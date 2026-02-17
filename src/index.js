@@ -1,10 +1,10 @@
 'use strict';
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const Fastify = require('fastify');
 const { WebSocketServer } = require('ws');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { runAllTests } = require('./tester');
@@ -25,12 +25,14 @@ const heartbeatInterval = setInterval(() => { heartbeatCount++; }, 1000);
 app.get('/', async (req, reply) => {
   requestCount++;
   const html = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf-8');
+  reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
   reply.type('text/html').send(html);
 });
 
 // System info (lightweight, always available)
 app.get('/api/info', async (req, reply) => {
   requestCount++;
+  reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
   const mem = process.memoryUsage();
   return {
     node: process.version,
@@ -62,6 +64,7 @@ app.get('/api/info', async (req, reply) => {
 // Run all capability tests
 app.get('/api/tests', async (req, reply) => {
   requestCount++;
+  reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
   const results = await runAllTests({ heartbeatCount, startTime });
   return results;
 });
