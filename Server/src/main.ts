@@ -1,8 +1,7 @@
-// Load .env BEFORE anything else — Prisma library engine reads DATABASE_URL
-// from process.env directly during module initialization
+// Load .env BEFORE anything else — Prisma reads DATABASE_URL from process.env
 import { config } from 'dotenv';
 import { join } from 'path';
-config({ path: join(__dirname, '..', '..', '.env') }); // Server/.env (relative to dist/src/)
+config({ path: join(__dirname, '..', '.env') }); // Server/.env (relative to dist/)
 config(); // fallback: CWD/.env
 
 import { NestFactory } from '@nestjs/core';

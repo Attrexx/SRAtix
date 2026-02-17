@@ -15,8 +15,8 @@ import { join } from 'path';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        join(__dirname, '..', '..', '.env'),  // Server/.env (relative to dist/src/)
-        '.env',                                // fallback: CWD
+        join(__dirname, '..', '.env'),  // Server/.env (relative to dist/)
+        '.env',                          // fallback: CWD
       ],
     }),
 
