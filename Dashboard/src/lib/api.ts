@@ -1,0 +1,313 @@
+/**
+ * SRAtix API Client — connects Dashboard to the NestJS Server.
+ *
+ * Uses fetch API with JWT Bearer token.
+ * In development, requests are proxied via Next.js rewrites to localhost:3000.
+ * In production, both apps are behind the same domain (tix.swiss-robotics.org).
+ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+interface ApiOptions {
+  method?: string;
+  body?: unknown;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+}
+
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+    public data?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('sratix_token');
+}
+
+async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}/api${path}`, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(
+      res.status,
+      data?.message ?? `HTTP ${res.status}`,
+      data,
+    );
+  }
+
+  // Handle 204 No Content
+  if (res.status === 204) return undefined as T;
+
+  return res.json();
+}
+
+// ─── Type Definitions ───────────────────────────────────────────
+
+export interface Event {
+  id: string;
+  name: string;
+  slug: string;
+  orgId: string;
+  description?: string;
+  venue?: string;
+  startDate: string;
+  endDate?: string;
+  timezone: string;
+  currency: string;
+  status: string;
+  maxCapacity?: number;
+  createdAt: string;
+}
+
+export interface TicketType {
+  id: string;
+  eventId: string;
+  name: string;
+  description?: string;
+  priceCents: number;
+  currency: string;
+  maxQuantity?: number;
+  soldCount: number;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface Attendee {
+  id: string;
+  eventId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  createdAt: string;
+}
+
+export interface Order {
+  id: string;
+  eventId: string;
+  orderNumber: string;
+  attendeeId: string;
+  customerEmail?: string;
+  customerName?: string;
+  totalCents: number;
+  currency: string;
+  status: string;
+  paidAt?: string;
+  createdAt: string;
+  items: OrderItem[];
+}
+
+export interface OrderItem {
+  id: string;
+  ticketTypeId: string;
+  quantity: number;
+  unitPriceCents: number;
+  subtotalCents: number;
+}
+
+export interface Ticket {
+  id: string;
+  code: string;
+  orderId: string;
+  attendeeId: string;
+  ticketTypeId: string;
+  status: string;
+  qrPayload: string;
+  createdAt: string;
+}
+
+export interface CheckIn {
+  id: string;
+  ticketId: string;
+  eventId: string;
+  method: string;
+  direction: string;
+  deviceId?: string;
+  location?: string;
+  createdAt: string;
+}
+
+export interface PromoCode {
+  id: string;
+  eventId: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  usageLimit?: number;
+  usedCount: number;
+  active: boolean;
+  validFrom?: string;
+  validTo?: string;
+}
+
+export interface DashboardStats {
+  totalAttendees: number;
+  totalOrders: number;
+  totalRevenue: number;
+  totalCheckIns: number;
+  ticketsSold: number;
+  currency: string;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  orgId: string;
+  eventId?: string | null;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  endpointId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  status: 'pending' | 'delivered' | 'failed';
+  httpStatus?: number | null;
+  responseBody?: string | null;
+  attempts: number;
+  error?: string | null;
+  deliveredAt?: string | null;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    roles: string[];
+  };
+}
+
+// ─── API Methods ────────────────────────────────────────────────
+
+export const api = {
+  // Auth
+  login: (token: string) =>
+    request<AuthResponse>('/auth/wp-exchange', {
+      method: 'POST',
+      body: { token },
+    }),
+
+  // Events
+  getEvents: (signal?: AbortSignal) =>
+    request<Event[]>('/events', { signal }),
+
+  getEvent: (id: string, signal?: AbortSignal) =>
+    request<Event>(`/events/${id}`, { signal }),
+
+  createEvent: (data: Partial<Event>) =>
+    request<Event>('/events', { method: 'POST', body: data }),
+
+  updateEvent: (id: string, data: Partial<Event>) =>
+    request<Event>(`/events/${id}`, { method: 'PATCH', body: data }),
+
+  // Ticket Types
+  getTicketTypes: (eventId: string, signal?: AbortSignal) =>
+    request<TicketType[]>(`/ticket-types/event/${eventId}`, { signal }),
+
+  // Attendees
+  getAttendees: (eventId: string, signal?: AbortSignal) =>
+    request<Attendee[]>(`/attendees/event/${eventId}`, { signal }),
+
+  // Orders
+  getOrders: (eventId: string, signal?: AbortSignal) =>
+    request<Order[]>(`/orders/event/${eventId}`, { signal }),
+
+  getOrder: (id: string, signal?: AbortSignal) =>
+    request<Order>(`/orders/${id}`, { signal }),
+
+  // Check-Ins
+  getCheckInStats: (eventId: string, signal?: AbortSignal) =>
+    request<{
+      total: number;
+      today: number;
+      byTicketType: Record<string, number>;
+    }>(`/check-ins/stats/event/${eventId}`, { signal }),
+
+  getRecentCheckIns: (eventId: string, limit?: number, signal?: AbortSignal) =>
+    request<CheckIn[]>(
+      `/check-ins/event/${eventId}${limit ? `?limit=${limit}` : ''}`,
+      { signal },
+    ),
+
+  // Promo Codes
+  getPromoCodes: (eventId: string, signal?: AbortSignal) =>
+    request<PromoCode[]>(`/promo-codes/event/${eventId}`, { signal }),
+
+  // Forms
+  getFormSchemas: (eventId: string, signal?: AbortSignal) =>
+    request<unknown[]>(`/forms/event/${eventId}`, { signal }),
+
+  // Exports
+  exportAttendees: (eventId: string) =>
+    `${API_BASE}/api/export/attendees/event/${eventId}`,
+
+  exportOrders: (eventId: string) =>
+    `${API_BASE}/api/export/orders/event/${eventId}`,
+
+  exportCheckIns: (eventId: string) =>
+    `${API_BASE}/api/export/check-ins/event/${eventId}`,
+
+  // Webhooks
+  getWebhookEventTypes: (signal?: AbortSignal) =>
+    request<{ eventTypes: string[] }>('/webhooks/event-types', { signal }),
+
+  getWebhookEndpoints: (orgId: string, eventId?: string, signal?: AbortSignal) =>
+    eventId
+      ? request<WebhookEndpoint[]>(`/webhooks/endpoints/${orgId}/${eventId}`, { signal })
+      : request<WebhookEndpoint[]>(`/webhooks/endpoints/${orgId}`, { signal }),
+
+  getWebhookEndpoint: (id: string, signal?: AbortSignal) =>
+    request<WebhookEndpoint & { deliveries: WebhookDelivery[] }>(`/webhooks/endpoint/${id}`, { signal }),
+
+  createWebhookEndpoint: (data: { orgId: string; eventId?: string; url: string; events: string[] }) =>
+    request<WebhookEndpoint>('/webhooks/endpoints', { method: 'POST', body: data }),
+
+  updateWebhookEndpoint: (id: string, data: { url?: string; events?: string[]; active?: boolean }) =>
+    request<WebhookEndpoint>(`/webhooks/endpoint/${id}`, { method: 'PATCH', body: data }),
+
+  deleteWebhookEndpoint: (id: string) =>
+    request<void>(`/webhooks/endpoint/${id}`, { method: 'DELETE' }),
+
+  rotateWebhookSecret: (id: string) =>
+    request<WebhookEndpoint>(`/webhooks/endpoint/${id}/rotate-secret`, { method: 'POST' }),
+
+  getWebhookDeliveries: (endpointId: string, signal?: AbortSignal) =>
+    request<WebhookDelivery[]>(`/webhooks/deliveries/${endpointId}`, { signal }),
+
+  retryWebhookDelivery: (id: string) =>
+    request<void>(`/webhooks/deliveries/${id}/retry`, { method: 'POST' }),
+};
+
+export { ApiError };

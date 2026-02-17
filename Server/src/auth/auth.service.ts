@@ -39,6 +39,8 @@ export class AuthService {
     wpRoles: string[],
     signature: string,
     sourceSite: string,
+    wpEmail?: string,
+    wpDisplayName?: string,
   ): Promise<TokenPair> {
     // Verify the HMAC signature from the WP plugin
     const secret = this.config.getOrThrow<string>('WP_API_SECRET');
@@ -54,17 +56,80 @@ export class AuthService {
       throw new UnauthorizedException('Invalid signature');
     }
 
-    // Map WP user to SRAtix user (create if first login)
-    // TODO: Implement wp_mappings lookup and user creation
-    const userId = `wp_${sourceSite}_${wpUserId}`;
+    // Map WP user to SRAtix user via WpMapping table
+    const mapping = await this.prisma.wpMapping.findUnique({
+      where: {
+        wpEntityType_wpEntityId: {
+          wpEntityType: 'user',
+          wpEntityId: wpUserId,
+        },
+      },
+    });
+
+    let userId: string;
+    let email = '';
+    let orgId: string | undefined;
+
+    if (mapping) {
+      // Existing mapping — resolve user
+      userId = mapping.sratixEntityId;
+      orgId = mapping.orgId ?? undefined;
+
+      // Fetch email from User record
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (user) {
+        email = user.email;
+        // Update last login + refresh email/displayName from WP if provided
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            lastLoginAt: new Date(),
+            ...(wpEmail ? { email: wpEmail } : {}),
+            ...(wpDisplayName ? { displayName: wpDisplayName } : {}),
+          },
+        });
+        if (wpEmail) email = wpEmail;
+      }
+    } else {
+      // First login — create User + WpMapping
+      // Generate a stable user ID from WP site + user ID
+      const user = await this.prisma.user.create({
+        data: {
+          email: wpEmail ?? `wp-${wpUserId}@${sourceSite}`,
+          displayName: wpDisplayName ?? `WP User ${wpUserId}`,
+          wpUserId,
+          lastLoginAt: new Date(),
+        },
+      });
+      userId = user.id;
+      email = user.email;
+
+      // Create bidirectional mapping
+      await this.prisma.wpMapping.create({
+        data: {
+          wpEntityType: 'user',
+          wpEntityId: wpUserId,
+          sratixEntityType: 'user',
+          sratixEntityId: userId,
+        },
+      });
+
+      this.logger.log(
+        `Created SRAtix user ${userId} for WP user ${wpUserId}@${sourceSite}`,
+      );
+    }
 
     // Map WP roles to SRAtix roles
     const sratixRoles = this.mapWpRoles(wpRoles);
 
     return this.generateTokenPair({
       sub: userId,
-      email: '', // Will be populated from mapping
+      email,
       roles: sratixRoles,
+      orgId,
     });
   }
 

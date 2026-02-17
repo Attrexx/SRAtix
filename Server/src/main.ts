@@ -1,14 +1,8 @@
 // Load .env BEFORE anything else — Prisma reads DATABASE_URL from process.env
 import { config } from 'dotenv';
 import { join } from 'path';
-const envResult = config({ path: join(__dirname, '..', '.env') }); // Server/.env (relative to dist/)
+config({ path: join(__dirname, '..', '.env') }); // Server/.env (relative to dist/)
 config(); // fallback: CWD/.env
-
-console.log('[SRAtix] __dirname:', __dirname);
-console.log('[SRAtix] .env path:', join(__dirname, '..', '.env'));
-console.log('[SRAtix] dotenv loaded:', envResult.error ? 'FAILED: ' + envResult.error.message : 'OK');
-console.log('[SRAtix] DATABASE_URL set:', !!process.env.DATABASE_URL);
-console.log('[SRAtix] JWT_SECRET set:', !!process.env.JWT_SECRET);
 
 import { NestFactory } from '@nestjs/core';
 import {
@@ -17,7 +11,9 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -30,6 +26,9 @@ async function bootstrap() {
         trustProxy: true,
         ignoreTrailingSlash: true,  // Infomaniak proxy appends trailing slashes
       }),
+      {
+        rawBody: true, // Required for Stripe webhook signature verification
+      },
     );
 
     // Global validation pipe — DTOs auto-validated
@@ -42,9 +41,9 @@ async function bootstrap() {
       }),
     );
 
-    // Global prefix — all API routes under /api, health excluded
+    // Global prefix — all API routes under /api, health + webhooks excluded
     app.setGlobalPrefix('api', {
-      exclude: ['health'],
+      exclude: ['health', 'webhooks/stripe'],
     });
 
     // CORS — allow WP sites to call the API
@@ -57,6 +56,10 @@ async function bootstrap() {
       ],
       credentials: true,
     });
+
+    // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
+    const reflector = app.get(Reflector);
+    app.useGlobalGuards(new RateLimitGuard(reflector));
 
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT', 3000);
@@ -71,19 +74,8 @@ async function bootstrap() {
 
     await app.listen(port, '0.0.0.0');
 
-    // Log all registered routes for debugging
-    const server = app.getHttpServer();
-    const router = server && (server as any)._events;
     logger.log(`SRAtix Server v0.1.0 listening on port ${port}`);
     logger.log(`Node ${process.version}, PID ${process.pid}`);
-
-    // Print Fastify route table
-    const instance = app.getHttpAdapter().getInstance();
-    const routes: string[] = [];
-    instance.printRoutes({ commonPrefix: false }).split('\n').forEach((line: string) => {
-      if (line.trim()) routes.push(line.trim());
-    });
-    logger.log(`Registered routes:\n${routes.join('\n')}`);
   } catch (error) {
     console.error('[SRAtix] FATAL: Failed to start:', error);
     process.exit(1);

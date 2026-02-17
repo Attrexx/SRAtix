@@ -7,6 +7,20 @@ import { TicketTypesModule } from './ticket-types/ticket-types.module';
 import { OrdersModule } from './orders/orders.module';
 import { AttendeesModule } from './attendees/attendees.module';
 import { HealthModule } from './health/health.module';
+import { PaymentsModule } from './payments/payments.module';
+import { SseModule } from './sse/sse.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { CheckInsModule } from './check-ins/check-ins.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
+import { EmailModule } from './email/email.module';
+import { FormsModule } from './forms/forms.module';
+import { PromoCodesModule } from './promo-codes/promo-codes.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { GdprModule } from './gdpr/gdpr.module';
+import { ExportModule } from './export/export.module';
+import { QueueModule } from './queue/queue.module';
+import { BadgeTemplatesModule } from './badge-templates/badge-templates.module';
+import { OutgoingWebhooksModule } from './outgoing-webhooks/outgoing-webhooks.module';
 import { join } from 'path';
 
 @Module({
@@ -23,6 +37,9 @@ import { join } from 'path';
     // Database
     PrismaModule,
 
+    // Global modules (available everywhere without explicit import)
+    AuditLogModule,
+
     // Core modules — Phase 1
     AuthModule,
     HealthModule,
@@ -30,6 +47,45 @@ import { join } from 'path';
     TicketTypesModule,
     OrdersModule,
     AttendeesModule,
+
+    // Tickets — issuance, QR codes, management
+    TicketsModule,
+
+    // Check-ins — QR validation, recording, offline sync
+    CheckInsModule,
+
+    // Payments — Stripe Checkout
+    PaymentsModule,
+
+    // Email — SMTP transport, templates
+    EmailModule,
+
+    // Registration form engine — versioned schemas & submissions
+    FormsModule,
+
+    // Promo/discount codes
+    PromoCodesModule,
+
+    // Invoices — PDF generation
+    InvoicesModule,
+
+    // GDPR/nLPD — erasure, access, consent tracking
+    GdprModule,
+
+    // Data export — CSV downloads
+    ExportModule,
+
+    // Real-time — Server-Sent Events
+    SseModule,
+
+    // Phase 2 — Background job queues (BullMQ + Redis)
+    QueueModule,
+
+    // Phase 2 — Badge template rendering (satori pipeline)
+    BadgeTemplatesModule,
+
+    // Phase 2 — Outgoing webhook endpoints + dispatch
+    OutgoingWebhooksModule,
   ],
 })
 export class AppModule {}

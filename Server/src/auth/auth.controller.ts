@@ -1,6 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService, TokenPair } from './auth.service';
-import { IsNumber, IsArray, IsString } from 'class-validator';
+import { IsNumber, IsArray, IsString, IsOptional } from 'class-validator';
+import { RateLimit } from '../common/guards/rate-limit.guard';
 
 class ExchangeTokenDto {
   @IsNumber()
@@ -15,6 +16,14 @@ class ExchangeTokenDto {
 
   @IsString()
   sourceSite!: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  displayName?: string;
 }
 
 @Controller('auth')
@@ -27,12 +36,15 @@ export class AuthController {
    */
   @Post('token')
   @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 20, windowSec: 60 }) // Tighter limit on auth endpoint
   async exchangeToken(@Body() dto: ExchangeTokenDto): Promise<TokenPair> {
     return this.authService.exchangeToken(
       dto.wpUserId,
       dto.wpRoles,
       dto.signature,
       dto.sourceSite,
+      dto.email,
+      dto.displayName,
     );
   }
 }

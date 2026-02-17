@@ -14,6 +14,52 @@ export class TicketTypesService {
     });
   }
 
+  /**
+   * Public-facing query: returns only active ticket types within their
+   * sales window, with remaining availability calculated.
+   */
+  async findPublicByEvent(eventId: string) {
+    const now = new Date();
+    const types = await this.prisma.ticketType.findMany({
+      where: {
+        eventId,
+        status: 'active',
+        OR: [{ salesStart: null }, { salesStart: { lte: now } }],
+      },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        priceCents: true,
+        currency: true,
+        quantity: true,
+        sold: true,
+        maxPerOrder: true,
+        salesStart: true,
+        salesEnd: true,
+        sortOrder: true,
+      },
+    });
+
+    type TicketTypeRow = typeof types[number];
+
+    return types
+      .filter((t: TicketTypeRow) => !t.salesEnd || t.salesEnd > now)
+      .map((t: TicketTypeRow) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        priceCents: t.priceCents,
+        currency: t.currency,
+        maxPerOrder: t.maxPerOrder,
+        available: t.quantity !== null ? t.quantity - t.sold : null,
+        soldOut: t.quantity !== null && t.sold >= t.quantity,
+        salesStart: t.salesStart,
+        salesEnd: t.salesEnd,
+      }));
+  }
+
   async findOne(id: string, eventId: string) {
     const ticketType = await this.prisma.ticketType.findFirst({
       where: { id, eventId },

@@ -1,11 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 
 @Injectable()
 export class AttendeesService {
   private readonly logger = new Logger(AttendeesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly outgoingWebhooks: OutgoingWebhooksService,
+  ) {}
 
   async findByEvent(eventId: string) {
     return this.prisma.attendee.findMany({
@@ -37,7 +41,7 @@ export class AttendeesService {
     wpUserId?: number;
     meta?: Record<string, unknown>;
   }) {
-    return this.prisma.attendee.create({
+    const attendee = await this.prisma.attendee.create({
       data: {
         eventId: data.eventId,
         orgId: data.orgId,
@@ -48,6 +52,21 @@ export class AttendeesService {
         meta: data.meta ? JSON.stringify(data.meta) : undefined,
       },
     });
+
+    // Fire outgoing webhook: attendee.registered
+    this.outgoingWebhooks
+      .dispatch(data.orgId, data.eventId, 'attendee.registered', {
+        attendeeId: attendee.id,
+        email: attendee.email,
+        firstName: attendee.firstName,
+        lastName: attendee.lastName,
+        eventId: data.eventId,
+      })
+      .catch((err) =>
+        this.logger.error(`Webhook dispatch failed for attendee.registered: ${err}`),
+      );
+
+    return attendee;
   }
 
   async update(id: string, data: Partial<{

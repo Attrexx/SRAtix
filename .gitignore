@@ -1,8 +1,11 @@
 node_modules/
 dist/
+.next/
 *.log
+*.tsbuildinfo
 tmp/
 .DS_Store
 Thumbs.db
+.env
 
 /generated/prisma

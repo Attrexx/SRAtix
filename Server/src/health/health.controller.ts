@@ -1,7 +1,9 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 
 @Controller('health')
+@SkipRateLimit()
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 

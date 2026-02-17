@@ -35,6 +35,7 @@ model Organization {
   orders     Order[]
   attendees  Attendee[]
   tickets    Ticket[]
+  webhookEndpoints WebhookEndpoint[]
 
   @@map("organizations")
 }
@@ -70,8 +71,11 @@ model Event {
   formSchemas   FormSchema[]
   formSubmissions FormSubmission[]
   checkIns      CheckIn[]
+  promoCodes    PromoCode[]
   auditLogs     AuditLog[]
   settings      Setting[]
+  badgeTemplates BadgeTemplate[]
+  webhookEndpoints WebhookEndpoint[]
 
   @@unique([orgId, slug])
   @@index([orgId])
@@ -192,6 +196,7 @@ model Attendee {
   tickets         Ticket[]
   formSubmissions FormSubmission[]
   checkIns        CheckIn[]
+  badgeRenders    BadgeRender[]
 
   @@unique([eventId, email])
   @@index([orgId])
@@ -220,6 +225,7 @@ model Ticket {
   order      Order?       @relation(fields: [orderId], references: [id])
   attendee   Attendee?    @relation(fields: [attendeeId], references: [id])
   checkIns   CheckIn[]
+  badgeRenders BadgeRender[]
 
   @@index([eventId])
   @@index([ticketTypeId])
@@ -271,6 +277,34 @@ model FormSubmission {
 // ============================================================================
 // CHECK-IN
 // ============================================================================
+
+model PromoCode {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventId             String   @db.Char(36)
+  code                String   @db.VarChar(50) // user-facing code (e.g. EARLYBIRD2026)
+  description         String?  @db.VarChar(255)
+  discountType        String   @db.VarChar(20) // percentage | fixed_amount
+  discountValue       Int      // percentage (e.g. 20 = 20%) or cents (e.g. 1000 = CHF 10.00)
+  currency            String   @default("CHF") @db.VarChar(3)
+  usageLimit          Int?     // null = unlimited
+  usedCount           Int      @default(0)
+  perCustomerLimit    Int      @default(1) // max uses per email
+  validFrom           DateTime? @db.DateTime(3)
+  validTo             DateTime? @db.DateTime(3)
+  applicableTicketIds Json?    // array of ticket type IDs, null = all
+  minOrderCents       Int?     // minimum order amount to apply
+  active              Boolean  @default(true)
+  meta                Json?
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+  updatedAt           DateTime @updatedAt @db.DateTime(3)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, code])
+  @@index([eventId])
+  @@index([code])
+  @@map("promo_codes")
+}
 
 model CheckIn {
   id         String   @id @default(uuid()) @db.Char(36)
@@ -390,4 +424,98 @@ model Setting {
   @@unique([scope, orgId, eventId, key])
   @@index([scope])
   @@map("settings")
+}
+
+// ============================================================================
+// BADGE TEMPLATES & RENDERS (Phase 2)
+// ============================================================================
+
+model BadgeTemplate {
+  id          String   @id @default(uuid()) @db.Char(36)
+  eventId     String   @db.Char(36)
+  name        String   @db.VarChar(255)
+  description String?  @db.VarChar(500)
+  layout      Json     // satori-compatible JSX layout definition
+  dimensions  Json     // { widthMm, heightMm, widthPx, heightPx, dpi }
+  ticketTypeIds Json?  // array of ticket type IDs this template applies to
+  isDefault   Boolean  @default(false)
+  active      Boolean  @default(true)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  event   Event         @relation(fields: [eventId], references: [id])
+  renders BadgeRender[]
+
+  @@index([eventId])
+  @@map("badge_templates")
+}
+
+model BadgeRender {
+  id              String   @id @default(uuid()) @db.Char(36)
+  templateId      String   @db.Char(36)
+  ticketId        String   @db.Char(36)
+  attendeeId      String   @db.Char(36)
+  format          String   @db.VarChar(10) // png | pdf
+  fileUrl         String?  @db.VarChar(500) // R2 URL or local path
+  fileSize        Int?     // bytes
+  renderTimeMs    Int?     // rendering duration
+  status          String   @default("pending") @db.VarChar(20) // pending | rendering | completed | failed
+  error           String?  @db.VarChar(500)
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+
+  template BadgeTemplate @relation(fields: [templateId], references: [id])
+  ticket   Ticket        @relation(fields: [ticketId], references: [id])
+  attendee Attendee      @relation(fields: [attendeeId], references: [id])
+
+  @@index([templateId])
+  @@index([ticketId])
+  @@index([attendeeId])
+  @@map("badge_renders")
+}
+
+// ============================================================================
+// OUTGOING WEBHOOKS (Phase 2)
+// ============================================================================
+
+model WebhookEndpoint {
+  id        String   @id @default(uuid()) @db.Char(36)
+  orgId     String   @db.Char(36)
+  eventId   String?  @db.Char(36) // null = org-wide (fires for all events)
+  url       String   @db.VarChar(500)
+  secret    String   @db.VarChar(255) // HMAC signing secret
+  events    Json     // array of event types: ["order.paid","ticket.issued",...]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @updatedAt @db.DateTime(3)
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  event Event?       @relation(fields: [eventId], references: [id])
+
+  deliveries WebhookDelivery[]
+
+  @@index([orgId])
+  @@index([eventId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(uuid()) @db.Char(36)
+  endpointId   String   @db.Char(36)
+  eventType    String   @db.VarChar(50)
+  payload      Json
+  status       String   @default("pending") @db.VarChar(20) // pending | delivered | failed
+  httpStatus   Int?     // response status code
+  responseBody String?  @db.Text
+  attempts     Int      @default(0)
+  error        String?  @db.VarChar(500)
+  deliveredAt  DateTime? @db.DateTime(3)
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@index([endpointId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("webhook_deliveries")
 }

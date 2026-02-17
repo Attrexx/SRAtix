@@ -1,0 +1,30 @@
+/* SRAtix Control — Admin Styles */
+
+.wrap h1 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.wrap h1::before {
+	content: "🎫";
+}
+
+/* Connection status badge */
+.sratix-status {
+	display: inline-block;
+	padding: 4px 12px;
+	border-radius: 12px;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.sratix-status--ok {
+	background: #d4edda;
+	color: #155724;
+}
+
+.sratix-status--error {
+	background: #f8d7da;
+	color: #721c24;
+}
