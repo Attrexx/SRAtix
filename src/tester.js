@@ -360,86 +360,125 @@ async function testRedis() {
   });
 }
 
-async function testChromium() {
-  let puppeteer;
+async function testBadgeRendering() {
+  // Step 1: Load satori (JSX-like → SVG)
+  let satori;
   try {
-    puppeteer = require('puppeteer');
+    const satoriModule = await import('satori');
+    satori = satoriModule.default || satoriModule;
   } catch (e) {
-    return warn(
-      'Puppeteer not installed — badge generation unavailable',
-      { error: e.message, suggestion: 'Add puppeteer to dependencies' }
-    );
-  }
-
-  // Get the bundled Chromium path
-  let execPath;
-  try {
-    execPath = puppeteer.executablePath();
-    if (!fs.existsSync(execPath)) {
-      return warn('Puppeteer installed but Chromium binary not found', {
-        expectedPath: execPath,
-        suggestion: 'Chromium download may have failed during npm install',
-      });
-    }
-  } catch (e) {
-    return warn('Could not determine Chromium path', { error: e.message });
-  }
-
-  // Actually launch Chromium and render a page
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-      timeout: 30000,
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(`
-      <html><body style="width:400px;height:200px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;background:#1a1a2e;color:#00ff88;">
-        <div style="text-align:center">
-          <h1 style="margin:0">SRAtix Badge Test</h1>
-          <p style="margin:8px 0 0">Puppeteer rendering works!</p>
-        </div>
-      </body></html>
-    `);
-
-    // Take a screenshot to prove rendering works
-    const screenshot = await page.screenshot({ type: 'png' });
-    const screenshotSize = screenshot.length;
-
-    // Also test PDF generation (needed for badges)
-    const pdf = await page.pdf({ width: '400px', height: '200px' });
-    const pdfSize = pdf.length;
-
-    const version = await browser.version();
-    await browser.close();
-
-    return pass(`Puppeteer works — rendered screenshot (${screenshotSize} bytes) + PDF (${pdfSize} bytes)`, {
-      chromiumPath: execPath,
-      browserVersion: version,
-      screenshotBytes: screenshotSize,
-      pdfBytes: pdfSize,
-    });
-  } catch (e) {
-    if (browser) try { await browser.close(); } catch {}
-
-    // Log full error for diagnosis via app log
-    console.error('[Puppeteer Test] Launch/render failed:', e.message);
-    if (e.stack) console.error('[Puppeteer Test] Stack:', e.stack);
-
-    // Try to detect missing shared libraries
-    let missingLibs = null;
-    try {
-      const lddOutput = execSync(`ldd "${execPath}" 2>&1 | grep "not found"`, { encoding: 'utf-8', timeout: 5000 });
-      missingLibs = lddOutput.trim().split('\n').filter(Boolean);
-    } catch {}
-
-    return fail('Puppeteer launch or rendering failed', {
+    return warn('satori not installed — badge rendering unavailable', {
       error: e.message,
-      chromiumPath: execPath,
-      missingLibs: missingLibs && missingLibs.length > 0 ? missingLibs : null,
-      suggestion: 'Server may lack required system libraries for headless Chromium',
+      suggestion: 'Add satori to dependencies',
+    });
+  }
+
+  // Step 2: Load resvg (SVG → PNG)
+  let Resvg;
+  try {
+    const resvgModule = require('@resvg/resvg-js');
+    Resvg = resvgModule.Resvg;
+  } catch (e) {
+    return warn('@resvg/resvg-js not installed — PNG rendering unavailable', {
+      error: e.message,
+      suggestion: 'Add @resvg/resvg-js to dependencies',
+    });
+  }
+
+  // Step 3: Load pdf-lib (PNG → PDF)
+  let PDFDocument, PDFImage;
+  try {
+    const pdfLib = require('pdf-lib');
+    PDFDocument = pdfLib.PDFDocument;
+  } catch (e) {
+    return warn('pdf-lib not installed — PDF generation unavailable', {
+      error: e.message,
+      suggestion: 'Add pdf-lib to dependencies',
+    });
+  }
+
+  // Step 4: Render a test badge with satori
+  try {
+    const badgeMarkup = {
+      type: 'div',
+      props: {
+        style: {
+          width: 400,
+          height: 200,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#1a1a2e',
+          color: '#00ff88',
+          fontFamily: 'sans-serif',
+        },
+        children: [
+          {
+            type: 'div',
+            props: {
+              style: { fontSize: 28, fontWeight: 700 },
+              children: 'SRAtix Badge Test',
+            },
+          },
+          {
+            type: 'div',
+            props: {
+              style: { fontSize: 14, marginTop: 8, color: '#8888aa' },
+              children: 'satori + resvg + pdf-lib pipeline',
+            },
+          },
+          {
+            type: 'div',
+            props: {
+              style: { fontSize: 12, marginTop: 16, color: '#00ff88' },
+              children: `Generated: ${new Date().toISOString()}`,
+            },
+          },
+        ],
+      },
+    };
+
+    const svg = await satori(badgeMarkup, {
+      width: 400,
+      height: 200,
+      fonts: [],  // Use system default — no custom fonts for this test
+    });
+    const svgSize = Buffer.byteLength(svg, 'utf-8');
+
+    // Step 5: SVG → PNG via resvg
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: 'width', value: 400 },
+    });
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
+    const pngSize = pngBuffer.length;
+
+    // Step 6: PNG → PDF via pdf-lib
+    const pdfDoc = await PDFDocument.create();
+    const pngImage = await pdfDoc.embedPng(pngBuffer);
+    const page = pdfDoc.addPage([400, 200]);
+    page.drawImage(pngImage, { x: 0, y: 0, width: 400, height: 200 });
+    const pdfBytes = await pdfDoc.save();
+    const pdfSize = pdfBytes.length;
+
+    return pass(
+      `Badge pipeline works — SVG (${svgSize}B) → PNG (${pngSize}B) → PDF (${pdfSize}B)`,
+      {
+        svgBytes: svgSize,
+        pngBytes: pngSize,
+        pdfBytes: pdfSize,
+        pipeline: 'satori → resvg → pdf-lib',
+        nativeDepsFree: true,
+      }
+    );
+  } catch (e) {
+    console.error('[Badge Rendering Test] Failed:', e.message);
+    if (e.stack) console.error('[Badge Rendering Test] Stack:', e.stack);
+    return fail('Badge rendering pipeline failed', {
+      error: e.message,
+      pipeline: 'satori → resvg → pdf-lib',
+      suggestion: 'Check if @resvg/resvg-js WASM binary loaded correctly on this platform',
     });
   }
 }
@@ -541,7 +580,7 @@ async function runAllTests(ctx = {}) {
     { name: 'TLS / HTTPS', category: 'network', fn: testTls },
     { name: 'MariaDB', category: 'services', fn: testMariaDB },
     { name: 'Redis', category: 'services', fn: testRedis },
-    { name: 'Chromium / Puppeteer', category: 'heavy', fn: testChromium },
+    { name: 'Badge Rendering (satori)', category: 'heavy', fn: testBadgeRendering },
     { name: 'Disk Space', category: 'heavy', fn: testDiskSpace },
     { name: 'Process Persistence', category: 'runtime', fn: (c) => testProcessPersistence(ctx) },
   ];
