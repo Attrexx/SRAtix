@@ -1,0 +1,21 @@
+{
+  "name": "sratix-tester",
+  "version": "1.0.0",
+  "description": "SRAtix Hosting Capability Tester — probes server environment before building the full platform",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "fastify": "^4.28.0",
+    "ws": "^8.17.0"
+  },
+  "optionalDependencies": {
+    "pg": "^8.12.0",
+    "ioredis": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "private": true
+}
