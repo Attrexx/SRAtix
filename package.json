@@ -1,0 +1,11 @@
+{
+  "name": "sratix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SRAtix — Root orchestrator for Infomaniak deployment",
+  "scripts": {
+    "postinstall": "cd Server && npm install && npx prisma generate",
+    "build": "cd Server && npm run build",
+    "start": "cd Server && node dist/src/main.js"
+  }
+}

@@ -7,13 +7,17 @@ import { TicketTypesModule } from './ticket-types/ticket-types.module';
 import { OrdersModule } from './orders/orders.module';
 import { AttendeesModule } from './attendees/attendees.module';
 import { HealthModule } from './health/health.module';
+import { join } from 'path';
 
 @Module({
   imports: [
-    // Config — loads .env, validates required vars
+    // Config — loads .env from Server/ dir (CWD on Infomaniak is repo root)
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: [
+        join(__dirname, '..', '..', '.env'),  // Server/.env (relative to dist/src/)
+        '.env',                                // fallback: CWD
+      ],
     }),
 
     // Database
