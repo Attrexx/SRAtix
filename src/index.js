@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const Fastify = require('fastify');
 const { WebSocketServer } = require('ws');
 const path = require('path');
