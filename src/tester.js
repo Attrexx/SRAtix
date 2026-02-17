@@ -276,36 +276,54 @@ async function testDns() {
   });
 }
 
-async function testPostgres() {
+async function testMariaDB() {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
-    return skip('DATABASE_URL not set — set it to test PostgreSQL connectivity');
+    return skip('DATABASE_URL not set — set it to test MariaDB connectivity');
   }
 
-  let pg;
+  let mysql;
   try {
-    pg = require('pg');
+    mysql = require('mysql2/promise');
   } catch {
-    return fail('pg module not installed (was in optionalDependencies — npm install may have skipped it)');
+    return fail('mysql2 module not installed (was in optionalDependencies — npm install may have skipped it)');
   }
 
   return withTimeout(async () => {
-    const client = new pg.Client({ connectionString: dbUrl, connectionTimeoutMillis: 5000 });
+    let connection;
     try {
-      await client.connect();
-      const res = await client.query('SELECT version() AS v, current_database() AS db, now() AS ts');
-      const row = res.rows[0];
-      await client.end();
-      return pass(`Connected — ${row.db}`, {
+      connection = await mysql.createConnection(dbUrl);
+      const [rows] = await connection.execute('SELECT VERSION() AS v, DATABASE() AS db, NOW() AS ts');
+      const row = rows[0];
+
+      // Test table creation capability
+      await connection.execute('CREATE TABLE IF NOT EXISTS _sratix_probe (id INT PRIMARY KEY, val VARCHAR(50), ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+      await connection.execute('INSERT INTO _sratix_probe (id, val) VALUES (1, "probe") ON DUPLICATE KEY UPDATE val="probe", ts=CURRENT_TIMESTAMP');
+      const [probeRows] = await connection.execute('SELECT * FROM _sratix_probe WHERE id = 1');
+      await connection.execute('DROP TABLE IF EXISTS _sratix_probe');
+
+      // Test JSON support
+      await connection.execute('CREATE TABLE IF NOT EXISTS _sratix_json_probe (id INT PRIMARY KEY, data JSON)');
+      await connection.execute('INSERT INTO _sratix_json_probe VALUES (1, ?)', [JSON.stringify({ test: true, nested: { a: 1 } })]);
+      const [jsonRows] = await connection.execute('SELECT JSON_EXTRACT(data, "$.nested.a") AS val FROM _sratix_json_probe WHERE id = 1');
+      const jsonSupport = jsonRows[0]?.val == 1;
+      await connection.execute('DROP TABLE IF EXISTS _sratix_json_probe');
+
+      await connection.end();
+      return pass(`Connected — ${row.db} (${row.v})`, {
         version: row.v,
         database: row.db,
         server_time: row.ts,
+        table_create: true,
+        insert_update: probeRows.length > 0,
+        json_support: jsonSupport,
+        json_extract: jsonSupport,
       });
     } catch (err) {
-      try { await client.end(); } catch {}
-      return fail(`PostgreSQL connection failed: ${err.message}`);
+      try { if (connection) await connection.end(); } catch {}
+      return fail(`MariaDB connection failed: ${err.message}`);
     }
-  });
+  }, 10000);
 }
 
 async function testRedis() {
@@ -490,7 +508,7 @@ async function runAllTests(ctx = {}) {
     { name: 'Outbound HTTPS', category: 'network', fn: testOutboundHttps },
     { name: 'DNS Resolution', category: 'network', fn: testDns },
     { name: 'TLS / HTTPS', category: 'network', fn: testTls },
-    { name: 'PostgreSQL', category: 'services', fn: testPostgres },
+    { name: 'MariaDB', category: 'services', fn: testMariaDB },
     { name: 'Redis', category: 'services', fn: testRedis },
     { name: 'Chromium / Puppeteer', category: 'heavy', fn: testChromium },
     { name: 'Disk Space', category: 'heavy', fn: testDiskSpace },

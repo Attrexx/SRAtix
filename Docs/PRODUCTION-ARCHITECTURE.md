@@ -186,15 +186,19 @@ Client is a **lightweight WordPress plugin**. It:
 ### SRAtix Server
 
 ```
-Runtime:          Node.js 24 (recommended LTS on hosting platform)
+Runtime:          Node.js 24 (v24.13.0 confirmed on hosting)
 Framework:        NestJS (TypeScript) — structured, batteries-included
                   OR Fastify + clean architecture (leaner alternative)
-Database:         PostgreSQL 16 (primary — relational integrity for
-                  tickets/invoices/financials/auditing)
-Cache/Queue:      Redis 7 (sessions, rate limits, pub/sub, BullMQ queues)
-                  FALLBACK: pgBoss (if hosting doesn't support Redis)
+Database:         MariaDB 10.6 (Infomaniak shared hosting)
+                  Host: ks704.myd.infomaniak.com:3306
+                  Relational integrity for tickets/invoices/financials/auditing
+                  JSON columns for flexible form submissions
+                  Generated columns for indexed JSON field extraction
+Cache/Queue:      Upstash Redis (free tier — 10k commands/day, 256MB)
+                  redis://...@upstash-endpoint:6379
+                  Upgrade path: local Redis when moving to Cloud Server
 ORM:              Prisma (type-safe, great migrations, schema-first)
-                  OR Drizzle (lighter, closer to SQL)
+                  Provider: "mysql" (MariaDB compatible)
 Auth:             OAuth2-lite token exchange + JWT + RBAC
 Real-time:        SSE (Server-Sent Events) for live dashboards/counters
                   WebSockets ONLY for bi-directional needs (future event app)
@@ -210,13 +214,14 @@ Payments:         Stripe SDK (Checkout for v1 — minimal PCI scope, SAQ-A)
 Badge Gen:        Puppeteer (HTML/CSS templates → PDF)
                   Templates = HTML files with placeholder tokens
                   Supports images, color-coding, dynamic layouts
+                  NOTE: Chromium not pre-installed — use bundled Puppeteer
 Wallet Passes:    passkit-generator (Apple) + google-wallet (Google)
 File Storage:     Cloudflare R2 (badge PDFs, invoice PDFs, uploads)
 CDN:              Cloudflare (free tier)
 Bot Protection:   Cloudflare Turnstile (free, replaces reCAPTCHA)
 Logging:          Pino (structured JSON logging)
 Process Manager:  PM2 (auto-restart, clustering)
-Background Jobs:  BullMQ (Redis-backed) — email dispatch, PDF gen,
+Background Jobs:  BullMQ (Upstash Redis-backed) — email dispatch, PDF gen,
                   badge rendering, sync jobs, scheduled tasks
 ```
 
@@ -262,25 +267,42 @@ The deciding factors specific to this project:
 
 ## 5. Database & Data Model Principles
 
-### PostgreSQL as Primary Store
+### MariaDB 10.6 as Primary Store
 
-PostgreSQL chosen for:
-- **Relational integrity** — tickets reference orders reference attendees reference events. Foreign keys matter.
-- **JSONB columns** — form submission data (variable schema) stored as JSONB with indexed key fields
-- **Full-text search** — attendee/order searching without external service
-- **Row-level security** — potential for tenant isolation at DB level
-- **Audit triggers** — database-level audit logging
-- **Proven at scale** — handles the volume of even large events comfortably
+MariaDB available on Infomaniak shared hosting (`ks704.myd.infomaniak.com:3306`). Chosen for:
+- **Relational integrity** — tickets reference orders reference attendees reference events. Foreign keys (InnoDB) fully supported.
+- **JSON columns** — form submission data stored as JSON type. Key fields extracted to generated/virtual columns for indexing.
+- **Full-text search** — MariaDB FULLTEXT indexes on InnoDB tables for attendee/order searching.
+- **Audit triggers** — database-level audit logging supported.
+- **Zero latency** — same hosting infrastructure as the Node.js app, no external network hop.
+- **No extra cost** — included in hosting plan.
+- **Prisma support** — Prisma ORM fully supports MariaDB via the `mysql` provider.
+
+**What we lose vs PostgreSQL and how we compensate:**
+
+| PostgreSQL Feature | MariaDB Compensation |
+|---|---|
+| JSONB + GIN indexes | JSON column + generated columns for indexed field extraction |
+| Row-level security | Middleware-enforced tenant isolation (already planned) |
+| `pgBoss` queue | BullMQ with Upstash Redis instead |
+| Array columns | JSON arrays or junction tables |
+| UUID primary key type | `CHAR(36)` for UUIDs, or `BIGINT AUTO_INCREMENT` with UUID as secondary unique column |
+
+**Upgrade path**: If SRAtix moves to Infomaniak Cloud Server in the future, PostgreSQL can be installed natively. Prisma schema migration between providers is manageable.
 
 ### Multi-Tenancy from Day 1
 
 Every table that holds tenant-scoped data includes:
 
 ```sql
-event_id    UUID NOT NULL REFERENCES events(id)
--- and/or
-org_id      UUID NOT NULL REFERENCES organizations(id)
+event_id    CHAR(36) NOT NULL,   -- UUID stored as string
+org_id      CHAR(36) NOT NULL,   -- UUID stored as string
+-- Foreign keys via InnoDB
+CONSTRAINT fk_event FOREIGN KEY (event_id) REFERENCES events(id),
+CONSTRAINT fk_org FOREIGN KEY (org_id) REFERENCES organizations(id)
 ```
+
+> **Note**: MariaDB lacks a native UUID type. UUIDs stored as `CHAR(36)`. Prisma handles this transparently with `@db.Char(36)` annotation. Alternative: use `BIGINT AUTO_INCREMENT` PKs with UUID as a secondary unique indexed column for external references.
 
 Tenant isolation enforced at the **query middleware layer** — every database call automatically scoped by the authenticated tenant context. This is not optional; it's baked into the ORM query builder.
 
@@ -321,16 +343,26 @@ settings               -- key-value config per event/org/global
 wp_mappings            -- wp_user_id ↔ sratix_actor_id + CPT entity mappings
 ```
 
-### Redis Usage
+### Redis Usage (Upstash Free Tier)
+
+Upstash Redis (free tier: 10,000 commands/day, 256MB, EU region available).
+Connects via TLS. Compatible with `ioredis` and BullMQ.
 
 ```
-Sessions:       Dashboard user sessions (fast lookup, auto-expiry)
-Rate Limiting:  API endpoint rate counters
-Caching:        Event config, ticket availability counters
-Pub/Sub:        Real-time event broadcasting (SSE fan-out)
 Queues:         BullMQ job queues (email, PDF, badge, sync, export)
+Caching:        Event config, ticket availability counters
+Rate Limiting:  API endpoint rate counters
+Sessions:       Dashboard user sessions (fast lookup, auto-expiry)
+Pub/Sub:        Real-time event broadcasting (SSE fan-out)
 Locks:          Distributed locks for payment processing (prevent double-charge)
 ```
+
+**Command budget (free tier)**: 10k/day is sufficient for development and low-volume
+production. At scale (event day with 1000+ check-ins), upgrade to Upstash Pay-as-you-go
+($0.2/100k commands) or migrate to local Redis on Cloud Server.
+
+**Upgrade path**: When moving to Infomaniak Cloud Server, install local Redis and
+change `REDIS_URL` to `redis://localhost:6379` — zero code changes.
 
 ---
 
@@ -1309,7 +1341,7 @@ The registration forms intentionally collect data that powers event app personal
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|-----------|--------|------------|
 | 1 | **Scope creep** — Swicket has years of development | High | High | Strict MVP phasing. Launch with Phase 1 only. Resist feature additions until phase is complete. |
-| 2 | **Hosting limitations** — Node.js hosting may restrict WebSockets, long-running processes, or Redis | Medium | High | **Test first** with Tester app (see §25). Fallback: SSE instead of WebSockets, pgBoss instead of BullMQ (Redis), Hetzner CH VPS (~€4/mo) as alternative. |
+| 2 | **Hosting limitations** — Node.js hosting may restrict WebSockets, long-running processes, or Redis | Low | Medium | **TESTED 2026-02-17**: WebSockets, SSE, worker threads, child processes, outbound HTTPS, file I/O all confirmed working. Redis/PostgreSQL not yet configured — need to verify hosting DB availability. Chromium not pre-installed — use bundled Puppeteer or lighter alternative. |
 | 3 | **Single point of failure** — Server down = both sites lose ticketing | Medium | High | PM2 auto-restart, health checks, Cloudflare caching for static assets, graceful degradation in WP plugins (show "temporarily unavailable" message). |
 | 4 | **Data sync conflicts** — WP and Server disagree on user/entity state | Medium | Medium | Event-driven sync with idempotent operations. Server always authoritative for ticketing data. WP always authoritative for WP content. |
 | 5 | **Stripe PCI compliance** — handling card data | Low | High | Stripe Checkout (hosted) = SAQ-A (minimal PCI scope). Never touch raw card numbers. |
@@ -1443,6 +1475,78 @@ SRAtix/
 | 16 | Capability matrix for configuration (3 tiers) | Prevents settings bloat, UI config for frequently changed items only, promotes from code to UI when proven necessary | 2026-02-17 |
 | 17 | PWA-first for event app, API designed for native readiness | Shared web stack, no app store approval, clean JSON APIs enable React Native/Flutter later | 2026-02-17 |
 | 18 | Control + Client plugins kept thin | Connectors only, all business logic in Server, prevents WordPress from becoming authoritative for ticketing data | 2026-02-17 |
+| 19 | Hosting capabilities confirmed via Tester | Node v24.13.0, Linux x64, 64 CPUs, 257GB RAM, WebSockets + SSE both working, worker threads + child processes confirmed, outbound HTTPS + DNS clear, crypto (HMAC+AES) functional, process persistence verified. Chromium requires bundled Puppeteer install. | 2026-02-17 |
+| 20 | MariaDB 10.6 instead of PostgreSQL | Hosting provides MariaDB only (shared hosting). Fully capable for SRAtix needs. Prisma supports via `mysql` provider. JSON columns + generated columns compensate for lack of JSONB. Upgrade path to PostgreSQL on Cloud Server exists. | 2026-02-17 |
+| 21 | Upstash Redis (free tier) instead of local Redis | Redis not available on shared hosting. Upstash free tier (10k cmds/day, 256MB, EU region) sufficient for dev + early production. BullMQ compatible. Upgrade path to local Redis on Cloud Server. | 2026-02-17 |
+
+---
+
+## 28. Hosting Test Results (2026-02-17)
+
+Tester deployed to `tix.swiss-robotics.org` via Git → hosting auto-deploy.
+
+### Server Environment
+
+| Property | Value |
+|----------|-------|
+| Node.js | v24.13.0 |
+| Platform | Linux x64 |
+| CPUs | 64 (shared hosting node) |
+| Total Memory | 257,431 MB (~251 GB, shared) |
+| Free Memory | 217,458 MB |
+| Heap Used | 13 MB |
+| Process persistence | Confirmed — heartbeat drift < 1s |
+
+### Capability Test Results
+
+| # | Test | Status | Details |
+|---|------|--------|---------|
+| 1 | Node.js Runtime | **PASS** | v24.13.0 — fully supported |
+| 2 | Environment Variables | **PASS** | 30 env vars accessible |
+| 3 | File System (R/W) | **PASS** | Temp dir + CWD both writable |
+| 4 | Memory | **PASS** | 257GB total, 217GB free |
+| 5 | Crypto (HMAC + AES) | **PASS** | HMAC-SHA256 + AES-256-GCM functional |
+| 6 | Worker Threads | **PASS** | Executed computation in worker |
+| 7 | Child Process | **PASS** | Spawned child Node process |
+| 8 | Scheduling (setInterval) | **PASS** | 3 ticks in 301ms (expected ~300ms) |
+| 9 | Native fetch() | **PASS** | HTTP 200 from httpbin.org |
+| 10 | Outbound HTTPS | **PASS** | httpbin.org + api.stripe.com reachable |
+| 11 | DNS Resolution | **PASS** | api.stripe.com, smtp.gmail.com, github.com all resolved |
+| 12 | TLS / HTTPS | **PASS** | TLS module available, external termination expected |
+| 13 | PostgreSQL | **SKIP → N/A** | Hosting provides MariaDB only. Using MariaDB 10.6 instead. |
+| 14 | Redis | **SKIP → EXTERNAL** | Not available on shared hosting. Using Upstash Redis (free tier). |
+| 15 | Chromium / Puppeteer | **WARN** | Not pre-installed on server |
+| 16 | Disk Space | **PASS** | Disk info retrieved |
+| 17 | Process Persistence | **PASS** | 25 heartbeats in 27s — persistent |
+
+### Client-Side Connection Tests (Browser → Server)
+
+| Test | Status | Details |
+|------|--------|---------|
+| WebSocket Upgrade | **PASS** | Connection established, echo confirmed |
+| Server-Sent Events | **PASS** | All 5 events received successfully |
+
+### Implications for Architecture
+
+1. **SSE + WebSocket both confirmed** — SSE-first strategy validated; WebSocket available for future event app
+2. **Worker threads work** — can use for CPU-intensive tasks (badge rendering, data processing) within same process
+3. **Child processes work** — Puppeteer can spawn headless Chromium as child process
+4. **Chromium not pre-installed** — must install `puppeteer` (not `puppeteer-core`) to bundle its own Chromium binary, OR use lighter PDF alternatives (`pdf-lib`, `satori`). Given 257GB RAM and writable filesystem, bundled Puppeteer likely works.
+5. **Database** — Hosting provides MariaDB 10.6 only (no PostgreSQL). MariaDB fully adequate. Prisma supports it.
+6. **Redis** — Not available on shared hosting. Using Upstash Redis free tier (EU region, BullMQ compatible).
+6. **Process persistence confirmed** — no idle timeout killing observed in initial test period
+7. **Outbound connectivity unrestricted** — Stripe, SMTP, Cloudflare R2, external APIs all reachable
+
+### Outstanding Items
+
+- [x] ~~Verify PostgreSQL availability~~ → Not available. Using MariaDB 10.6.
+- [x] ~~Verify Redis availability~~ → Not available on shared hosting. Using Upstash Redis free tier.
+- [ ] Create MariaDB database for SRAtix on hosting panel
+- [ ] Set up Upstash Redis account (free tier, EU region)
+- [ ] Test MariaDB + Upstash Redis connectivity from Tester app
+- [ ] Test bundled Puppeteer Chromium launch on this hosting
+- [ ] Confirm long-term process persistence (hours/days, not just minutes)
+- [ ] Check if hosting auto-restarts crashed processes or if PM2 is needed
 
 ---
 
