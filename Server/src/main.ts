@@ -67,8 +67,19 @@ async function bootstrap() {
 
     await app.listen(port, '0.0.0.0');
 
+    // Log all registered routes for debugging
+    const server = app.getHttpServer();
+    const router = server && (server as any)._events;
     logger.log(`SRAtix Server v0.1.0 listening on port ${port}`);
     logger.log(`Node ${process.version}, PID ${process.pid}`);
+
+    // Print Fastify route table
+    const instance = app.getHttpAdapter().getInstance();
+    const routes: string[] = [];
+    instance.printRoutes({ commonPrefix: false }).split('\n').forEach((line: string) => {
+      if (line.trim()) routes.push(line.trim());
+    });
+    logger.log(`Registered routes:\n${routes.join('\n')}`);
   } catch (error) {
     console.error('[SRAtix] FATAL: Failed to start:', error);
     process.exit(1);
