@@ -1,0 +1,392 @@
+// ============================================================================
+// SRAtix — Phase 1 Prisma Schema
+// Database: MariaDB 10.6 on Infomaniak (ks704.myd.infomaniak.com)
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ============================================================================
+// MULTI-TENANCY
+// ============================================================================
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Char(36)
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  type      String   @default("organizer") @db.VarChar(50) // organizer | exhibitor | sponsor | partner
+  contactEmail String? @db.VarChar(255)
+  logoUrl   String?  @db.VarChar(500)
+  meta      Json?    // flexible extra fields
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @updatedAt @db.DateTime(3)
+
+  events     Event[]
+  users      UserRole[]
+  wpMappings WpMapping[]
+  settings   Setting[]
+  orders     Order[]
+  attendees  Attendee[]
+  tickets    Ticket[]
+
+  @@map("organizations")
+}
+
+// ============================================================================
+// EVENTS
+// ============================================================================
+
+model Event {
+  id          String   @id @default(uuid()) @db.Char(36)
+  orgId       String   @db.Char(36)
+  name        String   @db.VarChar(255)
+  slug        String   @db.VarChar(100)
+  description String?  @db.Text
+  venue       String?  @db.VarChar(255)
+  venueAddress String? @db.VarChar(500)
+  timezone    String   @default("Europe/Zurich") @db.VarChar(50)
+  startDate   DateTime @db.DateTime(3)
+  endDate     DateTime @db.DateTime(3)
+  doorsOpen   DateTime? @db.DateTime(3)
+  status      String   @default("draft") @db.VarChar(30) // draft | published | cancelled | completed | archived
+  currency    String   @default("CHF") @db.VarChar(3)
+  maxCapacity Int?
+  meta        Json?    // flexible config (badge settings, colors, etc.)
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  org           Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  ticketTypes   TicketType[]
+  orders        Order[]
+  attendees     Attendee[]
+  tickets       Ticket[]
+  formSchemas   FormSchema[]
+  formSubmissions FormSubmission[]
+  checkIns      CheckIn[]
+  auditLogs     AuditLog[]
+  settings      Setting[]
+
+  @@unique([orgId, slug])
+  @@index([orgId])
+  @@index([status])
+  @@index([startDate])
+  @@map("events")
+}
+
+// ============================================================================
+// TICKET TYPES
+// ============================================================================
+
+model TicketType {
+  id            String   @id @default(uuid()) @db.Char(36)
+  eventId       String   @db.Char(36)
+  name          String   @db.VarChar(255)
+  description   String?  @db.Text
+  priceCents    Int      @default(0) // 0 = free ticket
+  currency      String   @default("CHF") @db.VarChar(3)
+  quantity      Int?     // null = unlimited
+  sold          Int      @default(0)
+  maxPerOrder   Int      @default(10)
+  salesStart    DateTime? @db.DateTime(3)
+  salesEnd      DateTime? @db.DateTime(3)
+  status        String   @default("active") @db.VarChar(30) // active | paused | sold_out | archived
+  sortOrder     Int      @default(0)
+  formSchemaId  String?  @db.Char(36)  // which reg form to show
+  meta          Json?    // badge template ref, visibility rules, etc.
+  createdAt     DateTime @default(now()) @db.DateTime(3)
+  updatedAt     DateTime @updatedAt @db.DateTime(3)
+
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  formSchema FormSchema? @relation(fields: [formSchemaId], references: [id])
+  orderItems OrderItem[]
+  tickets    Ticket[]
+
+  @@index([eventId])
+  @@index([status])
+  @@map("ticket_types")
+}
+
+// ============================================================================
+// ORDERS & PAYMENTS
+// ============================================================================
+
+model Order {
+  id              String   @id @default(uuid()) @db.Char(36)
+  eventId         String   @db.Char(36)
+  orgId           String   @db.Char(36)
+  attendeeId      String?  @db.Char(36)
+  orderNumber     String   @unique @db.VarChar(20) // human-readable: SRD-2026-0001
+  totalCents      Int
+  currency        String   @default("CHF") @db.VarChar(3)
+  status          String   @default("pending") @db.VarChar(30) // pending | paid | cancelled | refunded | partially_refunded
+  stripeSessionId String?  @db.VarChar(255)
+  stripePaymentId String?  @db.VarChar(255)
+  customerEmail   String?  @db.VarChar(255)
+  customerName    String?  @db.VarChar(255)
+  billingAddress  Json?
+  notes           String?  @db.Text
+  paidAt          DateTime? @db.DateTime(3)
+  cancelledAt     DateTime? @db.DateTime(3)
+  meta            Json?
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+  updatedAt       DateTime @updatedAt @db.DateTime(3)
+
+  event    Event         @relation(fields: [eventId], references: [id])
+  org      Organization  @relation(fields: [orgId], references: [id])
+  attendee Attendee?     @relation(fields: [attendeeId], references: [id])
+  items    OrderItem[]
+  tickets  Ticket[]
+
+  @@index([eventId])
+  @@index([orgId])
+  @@index([status])
+  @@index([stripeSessionId])
+  @@index([customerEmail])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String @id @default(uuid()) @db.Char(36)
+  orderId        String @db.Char(36)
+  ticketTypeId   String @db.Char(36)
+  quantity       Int
+  unitPriceCents Int
+  subtotalCents  Int
+  meta           Json?
+
+  order      Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// ============================================================================
+// ATTENDEES & TICKETS
+// ============================================================================
+
+model Attendee {
+  id        String   @id @default(uuid()) @db.Char(36)
+  eventId   String   @db.Char(36)
+  orgId     String   @db.Char(36)
+  email     String   @db.VarChar(255)
+  firstName String   @db.VarChar(100)
+  lastName  String   @db.VarChar(100)
+  wpUserId  Int?     // linked WP user, if any
+  phone     String?  @db.VarChar(50)
+  company   String?  @db.VarChar(255)
+  meta      Json?    // flexible attendee data
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  updatedAt DateTime @updatedAt @db.DateTime(3)
+
+  event           Event            @relation(fields: [eventId], references: [id])
+  org             Organization     @relation(fields: [orgId], references: [id])
+  orders          Order[]
+  tickets         Ticket[]
+  formSubmissions FormSubmission[]
+  checkIns        CheckIn[]
+
+  @@unique([eventId, email])
+  @@index([orgId])
+  @@index([email])
+  @@index([wpUserId])
+  @@map("attendees")
+}
+
+model Ticket {
+  id           String   @id @default(uuid()) @db.Char(36)
+  eventId      String   @db.Char(36)
+  orgId        String   @db.Char(36)
+  ticketTypeId String   @db.Char(36)
+  orderId      String?  @db.Char(36)
+  attendeeId   String?  @db.Char(36)
+  code         String   @unique @db.VarChar(50) // scannable code (QR payload)
+  status       String   @default("valid") @db.VarChar(30) // valid | checked_in | cancelled | transferred
+  checkedInAt  DateTime? @db.DateTime(3)
+  meta         Json?
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @db.DateTime(3)
+
+  event      Event        @relation(fields: [eventId], references: [id])
+  org        Organization @relation(fields: [orgId], references: [id])
+  ticketType TicketType   @relation(fields: [ticketTypeId], references: [id])
+  order      Order?       @relation(fields: [orderId], references: [id])
+  attendee   Attendee?    @relation(fields: [attendeeId], references: [id])
+  checkIns   CheckIn[]
+
+  @@index([eventId])
+  @@index([ticketTypeId])
+  @@index([attendeeId])
+  @@index([orderId])
+  @@index([status])
+  @@map("tickets")
+}
+
+// ============================================================================
+// FORMS & SUBMISSIONS
+// ============================================================================
+
+model FormSchema {
+  id        String   @id @default(uuid()) @db.Char(36)
+  eventId   String   @db.Char(36)
+  name      String   @db.VarChar(255)
+  version   Int      @default(1)
+  fields    Json     // versioned form field definitions (see arch doc §8)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+
+  event       Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketTypes TicketType[]
+  submissions FormSubmission[]
+
+  @@unique([eventId, name, version])
+  @@index([eventId])
+  @@map("form_schemas")
+}
+
+model FormSubmission {
+  id           String   @id @default(uuid()) @db.Char(36)
+  eventId      String   @db.Char(36)
+  attendeeId   String   @db.Char(36)
+  formSchemaId String   @db.Char(36)
+  data         Json     // attendee answers matching schema version
+  submittedAt  DateTime @default(now()) @db.DateTime(3)
+
+  event      Event      @relation(fields: [eventId], references: [id])
+  attendee   Attendee   @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  formSchema FormSchema @relation(fields: [formSchemaId], references: [id])
+
+  @@index([eventId])
+  @@index([attendeeId])
+  @@map("form_submissions")
+}
+
+// ============================================================================
+// CHECK-IN
+// ============================================================================
+
+model CheckIn {
+  id         String   @id @default(uuid()) @db.Char(36)
+  eventId    String   @db.Char(36)
+  ticketId   String   @db.Char(36)
+  attendeeId String?  @db.Char(36)
+  method     String   @db.VarChar(30) // qr_scan | manual | offline_sync | nfc
+  deviceId   String?  @db.VarChar(100) // identifies the scanning device
+  staffId    String?  @db.Char(36)     // who performed the check-in
+  location   String?  @db.VarChar(100) // door/gate identifier
+  direction  String   @default("in") @db.VarChar(10) // in | out (for re-entry tracking)
+  offline    Boolean  @default(false) // was this recorded offline and synced later?
+  timestamp  DateTime @default(now()) @db.DateTime(3)
+
+  event    Event     @relation(fields: [eventId], references: [id])
+  ticket   Ticket    @relation(fields: [ticketId], references: [id])
+  attendee Attendee? @relation(fields: [attendeeId], references: [id])
+
+  @@index([eventId])
+  @@index([ticketId])
+  @@index([timestamp])
+  @@map("check_ins")
+}
+
+// ============================================================================
+// AUTH & RBAC
+// ============================================================================
+
+model User {
+  id           String   @id @default(uuid()) @db.Char(36)
+  email        String   @unique @db.VarChar(255)
+  displayName  String   @db.VarChar(255)
+  wpUserId     Int?     @unique // linked WP user
+  avatarUrl    String?  @db.VarChar(500)
+  lastLoginAt  DateTime? @db.DateTime(3)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @db.DateTime(3)
+
+  roles     UserRole[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id     String  @id @default(uuid()) @db.Char(36)
+  userId String  @db.Char(36)
+  orgId  String? @db.Char(36)  // null = global scope
+  role   String  @db.VarChar(50) // super_admin | event_admin | box_office | gate_staff | viewer | etc.
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization? @relation(fields: [orgId], references: [id])
+
+  @@unique([userId, orgId, role])
+  @@index([userId])
+  @@index([orgId])
+  @@map("user_roles")
+}
+
+// ============================================================================
+// AUDIT & SYSTEM
+// ============================================================================
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Char(36)
+  eventId   String?  @db.Char(36)
+  userId    String?  @db.Char(36)
+  action    String   @db.VarChar(100) // order.created | ticket.checked_in | event.published | etc.
+  entity    String   @db.VarChar(50)  // order | ticket | event | attendee | etc.
+  entityId  String?  @db.Char(36)
+  detail    Json?    // before/after snapshot, extra context
+  ip        String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(500)
+  timestamp DateTime @default(now()) @db.DateTime(3)
+
+  event Event? @relation(fields: [eventId], references: [id])
+  user  User?  @relation(fields: [userId], references: [id])
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([timestamp])
+  @@map("audit_log")
+}
+
+model WpMapping {
+  id              String @id @default(uuid()) @db.Char(36)
+  wpEntityType    String @db.VarChar(50)  // user | corporate-member | sra_entity
+  wpEntityId      Int                      // WP post/user ID
+  sratixEntityType String @db.VarChar(50) // organization | attendee | user
+  sratixEntityId  String @db.Char(36)     // SRAtix UUID
+  orgId           String? @db.Char(36)
+  meta            Json?
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+
+  org Organization? @relation(fields: [orgId], references: [id])
+
+  @@unique([wpEntityType, wpEntityId])
+  @@unique([sratixEntityType, sratixEntityId])
+  @@index([orgId])
+  @@map("wp_mappings")
+}
+
+model Setting {
+  id      String  @id @default(uuid()) @db.Char(36)
+  scope   String  @db.VarChar(20) // global | org | event
+  orgId   String? @db.Char(36)
+  eventId String? @db.Char(36)
+  key     String  @db.VarChar(100)
+  value   Json
+
+  org   Organization? @relation(fields: [orgId], references: [id])
+  event Event?        @relation(fields: [eventId], references: [id])
+
+  @@unique([scope, orgId, eventId, key])
+  @@index([scope])
+  @@map("settings")
+}
