@@ -399,6 +399,18 @@ async function testBadgeRendering() {
 
   // Step 4: Render a test badge with satori
   try {
+    // Load bundled font
+    const fontPath = path.join(__dirname, 'fonts', 'Inter-Regular.woff');
+    let fontData;
+    try {
+      fontData = fs.readFileSync(fontPath);
+    } catch (e) {
+      return warn('Font file not found — needed for satori layout', {
+        expectedPath: fontPath,
+        error: e.message,
+      });
+    }
+
     const badgeMarkup = {
       type: 'div',
       props: {
@@ -442,7 +454,14 @@ async function testBadgeRendering() {
     const svg = await satori(badgeMarkup, {
       width: 400,
       height: 200,
-      fonts: [],  // Use system default — no custom fonts for this test
+      fonts: [
+        {
+          name: 'Inter',
+          data: fontData,
+          weight: 400,
+          style: 'normal',
+        },
+      ],
     });
     const svgSize = Buffer.byteLength(svg, 'utf-8');
 
