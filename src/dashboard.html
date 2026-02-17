@@ -367,8 +367,9 @@ function renderResults(data) {
     html += '<div class="test-grid">';
     for (const t of tests) {
       const icon = { pass: '✓', fail: '✗', warning: '!', skip: '–', error: '✗' }[t.status] || '?';
+      const autoExpand = (t.status === 'fail' || t.status === 'error') && t.details;
       html += `
-        <div class="test-card" onclick="this.classList.toggle('expanded')">
+        <div class="test-card${autoExpand ? ' expanded' : ''}" onclick="this.classList.toggle('expanded')">
           <div class="status-badge status-${t.status}">${icon}</div>
           <div class="test-body">
             <div class="test-name">${esc(t.name)}</div>

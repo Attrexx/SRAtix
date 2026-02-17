@@ -423,9 +423,22 @@ async function testChromium() {
     });
   } catch (e) {
     if (browser) try { await browser.close(); } catch {}
+
+    // Log full error for diagnosis via app log
+    console.error('[Puppeteer Test] Launch/render failed:', e.message);
+    if (e.stack) console.error('[Puppeteer Test] Stack:', e.stack);
+
+    // Try to detect missing shared libraries
+    let missingLibs = null;
+    try {
+      const lddOutput = execSync(`ldd "${execPath}" 2>&1 | grep "not found"`, { encoding: 'utf-8', timeout: 5000 });
+      missingLibs = lddOutput.trim().split('\n').filter(Boolean);
+    } catch {}
+
     return fail('Puppeteer launch or rendering failed', {
       error: e.message,
       chromiumPath: execPath,
+      missingLibs: missingLibs && missingLibs.length > 0 ? missingLibs : null,
       suggestion: 'Server may lack required system libraries for headless Chromium',
     });
   }
