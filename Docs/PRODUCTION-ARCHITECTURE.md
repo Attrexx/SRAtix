@@ -86,7 +86,7 @@ SRAtix is a **multi-component event ticketing and registration platform** built 
 │  └───────────┘ └──────────┘ └───────────┘ └──────────────┘  │
 │  ┌───────────┐ ┌──────────┐ ┌───────────┐ ┌──────────────┐  │
 │  │  Stripe   │ │ Email/   │ │ Badge Gen │ │  Wallet Pass │  │
-│  │  Gateway  │ │ SMS      │ │ (Puppeteer)│ │  Generator   │  │
+│  │  Gateway  │ │ SMS      │ │ (satori)  │ │  Generator   │  │
 │  └───────────┘ └──────────┘ └───────────┘ └──────────────┘  │
 │                                                               │
 │                  PostgreSQL + Redis                           │
@@ -211,10 +211,11 @@ Email:            Nodemailer + MJML templates
                   Abstracted behind EmailTransport interface
 SMS:              Twilio (future, behind same transport abstraction)
 Payments:         Stripe SDK (Checkout for v1 — minimal PCI scope, SAQ-A)
-Badge Gen:        Puppeteer (HTML/CSS templates → PDF)
-                  Templates = HTML files with placeholder tokens
-                  Supports images, color-coding, dynamic layouts
-                  NOTE: Chromium not pre-installed — use bundled Puppeteer
+Badge Gen:        satori + @resvg/resvg-js + pdf-lib
+                  satori: JSX-like markup → SVG (pure JS)
+                  @resvg/resvg-js: SVG → PNG (WASM, no native deps)
+                  pdf-lib: PNG → PDF (pure JS)
+                  CONFIRMED: Puppeteer fails on hosting (missing system libs)
 Wallet Passes:    passkit-generator (Apple) + google-wallet (Google)
 File Storage:     Cloudflare R2 (badge PDFs, invoice PDFs, uploads)
 CDN:              Cloudflare (free tier)
@@ -261,7 +262,7 @@ The deciding factors specific to this project:
 
 5. **Background workers** — BullMQ provides robust job queues without additional infrastructure (just Redis). Email blasts, badge rendering, invoice generation, data exports — all handled as background jobs.
 
-6. **Ecosystem** — Stripe SDK, Puppeteer, passkit-generator, google-wallet, MJML — all Node.js-native with mature, maintained packages.
+6. **Ecosystem** — Stripe SDK, satori, passkit-generator, google-wallet, MJML — all Node.js-native with mature, maintained packages.
 
 ---
 
@@ -673,7 +674,7 @@ CREATE TABLE invoice_ledger (
 - Organization billing details
 - Proforma vs final invoice distinction
 - Credit note generation for refunds
-- PDF rendering via Puppeteer (HTML → PDF with Swiss formatting)
+- PDF rendering via satori + @resvg/resvg-js + pdf-lib (Swiss formatting via template JSON)
 
 ---
 
@@ -681,27 +682,31 @@ CREATE TABLE invoice_ledger (
 
 ### Architecture
 
-Badges use **HTML/CSS templates rendered to PDF via Puppeteer**. This is chosen over PDFKit because:
-- Complex designs with images, color-coding, dynamic layouts are natural in HTML/CSS
-- Designers can create templates using standard web technologies
-- Hot-reload during template development
-- Same rendering engine for screen preview and print output
+Badges use a **satori + @resvg/resvg-js + pdf-lib** rendering pipeline. This is chosen over Puppeteer because:
+- Puppeteer requires system libraries (`libnspr4.so`, etc.) not available on Infomaniak shared hosting
+- satori is pure JS — zero native dependencies, works everywhere Node.js runs
+- @resvg/resvg-js uses WASM — cross-platform SVG→PNG without system libs
+- pdf-lib is pure JS — creates PDFs from PNG images
+- The full pipeline renders in ~1.8s (vs Puppeteer's ~3-5s browser launch)
+- Confirmed working on hosting: SVG (41KB) → PNG (9KB) → PDF (6KB)
 
 ### Template System
 
+Badge templates are **JSON-based layout definitions** rendered by satori:
+
 ```
 badge_templates/
-├── srd-2026-general.html      # HTML template with {{placeholder}} tokens
-├── srd-2026-vip.html
-├── srd-2026-exhibitor.html
-├── srd-2026-speaker.html
+├── srd-2026-general.json      # satori layout with dynamic tokens
+├── srd-2026-vip.json
+├── srd-2026-exhibitor.json
+├── srd-2026-speaker.json
 └── assets/
-    ├── backgrounds/           # Pre-made template backgrounds
+    ├── backgrounds/           # Base64 or URL-referenced backgrounds
     │   ├── general-bg.png
     │   ├── vip-bg.png
     │   └── exhibitor-bg.png
     ├── logos/
-    └── fonts/
+    └── fonts/                 # Bundled .woff/.ttf fonts for satori
 ```
 
 ### Dynamic Elements
@@ -721,17 +726,19 @@ Dashboard provides a visual badge designer where admins:
 - Select a background template
 - Position dynamic elements on a canvas (drag-and-drop)
 - Map form fields to badge regions
-- Preview with sample data
-- The builder generates the HTML template file underneath
+- Preview with sample data (live satori rendering)
+- The builder generates the JSON layout template underneath
 
 ### Rendering Pipeline
 
 ```
-Badge Request → BullMQ Job Queue → Puppeteer Worker
-  → Load HTML template
+Badge Request → BullMQ Job Queue → satori Worker
+  → Load JSON layout template
   → Inject attendee data into placeholders
   → Generate QR code (ticket_id + HMAC signature)
-  → Render to PDF (print-ready, specified dimensions)
+  → Render via satori (JSX → SVG)
+  → Convert via @resvg/resvg-js (SVG → PNG)
+  → Assemble via pdf-lib (PNG → PDF, print-ready dimensions)
   → Upload to Cloudflare R2
   → Store R2 URL in badge_renders table
   → Notify attendee (email with download link)
@@ -1282,7 +1289,7 @@ The registration forms intentionally collect data that powers event app personal
 
 **Goal**: Event-day operations and richer automation.
 
-- [ ] Badge template system (Puppeteer rendering pipeline)
+- [ ] Badge template system (satori rendering pipeline)
 - [ ] Badge builder UI (visual editor)
 - [ ] Check-in system (online — dashboard + scanner page)
 - [ ] Staff/volunteer role management
@@ -1341,7 +1348,7 @@ The registration forms intentionally collect data that powers event app personal
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|------|-----------|--------|------------|
 | 1 | **Scope creep** — Swicket has years of development | High | High | Strict MVP phasing. Launch with Phase 1 only. Resist feature additions until phase is complete. |
-| 2 | **Hosting limitations** — Node.js hosting may restrict WebSockets, long-running processes, or Redis | Low | Medium | **TESTED 2026-02-17**: WebSockets, SSE, worker threads, child processes, outbound HTTPS, file I/O all confirmed working. Redis/PostgreSQL not yet configured — need to verify hosting DB availability. Chromium not pre-installed — use bundled Puppeteer or lighter alternative. |
+| 2 | **Hosting limitations** — Node.js hosting may restrict WebSockets, long-running processes, or Redis | Low | Medium | **TESTED 2026-02-17**: All capabilities confirmed. MariaDB 10.6 + Upstash Redis connected. Badge rendering via satori pipeline (Puppeteer blocked by missing system libs). |
 | 3 | **Single point of failure** — Server down = both sites lose ticketing | Medium | High | PM2 auto-restart, health checks, Cloudflare caching for static assets, graceful degradation in WP plugins (show "temporarily unavailable" message). |
 | 4 | **Data sync conflicts** — WP and Server disagree on user/entity state | Medium | Medium | Event-driven sync with idempotent operations. Server always authoritative for ticketing data. WP always authoritative for WP content. |
 | 5 | **Stripe PCI compliance** — handling card data | Low | High | Stripe Checkout (hosted) = SAQ-A (minimal PCI scope). Never touch raw card numbers. |
@@ -1373,10 +1380,10 @@ Before building the full Server, verify what the hosting platform actually suppo
 | 6 | **Long-running process** | Server stays alive after initial request | PM2 process manager, or hosting may kill idle processes |
 | 7 | **Background workers** | Spawn child process or worker thread | In-process job handling (less ideal but functional) |
 | 8 | **File system write** | Write temp files (badge PDFs, exports) | Write to Cloudflare R2 directly (stream) |
-| 9 | **Puppeteer / Chromium** | Attempt headless Chrome launch for PDF generation | External PDF generation service, or pre-render on dev machine |
+| 9 | **Badge rendering** | satori + resvg + pdf-lib pipeline confirmed | N/A — confirmed working |
 | 10 | **Outbound HTTPS** | Call external APIs (Stripe, SMTP, Cloudflare R2) | — (if blocked, hosting is unsuitable for this project) |
 | 11 | **Environment variables** | Read from `process.env` | `.env` file loading via `dotenv` |
-| 12 | **Process memory** | Check available memory (Puppeteer needs ~200MB+) | If constrained, use lighter PDF libraries |
+| 12 | **Process memory** | 257GB available, satori uses ~50MB (vs Puppeteer's ~200MB+) | N/A — confirmed sufficient |
 | 13 | **Cron / scheduled tasks** | `node-cron` or hosting-provided scheduler | Manual triggers only |
 | 14 | **Port binding** | Can the app bind to a custom port? Or must it use a specific one? | Adapt to hosting's port assignment |
 | 15 | **HTTPS / TLS termination** | Does hosting handle SSL, or must the app? | Usually hosting/Cloudflare handles this |
@@ -1466,7 +1473,7 @@ SRAtix/
 | 7 | OAuth2-lite token exchange for WP↔Server auth | Clean upgrade path to OIDC, token scoping per-event/role, no long-lived browser tokens | 2026-02-17 |
 | 8 | Stripe Checkout (hosted) for Phase 1 | Minimal PCI scope (SAQ-A), handles SCA/3DS, fastest to implement | 2026-02-17 |
 | 9 | Append-only financial ledger | Dispute resolution, audit compliance, Swiss accounting requirements, independent of Stripe records | 2026-02-17 |
-| 10 | Puppeteer for badge generation | Complex designs with images/colors/dynamic layout natural in HTML/CSS, same rendering for screen + print | 2026-02-17 |
+| 10 | satori + resvg + pdf-lib for badge generation | Complex designs with flexbox layout, images, color-coding via satori JSX markup. Puppeteer blocked by missing system libs on shared hosting. Confirmed: SVG→PNG→PDF in 1.8s. | 2026-02-17 |
 | 11 | One dashboard with role-based context switching | Reduces frontend maintenance, consistent UX, single deployment | 2026-02-17 |
 | 12 | Encrypted check-in packs + signed QR codes for offline validation | True offline QR validation via HMAC, scoped data download, encryption at rest on device | 2026-02-17 |
 | 13 | Email/SMS transport abstraction from day 1 | SMTP initially, swap to SendGrid/Postmark/Twilio via config change, not refactor | 2026-02-17 |
@@ -1475,7 +1482,7 @@ SRAtix/
 | 16 | Capability matrix for configuration (3 tiers) | Prevents settings bloat, UI config for frequently changed items only, promotes from code to UI when proven necessary | 2026-02-17 |
 | 17 | PWA-first for event app, API designed for native readiness | Shared web stack, no app store approval, clean JSON APIs enable React Native/Flutter later | 2026-02-17 |
 | 18 | Control + Client plugins kept thin | Connectors only, all business logic in Server, prevents WordPress from becoming authoritative for ticketing data | 2026-02-17 |
-| 19 | Hosting capabilities confirmed via Tester | Node v24.13.0, Linux x64, 64 CPUs, 257GB RAM, WebSockets + SSE both working, worker threads + child processes confirmed, outbound HTTPS + DNS clear, crypto (HMAC+AES) functional, process persistence verified. Chromium requires bundled Puppeteer install. | 2026-02-17 |
+| 19 | Hosting capabilities confirmed via Tester | Node v24.13.0, Linux x64, 64 CPUs, 257GB RAM, WebSockets + SSE both working, worker threads + child processes confirmed, outbound HTTPS + DNS clear, crypto (HMAC+AES) functional, process persistence verified. MariaDB 10.6 + Upstash Redis connected. Badge rendering via satori (Puppeteer blocked). | 2026-02-17 |
 | 20 | MariaDB 10.6 instead of PostgreSQL | Hosting provides MariaDB only (shared hosting). Fully capable for SRAtix needs. Prisma supports via `mysql` provider. JSON columns + generated columns compensate for lack of JSONB. Upgrade path to PostgreSQL on Cloud Server exists. | 2026-02-17 |
 | 21 | Upstash Redis (free tier) instead of local Redis | Redis not available on shared hosting. Upstash free tier (10k cmds/day, 256MB, EU region) sufficient for dev + early production. BullMQ compatible. Upgrade path to local Redis on Cloud Server. | 2026-02-17 |
 
@@ -1518,7 +1525,7 @@ Tester deployed to `tix.swiss-robotics.org` via Git → Infomaniak Node.js hosti
 | 12 | TLS / HTTPS | **PASS** | TLS module available, external termination expected |
 | 13 | MariaDB | **PASS** | Connected — ks704_tix (MariaDB 10.6.20), 545ms |
 | 14 | Redis (Upstash) | **PASS** | Connected — Redis 8.2.0, 650ms |
-| 15 | Chromium / Puppeteer | **WARN** | Not pre-installed on server |
+| 15 | Badge Rendering (satori) | **PASS** | SVG (41KB) → PNG (9KB) → PDF (6KB), no native deps, 1.8s |
 | 16 | Disk Space | **PASS** | Disk info retrieved |
 | 17 | Process Persistence | **WARN** | Minor heartbeat drift (101/104s) — cosmetic |
 
@@ -1533,8 +1540,8 @@ Tester deployed to `tix.swiss-robotics.org` via Git → Infomaniak Node.js hosti
 
 1. **SSE + WebSocket both confirmed** — SSE-first strategy validated; WebSocket available for future event app
 2. **Worker threads work** — can use for CPU-intensive tasks (badge rendering, data processing) within same process
-3. **Child processes work** — Puppeteer can spawn headless Chromium as child process
-4. **Chromium not pre-installed** — must install `puppeteer` (not `puppeteer-core`) to bundle its own Chromium binary, OR use lighter PDF alternatives (`pdf-lib`, `satori`). Given 257GB RAM and writable filesystem, bundled Puppeteer likely works.
+3. **Child processes work** — can spawn child Node processes for background tasks
+4. **Badge rendering: satori + resvg + pdf-lib** — Puppeteer fails on shared hosting (missing `libnspr4.so` + many other system libs, no `apt-get`). Replaced with pure JS/WASM pipeline: `satori` (JSX→SVG) → `@resvg/resvg-js` (SVG→PNG, WASM) → `pdf-lib` (PNG→PDF). Confirmed working: 41KB SVG, 9KB PNG, 6KB PDF in 1.8s. Zero native dependencies.
 5. **MariaDB 10.6 connectivity confirmed** — Connected to `ks704_tix` on `ks704.myd.infomaniak.com:3306`. Prisma mysql provider ready.
 6. **Upstash Redis connectivity confirmed** — Redis 8.2.0 via TLS (`rediss://`), 650ms latency (EU region). BullMQ compatible.
 7. **Process persistence confirmed** — minor heartbeat drift is cosmetic, not a reliability concern
@@ -1548,7 +1555,7 @@ Tester deployed to `tix.swiss-robotics.org` via Git → Infomaniak Node.js hosti
 - [x] ~~Create MariaDB database for SRAtix on hosting panel~~ → `ks704_tix` created
 - [x] ~~Set up Upstash Redis account (free tier, EU region)~~ → `topical-kite-7164.upstash.io`
 - [x] ~~Test MariaDB + Upstash Redis connectivity from Tester app~~ → Both PASS
-- [ ] Test bundled Puppeteer Chromium launch on this hosting
+- [x] ~~Test badge rendering on hosting~~ → Puppeteer fails (missing system libs). satori + resvg + pdf-lib pipeline confirmed working.
 - [ ] Confirm long-term process persistence (hours/days, not just minutes)
 - [ ] Check if hosting auto-restarts crashed processes or if PM2 is needed
 
