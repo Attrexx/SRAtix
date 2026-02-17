@@ -1483,7 +1483,9 @@ SRAtix/
 
 ## 28. Hosting Test Results (2026-02-17)
 
-Tester deployed to `tix.swiss-robotics.org` via Git → hosting auto-deploy.
+Tester deployed to `tix.swiss-robotics.org` via Git → Infomaniak Node.js hosting.
+
+**Deployment method**: Git push to GitHub → change build command to `git pull origin main && npm install` → click Build → app auto-starts with `npm start`. No env-vars UI in hosting panel — using committed `.env` file with `dotenv` (private repo, temporary tester).
 
 ### Server Environment
 
@@ -1493,31 +1495,32 @@ Tester deployed to `tix.swiss-robotics.org` via Git → hosting auto-deploy.
 | Platform | Linux x64 |
 | CPUs | 64 (shared hosting node) |
 | Total Memory | 257,431 MB (~251 GB, shared) |
-| Free Memory | 217,458 MB |
-| Heap Used | 13 MB |
-| Process persistence | Confirmed — heartbeat drift < 1s |
+| Free Memory | 217,517 MB |
+| Heap Used | 17 MB |
+| Site path | `/sites/tix.swiss-robotics.org` |
+| Process persistence | Minor heartbeat drift (101 beats / 104s) — not concerning |
 
-### Capability Test Results
+### Capability Test Results — Final (15 Pass / 0 Fail / 2 Warn / 0 Skip)
 
 | # | Test | Status | Details |
 |---|------|--------|---------|
 | 1 | Node.js Runtime | **PASS** | v24.13.0 — fully supported |
-| 2 | Environment Variables | **PASS** | 30 env vars accessible |
+| 2 | Environment Variables | **PASS** | 32 env vars accessible |
 | 3 | File System (R/W) | **PASS** | Temp dir + CWD both writable |
 | 4 | Memory | **PASS** | 257GB total, 217GB free |
 | 5 | Crypto (HMAC + AES) | **PASS** | HMAC-SHA256 + AES-256-GCM functional |
 | 6 | Worker Threads | **PASS** | Executed computation in worker |
 | 7 | Child Process | **PASS** | Spawned child Node process |
 | 8 | Scheduling (setInterval) | **PASS** | 3 ticks in 301ms (expected ~300ms) |
-| 9 | Native fetch() | **PASS** | HTTP 200 from httpbin.org |
-| 10 | Outbound HTTPS | **PASS** | httpbin.org + api.stripe.com reachable |
-| 11 | DNS Resolution | **PASS** | api.stripe.com, smtp.gmail.com, github.com all resolved |
+| 9 | Native fetch() | **PASS** | HTTP 200, 558ms |
+| 10 | Outbound HTTPS | **PASS** | All external endpoints reachable, 515ms |
+| 11 | DNS Resolution | **PASS** | All targets resolved, 2ms |
 | 12 | TLS / HTTPS | **PASS** | TLS module available, external termination expected |
-| 13 | PostgreSQL | **SKIP → N/A** | Hosting provides MariaDB only. Using MariaDB 10.6 instead. |
-| 14 | Redis | **SKIP → EXTERNAL** | Not available on shared hosting. Using Upstash Redis (free tier). |
+| 13 | MariaDB | **PASS** | Connected — ks704_tix (MariaDB 10.6.20), 545ms |
+| 14 | Redis (Upstash) | **PASS** | Connected — Redis 8.2.0, 650ms |
 | 15 | Chromium / Puppeteer | **WARN** | Not pre-installed on server |
 | 16 | Disk Space | **PASS** | Disk info retrieved |
-| 17 | Process Persistence | **PASS** | 25 heartbeats in 27s — persistent |
+| 17 | Process Persistence | **WARN** | Minor heartbeat drift (101/104s) — cosmetic |
 
 ### Client-Side Connection Tests (Browser → Server)
 
@@ -1532,18 +1535,19 @@ Tester deployed to `tix.swiss-robotics.org` via Git → hosting auto-deploy.
 2. **Worker threads work** — can use for CPU-intensive tasks (badge rendering, data processing) within same process
 3. **Child processes work** — Puppeteer can spawn headless Chromium as child process
 4. **Chromium not pre-installed** — must install `puppeteer` (not `puppeteer-core`) to bundle its own Chromium binary, OR use lighter PDF alternatives (`pdf-lib`, `satori`). Given 257GB RAM and writable filesystem, bundled Puppeteer likely works.
-5. **Database** — Hosting provides MariaDB 10.6 only (no PostgreSQL). MariaDB fully adequate. Prisma supports it.
-6. **Redis** — Not available on shared hosting. Using Upstash Redis free tier (EU region, BullMQ compatible).
-6. **Process persistence confirmed** — no idle timeout killing observed in initial test period
-7. **Outbound connectivity unrestricted** — Stripe, SMTP, Cloudflare R2, external APIs all reachable
+5. **MariaDB 10.6 connectivity confirmed** — Connected to `ks704_tix` on `ks704.myd.infomaniak.com:3306`. Prisma mysql provider ready.
+6. **Upstash Redis connectivity confirmed** — Redis 8.2.0 via TLS (`rediss://`), 650ms latency (EU region). BullMQ compatible.
+7. **Process persistence confirmed** — minor heartbeat drift is cosmetic, not a reliability concern
+8. **Outbound connectivity unrestricted** — Stripe, SMTP, Cloudflare R2, external APIs all reachable
+9. **No env-vars panel** — Infomaniak Node.js hosting has no UI for environment variables. Production must use committed `.env` (private repo) or runtime config file loaded by `dotenv`.
 
 ### Outstanding Items
 
 - [x] ~~Verify PostgreSQL availability~~ → Not available. Using MariaDB 10.6.
 - [x] ~~Verify Redis availability~~ → Not available on shared hosting. Using Upstash Redis free tier.
-- [ ] Create MariaDB database for SRAtix on hosting panel
-- [ ] Set up Upstash Redis account (free tier, EU region)
-- [ ] Test MariaDB + Upstash Redis connectivity from Tester app
+- [x] ~~Create MariaDB database for SRAtix on hosting panel~~ → `ks704_tix` created
+- [x] ~~Set up Upstash Redis account (free tier, EU region)~~ → `topical-kite-7164.upstash.io`
+- [x] ~~Test MariaDB + Upstash Redis connectivity from Tester app~~ → Both PASS
 - [ ] Test bundled Puppeteer Chromium launch on this hosting
 - [ ] Confirm long-term process persistence (hours/days, not just minutes)
 - [ ] Check if hosting auto-restarts crashed processes or if PM2 is needed

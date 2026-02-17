@@ -361,56 +361,74 @@ async function testRedis() {
 }
 
 async function testChromium() {
-  const possiblePaths = [
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/local/bin/chromium',
-    '/snap/bin/chromium',
-  ];
-
-  // Check which command
-  const checkCmd = process.platform === 'win32' ? 'where chrome' : 'which chromium-browser || which chromium || which google-chrome 2>/dev/null';
-
-  let foundPath = null;
-  let version = null;
-
-  // Try `which` first
+  let puppeteer;
   try {
-    foundPath = execSync(checkCmd, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
-  } catch {}
-
-  // Try known paths
-  if (!foundPath) {
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        foundPath = p;
-        break;
-      }
-    }
+    puppeteer = require('puppeteer');
+  } catch (e) {
+    return warn(
+      'Puppeteer not installed — badge generation unavailable',
+      { error: e.message, suggestion: 'Add puppeteer to dependencies' }
+    );
   }
 
-  if (foundPath) {
-    try {
-      version = execSync(`"${foundPath}" --version`, { encoding: 'utf-8', timeout: 3000 }).trim();
-    } catch {}
-    return pass(`Chromium found at ${foundPath}`, { path: foundPath, version });
+  // Get the bundled Chromium path
+  let execPath;
+  try {
+    execPath = puppeteer.executablePath();
+    if (!fs.existsSync(execPath)) {
+      return warn('Puppeteer installed but Chromium binary not found', {
+        expectedPath: execPath,
+        suggestion: 'Chromium download may have failed during npm install',
+      });
+    }
+  } catch (e) {
+    return warn('Could not determine Chromium path', { error: e.message });
   }
 
-  // Check if puppeteer is installed (would bring its own Chromium)
+  // Actually launch Chromium and render a page
+  let browser;
   try {
-    const puppeteer = require('puppeteer');
-    return pass('Puppeteer installed with bundled Chromium', { bundled: true });
-  } catch {}
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      timeout: 30000,
+    });
 
-  return warn(
-    'No Chromium found — Puppeteer badge generation will need a bundled Chromium install or an alternative approach',
-    {
-      searched: possiblePaths,
-      suggestion: 'Install puppeteer as a dependency (it bundles Chromium) or use a lighter PDF library',
-    }
-  );
+    const page = await browser.newPage();
+    await page.setContent(`
+      <html><body style="width:400px;height:200px;display:flex;align-items:center;justify-content:center;font-family:sans-serif;background:#1a1a2e;color:#00ff88;">
+        <div style="text-align:center">
+          <h1 style="margin:0">SRAtix Badge Test</h1>
+          <p style="margin:8px 0 0">Puppeteer rendering works!</p>
+        </div>
+      </body></html>
+    `);
+
+    // Take a screenshot to prove rendering works
+    const screenshot = await page.screenshot({ type: 'png' });
+    const screenshotSize = screenshot.length;
+
+    // Also test PDF generation (needed for badges)
+    const pdf = await page.pdf({ width: '400px', height: '200px' });
+    const pdfSize = pdf.length;
+
+    const version = await browser.version();
+    await browser.close();
+
+    return pass(`Puppeteer works — rendered screenshot (${screenshotSize} bytes) + PDF (${pdfSize} bytes)`, {
+      chromiumPath: execPath,
+      browserVersion: version,
+      screenshotBytes: screenshotSize,
+      pdfBytes: pdfSize,
+    });
+  } catch (e) {
+    if (browser) try { await browser.close(); } catch {}
+    return fail('Puppeteer launch or rendering failed', {
+      error: e.message,
+      chromiumPath: execPath,
+      suggestion: 'Server may lack required system libraries for headless Chromium',
+    });
+  }
 }
 
 async function testProcessPersistence(ctx) {
