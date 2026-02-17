@@ -9,8 +9,10 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
-    // Prisma 7 library engine reads DATABASE_URL from environment
-    super();
+    super({
+      datasourceUrl: process.env.DATABASE_URL,
+      log: ['warn', 'error'],
+    });
   }
 
   async onModuleInit() {
