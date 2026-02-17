@@ -25,7 +25,11 @@ async function bootstrap() {
   try {
     const app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
-      new FastifyAdapter({ logger: true, trustProxy: true }),
+      new FastifyAdapter({
+        logger: true,
+        trustProxy: true,
+        ignoreTrailingSlash: true,  // Infomaniak proxy appends trailing slashes
+      }),
     );
 
     // Global validation pipe — DTOs auto-validated
