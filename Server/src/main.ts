@@ -42,8 +42,10 @@ async function bootstrap() {
       }),
     );
 
-    // NO global prefix for this test — routes are exactly as decorated
-    // app.setGlobalPrefix('api', { exclude: ['health'] });
+    // Global prefix — all API routes under /api, health excluded
+    app.setGlobalPrefix('api', {
+      exclude: ['health'],
+    });
 
     // CORS — allow WP sites to call the API
     app.enableCors({
