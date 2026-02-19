@@ -81,8 +81,9 @@ async function bootstrap() {
         wildcard: false,     // Don't intercept all routes — let NestJS handle /api/*
       });
 
-      // SPA fallback: serve index.html for any unmatched GET request
-      // (client-side routing handles /dashboard/events/[id]/... etc.)
+      // SPA fallback: serve the correct pre-rendered HTML for unmatched routes.
+      // Static export only generates pages for the '_' placeholder ID.
+      // For real event IDs, we serve the '_' page and let client JS handle it.
       const indexHtml = readFileSync(join(dashboardDir, 'index.html'), 'utf-8');
       fastify.setNotFoundHandler((request, reply) => {
         // Only serve SPA fallback for navigation requests (not API or assets)
@@ -92,6 +93,34 @@ async function bootstrap() {
           !request.url.startsWith('/health') &&
           !request.url.startsWith('/webhooks/')
         ) {
+          const urlPath = request.url.split('?')[0].replace(/\/$/, '');
+
+          // Map /dashboard/events/<realId>/... → /dashboard/events/_/.../index.html
+          const eventRouteMatch = urlPath.match(
+            /^\/dashboard\/events\/[^/]+(\/.*)?$/,
+          );
+          if (eventRouteMatch) {
+            const subpath = eventRouteMatch[1] || '';
+            const placeholderHtml = join(
+              dashboardDir, 'dashboard', 'events', '_',
+              subpath.replace(/^\//, ''), 'index.html',
+            );
+            if (existsSync(placeholderHtml)) {
+              return reply
+                .type('text/html')
+                .send(readFileSync(placeholderHtml, 'utf-8'));
+            }
+          }
+
+          // Fallback: try exact path match (e.g. /dashboard/index.html)
+          const exactHtml = join(dashboardDir, urlPath, 'index.html');
+          if (existsSync(exactHtml)) {
+            return reply
+              .type('text/html')
+              .send(readFileSync(exactHtml, 'utf-8'));
+          }
+
+          // Final fallback: root index.html
           reply.type('text/html').send(indexHtml);
         } else {
           reply.code(404).send({ statusCode: 404, message: 'Not Found' });
