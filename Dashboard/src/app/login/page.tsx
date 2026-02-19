@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
@@ -8,8 +8,24 @@ import { useAuth } from '@/lib/auth';
  * Login page — supports two flows:
  * 1. Auto-login via ?token=...&refresh=... URL params (from WP Control plugin redirect)
  * 2. Email + password form (app-native accounts)
+ *
+ * Wrapped in <Suspense> because useSearchParams() requires it for static export.
  */
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="animate-spin text-3xl">⏳</div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loginWithPassword, loginWithJwt, isLoading } = useAuth();
