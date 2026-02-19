@@ -45,8 +45,8 @@ SRAtix/
 │       ├── ticket-types/   # CRUD at /api/events/:eventId/ticket-types
 │       ├── orders/         # CRUD at /api/orders with auto-generated order numbers
 │       └── attendees/      # CRUD at /api/attendees with email lookup
-├── Control/               # WP plugin — NOT YET STARTED
-└── Client/                # WP plugin — NOT YET STARTED
+├── sratix-control/        # WP plugin — NOT YET STARTED
+└── sratix-client/         # WP plugin — NOT YET STARTED
 ```
 
 ## Infrastructure — CONFIRMED WORKING

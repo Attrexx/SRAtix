@@ -1092,7 +1092,7 @@ Platform Level
 | **Data minimization** | Form builder enforces "required justification" for each field (`requiredJustification` in schema) |
 | **Consent management** | Granular consent flags per data use (marketing, profiling, app personalization) stored with timestamp in form submissions |
 | **Lawful basis** | Each data collection point documents its legal basis (contract performance, legitimate interest, consent) |
-| **Right to erasure** | Server API endpoint cascades deletion: attendee data + form submissions + Stripe customer deletion (via API) + badge renders (R2 cleanup) + notify Control/Client plugins |
+| **Right to erasure** | Server API endpoint cascades deletion: attendee data + form submissions + Stripe customer deletion (via API) + badge renders (R2 cleanup) + notify sratix-control/sratix-client plugins |
 | **Right to access** | API endpoint returns all data held about an individual in structured JSON |
 | **Data portability** | JSON/CSV export endpoint for attendee's own data (machine-readable) |
 | **Processing records** | Audit log table: who accessed what, when, from where, for what purpose |
@@ -1432,7 +1432,7 @@ SRAtix/
 │   │   └── sync.worker.ts
 │   └── README.md
 │
-├── Control/                       # SRAtix Control (WP Plugin for swiss-robotics.org)
+├── sratix-control/                # SRAtix Control (WP Plugin for swiss-robotics.org)
 │   ├── sratix-control.php         # Plugin bootstrap
 │   ├── includes/
 │   │   ├── class-sratix-control.php
@@ -1444,7 +1444,7 @@ SRAtix/
 │   ├── admin/
 │   └── README.md
 │
-├── Client/                        # SRAtix Client (WP Plugin for swissroboticsday.ch)
+├── sratix-client/                 # SRAtix Client (WP Plugin for swissroboticsday.ch)
 │   ├── sratix-client.php          # Plugin bootstrap
 │   ├── includes/
 │   │   ├── class-sratix-client.php

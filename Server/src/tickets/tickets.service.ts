@@ -142,7 +142,7 @@ export class TicketsService {
       })),
     );
 
-    // Fire outgoing webhook: ticket.issued for WP Client/Control plugins
+    // Fire outgoing webhook: ticket.issued for WP sratix-client/sratix-control plugins
     for (const t of issued) {
       this.outgoingWebhooks
         .dispatch(order.orgId, order.eventId, 'ticket.issued', {

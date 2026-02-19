@@ -54,12 +54,12 @@ Server-Sent Events implementation following PRODUCTION-ARCHITECTURE.md §13:
 - Heartbeat stream keeps connections alive through Infomaniak proxy
 - Role-scoped: check-in feed allows gate_staff/scanner, stats restricted to event_admin/super_admin
 
-### 4. SRAtix Control WP Plugin (`Control/`)
+### 4. SRAtix Control WP Plugin (`sratix-control/`)
 
 Thin WP connector for swiss-robotics.org — follows standard SRA plugin architecture:
 
 ```
-Control/
+sratix-control/
 ├── sratix-control.php              # Main bootstrap, activation (creates wp_sratix_mappings table)
 ├── admin/css/admin.css              # Admin styles
 └── includes/
@@ -78,12 +78,12 @@ Control/
 - Health check on settings page (pings Server's `/health` endpoint)
 - Dashboard quick-link to SRAtix Server UI
 
-### 5. SRAtix Client WP Plugin (`Client/`)
+### 5. SRAtix Client WP Plugin (`sratix-client/`)
 
 Thin WP connector for swissroboticsday.ch — public ticket purchase:
 
 ```
-Client/
+sratix-client/
 ├── sratix-client.php               # Main bootstrap, activation
 ├── public/
 │   ├── css/sratix-client.css        # Responsive ticket cards, badges, messages
@@ -143,11 +143,11 @@ SRAtix/
 │       ├── attendees/
 │       ├── payments/                  ← NEW (3 files)
 │       └── sse/                       ← NEW (3 files)
-├── Control/                           ← NEW (7 files)
+├── sratix-control/                    ← NEW (7 files)
 │   ├── sratix-control.php
 │   ├── admin/css/admin.css
 │   └── includes/
-└── Client/                            ← NEW (8 files)
+└── sratix-client/                     ← NEW (8 files)
     ├── sratix-client.php
     ├── public/css/sratix-client.css
     ├── public/js/sratix-embed.js
@@ -169,8 +169,8 @@ git pull origin main && npm install && npm run build
 ```
 
 **WP plugins:**
-- Copy `Control/` to `wp-content/plugins/sratix-control/` on swiss-robotics.org
-- Copy `Client/` to `wp-content/plugins/sratix-client/` on swissroboticsday.ch
+- Copy `sratix-control/` to `wp-content/plugins/sratix-control/` on swiss-robotics.org
+- Copy `sratix-client/` to `wp-content/plugins/sratix-client/` on swissroboticsday.ch
 - Activate and configure API URL + secrets in each plugin's settings page
 
 ## What's Next (Phase 2)
@@ -188,7 +188,7 @@ git pull origin main && npm install && npm run build
 
 ## Technical Debt / TODOs
 
-- `stripe-webhook.controller.ts` — TODO: issue tickets on payment, send confirmation email, fire webhook to Control/Client
+- `stripe-webhook.controller.ts` — TODO: issue tickets on payment, send confirmation email, fire webhook to sratix-control/sratix-client
 - `auth.service.ts` — TODO: implement `wp_mappings` lookup and proper user creation on first token exchange
 - `sse.service.ts` — upgrade to Redis Pub/Sub for multi-process deployments
 - `payments.controller.ts` — ticket type names in line items are currently IDs; resolve to names via service
