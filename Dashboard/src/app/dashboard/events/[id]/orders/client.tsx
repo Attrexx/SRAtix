@@ -6,6 +6,7 @@ import { api, type Order } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { useSSE } from '@/lib/sse';
+import { Icons } from '@/components/icons';
 
 export default function OrdersPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -84,7 +85,7 @@ export default function OrdersPage() {
             color: 'var(--color-text)',
           }}
         >
-          📤 Export CSV
+                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
         </a>
       </div>
 

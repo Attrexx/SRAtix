@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api, type Event } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
 import { StatCard } from '@/components/stat-card';
+import { Icons } from '@/components/icons';
 
 function generateSlug(name: string): string {
   return name
@@ -121,22 +122,22 @@ export default function EventsPage() {
       {/* Platform Overview Stats */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon="🎪"
+          icon={<Icons.Calendar size={20} />}
           label="Total Events"
           value={events.length}
         />
         <StatCard
-          icon="📅"
+          icon={<Icons.Activity size={20} />}
           label="Active Events"
           value={events.filter((e) => e.status === 'active' || e.status === 'published').length}
         />
         <StatCard
-          icon="🟢"
+          icon={<Icons.Clock size={20} />}
           label="Upcoming"
           value={events.filter((e) => new Date(e.startDate) > new Date()).length}
         />
         <StatCard
-          icon="✅"
+          icon={<Icons.CheckCircle size={20} />}
           label="Completed"
           value={events.filter((e) => e.status === 'completed' || (e.endDate && new Date(e.endDate) < new Date())).length}
         />
@@ -151,7 +152,7 @@ export default function EventsPage() {
             border: '1px solid var(--color-border)',
           }}
         >
-          <span className="text-5xl">🎪</span>
+          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Calendar size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
             No events yet
           </p>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { api, type Attendee } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
+import { Icons } from '@/components/icons';
 
 export default function AttendeesPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -130,7 +131,7 @@ export default function AttendeesPage() {
               color: 'var(--color-text)',
             }}
           >
-            📤 Export CSV
+                        <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
           </a>
           <button
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
@@ -178,7 +179,7 @@ export default function AttendeesPage() {
                 className="rounded px-2 py-1 text-xs"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                ✏️
+                <Icons.Edit size={14} />
               </button>
             ),
           },

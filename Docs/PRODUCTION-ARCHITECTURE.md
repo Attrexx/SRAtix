@@ -1568,3 +1568,114 @@ Tester deployed to `tix.swiss-robotics.org` via Git → Infomaniak Node.js hosti
 ---
 
 *This document is the canonical reference for SRAtix architecture. Update it as decisions evolve. All implementation should align with the principles and patterns documented here.*
+
+---
+
+## 28. Implementation Log
+
+### Session 7 — 2026-02-19 — Dashboard Feature Build
+
+#### Changes Delivered
+
+**Server-side:**
+
+| Area | What Changed | Files |
+|------|-------------|-------|
+| Audit Log | REST controller exposing `GET /api/audit-log/event/:eventId` (paginated, filterable by action) and `GET /api/audit-log/entity/:entity/:entityId` | `Server/src/audit-log/audit-log.controller.ts` (NEW), `audit-log.module.ts` |
+| Attendees | Added `phone` and `company` fields to create/update DTOs; fixed super_admin `orgId: null` crash by importing `EventsService.getOrCreateDefaultOrgId()` | `Server/src/attendees/attendees.controller.ts`, `attendees.service.ts`, `attendees.module.ts` |
+| Events | Auto-creates "Swiss Robotics Association" default org (`slug: sra-default`) when super_admin creates first event; `findAll`/`findOne`/`update` accept optional orgId for super_admins | `Server/src/events/events.service.ts`, `events.controller.ts` |
+| Settings | Full CRUD settings API (key-value, grouped, encrypted secrets) | `Server/src/settings/settings.service.ts`, `settings.controller.ts`, `settings.module.ts` |
+
+**Dashboard:**
+
+| Page | Status | Description |
+|------|--------|-------------|
+| **Ticket Types** | NEW | Full management page: create/edit modal (name, description, price, capacity, sales window, max per order), status toggle (active ↔ paused), capacity progress bars. Route: `/dashboard/events/:id/ticket-types` |
+| **Activity Log** | NEW | Paginated audit trail with action-type filter dropdown, expandable detail JSON, IP/user-agent metadata, load-more pagination. Route: `/dashboard/events/:id/audit-log` |
+| **Promo Codes** | ENHANCED | Added create/edit modal (code, discount type percentage/fixed_amount, value, usage limit, per-customer limit, validity dates), deactivate toggle per row |
+| **Attendees** | ENHANCED | Added "Add Attendee" button with create modal, inline edit via row click or edit button (first name, last name, email, phone, company) |
+| **Export** | ENHANCED | Added 4th export card for Form Submissions; grid changed to 4-column layout |
+| **Settings** | NEW | Platform settings page with grouped sections (Stripe, Email, Branding, Security, General), encrypted secret handling with reveal/hide toggle |
+| **Create Event** | NEW | Modal from Events list page to create new events |
+| **Platform Stats** | NEW | StatCards on Events overview page (total events, active, upcoming, completed) |
+| **Analytics** | REWRITTEN | Full B2B convention analytics page with 10+ KPIs (see §28.1) |
+| **Overview** | ENHANCED | Event overview now shows StatCards (tickets sold, orders, revenue, check-ins) |
+
+**Sidebar navigation** updated with 2 new entries: Ticket Types (after Overview), Activity Log (before Export).
+
+**Icon system:** All emoji icons replaced with a unified SVG icon library (`Dashboard/src/components/icons.tsx`). All icons are single-color, size-configurable, currentColor-based React components.
+
+**API Client** (`Dashboard/src/lib/api.ts`):
+- Fixed ticket types route from `/ticket-types/event/${eventId}` (wrong) to `/events/${eventId}/ticket-types` (matches server controller)
+- Updated `TicketType` interface to match Prisma schema (quantity/sold/status instead of maxQuantity/soldCount)
+- Expanded `PromoCode` interface with all fields
+- Added `AuditLogEntry` interface
+- Added methods: `createTicketType`, `updateTicketType`, `createAttendee`, `updateAttendee`, `createPromoCode`, `updatePromoCode`, `deactivatePromoCode`, `getAuditLog`, `exportFormSubmissions`
+
+#### 28.1 Analytics — B2B Convention KPIs
+
+The analytics page tracks KPIs critical for B2B events and conventions:
+
+| KPI | What It Measures | Why It Matters |
+|-----|-----------------|----------------|
+| **Total Revenue** | Sum of paid orders in event currency | Core financial metric |
+| **Average Order Value** | Revenue ÷ paid orders | Upsell effectiveness |
+| **Tickets Sold** | Sum across all ticket types | Registration velocity |
+| **Capacity Utilization** | Tickets sold ÷ total capacity (%) | Demand forecasting |
+| **Conversion Rate** | Paid orders ÷ total orders (%) | Checkout funnel health |
+| **Check-In Rate** | Checked-in ÷ registered (%) | No-show prediction, future planning |
+| **Registrations Today** | Orders created today | Same-day demand pulse |
+| **Revenue per Attendee** | Revenue ÷ unique attendees | Attendee value (sponsorship pricing input) |
+| **Refund Rate** | Refunded orders ÷ paid orders (%) | Event satisfaction signal |
+| **Promo Code Usage** | % of orders using promo codes | Marketing channel effectiveness |
+
+Visualizations:
+- Bar chart: Revenue by Ticket Type
+- Bar chart: Daily Revenue (14-day trailing)
+- Breakdown: Order Status distribution
+- Breakdown: Check-in by Ticket Type
+
+Future KPIs (when data is available):
+- Lead capture volume (exhibitor scans per booth)
+- Session fill rate (session capacity utilization)
+- Sponsor impression analytics
+- Attendee engagement score (sessions attended, leads exchanged)
+- Email open/click rates per communication
+- Badge download rate
+
+#### 28.2 Icon System Architecture
+
+All dashboard icons use a centralized SVG icon library:
+
+```
+Dashboard/src/components/icons.tsx    # All icon components
+```
+
+**Design principles:**
+- Single-color SVGs using `currentColor` — icons inherit text color
+- Consistent 24×24 viewBox, configurable via `size` and `className` props
+- Stroke-based (not fill-based) for clean scaling at all sizes
+- No external icon library dependency — fully self-contained
+- Icons grouped by usage: navigation, actions, status, domain-specific
+
+**Icon mapping from emoji:**
+
+| Old Emoji | New Icon Component | Usage Context |
+|-----------|--------------------|---------------|
+| 📊 | `Icons.BarChart` | Overview, stats |
+| 🎫 | `Icons.Ticket` | Ticket types, ticket references |
+| 👥 | `Icons.Users` | Attendees |
+| 🛒 | `Icons.ShoppingCart` | Orders |
+| ✅ | `Icons.CheckCircle` | Check-in, completed status |
+| 📈 | `Icons.TrendingUp` | Analytics |
+| 🏷️ | `Icons.Tag` | Promo codes |
+| 📋 | `Icons.Clipboard` | Forms, clipboard actions |
+| 📝 | `Icons.FileText` | Activity log, notes |
+| 📤 | `Icons.Upload` | Export |
+| 🔗 | `Icons.Link` | Webhooks |
+| 🎪 | `Icons.Calendar` | Events |
+| 👤 | `Icons.User` | User profile |
+| ⚙️ | `Icons.Settings` | Settings |
+| 💰 | `Icons.DollarSign` | Revenue, pricing |
+| ✏️ | `Icons.Edit` | Edit actions |
+| + more | ... | See `icons.tsx` for full list |

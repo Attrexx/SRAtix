@@ -1,7 +1,9 @@
+import { type ReactNode } from 'react';
+
 interface StatCardProps {
   label: string;
   value: string | number;
-  icon?: string;
+  icon?: ReactNode;
   trend?: string;
   trendUp?: boolean;
   className?: string;
@@ -30,14 +32,18 @@ export function StatCard({ label, value, icon, trend, trendUp, className = '' }:
           </p>
           {trend && (
             <p
-              className="mt-1 text-xs font-medium"
+              className="mt-1 flex items-center gap-1 text-xs font-medium"
               style={{ color: trendUp ? 'var(--color-success)' : 'var(--color-danger)' }}
             >
-              {trendUp ? '↑' : '↓'} {trend}
+              {trend}
             </p>
           )}
         </div>
-        {icon && <span className="text-2xl opacity-50">{icon}</span>}
+        {icon && (
+          <span className="opacity-40" style={{ color: 'var(--color-text)' }}>
+            {icon}
+          </span>
+        )}
       </div>
     </div>
   );

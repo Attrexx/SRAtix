@@ -1,37 +1,39 @@
 'use client';
 
+import { type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { ThemeToggle } from './theme-toggle';
+import { Icons } from './icons';
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   roles?: string[];
 }
 
 function getEventNav(eventId: string): NavItem[] {
   return [
-    { href: `/dashboard/events/${eventId}`, label: 'Overview', icon: '📊' },
-    { href: `/dashboard/events/${eventId}/ticket-types`, label: 'Ticket Types', icon: '🎫' },
-    { href: `/dashboard/events/${eventId}/attendees`, label: 'Attendees', icon: '👥' },
-    { href: `/dashboard/events/${eventId}/orders`, label: 'Orders', icon: '🛒' },
-    { href: `/dashboard/events/${eventId}/check-in`, label: 'Check-In Live', icon: '✅' },
-    { href: `/dashboard/events/${eventId}/analytics`, label: 'Analytics', icon: '📈' },
-    { href: `/dashboard/events/${eventId}/promo-codes`, label: 'Promo Codes', icon: '🏷️' },
-    { href: `/dashboard/events/${eventId}/forms`, label: 'Forms', icon: '📋' },
-    { href: `/dashboard/events/${eventId}/audit-log`, label: 'Activity Log', icon: '📝' },
-    { href: `/dashboard/events/${eventId}/export`, label: 'Export', icon: '📤' },
-    { href: `/dashboard/events/${eventId}/webhooks`, label: 'Webhooks', icon: '🔗', roles: ['admin', 'owner'] },
+    { href: `/dashboard/events/${eventId}`, label: 'Overview', icon: <Icons.BarChart size={18} /> },
+    { href: `/dashboard/events/${eventId}/ticket-types`, label: 'Ticket Types', icon: <Icons.Ticket size={18} /> },
+    { href: `/dashboard/events/${eventId}/attendees`, label: 'Attendees', icon: <Icons.Users size={18} /> },
+    { href: `/dashboard/events/${eventId}/orders`, label: 'Orders', icon: <Icons.ShoppingCart size={18} /> },
+    { href: `/dashboard/events/${eventId}/check-in`, label: 'Check-In Live', icon: <Icons.CheckCircle size={18} /> },
+    { href: `/dashboard/events/${eventId}/analytics`, label: 'Analytics', icon: <Icons.TrendingUp size={18} /> },
+    { href: `/dashboard/events/${eventId}/promo-codes`, label: 'Promo Codes', icon: <Icons.Tag size={18} /> },
+    { href: `/dashboard/events/${eventId}/forms`, label: 'Forms', icon: <Icons.Clipboard size={18} /> },
+    { href: `/dashboard/events/${eventId}/audit-log`, label: 'Activity Log', icon: <Icons.FileText size={18} /> },
+    { href: `/dashboard/events/${eventId}/export`, label: 'Export', icon: <Icons.Upload size={18} /> },
+    { href: `/dashboard/events/${eventId}/webhooks`, label: 'Webhooks', icon: <Icons.Link size={18} />, roles: ['admin', 'owner'] },
   ];
 }
 
 const topNav: NavItem[] = [
-  { href: '/dashboard', label: 'Events', icon: '🎪' },
-  { href: '/dashboard/users', label: 'Users', icon: '👤', roles: ['super_admin'] },
-  { href: '/dashboard/settings', label: 'Settings', icon: '⚙️', roles: ['super_admin'] },
+  { href: '/dashboard', label: 'Events', icon: <Icons.Calendar size={18} /> },
+  { href: '/dashboard/users', label: 'Users', icon: <Icons.User size={18} />, roles: ['super_admin'] },
+  { href: '/dashboard/settings', label: 'Settings', icon: <Icons.Settings size={18} />, roles: ['super_admin'] },
 ];
 
 export function Sidebar({ eventId }: { eventId?: string }) {
@@ -50,7 +52,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5">
-        <span className="text-2xl">🎫</span>
+        <Icons.Ticket size={24} className="text-white" />
         <div>
           <h1 className="text-lg font-bold tracking-tight text-white">SRAtix</h1>
           <p className="text-xs opacity-60">Event Dashboard</p>
@@ -100,7 +102,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
               className="ml-2 rounded px-2 py-1 text-xs transition-colors hover:bg-white/10"
               aria-label="Sign out"
             >
-              ↗
+              <Icons.LogOut size={14} />
             </button>
           </div>
         )}
@@ -125,7 +127,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
         if (!active) e.currentTarget.style.background = 'transparent';
       }}
     >
-      <span className="text-base">{item.icon}</span>
+      <span className="flex-shrink-0">{item.icon}</span>
       <span>{item.label}</span>
     </Link>
   );

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useSSEBuffer } from '@/lib/sse';
 import { StatCard } from '@/components/stat-card';
+import { Icons } from '@/components/icons';
 
 interface CheckInEvent {
   ticketId: string;
@@ -116,26 +117,26 @@ export default function CheckInLivePage() {
             color: 'var(--color-text)',
           }}
         >
-          📤 Export CSV
+                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
         </a>
       </div>
 
       {/* Stats Row */}
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard
-          icon="✅"
+          icon={<Icons.CheckCircle size={20} />}
           label="Total Check-Ins"
           value={effectiveTotal.toLocaleString()}
         />
         <StatCard
-          icon="🎫"
+          icon={<Icons.Ticket size={20} />}
           label="Attendance Rate"
           value={`${checkedInPct}%`}
           trend={`${effectiveTotal} of ${totalTickets}`}
           trendUp
         />
         <StatCard
-          icon="📊"
+          icon={<Icons.BarChart size={20} />}
           label="Today"
           value={stats.today.toLocaleString()}
         />
@@ -201,7 +202,7 @@ export default function CheckInLivePage() {
         <div className="max-h-[480px] overflow-y-auto">
           {liveCheckIns.length === 0 ? (
             <div className="px-5 py-12 text-center">
-              <span className="text-4xl">📡</span>
+              <span className="text-4xl opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Activity size={48} /></span>
               <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
                 Waiting for check-ins...
               </p>
@@ -230,7 +231,7 @@ export default function CheckInLivePage() {
                           : 'var(--color-warning)',
                     }}
                   >
-                    {ci.direction === 'in' ? '→' : '←'}
+                    {ci.direction === 'in' ? <Icons.ArrowRight size={16} /> : <Icons.ArrowLeft size={16} />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text)' }}>

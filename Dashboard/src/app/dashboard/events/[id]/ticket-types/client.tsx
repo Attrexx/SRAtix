@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { api, type TicketType, type Event } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
+import { Icons } from '@/components/icons';
 
 export default function TicketTypesPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -171,7 +172,7 @@ export default function TicketTypesPage() {
             border: '1px solid var(--color-border)',
           }}
         >
-          <span className="text-5xl">🎫</span>
+          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Ticket size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
             No ticket types yet
           </p>
@@ -219,15 +220,15 @@ export default function TicketTypesPage() {
                     </p>
                   )}
                   <div className="mt-2 flex flex-wrap gap-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    <span>
-                      💰 {tt.priceCents === 0 ? 'Free' : `${(tt.priceCents / 100).toFixed(2)} ${currency}`}
+                    <span className="inline-flex items-center gap-1">
+                      <Icons.DollarSign size={14} /> {tt.priceCents === 0 ? 'Free' : `${(tt.priceCents / 100).toFixed(2)} ${currency}`}
                     </span>
-                    <span>
-                      🎫 {tt.sold}{tt.quantity != null ? ` / ${tt.quantity}` : ''} sold
+                    <span className="inline-flex items-center gap-1">
+                      <Icons.Ticket size={14} /> {tt.sold}{tt.quantity != null ? ` / ${tt.quantity}` : ''} sold
                     </span>
-                    <span>📦 Max {tt.maxPerOrder}/order</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Package size={14} /> Max {tt.maxPerOrder}/order</span>
                     {tt.salesStart && (
-                      <span>🕐 Sales: {new Date(tt.salesStart).toLocaleDateString('en-CH')} — {tt.salesEnd ? new Date(tt.salesEnd).toLocaleDateString('en-CH') : '∞'}</span>
+                      <span className="inline-flex items-center gap-1"><Icons.Clock size={14} /> Sales: {new Date(tt.salesStart).toLocaleDateString('en-CH')} — {tt.salesEnd ? new Date(tt.salesEnd).toLocaleDateString('en-CH') : '∞'}</span>
                     )}
                   </div>
                   {tt.quantity != null && (
@@ -248,14 +249,14 @@ export default function TicketTypesPage() {
                 <div className="flex items-center gap-2 pl-4">
                   <button
                     onClick={() => toggleStatus(tt)}
-                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: 'var(--color-text-secondary)',
                     }}
                     title={tt.status === 'active' ? 'Pause sales' : 'Resume sales'}
                   >
-                    {tt.status === 'active' ? '⏸ Pause' : '▶ Resume'}
+                    {tt.status === 'active' ? <><Icons.Pause size={14} /> Pause</> : <><Icons.Play size={14} /> Resume</>}
                   </button>
                   <button
                     onClick={() => openEdit(tt)}
@@ -265,7 +266,7 @@ export default function TicketTypesPage() {
                       color: 'var(--color-text-secondary)',
                     }}
                   >
-                    ✏️ Edit
+                    <span className="inline-flex items-center gap-1"><Icons.Edit size={14} /> Edit</span>
                   </button>
                 </div>
               </div>

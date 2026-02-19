@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { Icons } from '@/components/icons';
 
 /**
  * Login page — supports two flows:
@@ -16,7 +17,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <div className="animate-spin text-3xl">⏳</div>
+          <div className="animate-spin" style={{ color: 'var(--color-primary)' }}><Icons.RefreshCw size={28} /></div>
         </div>
       }
     >
@@ -75,7 +76,7 @@ function LoginForm() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin text-3xl">⏳</div>
+          <div className="animate-spin" style={{ color: 'var(--color-primary)' }}><Icons.RefreshCw size={28} /></div>
           {autoLogging && (
             <p className="mt-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               Signing in from WordPress...
@@ -101,7 +102,7 @@ function LoginForm() {
       >
         {/* Header */}
         <div className="mb-8 text-center">
-          <span className="text-5xl">🎫</span>
+          <span style={{ color: 'var(--color-primary)' }}><Icons.Ticket size={48} /></span>
           <h1
             className="mt-4 text-2xl font-bold tracking-tight"
             style={{ color: 'var(--color-text)' }}

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, type AppUser, type RoleDefinition } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Icons } from '@/components/icons';
 
 interface CreateFormData {
   email: string;
@@ -39,7 +40,7 @@ export default function UsersPage() {
   if (!hasRole('super_admin')) {
     return (
       <div className="py-16 text-center">
-        <span className="text-5xl">🔒</span>
+        <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Lock size={48} /></span>
         <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
           Access Denied
         </p>
@@ -508,7 +509,9 @@ function EditUserModal({
   if (!user) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="animate-spin text-3xl">⏳</div>
+        <div className="animate-spin" style={{ color: 'var(--color-primary)' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" /></svg>
+        </div>
       </div>
     );
   }

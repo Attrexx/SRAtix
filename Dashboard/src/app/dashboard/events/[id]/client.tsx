@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api, type Event, type TicketType } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
+import { Icons } from '@/components/icons';
 
 export default function EventOverviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -86,26 +87,26 @@ export default function EventOverviewPage() {
       {/* Stats Grid */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon="🎫"
+          icon={<Icons.Ticket size={20} />}
           label="Tickets Sold"
           value={stats.ticketsSold.toLocaleString()}
           trend={capacity > 0 ? `${capacityPct}% of capacity` : undefined}
           trendUp={capacityPct < 90}
         />
         <StatCard
-          icon="🛒"
+          icon={<Icons.ShoppingCart size={20} />}
           label="Orders"
           value={stats.totalOrders.toLocaleString()}
         />
         <StatCard
-          icon="💰"
+          icon={<Icons.DollarSign size={20} />}
           label="Revenue"
           value={`${(stats.totalRevenue / 100).toLocaleString('de-CH', {
             minimumFractionDigits: 2,
           })} ${event.currency}`}
         />
         <StatCard
-          icon="✅"
+          icon={<Icons.CheckCircle size={20} />}
           label="Check-Ins"
           value={stats.checkIns.toLocaleString()}
           trend={

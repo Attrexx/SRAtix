@@ -2,33 +2,35 @@
 
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { Icons } from '@/components/icons';
+import { type ReactNode } from 'react';
 
 export default function ExportPage() {
   const { id: eventId } = useParams<{ id: string }>();
 
-  const exports = [
+  const exports: { label: string; description: string; icon: ReactNode; url: string }[] = [
     {
       label: 'Attendees',
       description: 'Name, email, phone, company, ticket codes',
-      icon: '👥',
+      icon: <Icons.Users size={28} />,
       url: api.exportAttendees(eventId),
     },
     {
       label: 'Orders',
       description: 'Order number, status, customer info, line items, Stripe ref',
-      icon: '🛒',
+      icon: <Icons.ShoppingCart size={28} />,
       url: api.exportOrders(eventId),
     },
     {
       label: 'Check-Ins',
       description: 'Ticket code, type, attendee, method, direction, timestamp',
-      icon: '✅',
+      icon: <Icons.CheckCircle size={28} />,
       url: api.exportCheckIns(eventId),
     },
     {
       label: 'Form Submissions',
       description: 'Registration form answers, custom field responses',
-      icon: '📝',
+      icon: <Icons.FileText size={28} />,
       url: api.exportFormSubmissions(eventId),
     },
   ];
@@ -66,7 +68,7 @@ export default function ExportPage() {
               e.currentTarget.style.borderColor = 'var(--color-border)';
             }}
           >
-            <span className="text-3xl">{exp.icon}</span>
+            <span className="opacity-40" style={{ color: 'var(--color-text)' }}>{exp.icon}</span>
             <h3
               className="mt-3 text-base font-semibold"
               style={{ color: 'var(--color-text)' }}
@@ -80,7 +82,7 @@ export default function ExportPage() {
               className="mt-3 inline-flex items-center gap-1 text-sm font-medium"
               style={{ color: 'var(--color-primary)' }}
             >
-              📥 Download CSV
+                            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Download CSV</span>
             </span>
           </a>
         ))}

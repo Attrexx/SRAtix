@@ -3,27 +3,29 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { api, type AuditLogEntry } from '@/lib/api';
+import { Icons } from '@/components/icons';
+import { type ReactNode } from 'react';
 
 const PAGE_SIZE = 30;
 
-const ACTION_LABELS: Record<string, { icon: string; label: string }> = {
-  'event.created':        { icon: '🎉', label: 'Event created' },
-  'event.updated':        { icon: '✏️', label: 'Event updated' },
-  'ticket_type.created':  { icon: '🎫', label: 'Ticket type created' },
-  'ticket_type.updated':  { icon: '🎫', label: 'Ticket type updated' },
-  'order.created':        { icon: '🛒', label: 'Order created' },
-  'order.paid':           { icon: '💰', label: 'Order paid' },
-  'order.refunded':       { icon: '↩️', label: 'Order refunded' },
-  'order.cancelled':      { icon: '❌', label: 'Order cancelled' },
-  'attendee.created':     { icon: '👤', label: 'Attendee created' },
-  'attendee.updated':     { icon: '👤', label: 'Attendee updated' },
-  'check_in.recorded':    { icon: '✅', label: 'Check-in recorded' },
-  'check_in.reverted':    { icon: '↩️', label: 'Check-in reverted' },
-  'promo_code.created':   { icon: '🏷️', label: 'Promo code created' },
-  'promo_code.updated':   { icon: '🏷️', label: 'Promo code updated' },
-  'promo_code.deactivated': { icon: '🚫', label: 'Promo code deactivated' },
-  'webhook.delivered':    { icon: '🔗', label: 'Webhook delivered' },
-  'webhook.failed':       { icon: '⚠️', label: 'Webhook failed' },
+const ACTION_LABELS: Record<string, { icon: ReactNode; label: string }> = {
+  'event.created':        { icon: <Icons.Sparkles size={16} />, label: 'Event created' },
+  'event.updated':        { icon: <Icons.Edit size={16} />, label: 'Event updated' },
+  'ticket_type.created':  { icon: <Icons.Ticket size={16} />, label: 'Ticket type created' },
+  'ticket_type.updated':  { icon: <Icons.Ticket size={16} />, label: 'Ticket type updated' },
+  'order.created':        { icon: <Icons.ShoppingCart size={16} />, label: 'Order created' },
+  'order.paid':           { icon: <Icons.DollarSign size={16} />, label: 'Order paid' },
+  'order.refunded':       { icon: <Icons.Undo size={16} />, label: 'Order refunded' },
+  'order.cancelled':      { icon: <Icons.X size={16} />, label: 'Order cancelled' },
+  'attendee.created':     { icon: <Icons.User size={16} />, label: 'Attendee created' },
+  'attendee.updated':     { icon: <Icons.User size={16} />, label: 'Attendee updated' },
+  'check_in.recorded':    { icon: <Icons.CheckCircle size={16} />, label: 'Check-in recorded' },
+  'check_in.reverted':    { icon: <Icons.Undo size={16} />, label: 'Check-in reverted' },
+  'promo_code.created':   { icon: <Icons.Tag size={16} />, label: 'Promo code created' },
+  'promo_code.updated':   { icon: <Icons.Tag size={16} />, label: 'Promo code updated' },
+  'promo_code.deactivated': { icon: <Icons.Ban size={16} />, label: 'Promo code deactivated' },
+  'webhook.delivered':    { icon: <Icons.Link size={16} />, label: 'Webhook delivered' },
+  'webhook.failed':       { icon: <Icons.AlertTriangle size={16} />, label: 'Webhook failed' },
 };
 
 const ACTION_FILTER_OPTIONS = Object.keys(ACTION_LABELS);
@@ -94,7 +96,7 @@ export default function AuditLogPage() {
   };
 
   const meta = (entry: AuditLogEntry) =>
-    ACTION_LABELS[entry.action] ?? { icon: '📋', label: entry.action.replace(/[._]/g, ' ') };
+    ACTION_LABELS[entry.action] ?? { icon: <Icons.Clipboard size={16} />, label: entry.action.replace(/[._]/g, ' ') };
 
   return (
     <div>
@@ -148,7 +150,7 @@ export default function AuditLogPage() {
             border: '1px solid var(--color-border)',
           }}
         >
-          <span className="text-5xl">📋</span>
+          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Clipboard size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
             No activity recorded yet
           </p>
@@ -178,7 +180,7 @@ export default function AuditLogPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-lg">{m.icon}</span>
+                      <span className="text-lg" style={{ color: 'var(--color-text-muted)' }}>{m.icon}</span>
                       <div>
                         <span className="font-medium" style={{ color: 'var(--color-text)' }}>
                           {m.label}

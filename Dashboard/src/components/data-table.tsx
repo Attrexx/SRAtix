@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { Icons } from './icons';
 
 interface Column<T> {
   key: string;
@@ -186,7 +187,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 color: 'var(--color-text)',
               }}
             >
-              ← Prev
+              <span className="flex items-center gap-1"><Icons.ChevronLeft size={14} /> Prev</span>
             </button>
             <span style={{ color: 'var(--color-text-secondary)' }}>
               {page + 1} / {totalPages}
@@ -201,7 +202,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 color: 'var(--color-text)',
               }}
             >
-              Next →
+              <span className="flex items-center gap-1">Next <Icons.ChevronRight size={14} /></span>
             </button>
           </div>
         </div>

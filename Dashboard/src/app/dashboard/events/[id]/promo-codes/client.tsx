@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api, type PromoCode } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
+import { Icons } from '@/components/icons';
 
 export default function PromoCodesPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -207,7 +208,7 @@ export default function PromoCodesPage() {
                   className="rounded px-2 py-1 text-xs"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  ✏️
+                  <Icons.Edit size={14} />
                 </button>
                 {(row.active as boolean) && (
                   <button
@@ -215,7 +216,7 @@ export default function PromoCodesPage() {
                     className="rounded px-2 py-1 text-xs"
                     style={{ color: 'var(--color-danger, #ef4444)' }}
                   >
-                    🚫
+                    <Icons.Ban size={14} />
                   </button>
                 )}
               </div>

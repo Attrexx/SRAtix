@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { Icons } from '@/components/icons';
 
 interface FormSchema {
   id: string;
@@ -74,7 +75,7 @@ export default function FormsPage() {
             border: '1px solid var(--color-border)',
           }}
         >
-          <span className="text-4xl">📋</span>
+          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Clipboard size={40} /></span>
           <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
             No forms configured yet.
           </p>

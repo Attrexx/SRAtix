@@ -2,33 +2,40 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { api, type Order, type TicketType } from '@/lib/api';
+import { api, type Order, type TicketType, type PromoCode } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
+import { Icons } from '@/components/icons';
 
 export default function AnalyticsPage() {
   const { id: eventId } = useParams<{ id: string }>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [checkInStats, setCheckInStats] = useState<{
     total: number;
     today: number;
     byTicketType: Record<string, number>;
   }>({ total: 0, today: 0, byTicketType: {} });
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState('CHF');
 
   useEffect(() => {
     if (!eventId) return;
     const ac = new AbortController();
 
     Promise.all([
+      api.getEvent(eventId, ac.signal),
       api.getOrders(eventId, ac.signal),
       api.getTicketTypes(eventId, ac.signal),
       api.getCheckInStats(eventId, ac.signal).catch(() => ({ total: 0, today: 0, byTicketType: {} })),
+      api.getPromoCodes(eventId, ac.signal).catch(() => [] as PromoCode[]),
     ])
-      .then(([ords, tts, cis]) => {
+      .then(([ev, ords, tts, cis, pcs]) => {
+        setCurrency(ev.currency ?? 'CHF');
         setOrders(ords);
         setTicketTypes(tts);
         setCheckInStats(cis);
+        setPromoCodes(pcs);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -42,16 +49,43 @@ export default function AnalyticsPage() {
 
     const totalRevenue = paidOrders.reduce((s, o) => s + o.totalCents, 0);
     const avgOrderValue = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
-    const totalTickets = ticketTypes.reduce((s, tt) => s + tt.soldCount, 0);
-    const totalCapacity = ticketTypes.reduce((s, tt) => s + (tt.maxQuantity ?? 0), 0);
+    const totalTickets = ticketTypes.reduce((s, tt) => s + (tt.sold ?? tt.soldCount ?? 0), 0);
+    const totalCapacity = ticketTypes.reduce((s, tt) => s + (tt.quantity ?? tt.maxQuantity ?? 0), 0);
+    const capacityUtilization = totalCapacity > 0 ? Math.round((totalTickets / totalCapacity) * 100) : 0;
 
-    // Revenue by day (last 14 days)
+    // Check-in rate
+    const checkInRate = totalTickets > 0 ? Math.round((checkInStats.total / totalTickets) * 100) : 0;
+
+    // Revenue per attendee
+    const revenuePerAttendee = totalTickets > 0 ? totalRevenue / totalTickets : 0;
+
+    // Refund rate
+    const refundRate = orders.length > 0 ? Math.round((refundedOrders.length / orders.length) * 100) : 0;
+
+    // Promo code usage
+    const totalPromoUses = promoCodes.reduce((s, pc) => s + pc.usedCount, 0);
+    const promoRedemptionRate = paidOrders.length > 0
+      ? Math.round((totalPromoUses / paidOrders.length) * 100)
+      : 0;
+
+    // Registrations today
+    const todayStr = new Date().toISOString().split('T')[0];
+    const registrationsToday = orders.filter(
+      (o) => o.createdAt.startsWith(todayStr),
+    ).length;
+
+    // Conversion rate
+    const conversionRate = orders.length > 0
+      ? Math.round((paidOrders.length / orders.length) * 100)
+      : 0;
+
+    // Revenue by day (last 30 days)
     const revenueByDay: Record<string, number> = {};
+    const ordersByDay: Record<string, number> = {};
     paidOrders.forEach((o) => {
-      if (o.paidAt) {
-        const day = new Date(o.paidAt).toISOString().split('T')[0];
-        revenueByDay[day] = (revenueByDay[day] ?? 0) + o.totalCents;
-      }
+      const day = (o.paidAt ?? o.createdAt).split('T')[0];
+      revenueByDay[day] = (revenueByDay[day] ?? 0) + o.totalCents;
+      ordersByDay[day] = (ordersByDay[day] ?? 0) + 1;
     });
 
     // Orders by status
@@ -61,33 +95,49 @@ export default function AnalyticsPage() {
     });
 
     // Revenue by ticket type
-    const revenueByTicketType: Array<{ name: string; revenue: number; sold: number; capacity: number }> = [];
-    ticketTypes.forEach((tt) => {
-      revenueByTicketType.push({
-        name: tt.name,
-        revenue: tt.soldCount * tt.priceCents,
-        sold: tt.soldCount,
-        capacity: tt.maxQuantity ?? 0,
-      });
-    });
+    const revenueByTicketType: Array<{
+      name: string;
+      revenue: number;
+      sold: number;
+      capacity: number;
+    }> = ticketTypes.map((tt) => ({
+      name: tt.name,
+      revenue: (tt.sold ?? tt.soldCount ?? 0) * tt.priceCents,
+      sold: tt.sold ?? tt.soldCount ?? 0,
+      capacity: tt.quantity ?? tt.maxQuantity ?? 0,
+    }));
+
+    // Top promo codes
+    const topPromoCodes = [...promoCodes]
+      .sort((a, b) => b.usedCount - a.usedCount)
+      .slice(0, 5);
 
     return {
       totalRevenue,
       avgOrderValue,
       totalTickets,
       totalCapacity,
+      capacityUtilization,
       totalOrders: orders.length,
       paidOrders: paidOrders.length,
       refundedOrders: refundedOrders.length,
-      conversionRate:
-        orders.length > 0
-          ? Math.round((paidOrders.length / orders.length) * 100)
-          : 0,
+      conversionRate,
+      checkInRate,
+      checkInTotal: checkInStats.total,
+      checkInToday: checkInStats.today,
+      checkInByTicketType: checkInStats.byTicketType,
+      revenuePerAttendee,
+      refundRate,
+      totalPromoUses,
+      promoRedemptionRate,
+      registrationsToday,
       revenueByDay,
+      ordersByDay,
       ordersByStatus,
       revenueByTicketType,
+      topPromoCodes,
     };
-  }, [orders, ticketTypes]);
+  }, [orders, ticketTypes, checkInStats, promoCodes]);
 
   if (loading) {
     return (
@@ -103,6 +153,9 @@ export default function AnalyticsPage() {
     );
   }
 
+  const fmt = (cents: number) =>
+    `${(cents / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 })} ${currency}`;
+
   return (
     <div>
       <div className="mb-6">
@@ -110,35 +163,30 @@ export default function AnalyticsPage() {
           Analytics
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Event performance overview
+          Event performance &amp; key metrics
         </p>
       </div>
 
-      {/* Key Metrics */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Row 1: Revenue KPIs ── */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon="💰"
+          icon={<Icons.DollarSign size={20} />}
           label="Total Revenue"
-          value={`${(analytics.totalRevenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 })} CHF`}
+          value={fmt(analytics.totalRevenue)}
         />
         <StatCard
-          icon="🛒"
+          icon={<Icons.ShoppingCart size={20} />}
           label="Avg. Order Value"
-          value={`${(analytics.avgOrderValue / 100).toFixed(2)} CHF`}
+          value={fmt(analytics.avgOrderValue)}
+          trend={`${analytics.paidOrders} paid orders`}
         />
         <StatCard
-          icon="🎫"
-          label="Tickets Sold"
-          value={analytics.totalTickets.toLocaleString()}
-          trend={
-            analytics.totalCapacity > 0
-              ? `${Math.round((analytics.totalTickets / analytics.totalCapacity) * 100)}% of capacity`
-              : undefined
-          }
-          trendUp
+          icon={<Icons.Target size={20} />}
+          label="Revenue / Attendee"
+          value={fmt(analytics.revenuePerAttendee)}
         />
         <StatCard
-          icon="📈"
+          icon={<Icons.TrendingUp size={20} />}
           label="Conversion Rate"
           value={`${analytics.conversionRate}%`}
           trend={`${analytics.paidOrders} paid / ${analytics.totalOrders} total`}
@@ -146,24 +194,57 @@ export default function AnalyticsPage() {
         />
       </div>
 
-      {/* Two-Column Layout */}
+      {/* ── Row 2: Attendance KPIs ── */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          icon={<Icons.Ticket size={20} />}
+          label="Tickets Sold"
+          value={analytics.totalTickets.toLocaleString()}
+          trend={
+            analytics.totalCapacity > 0
+              ? `${analytics.capacityUtilization}% of capacity`
+              : undefined
+          }
+          trendUp={analytics.capacityUtilization < 90}
+        />
+        <StatCard
+          icon={<Icons.Percent size={20} />}
+          label="Capacity Utilization"
+          value={`${analytics.capacityUtilization}%`}
+          trend={
+            analytics.totalCapacity > 0
+              ? `${analytics.totalTickets} / ${analytics.totalCapacity}`
+              : 'No cap set'
+          }
+          trendUp={analytics.capacityUtilization < 95}
+        />
+        <StatCard
+          icon={<Icons.CheckCircle size={20} />}
+          label="Check-In Rate"
+          value={`${analytics.checkInRate}%`}
+          trend={`${analytics.checkInTotal} checked in`}
+          trendUp
+        />
+        <StatCard
+          icon={<Icons.Activity size={20} />}
+          label="Registrations Today"
+          value={analytics.registrationsToday.toLocaleString()}
+        />
+        <StatCard
+          icon={<Icons.Undo size={20} />}
+          label="Refund Rate"
+          value={`${analytics.refundRate}%`}
+          trend={`${analytics.refundedOrders} refunded`}
+          trendUp={analytics.refundRate <= 5}
+        />
+      </div>
+
+      {/* ── Charts Row ── */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Revenue by Ticket Type */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-            Revenue by Ticket Type
-          </h2>
+        <Card title="Revenue by Ticket Type">
           {analytics.revenueByTicketType.length === 0 ? (
-            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              No data yet.
-            </p>
+            <EmptyState />
           ) : (
             <div className="space-y-3">
               {analytics.revenueByTicketType.map((tt) => {
@@ -172,12 +253,19 @@ export default function AnalyticsPage() {
                   1,
                 );
                 const barWidth = Math.round((tt.revenue / maxRevenue) * 100);
+                const soldPct =
+                  tt.capacity > 0
+                    ? Math.round((tt.sold / tt.capacity) * 100)
+                    : 0;
                 return (
                   <div key={tt.name}>
                     <div className="flex items-center justify-between text-sm">
                       <span style={{ color: 'var(--color-text)' }}>{tt.name}</span>
-                      <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                        {(tt.revenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 })} CHF
+                      <span
+                        className="font-semibold"
+                        style={{ color: 'var(--color-text)' }}
+                      >
+                        {fmt(tt.revenue)}
                       </span>
                     </div>
                     <div
@@ -192,28 +280,22 @@ export default function AnalyticsPage() {
                         }}
                       />
                     </div>
-                    <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {tt.sold} sold{tt.capacity > 0 ? ` / ${tt.capacity} capacity` : ''}
+                    <p
+                      className="mt-0.5 text-xs"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {tt.sold} sold
+                      {tt.capacity > 0 ? ` / ${tt.capacity} (${soldPct}%)` : ''}
                     </p>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Order Status Breakdown */}
-        <div
-          className="rounded-xl p-5"
-          style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-            Order Status
-          </h2>
+        {/* Order Funnel / Status Breakdown */}
+        <Card title="Order Status">
           <div className="space-y-3">
             {Object.entries(analytics.ordersByStatus).map(([status, count]) => {
               const pct =
@@ -221,7 +303,10 @@ export default function AnalyticsPage() {
                   ? Math.round((count / analytics.totalOrders) * 100)
                   : 0;
               return (
-                <div key={status} className="flex items-center justify-between">
+                <div
+                  key={status}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
                     <span
                       className="inline-block h-3 w-3 rounded-full"
@@ -236,11 +321,17 @@ export default function AnalyticsPage() {
                                 : 'var(--color-text-muted)',
                       }}
                     />
-                    <span className="text-sm capitalize" style={{ color: 'var(--color-text)' }}>
+                    <span
+                      className="text-sm capitalize"
+                      style={{ color: 'var(--color-text)' }}
+                    >
                       {status}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text)' }}
+                  >
                     {count} ({pct}%)
                   </span>
                 </div>
@@ -248,85 +339,234 @@ export default function AnalyticsPage() {
             })}
           </div>
 
-          {/* Check-In Stats */}
+          {/* Check-In Breakdown */}
           <div
             className="mt-6 border-t pt-4"
             style={{ borderColor: 'var(--color-border)' }}
           >
-            <h3 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-              Check-In Breakdown
+            <h3
+              className="mb-3 flex items-center gap-2 text-sm font-semibold"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              <Icons.CheckCircle size={14} /> Check-In Breakdown
             </h3>
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: 'var(--color-text)' }}>
+              <span
+                className="text-sm"
+                style={{ color: 'var(--color-text)' }}
+              >
                 Total checked in
               </span>
-              <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                {checkInStats.total}
+              <span
+                className="font-semibold"
+                style={{ color: 'var(--color-text)' }}
+              >
+                {analytics.checkInTotal}
               </span>
             </div>
-            {Object.entries(checkInStats.byTicketType).map(([type, count]) => (
-              <div key={type} className="mt-1 flex items-center justify-between text-sm">
-                <span style={{ color: 'var(--color-text-secondary)' }}>{type}</span>
-                <span style={{ color: 'var(--color-text)' }}>{count}</span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between mt-1">
+              <span
+                className="text-sm"
+                style={{ color: 'var(--color-text)' }}
+              >
+                Today
+              </span>
+              <span
+                className="font-semibold"
+                style={{ color: 'var(--color-text)' }}
+              >
+                {analytics.checkInToday}
+              </span>
+            </div>
+            {Object.entries(analytics.checkInByTicketType).map(
+              ([type, count]) => (
+                <div
+                  key={type}
+                  className="mt-1 flex items-center justify-between text-sm"
+                >
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    {type}
+                  </span>
+                  <span style={{ color: 'var(--color-text)' }}>{count}</span>
+                </div>
+              ),
+            )}
           </div>
-        </div>
-      </div>
+        </Card>
 
-      {/* Daily Revenue Table */}
-      {Object.keys(analytics.revenueByDay).length > 0 && (
-        <div
-          className="mt-6 rounded-xl p-5"
-          style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-            Daily Revenue
-          </h2>
-          <div className="space-y-2">
-            {Object.entries(analytics.revenueByDay)
-              .sort(([a], [b]) => b.localeCompare(a))
-              .slice(0, 14)
-              .map(([date, cents]) => {
-                const maxDay = Math.max(...Object.values(analytics.revenueByDay), 1);
-                const barWidth = Math.round((cents / maxDay) * 100);
-                return (
-                  <div key={date} className="flex items-center gap-4">
+        {/* Promo Code Performance */}
+        <Card title="Promo Code Usage">
+          <div className="mb-4 flex gap-6">
+            <div>
+              <p
+                className="text-2xl font-bold"
+                style={{ color: 'var(--color-text)' }}
+              >
+                {analytics.totalPromoUses}
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Total redemptions
+              </p>
+            </div>
+            <div>
+              <p
+                className="text-2xl font-bold"
+                style={{ color: 'var(--color-text)' }}
+              >
+                {analytics.promoRedemptionRate}%
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                Of orders used a code
+              </p>
+            </div>
+          </div>
+          {analytics.topPromoCodes.length === 0 ? (
+            <p
+              className="text-sm"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              No promo codes configured.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {analytics.topPromoCodes.map((pc) => (
+                <div
+                  key={pc.id}
+                  className="flex items-center justify-between rounded-lg px-3 py-2"
+                  style={{
+                    background: 'var(--color-bg-subtle)',
+                    border: '1px solid var(--color-border-subtle)',
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icons.Tag size={14} className="opacity-40" />
                     <span
-                      className="w-24 text-sm"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {new Date(date).toLocaleDateString('en-CH', {
-                        day: '2-digit',
-                        month: 'short',
-                      })}
-                    </span>
-                    <div className="flex-1">
-                      <div
-                        className="h-5 rounded"
-                        style={{
-                          width: `${barWidth}%`,
-                          background: 'var(--color-primary-light)',
-                          minWidth: '2px',
-                        }}
-                      />
-                    </div>
-                    <span
-                      className="w-28 text-right text-sm font-semibold"
+                      className="font-mono text-sm font-bold"
                       style={{ color: 'var(--color-text)' }}
                     >
-                      {(cents / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 })} CHF
+                      {pc.code}
+                    </span>
+                    <span
+                      className="text-xs"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {pc.discountType === 'percentage'
+                        ? `${pc.discountValue}%`
+                        : fmt(pc.discountValue)}
                     </span>
                   </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {pc.usedCount}
+                    {pc.usageLimit ? ` / ${pc.usageLimit}` : ''} uses
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Daily Revenue Chart */}
+        <Card title="Daily Revenue (Last 30 Days)">
+          {Object.keys(analytics.revenueByDay).length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-1.5">
+              {Object.entries(analytics.revenueByDay)
+                .sort(([a], [b]) => b.localeCompare(a))
+                .slice(0, 30)
+                .map(([date, cents]) => {
+                  const maxDay = Math.max(
+                    ...Object.values(analytics.revenueByDay),
+                    1,
+                  );
+                  const barWidth = Math.round((cents / maxDay) * 100);
+                  const dayOrders = analytics.ordersByDay[date] ?? 0;
+                  return (
+                    <div key={date} className="flex items-center gap-3">
+                      <span
+                        className="w-16 flex-shrink-0 text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {new Date(date).toLocaleDateString('en-CH', {
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                      </span>
+                      <div className="flex-1">
+                        <div
+                          className="h-4 rounded"
+                          style={{
+                            width: `${Math.max(barWidth, 2)}%`,
+                            background: 'var(--color-primary)',
+                            opacity: 0.7,
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="w-28 flex-shrink-0 text-right text-xs font-semibold"
+                        style={{ color: 'var(--color-text)' }}
+                      >
+                        {fmt(cents)}
+                      </span>
+                      <span
+                        className="w-12 flex-shrink-0 text-right text-xs"
+                        style={{ color: 'var(--color-text-muted)' }}
+                      >
+                        {dayOrders} ord
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
+  );
+}
+
+/* ── Shared sub-components ── */
+
+function Card({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <h2
+        className="mb-4 text-lg font-semibold"
+        style={{ color: 'var(--color-text)' }}
+      >
+        {title}
+      </h2>
+      {children}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+      No data yet.
+    </p>
   );
 }

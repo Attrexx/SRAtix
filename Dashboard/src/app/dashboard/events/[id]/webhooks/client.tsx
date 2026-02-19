@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
+import { Icons } from '@/components/icons';
 
 const ALL_EVENT_TYPES = [
   'order.paid',
@@ -265,7 +266,7 @@ export default function WebhooksPage() {
           className="rounded-lg p-8 text-center"
           style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
         >
-          <p className="text-4xl mb-3">🔗</p>
+          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Link size={40} /></span>
           <p className="font-medium" style={{ color: 'var(--color-text)' }}>
             No webhook endpoints configured
           </p>
@@ -323,7 +324,7 @@ export default function WebhooksPage() {
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
                     title="View delivery log"
                   >
-                    📋 Log
+                                        <span className="inline-flex items-center gap-1"><Icons.FileText size={14} /> Log</span>
                   </button>
                   <button
                     onClick={() => handleRotateSecret(ep.id)}
@@ -331,24 +332,24 @@ export default function WebhooksPage() {
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
                     title="Rotate signing secret"
                   >
-                    🔑 Rotate
+                                        <span className="inline-flex items-center gap-1"><Icons.Key size={14} /> Rotate</span>
                   </button>
                   <button
                     onClick={() => handleToggleActive(ep)}
-                    className="rounded px-3 py-1.5 text-xs"
+                    className="flex items-center gap-1 rounded px-3 py-1.5 text-xs"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: ep.active ? 'var(--color-warning, #d97706)' : 'var(--color-success, #22c55e)',
                     }}
                   >
-                    {ep.active ? '⏸ Disable' : '▶ Enable'}
+                    {ep.active ? <><Icons.Pause size={14} /> Disable</> : <><Icons.Play size={14} /> Enable</>}
                   </button>
                   <button
                     onClick={() => handleDelete(ep.id)}
                     className="rounded px-3 py-1.5 text-xs text-red-600"
                     style={{ border: '1px solid var(--color-border)' }}
                   >
-                    🗑
+                    <Icons.Trash size={14} />
                   </button>
                 </div>
               </div>
@@ -372,7 +373,7 @@ export default function WebhooksPage() {
               className="text-sm"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              ✕ Close
+              <span className="flex items-center gap-1"><Icons.X size={14} /> Close</span>
             </button>
           </div>
           <p className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>

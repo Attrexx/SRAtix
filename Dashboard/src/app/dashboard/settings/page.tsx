@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { api, type SettingValue } from '@/lib/api';
+import { Icons } from '@/components/icons';
+import { type ReactNode } from 'react';
 
 /** Group order for display. */
 const GROUP_ORDER = [
@@ -63,7 +65,7 @@ export default function SettingsPage() {
           border: '1px solid var(--color-border)',
         }}
       >
-        <span className="text-4xl">🔒</span>
+        <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Lock size={40} /></span>
         <p
           className="mt-4 text-lg font-medium"
           style={{ color: 'var(--color-text)' }}
@@ -286,13 +288,13 @@ export default function SettingsPage() {
 
 // ── Settings Group ──────────────────────────────────────────────
 
-const GROUP_ICONS: Record<string, string> = {
-  Stripe: '💳',
-  Email: '📧',
-  WordPress: '🔌',
-  Security: '🔐',
-  Infrastructure: '🏗️',
-  General: '⚙️',
+const GROUP_ICONS: Record<string, ReactNode> = {
+  Stripe: <Icons.CreditCard size={18} />,
+  Email: <Icons.Mail size={18} />,
+  WordPress: <Icons.ExternalLink size={18} />,
+  Security: <Icons.Shield size={18} />,
+  Infrastructure: <Icons.Settings size={18} />,
+  General: <Icons.Settings size={18} />,
 };
 
 function SettingsGroup({
@@ -326,7 +328,7 @@ function SettingsGroup({
           className="flex items-center gap-2 text-base font-semibold"
           style={{ color: 'var(--color-text)' }}
         >
-          <span>{GROUP_ICONS[name] ?? '📦'}</span>
+          <span>{GROUP_ICONS[name] ?? <Icons.Package size={18} />}</span>
           {name}
         </h2>
       </div>
@@ -447,7 +449,7 @@ function SettingRow({
                 style={{ color: 'var(--color-text-muted)' }}
                 title={isRevealed ? 'Hide' : 'Reveal'}
               >
-                {isRevealed ? '🙈' : '👁️'}
+                {isRevealed ? <Icons.EyeOff size={14} /> : <Icons.Eye size={14} />}
               </button>
             )}
           </div>
