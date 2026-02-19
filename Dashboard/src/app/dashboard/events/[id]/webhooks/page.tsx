@@ -44,7 +44,7 @@ export default function WebhooksPage({
       // We need orgId — for now we fetch event then use its orgId
       const event = await api.getEvent(eventId);
       const data = await api.getWebhookEndpoints(
-        (event as Record<string, unknown>).orgId as string,
+        event.orgId,
         eventId,
       );
       setEndpoints(data);
@@ -73,7 +73,7 @@ export default function WebhooksPage({
     try {
       const event = await api.getEvent(eventId);
       await api.createWebhookEndpoint({
-        orgId: (event as Record<string, unknown>).orgId as string,
+        orgId: event.orgId,
         eventId,
         url: newUrl.trim(),
         events: newEvents,

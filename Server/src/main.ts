@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
+import proxy from '@fastify/http-proxy';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -64,13 +65,20 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT', 3000);
 
-    // Add a root route for basic info
+    // ── Dashboard Reverse Proxy ──────────────────────────────────
+    // Proxy all non-API routes to the Next.js Dashboard running
+    // on an internal port. Fastify gives priority to specific routes
+    // (NestJS: /api/*, /health, /webhooks/*) over the wildcard proxy.
+    const dashboardPort = configService.get<number>('DASHBOARD_PORT', 3100);
     const fastify = app.getHttpAdapter().getInstance();
-    fastify.get('/', async () => ({
-      service: 'SRAtix Server',
-      version: '0.1.0',
-      status: 'running',
-    }));
+    await fastify.register(proxy, {
+      upstream: `http://127.0.0.1:${dashboardPort}`,
+      prefix: '/',
+      rewritePrefix: '/',
+      http2: false,
+      websocket: false,
+    });
+    logger.log(`Dashboard proxy → http://127.0.0.1:${dashboardPort}`);
 
     await app.listen(port, '0.0.0.0');
 

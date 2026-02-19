@@ -1,12 +1,16 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Proxy API calls to the NestJS server during development
+  // Proxy API calls to the NestJS server during local development.
+  // In production, NestJS reverse-proxies the Dashboard, so both
+  // share the same origin — no rewrites needed.
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return [];          // production — same origin
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000'}/api/:path*`,
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },
