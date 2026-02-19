@@ -125,6 +125,18 @@ export class AuthService {
     // Map WP roles to SRAtix roles
     const sratixRoles = this.mapWpRoles(wpRoles);
 
+    // Sync roles to UserRole table (replace existing global-scope roles)
+    await this.prisma.$transaction([
+      this.prisma.userRole.deleteMany({
+        where: { userId, orgId: null },
+      }),
+      ...sratixRoles.map((role) =>
+        this.prisma.userRole.create({
+          data: { userId, orgId: orgId ?? null, role },
+        }),
+      ),
+    ]);
+
     return this.generateTokenPair({
       sub: userId,
       email,
@@ -150,6 +162,71 @@ export class AuthService {
       refreshToken,
       expiresIn: 900, // 15 minutes in seconds
     };
+  }
+
+  /**
+   * Exchange a valid refresh token for a new token pair.
+   * Looks up the user from DB to get current email/roles.
+   */
+  async refreshAccessToken(refreshToken: string): Promise<TokenPair> {
+    let decoded: { sub: string; type?: string };
+    try {
+      decoded = this.jwt.verify(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (decoded.type !== 'refresh') {
+      throw new UnauthorizedException('Token is not a refresh token');
+    }
+
+    // Look up user from DB to get current data
+    const user = await this.prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: { id: true, email: true, wpUserId: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Look up WP mapping to resolve orgId
+    let orgId: string | undefined;
+    if (user.wpUserId) {
+      const mapping = await this.prisma.wpMapping.findUnique({
+        where: {
+          wpEntityType_wpEntityId: {
+            wpEntityType: 'user',
+            wpEntityId: user.wpUserId,
+          },
+        },
+      });
+      orgId = mapping?.orgId ?? undefined;
+    }
+
+    // Look up user's current roles from UserRole table
+    const userRoles = await this.prisma.userRole.findMany({
+      where: { userId: decoded.sub },
+      select: { role: true },
+    });
+
+    const roles = userRoles.map((ur) => ur.role);
+
+    // If no roles stored in DB, fallback to attendee
+    const effectiveRoles = roles.length > 0 ? roles : ['attendee'];
+
+    // Update last login
+    await this.prisma.user.update({
+      where: { id: decoded.sub },
+      data: { lastLoginAt: new Date() },
+    });
+
+    return this.generateTokenPair({
+      sub: decoded.sub,
+      email: user.email,
+      roles: effectiveRoles,
+      orgId,
+    });
   }
 
   /**

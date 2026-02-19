@@ -25,10 +25,11 @@ export default function LoginPage() {
   // Auto-login from ?token= URL parameter (redirect from WP Control plugin)
   useEffect(() => {
     const urlToken = searchParams.get('token');
+    const urlRefresh = searchParams.get('refresh');
     if (!urlToken || autoLogging) return;
 
     setAutoLogging(true);
-    loginWithJwt(urlToken)
+    loginWithJwt(urlToken, urlRefresh ?? undefined)
       .then(() => {
         // Clean the token from the URL before redirecting
         window.history.replaceState({}, '', '/login/');

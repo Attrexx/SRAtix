@@ -31,8 +31,75 @@ function getToken(): string | null {
   return localStorage.getItem('sratix_token');
 }
 
+function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('sratix_refresh_token');
+}
+
+/** Check if a JWT is expired (with 60s buffer). */
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (!payload.exp) return true;
+    return payload.exp * 1000 < Date.now() + 60_000; // 60s buffer
+  } catch {
+    return true;
+  }
+}
+
+/** Flag to prevent concurrent refresh requests. */
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Attempt to refresh the access token using the stored refresh token.
+ * Returns the new access token or null if refresh failed.
+ */
+async function doRefreshToken(): Promise<string | null> {
+  const rt = getRefreshToken();
+  if (!rt) return null;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+
+    if (!res.ok) {
+      // Refresh failed — clear stored tokens
+      localStorage.removeItem('sratix_token');
+      localStorage.removeItem('sratix_refresh_token');
+      localStorage.removeItem('sratix_user');
+      return null;
+    }
+
+    const data: { accessToken: string; refreshToken: string; expiresIn: number } = await res.json();
+    localStorage.setItem('sratix_token', data.accessToken);
+    localStorage.setItem('sratix_refresh_token', data.refreshToken);
+    return data.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+/** Refresh with deduplication — only one refresh request at a time. */
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = doRefreshToken().finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
 async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  const token = getToken();
+  let token = getToken();
+
+  // If access token is expired, try refreshing before the request
+  if (token && isTokenExpired(token)) {
+    token = await refreshAccessToken();
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -48,6 +115,26 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     body: options.body ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
   });
+
+  // On 401, try refreshing token and retrying once
+  if (res.status === 401 && getRefreshToken()) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers['Authorization'] = `Bearer ${newToken}`;
+      const retry = await fetch(`${API_BASE}/api${path}`, {
+        method: options.method ?? 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: options.signal,
+      });
+      if (!retry.ok) {
+        const data = await retry.json().catch(() => null);
+        throw new ApiError(retry.status, data?.message ?? `HTTP ${retry.status}`, data);
+      }
+      if (retry.status === 204) return undefined as T;
+      return retry.json();
+    }
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => null);

@@ -101,18 +101,53 @@ class SRAtix_Control_Admin {
 			);
 		}
 
-		$access_token = $result['accessToken'] ?? '';
+		$access_token  = $result['accessToken'] ?? '';
+		$refresh_token = $result['refreshToken'] ?? '';
 		if ( ! $access_token ) {
 			wp_die( __( 'No access token received from server.', 'sratix-control' ), 500 );
 		}
 
-		// Redirect to Dashboard with token — Dashboard auto-detects and logs in
+		// Redirect to Dashboard with both tokens — Dashboard auto-detects and logs in
 		$api_url       = get_option( 'sratix_api_url', '' );
 		$dashboard_url = str_replace( '/api', '/login', $api_url );
-		$redirect_url  = add_query_arg( 'token', $access_token, $dashboard_url );
+		$redirect_url  = add_query_arg( array(
+			'token'   => $access_token,
+			'refresh' => $refresh_token,
+		), $dashboard_url );
 
 		wp_redirect( $redirect_url );
 		exit;
+	}
+
+	/**
+	 * AJAX: generate a shareable login URL with a refresh token (7-day expiry).
+	 */
+	public function handle_generate_token() {
+		check_ajax_referer( 'sratix_generate_token' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		$api  = new SRAtix_Control_API();
+		$user = wp_get_current_user();
+
+		$result = $api->exchange_token( $user->ID, (array) $user->roles );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		$access_token  = $result['accessToken'] ?? '';
+		$refresh_token = $result['refreshToken'] ?? '';
+
+		$api_url       = get_option( 'sratix_api_url', '' );
+		$dashboard_url = str_replace( '/api', '/login', $api_url );
+		$login_url     = add_query_arg( array(
+			'token'   => $access_token,
+			'refresh' => $refresh_token,
+		), $dashboard_url );
+
+		wp_send_json_success( array( 'loginUrl' => $login_url ) );
 	}
 
 	/**
@@ -195,6 +230,70 @@ class SRAtix_Control_Admin {
 					<p class="description">
 						<?php esc_html_e( 'Exchanges your WordPress credentials and opens the dashboard with automatic sign-in.', 'sratix-control' ); ?>
 					</p>
+
+					<hr style="margin:16px 0">
+
+					<h3 style="margin-top:0"><?php esc_html_e( 'Shareable Login Token', 'sratix-control' ); ?></h3>
+					<p class="description" style="margin-bottom:8px">
+						<?php esc_html_e( 'Generate a token you can give to someone without WordPress access so they can sign into the Dashboard.', 'sratix-control' ); ?>
+					</p>
+					<p>
+						<button type="button" id="sratix-generate-token" class="button">
+							<?php esc_html_e( 'Generate Token', 'sratix-control' ); ?>
+						</button>
+					</p>
+					<div id="sratix-token-output" style="display:none;margin-top:12px">
+						<label style="display:block;margin-bottom:4px;font-weight:600;font-size:13px">
+							<?php esc_html_e( 'Dashboard URL (valid for 7 days):', 'sratix-control' ); ?>
+						</label>
+						<div style="display:flex;gap:6px">
+							<input type="text" id="sratix-token-url" readonly class="regular-text" style="flex:1;font-family:monospace;font-size:12px" />
+							<button type="button" id="sratix-copy-url" class="button"><?php esc_html_e( 'Copy URL', 'sratix-control' ); ?></button>
+						</div>
+						<p class="description" style="margin-top:6px">
+							<?php esc_html_e( 'Send this URL to the person — they will be signed in automatically when they open it.', 'sratix-control' ); ?>
+						</p>
+					</div>
+
+					<script>
+					(function(){
+						var btn = document.getElementById('sratix-generate-token');
+						var output = document.getElementById('sratix-token-output');
+						var urlInput = document.getElementById('sratix-token-url');
+						var copyBtn = document.getElementById('sratix-copy-url');
+
+						btn.addEventListener('click', function() {
+							btn.disabled = true;
+							btn.textContent = '<?php echo esc_js( __( 'Generating…', 'sratix-control' ) ); ?>';
+
+							fetch(ajaxurl + '?action=sratix_generate_token&_wpnonce=<?php echo wp_create_nonce( 'sratix_generate_token' ); ?>')
+								.then(function(r){ return r.json(); })
+								.then(function(data) {
+									if (data.success) {
+										urlInput.value = data.data.loginUrl;
+										output.style.display = 'block';
+									} else {
+										alert(data.data || 'Failed to generate token');
+									}
+									btn.disabled = false;
+									btn.textContent = '<?php echo esc_js( __( 'Generate Token', 'sratix-control' ) ); ?>';
+								})
+								.catch(function() {
+									alert('Request failed');
+									btn.disabled = false;
+									btn.textContent = '<?php echo esc_js( __( 'Generate Token', 'sratix-control' ) ); ?>';
+								});
+						});
+
+						copyBtn.addEventListener('click', function() {
+							urlInput.select();
+							navigator.clipboard.writeText(urlInput.value).then(function() {
+								copyBtn.textContent = '<?php echo esc_js( __( 'Copied!', 'sratix-control' ) ); ?>';
+								setTimeout(function(){ copyBtn.textContent = '<?php echo esc_js( __( 'Copy URL', 'sratix-control' ) ); ?>'; }, 2000);
+							});
+						});
+					})();
+					</script>
 				</div>
 				<?php endif; ?>
 			</div>

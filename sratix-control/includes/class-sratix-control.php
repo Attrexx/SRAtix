@@ -51,6 +51,9 @@ class SRAtix_Control {
 
 		// Dashboard launch — exchanges WP credentials for JWT, redirects with token
 		$this->loader->add_action( 'admin_post_sratix_launch_dashboard', $this->admin, 'handle_launch_dashboard' );
+
+		// AJAX: generate shareable login token
+		$this->loader->add_action( 'wp_ajax_sratix_generate_token', $this->admin, 'handle_generate_token' );
 	}
 
 	private function define_sync_hooks() {

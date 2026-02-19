@@ -26,6 +26,11 @@ class ExchangeTokenDto {
   displayName?: string;
 }
 
+class RefreshTokenDto {
+  @IsString()
+  refreshToken!: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -46,5 +51,16 @@ export class AuthController {
       dto.email,
       dto.displayName,
     );
+  }
+
+  /**
+   * POST /api/auth/refresh
+   * Exchange a valid refresh token for a new access + refresh token pair.
+   */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 30, windowSec: 60 })
+  async refreshToken(@Body() dto: RefreshTokenDto): Promise<TokenPair> {
+    return this.authService.refreshAccessToken(dto.refreshToken);
   }
 }
