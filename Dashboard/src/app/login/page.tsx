@@ -1,22 +1,45 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
 /**
  * Login page — accepts a WP-issued token for exchange.
  *
  * In production, users arrive here via redirect from SRAtix Control plugin
- * with a short-lived exchange token in the URL. For dev/testing, a manual
- * input field is shown.
+ * with a JWT access token in the URL (?token=...). The page auto-detects
+ * it, stores the session, and redirects to /dashboard.
+ *
+ * For dev/testing, a manual input field is also shown.
  */
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, loginWithJwt, isLoading } = useAuth();
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [autoLogging, setAutoLogging] = useState(false);
+
+  // Auto-login from ?token= URL parameter (redirect from WP Control plugin)
+  useEffect(() => {
+    const urlToken = searchParams.get('token');
+    if (!urlToken || autoLogging) return;
+
+    setAutoLogging(true);
+    loginWithJwt(urlToken)
+      .then(() => {
+        // Clean the token from the URL before redirecting
+        window.history.replaceState({}, '', '/login/');
+        router.push('/dashboard');
+      })
+      .catch((err: unknown) => {
+        setAutoLogging(false);
+        setError(err instanceof Error ? err.message : 'Auto-login failed');
+        window.history.replaceState({}, '', '/login/');
+      });
+  }, [searchParams, autoLogging, loginWithJwt, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +58,17 @@ export default function LoginPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || autoLogging) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin text-3xl">⏳</div>
+        <div className="text-center">
+          <div className="animate-spin text-3xl">⏳</div>
+          {autoLogging && (
+            <p className="mt-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Signing in from WordPress...
+            </p>
+          )}
+        </div>
       </div>
     );
   }

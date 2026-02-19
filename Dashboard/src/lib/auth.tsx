@@ -22,6 +22,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (wpToken: string) => Promise<void>;
+  loginWithJwt: (jwt: string) => Promise<void>;
   logout: () => void;
   hasRole: (role: string) => boolean;
 }
@@ -57,6 +58,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   }, []);
 
+  /**
+   * Login with a pre-issued JWT (from WP Control plugin redirect).
+   * Decodes the JWT payload to extract user data — no server round-trip needed.
+   */
+  const loginWithJwt = useCallback(async (jwt: string) => {
+    try {
+      // Decode JWT payload (base64url — second segment)
+      const parts = jwt.split('.');
+      if (parts.length !== 3) throw new Error('Invalid token format');
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+
+      if (!payload.sub || !payload.email) {
+        throw new Error('Token missing required fields');
+      }
+
+      const userData: User = {
+        id: payload.sub,
+        email: payload.email,
+        displayName: payload.displayName || payload.email.split('@')[0],
+        roles: payload.roles || [],
+      };
+
+      localStorage.setItem('sratix_token', jwt);
+      localStorage.setItem('sratix_user', JSON.stringify(userData));
+      setToken(jwt);
+      setUser(userData);
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Failed to decode token');
+    }
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('sratix_token');
     localStorage.removeItem('sratix_user');
@@ -71,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isLoading, login, logout, hasRole }}
+      value={{ user, token, isLoading, login, loginWithJwt, logout, hasRole }}
     >
       {children}
     </AuthContext.Provider>

@@ -48,6 +48,9 @@ class SRAtix_Control {
 		$this->loader->add_action( 'admin_menu',           $this->admin, 'add_menu_page' );
 		$this->loader->add_action( 'admin_init',           $this->admin, 'register_settings' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $this->admin, 'enqueue_assets' );
+
+		// Dashboard launch — exchanges WP credentials for JWT, redirects with token
+		$this->loader->add_action( 'admin_post_sratix_launch_dashboard', $this->admin, 'handle_launch_dashboard' );
 	}
 
 	private function define_sync_hooks() {

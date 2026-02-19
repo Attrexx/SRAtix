@@ -75,6 +75,47 @@ class SRAtix_Control_Admin {
 	}
 
 	/**
+	 * Handle "Open SRAtix Dashboard" — exchange WP creds for JWT, redirect with token.
+	 */
+	public function handle_launch_dashboard() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( __( 'Unauthorized', 'sratix-control' ), 403 );
+		}
+
+		check_admin_referer( 'sratix_launch_dashboard' );
+
+		$api = new SRAtix_Control_API();
+		$user = wp_get_current_user();
+
+		$result = $api->exchange_token( $user->ID, (array) $user->roles );
+
+		if ( is_wp_error( $result ) ) {
+			wp_die(
+				sprintf(
+					/* translators: %s: error message */
+					__( 'Failed to authenticate with SRAtix Server: %s', 'sratix-control' ),
+					$result->get_error_message()
+				),
+				__( 'Authentication Error', 'sratix-control' ),
+				array( 'back_link' => true )
+			);
+		}
+
+		$access_token = $result['accessToken'] ?? '';
+		if ( ! $access_token ) {
+			wp_die( __( 'No access token received from server.', 'sratix-control' ), 500 );
+		}
+
+		// Redirect to Dashboard with token — Dashboard auto-detects and logs in
+		$api_url       = get_option( 'sratix_api_url', '' );
+		$dashboard_url = str_replace( '/api', '/login', $api_url );
+		$redirect_url  = add_query_arg( 'token', $access_token, $dashboard_url );
+
+		wp_redirect( $redirect_url );
+		exit;
+	}
+
+	/**
 	 * Enqueue admin assets (only on our page).
 	 */
 	public function enqueue_assets( $hook ) {
@@ -143,13 +184,16 @@ class SRAtix_Control_Admin {
 				<div style="flex:1;background:#fff;border:1px solid #c3c4c7;padding:20px;border-radius:4px">
 					<h2><?php esc_html_e( 'Quick Actions', 'sratix-control' ); ?></h2>
 					<p>
-						<a href="<?php echo esc_url( str_replace( '/api', '', $api_url ) ); ?>"
+						<?php
+						$launch_url = admin_url( 'admin-post.php?action=sratix_launch_dashboard&_wpnonce=' . wp_create_nonce( 'sratix_launch_dashboard' ) );
+						?>
+						<a href="<?php echo esc_url( $launch_url ); ?>"
 						   class="button button-primary" target="_blank" rel="noopener">
 							<?php esc_html_e( 'Open SRAtix Dashboard →', 'sratix-control' ); ?>
 						</a>
 					</p>
 					<p class="description">
-						<?php esc_html_e( 'Opens the full ticketing dashboard in a new tab. You will be authenticated automatically.', 'sratix-control' ); ?>
+						<?php esc_html_e( 'Exchanges your WordPress credentials and opens the dashboard with automatic sign-in.', 'sratix-control' ); ?>
 					</p>
 				</div>
 				<?php endif; ?>
