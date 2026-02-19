@@ -1,9 +1,10 @@
 # SRAtix — Session 6 Handoff
 
 **Date**: 2026-02-19  
-**Focus**: Build Audit, Webhook Management Page, WP Sync Webhooks, Infomaniak Deployment (6 Iterations)  
+**Focus**: Build Audit, Webhook Management Page, WP Sync Webhooks, Infomaniak Deployment (10 Iterations)  
 **Architecture change**: Dashboard converted from SSR to static export — single-process, single-port deployment  
-**Commits this session**: 10 (from `cec97d1` to `9b2bd6a`)
+**Deployment result**: ✅ Server running on Infomaniak — Dashboard login page confirmed live  
+**Commits this session**: 15 (from `cec97d1` to `c29ee96`)
 
 ---
 
@@ -74,7 +75,7 @@ Combined with the existing `order.paid` dispatch (wired in Session 5), the syste
 
 ---
 
-### 4. Infomaniak Deployment — 6 Iterations
+### 4. Infomaniak Deployment — 10 Iterations
 
 This was the most challenging part of the session. The goal: get SRAtix running on Infomaniak's Node.js hosting (single site, single port 3000, git-based deploy).
 
@@ -108,7 +109,7 @@ git push origin main --force
 **Attempted fix**: Added `fuser -k 3100/tcp` and `fuser -k 3000/tcp` to `start.js` before spawning processes. Didn't reliably work — `fuser` may not be available, and the restart window is too tight.  
 **Conclusion**: Two-process architecture is fundamentally incompatible with Infomaniak's single-app hosting model.
 
-#### Iteration 6 (FINAL): Static Export Architecture (`9b2bd6a`) ✅
+#### Iteration 6: Static Export Architecture (`9b2bd6a`) ✅
 **Solution**: Eliminated the two-process problem entirely:
 1. Converted Dashboard to `output: 'export'` — Next.js generates plain HTML/JS/CSS in `Dashboard/out/`
 2. Replaced `@fastify/http-proxy` with `@fastify/static` in NestJS `main.ts`
@@ -117,10 +118,46 @@ git push origin main --force
 
 **Key implementation details**:
 - `@fastify/static` registered with `wildcard: false` — doesn't intercept all routes, lets NestJS handle `/api/*`
-- `setNotFoundHandler` serves `index.html` for any unmatched GET request (SPA fallback)
+- SPA fallback serves `index.html` for any unmatched GET request
 - API routes (`/api/*`), health (`/health`), webhooks (`/webhooks/*`) excluded from SPA fallback → return proper 404 JSON
 - `trailingSlash: true` in Next.js config for proper static file path resolution
 - `images: { unoptimized: true }` — Next.js Image component works without server-side optimization
+
+#### Iteration 7: generateStaticParams Missing (`d8d5a9f`)
+**Failure**: `next build` with `output: 'export'` failed — all 9 `[id]` dynamic route pages require `generateStaticParams()` for static export. Error: `Page "/dashboard/events/[id]/analytics" is missing "generateStaticParams()" so it cannot be used with "output: export" config.`  
+**Fix**: Split all 9 dynamic route pages into a server wrapper (`page.tsx`) + client component (`client.tsx`). Each `page.tsx` exports:
+```typescript
+export function generateStaticParams() { return [{ id: '_' }]; }
+```
+The `_` acts as a placeholder — Next.js pre-renders one copy, and the SPA fallback in `main.ts` maps any real event ID to the pre-rendered `_` HTML at runtime. Updated `main.ts` to map `/dashboard/events/<realId>/...` → `dashboard/events/_/.../index.html`.
+
+**Pages split**: overview, analytics, attendees, check-in, export, forms, orders, promo-codes, webhooks.
+
+#### Iteration 8: BullMQ Queue Name Colon (`9a1dcec`)
+**Failure**: Build succeeded (15/15 pages generated) but server crashed at startup: `Error: Queue name cannot contain :`  
+**Root cause**: Queue names were `sratix:email`, `sratix:pdf`, etc. BullMQ uses `:` internally as a Redis key separator.  
+**Fix**: Changed queue naming from `sratix:${name}` → `sratix-${name}` in `queue.service.ts` (both `Queue` and `Worker` creation). 6 queues affected: email, pdf, badge, export, sync, webhook.
+
+#### Iteration 9: Stripe Empty Key Crash (`e8b65a7`)
+**Failure**: BullMQ fix worked, 6 queues initialized. New crash: `Error: Neither apiKey nor config.authenticator provided`  
+**Root cause**: `StripeService.onModuleInit()` used `config.getOrThrow('STRIPE_SECRET_KEY')` which passed an empty string to `new Stripe('')` — Stripe SDK rejects empty keys.  
+**Fix**: Graceful degradation pattern:
+- Changed to `config.get()`, skip Stripe init if key is empty (logs warning)
+- Added `private ensureStripe(): Stripe` guard method that throws a clear error on use
+- Replaced all `this.stripe.*` calls with `this.ensureStripe().*`
+- Same treatment for `STRIPE_WEBHOOK_SECRET`
+
+#### Iteration 10 (FINAL): setNotFoundHandler Conflict (`f2780ef`) ✅
+**Failure**: Stripe fix worked (logged warning, continued). New crash: `Error: Not found handler already set for Fastify instance with prefix: '/'`  
+**Root cause**: Our `main.ts` called `fastify.setNotFoundHandler()` for SPA fallback, but NestJS registers its own 404 handler during `app.listen()` → `init()` → `registerRouterHooks()` → `registerNotFoundHandler()`. Fastify only allows one per prefix.  
+**Fix**: Replaced `setNotFoundHandler` with `fastify.addHook('onRequest', ...)` which runs before route matching:
+- Intercepts GET requests to Dashboard navigation paths
+- Skips: non-GET, `/api/*`, `/health`, `/webhooks/*`, files with extensions (`.js`, `.css`, `.png`, etc.)
+- Maps `/dashboard/events/<realId>/subpath` → pre-rendered `dashboard/events/_/subpath/index.html`
+- Falls back to exact path match, then root `index.html`
+- Unknown non-API paths fall through to NestJS (which returns its own 404)
+
+**Result**: Server started successfully ✅ — Dashboard login page confirmed live at `tix.swiss-robotics.org`
 
 ---
 
@@ -139,7 +176,16 @@ Infomaniak separates build and runtime environments. `DATABASE_URL`, `REDIS_URL`
 GitHub's secret scanning caught Stripe live keys (`sk_live_*`) and blocked the push. After reverting to placeholders and force-pushing, the git history was scrubbed. Lesson: sensitive credentials should never be committed, even to private repos. A Dashboard settings page (storing to DB) is the proper solution — deferred to a future session.
 
 ### Challenge 5: Static Export + Dynamic Routes
-Next.js `output: 'export'` with dynamic `[id]` routes doesn't generate per-ID HTML files (since there's no `generateStaticParams()`). The SPA fallback approach handles this — all navigation requests receive `index.html`, and Next.js client-side router resolves the route. This works because the Dashboard uses client-side data fetching exclusively.
+Next.js `output: 'export'` with dynamic `[id]` routes **requires** `generateStaticParams()` — without it, the build fails. Solution: each dynamic page exports `generateStaticParams` returning a single placeholder `[{ id: '_' }]`. At runtime, the `onRequest` hook in `main.ts` maps real event IDs to the pre-rendered `_` HTML. This works because the Dashboard uses `useParams()` for client-side data fetching — the actual ID comes from the URL, not the pre-rendered file.
+
+### Challenge 6: BullMQ Queue Naming
+BullMQ uses `:` as a Redis key prefix separator internally. Queue names like `sratix:email` conflicted with this — BullMQ's key format is `{prefix}:{queueName}:{subkey}`, so our colon created ambiguous keys. Changed to dash separator: `sratix-email`.
+
+### Challenge 7: Stripe Graceful Degradation
+In dev/staging environments, Stripe keys may be empty. The SDK crashes on `new Stripe('')`. Services that depend on Stripe should degrade gracefully — log a warning, skip init, throw a clear error only when Stripe is actually used. The `ensureStripe()` guard pattern handles this cleanly.
+
+### Challenge 8: Fastify + NestJS 404 Handler Conflict
+Fastify allows only one `setNotFoundHandler` per route prefix. NestJS's `FastifyAdapter` registers its own during `app.listen()`. Any user-defined `setNotFoundHandler` on `'/'` conflicts. Solution: use `addHook('onRequest', ...)` instead — this runs before route matching and doesn't conflict with NestJS's 404 handler.
 
 ### Observation: Stripe API Evolution
 Stripe v17 renamed `expires_after` → `expires_at` on checkout sessions. The `apiVersion` must be set to `2025-02-24.acacia` to match the installed SDK. Minor but easy to miss during type-checking.
@@ -224,6 +270,11 @@ npm start
 | `d9dac64` | config: .env with placeholders for Stripe/SMTP (set via Dashboard later) |
 | `92379ef` | fix: kill stale port processes before starting — prevents EADDRINUSE loop |
 | `9b2bd6a` | **fix: replace two-process proxy with static export — single process, single port** |
+| `d8d5a9f` | fix: add generateStaticParams to all 9 dynamic [id] pages — split into server/client |
+| `9a1dcec` | fix: BullMQ queue names `sratix:*` → `sratix-*` (colon not allowed as separator) |
+| `e8b65a7` | fix: Stripe graceful degradation — skip init when key is empty, `ensureStripe()` guard |
+| `f2780ef` | fix: replace setNotFoundHandler with onRequest hook — avoids NestJS conflict |
+| `c29ee96` | rename: Client/ → sratix-client/, Control/ → sratix-control/ — match WP plugin slugs |
 
 ---
 
@@ -233,7 +284,7 @@ npm start
 
 | File | Changes |
 |------|---------|
-| `src/main.ts` | **Major rewrite** — removed `@fastify/http-proxy`, added `@fastify/static` for Dashboard/out/, SPA fallback via `setNotFoundHandler` |
+| `src/main.ts` | **Major rewrite** — removed `@fastify/http-proxy`, added `@fastify/static` for Dashboard/out/, SPA fallback via `onRequest` hook (not `setNotFoundHandler` — conflicts with NestJS) |
 | `src/outgoing-webhooks/outgoing-webhooks.controller.ts` | Fixed `AuthGuard` pattern |
 | `src/audit-log/audit-log.service.ts` | Prisma 6 JSON field casts |
 | `src/forms/forms.service.ts` | Prisma 6 JSON field casts |
@@ -242,8 +293,9 @@ npm start
 | `src/payments/stripe-webhook.controller.ts` | `expires_after` → `expires_at`, JSON casts |
 | `src/outgoing-webhooks/outgoing-webhooks.service.ts` | JSON field casts |
 | `src/badge-templates/badge-templates.service.ts` | JSON field casts |
-| `src/payments/stripe.service.ts` | Stripe API version update |
+| `src/payments/stripe.service.ts` | Stripe API version update + graceful degradation when key is empty (`ensureStripe()` guard) |
 | `src/promo-codes/promo-codes.service.ts` | JSON field casts |
+| `src/queue/queue.service.ts` | BullMQ queue names `sratix:*` → `sratix-*` (colon not allowed) |
 | `src/tickets/tickets.service.ts` | **+Webhook dispatch** (`ticket.issued`, `ticket.voided`) |
 | `src/tickets/tickets.module.ts` | +`OutgoingWebhooksModule` import |
 | `src/check-ins/check-ins.service.ts` | **+Webhook dispatch** (`checkin.created`) |
@@ -263,6 +315,8 @@ npm start
 | `src/app/dashboard/layout.tsx` | Removed `AuthProvider` (now in root layout) |
 | `src/components/sidebar.tsx` | +Webhooks nav item |
 | `src/app/dashboard/events/[id]/webhooks/page.tsx` | **NEW** — Full webhook management page |
+| `src/app/dashboard/events/[id]/*/client.tsx` (×9) | **NEW** — Client components extracted from page.tsx for static export |
+| `src/app/dashboard/events/[id]/*/page.tsx` (×9) | **REWRITTEN** — Server wrappers with `generateStaticParams` returning `[{ id: '_' }]` |
 
 ### Root Files (3 modified, 1 created)
 
@@ -290,7 +344,7 @@ npm start
 
 | Priority | Task | Notes |
 |----------|------|-------|
-| **P0** | Verify Infomaniak rebuild | User must trigger rebuild — awaiting result |
+| ~~**P0**~~ | ~~Verify Infomaniak rebuild~~ | ✅ Server running — Dashboard login page confirmed live |
 | **P0** | `prisma db push` via SSH | Creates 4 new tables: `badge_templates`, `badge_renders`, `webhook_endpoints`, `webhook_deliveries` |
 | **P0** | Set real JWT/WP secrets | Currently using dev placeholders — insecure |
 | **P1** | Dashboard settings page | Store Stripe keys + SMTP creds via UI (not .env) |
@@ -335,9 +389,10 @@ npm start
 | NestJS modules | 22 | 22 |
 | Prisma models | 20 | 20 |
 | REST API endpoints | ~65 | ~65 |
-| Dashboard TypeScript/TSX files | 22 | 24 |
+| Dashboard TypeScript/TSX files | 22 | 33 |
 | Dashboard pages | 11 | 12 |
-| WP plugins | 2 | 2 |
-| Git commits (total) | ~10 | 20 |
+| WP plugin folders | `Client/`, `Control/` | `sratix-client/`, `sratix-control/` |
+| Git commits (total) | ~10 | 25 |
 | Phase 1 items | 19/19 ✅ | 19/19 ✅ |
 | Phase 2 items done | 3 | **5** |
+| Deployment status | Not deployed | ✅ Live on Infomaniak |
