@@ -112,8 +112,14 @@ export function Sidebar({ eventId }: { eventId?: string }) {
 }
 
 function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
+  // Use native <a> for event sub-pages to force full page load →
+  // SPA fallback serves the _ placeholder HTML with correct URL
+  // so useEventId() can read the real UUID from window.location.
+  const isEventRoute = item.href.includes('/dashboard/events/');
+  const Tag = isEventRoute ? 'a' : Link;
+
   return (
-    <Link
+    <Tag
       href={item.href}
       className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
       style={{
@@ -129,6 +135,6 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
     >
       <span className="flex-shrink-0">{item.icon}</span>
       <span>{item.label}</span>
-    </Link>
+    </Tag>
   );
 }

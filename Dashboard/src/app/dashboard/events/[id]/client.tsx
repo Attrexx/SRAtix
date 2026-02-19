@@ -20,7 +20,7 @@ export default function EventOverviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || id === '_') return;
     const ac = new AbortController();
 
     Promise.all([
@@ -89,29 +89,29 @@ export default function EventOverviewPage() {
         <StatCard
           icon={<Icons.Ticket size={20} />}
           label="Tickets Sold"
-          value={stats.ticketsSold.toLocaleString()}
+          value={(stats.ticketsSold ?? 0).toLocaleString()}
           trend={capacity > 0 ? `${capacityPct}% of capacity` : undefined}
           trendUp={capacityPct < 90}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}
           label="Orders"
-          value={stats.totalOrders.toLocaleString()}
+          value={(stats.totalOrders ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.DollarSign size={20} />}
           label="Revenue"
-          value={`${(stats.totalRevenue / 100).toLocaleString('de-CH', {
+          value={`${((stats.totalRevenue ?? 0) / 100).toLocaleString('de-CH', {
             minimumFractionDigits: 2,
-          })} ${event.currency}`}
+          })} ${event.currency ?? 'CHF'}`}
         />
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
           label="Check-Ins"
-          value={stats.checkIns.toLocaleString()}
+          value={(stats.checkIns ?? 0).toLocaleString()}
           trend={
             stats.ticketsSold > 0
-              ? `${Math.round((stats.checkIns / stats.ticketsSold) * 100)}% checked in`
+              ? `${Math.round(((stats.checkIns ?? 0) / stats.ticketsSold) * 100)}% checked in`
               : undefined
           }
           trendUp
