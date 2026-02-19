@@ -20,26 +20,43 @@ import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
+  private isSuperAdmin(user: JwtPayload): boolean {
+    return user.roles?.includes('super_admin') ?? false;
+  }
+
   @Get()
   @Roles('event_admin', 'super_admin')
   findAll(@CurrentUser() user: JwtPayload) {
-    return this.eventsService.findAll(user.orgId ?? '');
+    // Super admins see all events across all orgs
+    if (this.isSuperAdmin(user)) {
+      return this.eventsService.findAll();
+    }
+    return this.eventsService.findAll(user.orgId);
   }
 
   @Get(':id')
   @Roles('event_admin', 'super_admin')
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.eventsService.findOne(id, user.orgId ?? '');
+    // Super admins can view any event
+    if (this.isSuperAdmin(user)) {
+      return this.eventsService.findOne(id);
+    }
+    return this.eventsService.findOne(id, user.orgId);
   }
 
   @Post()
   @Roles('event_admin', 'super_admin')
-  create(@Body() dto: CreateEventDto, @CurrentUser() user: JwtPayload) {
+  async create(@Body() dto: CreateEventDto, @CurrentUser() user: JwtPayload) {
+    // Resolve the orgId — super admins without an org get a default one
+    let orgId = user.orgId;
+    if (!orgId) {
+      orgId = await this.eventsService.getOrCreateDefaultOrgId();
+    }
     return this.eventsService.create({
       ...dto,
       startDate: new Date(dto.startDate),
       endDate: new Date(dto.endDate),
-      orgId: user.orgId ?? '',
+      orgId,
     });
   }
 
@@ -53,6 +70,10 @@ export class EventsController {
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
-    return this.eventsService.update(id, user.orgId ?? '', data);
+    // Super admins can update any event
+    if (this.isSuperAdmin(user)) {
+      return this.eventsService.update(id, undefined, data);
+    }
+    return this.eventsService.update(id, user.orgId, data);
   }
 }
