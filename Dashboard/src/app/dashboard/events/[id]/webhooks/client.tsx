@@ -219,7 +219,7 @@ export default function WebhooksPage() {
                   className="flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer"
                   style={{
                     background: newEvents.includes(type)
-                      ? 'var(--color-primary-bg, #eff6ff)'
+                      ? 'var(--color-primary-bg, #fde8e8)'
                       : 'var(--color-bg)',
                     border: `1px solid ${newEvents.includes(type) ? 'var(--color-primary)' : 'var(--color-border)'}`,
                   }}

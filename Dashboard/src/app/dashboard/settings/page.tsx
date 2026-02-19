@@ -233,7 +233,7 @@ export default function SettingsPage() {
         <div
           className="mb-6 rounded-lg px-4 py-3 text-sm"
           style={{
-            background: 'var(--color-primary-light, #eff6ff)',
+            background: 'var(--color-primary-light, #fde8e8)',
             color: 'var(--color-primary)',
             border: '1px solid var(--color-primary)',
           }}
@@ -477,8 +477,8 @@ function SourceBadge({ source }: { source: 'database' | 'env' | 'default' }) {
       label: 'DB',
     },
     env: {
-      bg: 'var(--color-info-bg, #dbeafe)',
-      color: 'var(--color-info-text, #1e40af)',
+      bg: 'var(--color-info-bg, #fde8e8)',
+      color: 'var(--color-info-text, #a01f24)',
       label: '.env',
     },
     default: {

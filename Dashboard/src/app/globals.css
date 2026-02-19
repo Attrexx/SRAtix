@@ -13,9 +13,9 @@
   --color-text: #0f172a;
   --color-text-secondary: #475569;
   --color-text-muted: #94a3b8;
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #dbeafe;
+  --color-primary: #c1272d;
+  --color-primary-hover: #a01f24;
+  --color-primary-light: #fde8e8;
   --color-success: #16a34a;
   --color-success-light: #dcfce7;
   --color-warning: #d97706;
@@ -25,7 +25,7 @@
   --color-sidebar: #0f172a;
   --color-sidebar-text: #e2e8f0;
   --color-sidebar-hover: #1e293b;
-  --color-sidebar-active: #1e40af;
+  --color-sidebar-active: #a01f24;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
@@ -33,29 +33,29 @@
 }
 
 .dark {
-  --color-bg: #0f172a;
-  --color-bg-subtle: #1e293b;
-  --color-bg-muted: #334155;
-  --color-bg-card: #1e293b;
-  --color-bg-hover: #334155;
-  --color-border: #334155;
-  --color-border-subtle: #1e293b;
+  --color-bg: #1c1d21;
+  --color-bg-subtle: #25262b;
+  --color-bg-muted: #2e2f35;
+  --color-bg-card: #25262b;
+  --color-bg-hover: #2e2f35;
+  --color-border: #35363c;
+  --color-border-subtle: #25262b;
   --color-text: #f1f5f9;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
-  --color-primary: #3b82f6;
-  --color-primary-hover: #60a5fa;
-  --color-primary-light: #1e3a5f;
+  --color-primary: #d63031;
+  --color-primary-hover: #e74c3c;
+  --color-primary-light: #3d1415;
   --color-success: #22c55e;
   --color-success-light: #14532d;
   --color-warning: #f59e0b;
   --color-warning-light: #451a03;
   --color-danger: #ef4444;
   --color-danger-light: #450a0a;
-  --color-sidebar: #020617;
+  --color-sidebar: #16171a;
   --color-sidebar-text: #cbd5e1;
-  --color-sidebar-hover: #0f172a;
-  --color-sidebar-active: #1d4ed8;
+  --color-sidebar-hover: #1c1d21;
+  --color-sidebar-active: #a01f24;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
