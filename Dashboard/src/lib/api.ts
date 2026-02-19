@@ -440,11 +440,11 @@ export const api = {
       total: number;
       today: number;
       byTicketType: Record<string, number>;
-    }>(`/check-ins/stats/event/${eventId}`, { signal }),
+    }>(`/events/${eventId}/check-ins/stats`, { signal }),
 
   getRecentCheckIns: (eventId: string, limit?: number, signal?: AbortSignal) =>
     request<CheckIn[]>(
-      `/check-ins/event/${eventId}${limit ? `?limit=${limit}` : ''}`,
+      `/events/${eventId}/check-ins${limit ? `?limit=${limit}` : ''}`,
       { signal },
     ),
 
