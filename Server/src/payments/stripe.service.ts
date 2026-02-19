@@ -14,7 +14,13 @@ export class StripeService implements OnModuleInit {
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit() {
-    const secretKey = this.config.getOrThrow<string>('STRIPE_SECRET_KEY');
+    const secretKey = this.config.get<string>('STRIPE_SECRET_KEY');
+    if (!secretKey) {
+      this.logger.warn(
+        'STRIPE_SECRET_KEY not configured — payment features will be unavailable',
+      );
+      return;
+    }
     this.stripe = new Stripe(secretKey, {
       apiVersion: '2025-02-24.acacia',
       appInfo: {
@@ -26,6 +32,13 @@ export class StripeService implements OnModuleInit {
     this.logger.log(
       `Stripe initialized in ${this.config.get('STRIPE_MODE', 'test')} mode`,
     );
+  }
+
+  private ensureStripe(): Stripe {
+    if (!this.stripe) {
+      throw new Error('Stripe is not configured — set STRIPE_SECRET_KEY');
+    }
+    return this.stripe;
   }
 
   /**
@@ -53,7 +66,7 @@ export class StripeService implements OnModuleInit {
     // If a discount is specified, create a one-time Stripe coupon
     let discounts: Stripe.Checkout.SessionCreateParams['discounts'] | undefined;
     if (params.discountAmountCents && params.discountAmountCents > 0) {
-      const coupon = await this.stripe.coupons.create({
+      const coupon = await this.ensureStripe().coupons.create({
         amount_off: params.discountAmountCents,
         currency: params.currency.toLowerCase(),
         duration: 'once',
@@ -66,7 +79,7 @@ export class StripeService implements OnModuleInit {
       );
     }
 
-    const session = await this.stripe.checkout.sessions.create({
+    const session = await this.ensureStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       customer_email: params.customerEmail,
@@ -107,7 +120,7 @@ export class StripeService implements OnModuleInit {
    * Retrieve a Checkout Session from Stripe (for status checks).
    */
   async getSession(sessionId: string): Promise<Stripe.Checkout.Session> {
-    return this.stripe.checkout.sessions.retrieve(sessionId, {
+    return this.ensureStripe().checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent'],
     });
   }
@@ -119,7 +132,7 @@ export class StripeService implements OnModuleInit {
     paymentIntentId: string,
     amountCents?: number,
   ): Promise<Stripe.Refund> {
-    const refund = await this.stripe.refunds.create({
+    const refund = await this.ensureStripe().refunds.create({
       payment_intent: paymentIntentId,
       ...(amountCents ? { amount: amountCents } : {}),
     });
@@ -136,10 +149,13 @@ export class StripeService implements OnModuleInit {
     rawBody: Buffer,
     signature: string,
   ): Stripe.Event {
-    const webhookSecret = this.config.getOrThrow<string>(
+    const webhookSecret = this.config.get<string>(
       'STRIPE_WEBHOOK_SECRET',
     );
-    return this.stripe.webhooks.constructEvent(
+    if (!webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET not configured');
+    }
+    return this.ensureStripe().webhooks.constructEvent(
       rawBody,
       signature,
       webhookSecret,
