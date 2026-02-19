@@ -30,10 +30,11 @@ export default function CheckInLivePage() {
   const [loading, setLoading] = useState(true);
 
   // SSE live check-in feed
+  const sseEnabled = !!eventId && eventId !== '_';
   const { items: liveCheckIns, isConnected } = useSSEBuffer<CheckInEvent>(
     `events/${eventId}/check-ins`,
     100,
-    !!eventId,
+    sseEnabled,
   );
 
   // SSE stats updates
@@ -43,7 +44,7 @@ export default function CheckInLivePage() {
 
   // Initial data load
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || eventId === '_') return;
     const ac = new AbortController();
 
     Promise.all([
@@ -60,7 +61,7 @@ export default function CheckInLivePage() {
   }, [eventId]);
 
   // Update total from live stream
-  const effectiveTotal = stats.total + liveCheckIns.length;
+  const effectiveTotal = (stats?.total ?? 0) + liveCheckIns.length;
   const checkedInPct = totalTickets > 0 ? Math.round((effectiveTotal / totalTickets) * 100) : 0;
 
   if (loading) {
@@ -126,7 +127,7 @@ export default function CheckInLivePage() {
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
           label="Total Check-Ins"
-          value={effectiveTotal.toLocaleString()}
+          value={(effectiveTotal ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.Ticket size={20} />}
@@ -138,7 +139,7 @@ export default function CheckInLivePage() {
         <StatCard
           icon={<Icons.BarChart size={20} />}
           label="Today"
-          value={stats.today.toLocaleString()}
+          value={(stats?.today ?? 0).toLocaleString()}
         />
       </div>
 

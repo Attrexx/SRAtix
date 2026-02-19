@@ -20,7 +20,7 @@ export default function AnalyticsPage() {
   const [currency, setCurrency] = useState('CHF');
 
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId || eventId === '_') return;
     const ac = new AbortController();
 
     Promise.all([
@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
     const capacityUtilization = totalCapacity > 0 ? Math.round((totalTickets / totalCapacity) * 100) : 0;
 
     // Check-in rate
-    const checkInRate = totalTickets > 0 ? Math.round((checkInStats.total / totalTickets) * 100) : 0;
+    const checkInRate = totalTickets > 0 ? Math.round(((checkInStats?.total ?? 0) / totalTickets) * 100) : 0;
 
     // Revenue per attendee
     const revenuePerAttendee = totalTickets > 0 ? totalRevenue / totalTickets : 0;
@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
     const refundRate = orders.length > 0 ? Math.round((refundedOrders.length / orders.length) * 100) : 0;
 
     // Promo code usage
-    const totalPromoUses = promoCodes.reduce((s, pc) => s + pc.usedCount, 0);
+    const totalPromoUses = promoCodes.reduce((s, pc) => s + (pc.usedCount ?? 0), 0);
     const promoRedemptionRate = paidOrders.length > 0
       ? Math.round((totalPromoUses / paidOrders.length) * 100)
       : 0;
@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
 
     // Top promo codes
     const topPromoCodes = [...promoCodes]
-      .sort((a, b) => b.usedCount - a.usedCount)
+      .sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0))
       .slice(0, 5);
 
     return {
@@ -123,9 +123,9 @@ export default function AnalyticsPage() {
       refundedOrders: refundedOrders.length,
       conversionRate,
       checkInRate,
-      checkInTotal: checkInStats.total,
-      checkInToday: checkInStats.today,
-      checkInByTicketType: checkInStats.byTicketType,
+      checkInTotal: checkInStats?.total ?? 0,
+      checkInToday: checkInStats?.today ?? 0,
+      checkInByTicketType: checkInStats?.byTicketType ?? {},
       revenuePerAttendee,
       refundRate,
       totalPromoUses,
@@ -199,7 +199,7 @@ export default function AnalyticsPage() {
         <StatCard
           icon={<Icons.Ticket size={20} />}
           label="Tickets Sold"
-          value={analytics.totalTickets.toLocaleString()}
+          value={(analytics.totalTickets ?? 0).toLocaleString()}
           trend={
             analytics.totalCapacity > 0
               ? `${analytics.capacityUtilization}% of capacity`
@@ -228,7 +228,7 @@ export default function AnalyticsPage() {
         <StatCard
           icon={<Icons.Activity size={20} />}
           label="Registrations Today"
-          value={analytics.registrationsToday.toLocaleString()}
+          value={(analytics.registrationsToday ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.Undo size={20} />}

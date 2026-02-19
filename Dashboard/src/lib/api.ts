@@ -431,12 +431,29 @@ export const api = {
     request<Order>(`/orders/${id}`, { signal }),
 
   // Check-Ins
-  getCheckInStats: (eventId: string, signal?: AbortSignal) =>
-    request<{
-      total: number;
-      today: number;
-      byTicketType: Record<string, number>;
-    }>(`/events/${eventId}/check-ins/stats`, { signal }),
+  // Server returns { totalTickets, checkedIn, totalCheckIns, percentCheckedIn }
+  // Dashboard expects { total, today, byTicketType } — map here
+  getCheckInStats: async (eventId: string, signal?: AbortSignal): Promise<{
+    total: number;
+    today: number;
+    byTicketType: Record<string, number>;
+  }> => {
+    const raw = await request<{
+      totalTickets?: number;
+      checkedIn?: number;
+      totalCheckIns?: number;
+      percentCheckedIn?: number;
+      // forward-compat if server is later extended
+      total?: number;
+      today?: number;
+      byTicketType?: Record<string, number>;
+    }>(`/events/${eventId}/check-ins/stats`, { signal });
+    return {
+      total: raw.total ?? raw.checkedIn ?? raw.totalCheckIns ?? 0,
+      today: raw.today ?? 0,
+      byTicketType: raw.byTicketType ?? {},
+    };
+  },
 
   getRecentCheckIns: (eventId: string, limit?: number, signal?: AbortSignal) =>
     request<CheckIn[]>(
