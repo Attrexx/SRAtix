@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
 
@@ -14,11 +15,8 @@ const ALL_EVENT_TYPES = [
   'event.updated',
 ];
 
-export default function WebhooksPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function WebhooksPage() {
+  const { id } = useParams<{ id: string }>();
   const [eventId, setEventId] = useState('');
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<
@@ -34,8 +32,8 @@ export default function WebhooksPage({
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
-    params.then((p) => setEventId(p.id));
-  }, [params]);
+    if (id) setEventId(id);
+  }, [id]);
 
   const loadEndpoints = useCallback(async () => {
     if (!eventId) return;

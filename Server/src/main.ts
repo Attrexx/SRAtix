@@ -1,6 +1,6 @@
 // Load .env BEFORE anything else — Prisma reads DATABASE_URL from process.env
 import { config } from 'dotenv';
-import { join } from 'path';
+import { join, resolve } from 'path';
 config({ path: join(__dirname, '..', '.env') }); // Server/.env (relative to dist/)
 config(); // fallback: CWD/.env
 
@@ -14,7 +14,8 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
-import proxy from '@fastify/http-proxy';
+import fastifyStatic from '@fastify/static';
+import { existsSync, readFileSync } from 'fs';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -65,20 +66,42 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT', 3000);
 
-    // ── Dashboard Reverse Proxy ──────────────────────────────────
-    // Proxy all non-API routes to the Next.js Dashboard running
-    // on an internal port. Fastify gives priority to specific routes
-    // (NestJS: /api/*, /health, /webhooks/*) over the wildcard proxy.
-    const dashboardPort = configService.get<number>('DASHBOARD_PORT', 3100);
+    // ── Dashboard Static Files ───────────────────────────────────
+    // Serve the Next.js static export (Dashboard/out/) directly from
+    // Fastify. Single process, single port — no separate Next.js server.
+    const dashboardDir = resolve(__dirname, '..', '..', 'Dashboard', 'out');
     const fastify = app.getHttpAdapter().getInstance();
-    await fastify.register(proxy, {
-      upstream: `http://127.0.0.1:${dashboardPort}`,
-      prefix: '/',
-      rewritePrefix: '/',
-      http2: false,
-      websocket: false,
-    });
-    logger.log(`Dashboard proxy → http://127.0.0.1:${dashboardPort}`);
+
+    if (existsSync(dashboardDir)) {
+      // Serve static assets (_next/*, images, etc.)
+      await fastify.register(fastifyStatic, {
+        root: dashboardDir,
+        prefix: '/',
+        decorateReply: false,
+        wildcard: false,     // Don't intercept all routes — let NestJS handle /api/*
+      });
+
+      // SPA fallback: serve index.html for any unmatched GET request
+      // (client-side routing handles /dashboard/events/[id]/... etc.)
+      const indexHtml = readFileSync(join(dashboardDir, 'index.html'), 'utf-8');
+      fastify.setNotFoundHandler((request, reply) => {
+        // Only serve SPA fallback for navigation requests (not API or assets)
+        if (
+          request.method === 'GET' &&
+          !request.url.startsWith('/api/') &&
+          !request.url.startsWith('/health') &&
+          !request.url.startsWith('/webhooks/')
+        ) {
+          reply.type('text/html').send(indexHtml);
+        } else {
+          reply.code(404).send({ statusCode: 404, message: 'Not Found' });
+        }
+      });
+
+      logger.log(`Dashboard served from ${dashboardDir}`);
+    } else {
+      logger.warn(`Dashboard build not found at ${dashboardDir} — UI unavailable`);
+    }
 
     await app.listen(port, '0.0.0.0');
 
