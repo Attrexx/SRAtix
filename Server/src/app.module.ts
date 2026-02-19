@@ -21,6 +21,7 @@ import { ExportModule } from './export/export.module';
 import { QueueModule } from './queue/queue.module';
 import { BadgeTemplatesModule } from './badge-templates/badge-templates.module';
 import { OutgoingWebhooksModule } from './outgoing-webhooks/outgoing-webhooks.module';
+import { UsersModule } from './users/users.module';
 import { join } from 'path';
 
 @Module({
@@ -86,6 +87,9 @@ import { join } from 'path';
 
     // Phase 2 — Outgoing webhook endpoints + dispatch
     OutgoingWebhooksModule,
+
+    // User management (app-native accounts, Super Admin CRUD)
+    UsersModule,
   ],
 })
 export class AppModule {}

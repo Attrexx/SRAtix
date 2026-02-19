@@ -296,6 +296,25 @@ export interface AuthResponse {
   };
 }
 
+export interface AppUser {
+  id: string;
+  email: string;
+  displayName: string;
+  roles: string[];
+  orgId: string | null;
+  wpUserId: number | null;
+  emailConfirmedAt: string | null;
+  active: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface RoleDefinition {
+  value: string;
+  label: string;
+  description: string;
+}
+
 // ─── API Methods ────────────────────────────────────────────────
 
 export const api = {
@@ -395,6 +414,44 @@ export const api = {
 
   retryWebhookDelivery: (id: string) =>
     request<void>(`/webhooks/deliveries/${id}/retry`, { method: 'POST' }),
+
+  // ─── Users (Super Admin) ───────────────────────────────────────
+
+  getUsers: (signal?: AbortSignal) =>
+    request<AppUser[]>('/users', { signal }),
+
+  getUser: (id: string, signal?: AbortSignal) =>
+    request<AppUser>(`/users/${id}`, { signal }),
+
+  getAvailableRoles: (signal?: AbortSignal) =>
+    request<RoleDefinition[]>('/users/roles', { signal }),
+
+  createUser: (data: {
+    email: string;
+    displayName: string;
+    password: string;
+    roles: string[];
+    orgId?: string;
+  }) =>
+    request<AppUser>('/users', { method: 'POST', body: data }),
+
+  updateUser: (
+    id: string,
+    data: {
+      email?: string;
+      displayName?: string;
+      password?: string;
+      roles?: string[];
+      orgId?: string;
+      active?: boolean;
+    },
+  ) => request<AppUser>(`/users/${id}`, { method: 'PATCH', body: data }),
+
+  deactivateUser: (id: string) =>
+    request<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' }),
+
+  activateUser: (id: string) =>
+    request<{ success: boolean }>(`/users/${id}/activate`, { method: 'POST' }),
 };
 
 export { ApiError };

@@ -478,22 +478,28 @@ Architecture follows an OAuth2-like flow for WP ↔ Server authentication:
 
 ### RBAC — Role-Based Access Control
 
+Roles are **app-native** — managed entirely within SRAtix via the Dashboard's User Management page (Super Admin only). The WP-to-SRAtix bridge is a secondary convenience path for the SRA administrator; all other users authenticate with **email + password**.
+
 Roles are scoped per event AND per organization:
 
 | Role | Scope | Capabilities |
 |------|-------|-------------|
-| **Super Admin** | Platform-wide (Server-native) | Full platform access, all events, all orgs, system settings |
+| **Super Admin** | Platform-wide | Full platform access, all events, all orgs, user management, system settings |
 | **Event Admin** | Single event | Event config, attendee management, check-in, comms, analytics |
 | **Organization Admin** | Single organization | Manage org's exhibitor/sponsor/partner data across events |
-| **Exhibitor** | Single event + org (synced from WP `corporate-member` CPT) | Own booth data, lead capture, badge scanning, org-scoped analytics |
-| **Sponsor** | Single event + org (synced from WP) | Branding assets, impression analytics, lead data |
-| **Partner** | Single event + org (synced from WP) | Limited analytics, co-branding |
+| **Exhibitor** | Single event + org | Own booth data, lead capture, badge scanning, org-scoped analytics |
+| **Sponsor** | Single event + org | Branding assets, impression analytics, lead data |
+| **Partner** | Single event + org | Limited analytics, co-branding |
 | **Staff** | Single event | Check-in operations, attendee assistance, on-site ops |
 | **Volunteer** | Single event | Check-in scanning only |
 | **Scanner** | Single event | QR scan + check-in only (kiosk/device accounts) |
 | **Attendee** | Single event (created at registration) | Own ticket, schedule, badge, profile |
 
-**Permission checks at API layer, not UI.** Every API endpoint enforces permissions via middleware/guards (NestJS guards pattern). UI merely hides elements the user can't access — security is never UI-only.
+**Authentication methods:**
+1. **Email + password** — Primary method. Super Admin creates accounts via Dashboard, gives credentials to users.
+2. **WP bridge (token exchange)** — Secondary. SRA administrator can launch Dashboard from WP Control plugin; WP roles map to SRAtix roles automatically.
+
+**Permission checks at API layer, not UI.** Every API endpoint enforces permissions via NestJS guards. UI merely hides elements the user can't access — security is never UI-only.
 
 ---
 

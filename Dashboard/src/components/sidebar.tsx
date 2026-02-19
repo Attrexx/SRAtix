@@ -28,6 +28,7 @@ function getEventNav(eventId: string): NavItem[] {
 
 const topNav: NavItem[] = [
   { href: '/dashboard', label: 'Events', icon: '🎪' },
+  { href: '/dashboard/users', label: 'Users', icon: '👤', roles: ['super_admin'] },
   { href: '/dashboard/settings', label: 'Settings', icon: '⚙️', roles: ['super_admin'] },
 ];
 

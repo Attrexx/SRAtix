@@ -2,7 +2,8 @@ import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { createHmac } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 export interface JwtPayload {
   sub: string; // user ID
@@ -256,5 +257,141 @@ export class AuthService {
     return wpRoles
       .map((r) => roleMap[r])
       .filter((r): r is string => r !== undefined);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Email + Password Authentication (app-native accounts)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Authenticate with email + password.
+   * Returns JWT token pair on success.
+   */
+  async loginWithPassword(
+    email: string,
+    password: string,
+  ): Promise<TokenPair> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { roles: true },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.active) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // Update last login
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
+    const roles = user.roles.map((r) => r.role);
+    const effectiveRoles = roles.length > 0 ? roles : ['attendee'];
+    const orgId = user.roles.find((r) => r.orgId)?.orgId ?? undefined;
+
+    return this.generateTokenPair({
+      sub: user.id,
+      email: user.email,
+      roles: effectiveRoles,
+      orgId,
+    });
+  }
+
+  /**
+   * Create an app-native user (Super Admin only).
+   * Returns the created user with a confirmation token for email verification.
+   */
+  async createAppUser(data: {
+    email: string;
+    displayName: string;
+    password: string;
+    roles: string[];
+    orgId?: string;
+  }) {
+    // Check for duplicate email
+    const existing = await this.prisma.user.findUnique({
+      where: { email: data.email },
+    });
+    if (existing) {
+      throw new UnauthorizedException('Email already in use');
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const confirmToken = randomBytes(32).toString('hex');
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: data.email,
+        displayName: data.displayName,
+        passwordHash,
+        confirmToken,
+        // Auto-confirm for admin-created accounts
+        emailConfirmedAt: new Date(),
+      },
+    });
+
+    // Assign roles
+    for (const role of data.roles) {
+      await this.prisma.userRole.create({
+        data: {
+          userId: user.id,
+          orgId: data.orgId ?? null,
+          role,
+        },
+      });
+    }
+
+    this.logger.log(
+      `Created app user ${user.id} (${data.email}) with roles: ${data.roles.join(', ')}`,
+    );
+
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      roles: data.roles,
+      active: user.active,
+      createdAt: user.createdAt,
+    };
+  }
+
+  /**
+   * Confirm email via token. Clears the token and sets emailConfirmedAt.
+   */
+  async confirmEmail(token: string): Promise<{ success: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { confirmToken: token },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid confirmation token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailConfirmedAt: new Date(),
+        confirmToken: null,
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Hash a password (for seeding / admin resets).
+   */
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 12);
   }
 }

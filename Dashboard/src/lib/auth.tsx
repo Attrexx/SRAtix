@@ -23,6 +23,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (wpToken: string) => Promise<void>;
+  loginWithPassword: (email: string, password: string) => Promise<void>;
   loginWithJwt: (jwt: string, refreshToken?: string) => Promise<void>;
   logout: () => void;
   hasRole: (role: string) => boolean;
@@ -202,6 +203,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Login with email + password (app-native accounts).
+   * Calls POST /api/auth/login → receives token pair → stores session.
+   */
+  const loginWithPassword = useCallback(
+    async (email: string, password: string) => {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/auth/login`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        },
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message ?? 'Authentication failed');
+      }
+
+      const data: { accessToken: string; refreshToken: string; expiresIn: number } =
+        await res.json();
+
+      const payload = decodeJwtPayload(data.accessToken);
+      const userData: User = {
+        id: payload.sub as string,
+        email: payload.email as string,
+        displayName:
+          (payload.displayName as string) || (payload.email as string).split('@')[0],
+        roles: (payload.roles as string[]) || [],
+      };
+
+      localStorage.setItem('sratix_token', data.accessToken);
+      localStorage.setItem('sratix_refresh_token', data.refreshToken);
+      localStorage.setItem('sratix_user', JSON.stringify(userData));
+      setToken(data.accessToken);
+      setUser(userData);
+      scheduleRefresh(data.accessToken);
+    },
+    [scheduleRefresh],
+  );
+
+  /**
    * Login with a pre-issued JWT (from WP Control plugin redirect).
    * Decodes the JWT payload to extract user data — no server round-trip needed.
    * Optionally stores a refresh token for session persistence.
@@ -256,7 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isLoading, login, loginWithJwt, logout, hasRole }}
+      value={{ user, token, isLoading, login, loginWithPassword, loginWithJwt, logout, hasRole }}
     >
       {children}
     </AuthContext.Provider>

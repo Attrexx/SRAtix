@@ -5,19 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
 /**
- * Login page — accepts a WP-issued token for exchange.
- *
- * In production, users arrive here via redirect from SRAtix Control plugin
- * with a JWT access token in the URL (?token=...). The page auto-detects
- * it, stores the session, and redirects to /dashboard.
- *
- * For dev/testing, a manual input field is also shown.
+ * Login page — supports two flows:
+ * 1. Auto-login via ?token=...&refresh=... URL params (from WP Control plugin redirect)
+ * 2. Email + password form (app-native accounts)
  */
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithJwt, isLoading } = useAuth();
-  const [token, setToken] = useState('');
+  const { loginWithPassword, loginWithJwt, isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [autoLogging, setAutoLogging] = useState(false);
@@ -31,7 +28,6 @@ export default function LoginPage() {
     setAutoLogging(true);
     loginWithJwt(urlToken, urlRefresh ?? undefined)
       .then(() => {
-        // Clean the token from the URL before redirecting
         window.history.replaceState({}, '', '/login/');
         router.push('/dashboard');
       })
@@ -44,13 +40,13 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token.trim()) return;
+    if (!email.trim() || !password) return;
 
     setSubmitting(true);
     setError('');
 
     try {
-      await login(token.trim());
+      await loginWithPassword(email.trim(), password);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -97,7 +93,7 @@ export default function LoginPage() {
             SRAtix Dashboard
           </h1>
           <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Sign in with your WordPress credentials
+            Sign in to your account
           </p>
         </div>
 
@@ -105,26 +101,50 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
-              htmlFor="token"
+              htmlFor="email"
               className="mb-1 block text-sm font-medium"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Exchange Token
+              Email
             </label>
             <input
-              id="token"
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Paste your authentication token"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="w-full rounded-lg px-4 py-2.5 text-sm transition-colors"
               style={{
                 background: 'var(--color-bg-subtle)',
                 border: '1px solid var(--color-border)',
                 color: 'var(--color-text)',
               }}
-              autoComplete="off"
+              autoComplete="email"
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full rounded-lg px-4 py-2.5 text-sm transition-colors"
+              style={{
+                background: 'var(--color-bg-subtle)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text)',
+              }}
+              autoComplete="current-password"
             />
           </div>
 
@@ -140,7 +160,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={submitting || !token.trim()}
+            disabled={submitting || !email.trim() || !password}
             className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
             style={{
               background: submitting ? 'var(--color-primary-hover)' : 'var(--color-primary)',
