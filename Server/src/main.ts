@@ -81,50 +81,60 @@ async function bootstrap() {
         wildcard: false,     // Don't intercept all routes — let NestJS handle /api/*
       });
 
-      // SPA fallback: serve the correct pre-rendered HTML for unmatched routes.
-      // Static export only generates pages for the '_' placeholder ID.
-      // For real event IDs, we serve the '_' page and let client JS handle it.
+      // SPA fallback via onRequest hook (not setNotFoundHandler — NestJS
+      // registers its own 404 handler and Fastify allows only one per prefix).
+      // This hook intercepts Dashboard navigation requests BEFORE NestJS
+      // routing, serving pre-rendered HTML directly. API routes, static
+      // assets, and webhook paths pass through to NestJS / @fastify/static.
       const indexHtml = readFileSync(join(dashboardDir, 'index.html'), 'utf-8');
-      fastify.setNotFoundHandler((request, reply) => {
-        // Only serve SPA fallback for navigation requests (not API or assets)
+      fastify.addHook('onRequest', async (request, reply) => {
+        const url = request.url.split('?')[0];
+
+        // Skip: non-GET, API routes, health, webhooks, files with extensions
         if (
-          request.method === 'GET' &&
-          !request.url.startsWith('/api/') &&
-          !request.url.startsWith('/health') &&
-          !request.url.startsWith('/webhooks/')
+          request.method !== 'GET' ||
+          url.startsWith('/api/') ||
+          url.startsWith('/api') ||
+          url.startsWith('/health') ||
+          url.startsWith('/webhooks/') ||
+          /\.\w{2,5}$/.test(url) // .js, .css, .png, .json, .woff2, etc.
         ) {
-          const urlPath = request.url.split('?')[0].replace(/\/$/, '');
+          return; // Let NestJS or @fastify/static handle it
+        }
 
-          // Map /dashboard/events/<realId>/... → /dashboard/events/_/.../index.html
-          const eventRouteMatch = urlPath.match(
-            /^\/dashboard\/events\/[^/]+(\/.*)?$/,
+        const urlPath = url.replace(/\/$/, '') || '/';
+
+        // Map /dashboard/events/<realId>/... → /dashboard/events/_/.../index.html
+        const eventRouteMatch = urlPath.match(
+          /^\/dashboard\/events\/[^/]+(\/.*)?$/,
+        );
+        if (eventRouteMatch) {
+          const subpath = eventRouteMatch[1] || '';
+          const placeholderHtml = join(
+            dashboardDir, 'dashboard', 'events', '_',
+            subpath.replace(/^\//, ''), 'index.html',
           );
-          if (eventRouteMatch) {
-            const subpath = eventRouteMatch[1] || '';
-            const placeholderHtml = join(
-              dashboardDir, 'dashboard', 'events', '_',
-              subpath.replace(/^\//, ''), 'index.html',
-            );
-            if (existsSync(placeholderHtml)) {
-              return reply
-                .type('text/html')
-                .send(readFileSync(placeholderHtml, 'utf-8'));
-            }
-          }
-
-          // Fallback: try exact path match (e.g. /dashboard/index.html)
-          const exactHtml = join(dashboardDir, urlPath, 'index.html');
-          if (existsSync(exactHtml)) {
+          if (existsSync(placeholderHtml)) {
             return reply
               .type('text/html')
-              .send(readFileSync(exactHtml, 'utf-8'));
+              .send(readFileSync(placeholderHtml, 'utf-8'));
           }
-
-          // Final fallback: root index.html
-          reply.type('text/html').send(indexHtml);
-        } else {
-          reply.code(404).send({ statusCode: 404, message: 'Not Found' });
         }
+
+        // Try exact path match (e.g. /dashboard/index.html, /login/index.html)
+        const exactHtml = join(dashboardDir, urlPath, 'index.html');
+        if (existsSync(exactHtml)) {
+          return reply
+            .type('text/html')
+            .send(readFileSync(exactHtml, 'utf-8'));
+        }
+
+        // Root path → root index.html
+        if (urlPath === '/' || urlPath === '') {
+          return reply.type('text/html').send(indexHtml);
+        }
+
+        // Unknown non-API path: let NestJS handle (will 404)
       });
 
       logger.log(`Dashboard served from ${dashboardDir}`);
