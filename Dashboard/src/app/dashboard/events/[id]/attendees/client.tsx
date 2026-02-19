@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type Attendee } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
 
 export default function AttendeesPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

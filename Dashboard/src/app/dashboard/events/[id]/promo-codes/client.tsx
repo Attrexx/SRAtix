@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type PromoCode } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 
 export default function PromoCodesPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

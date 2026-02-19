@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api } from '@/lib/api';
 import { useSSEBuffer } from '@/lib/sse';
 import { StatCard } from '@/components/stat-card';
@@ -24,7 +24,7 @@ interface CheckInStats {
 }
 
 export default function CheckInLivePage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [stats, setStats] = useState<CheckInStats>({ total: 0, today: 0, byTicketType: {} });
   const [totalTickets, setTotalTickets] = useState(0);
   const [loading, setLoading] = useState(true);

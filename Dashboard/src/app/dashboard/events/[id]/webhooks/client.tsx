@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
@@ -17,7 +17,7 @@ const ALL_EVENT_TYPES = [
 ];
 
 export default function WebhooksPage() {
-  const { id } = useParams<{ id: string }>();
+  const id = useEventId();
   const [eventId, setEventId] = useState('');
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<

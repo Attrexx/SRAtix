@@ -90,19 +90,43 @@ async function bootstrap() {
       fastify.addHook('onRequest', async (request, reply) => {
         const url = request.url.split('?')[0];
 
-        // Skip: non-GET, API routes, health, webhooks, files with extensions
+        // Skip: non-GET, API routes, health, webhooks
         if (
           request.method !== 'GET' ||
           url.startsWith('/api/') ||
           url.startsWith('/api') ||
           url.startsWith('/health') ||
-          url.startsWith('/webhooks/') ||
-          /\.\w{2,5}$/.test(url) // .js, .css, .png, .json, .woff2, etc.
+          url.startsWith('/webhooks/')
         ) {
-          return; // Let NestJS or @fastify/static handle it
+          return; // Let NestJS handle it
         }
 
         const urlPath = url.replace(/\/$/, '') || '/';
+
+        // ── RSC payload rewriting for dynamic event routes ──────────
+        // Next.js client-side navigation fetches .txt flight data
+        // (e.g. /dashboard/events/{uuid}/index.txt?_rsc=...).
+        // Only the '_' placeholder was pre-rendered, so rewrite any
+        // real UUID path to serve from the '_' directory.
+        const rscMatch = urlPath.match(
+          /^\/dashboard\/events\/(?!_(?:\/|$))([^/]+)(\/.*\.txt)$/,
+        );
+        if (rscMatch) {
+          const rscFile = join(
+            dashboardDir, 'dashboard', 'events', '_',
+            rscMatch[2].replace(/^\//, ''),
+          );
+          if (existsSync(rscFile)) {
+            return reply
+              .type('text/plain')
+              .send(readFileSync(rscFile, 'utf-8'));
+          }
+        }
+
+        // Skip files with extensions (.js, .css, .png, .json, .woff2, etc.)
+        if (/\.\w{2,5}$/.test(url)) {
+          return; // Let @fastify/static handle it
+        }
 
         // Map /dashboard/events/<realId>/... → /dashboard/events/_/.../index.html
         const eventRouteMatch = urlPath.match(

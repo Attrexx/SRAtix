@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type AuditLogEntry } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
@@ -31,7 +31,7 @@ const ACTION_LABELS: Record<string, { icon: ReactNode; label: string }> = {
 const ACTION_FILTER_OPTIONS = Object.keys(ACTION_LABELS);
 
 export default function AuditLogPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

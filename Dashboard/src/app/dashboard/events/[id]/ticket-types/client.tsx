@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type TicketType, type Event } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 
 export default function TicketTypesPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [loading, setLoading] = useState(true);

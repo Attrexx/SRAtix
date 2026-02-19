@@ -1,12 +1,12 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
 
 export default function ExportPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
 
   const exports: { label: string; description: string; icon: ReactNode; url: string }[] = [
     {

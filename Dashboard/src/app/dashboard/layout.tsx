@@ -12,7 +12,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   // Extract eventId from pathname if present: /dashboard/events/:id/...
   const eventIdMatch = pathname.match(/\/dashboard\/events\/([^/]+)/);
-  const eventId = eventIdMatch?.[1];
+  let eventId = eventIdMatch?.[1];
+
+  // Static export placeholder — fall back to real URL
+  if (eventId === '_' && typeof window !== 'undefined') {
+    const seg = window.location.pathname.match(/\/dashboard\/events\/([^/]+)/);
+    if (seg?.[1] && seg[1] !== '_') eventId = seg[1];
+  }
 
   useEffect(() => {
     if (!isLoading && !user) {

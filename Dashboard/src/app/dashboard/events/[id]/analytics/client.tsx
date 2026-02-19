@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api, type Order, type TicketType, type PromoCode } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
 import { Icons } from '@/components/icons';
 
 export default function AnalyticsPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);

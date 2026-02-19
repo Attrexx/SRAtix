@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEventId } from '@/hooks/use-event-id';
 import { api } from '@/lib/api';
 import { Icons } from '@/components/icons';
 
@@ -22,7 +22,7 @@ interface FormSchema {
 }
 
 export default function FormsPage() {
-  const { id: eventId } = useParams<{ id: string }>();
+  const eventId = useEventId();
   const [schemas, setSchemas] = useState<FormSchema[]>([]);
   const [loading, setLoading] = useState(true);
 
