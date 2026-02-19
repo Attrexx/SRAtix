@@ -8,7 +8,7 @@
  * Infomaniak sees ONE process on port 3000.
  */
 
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 
 const ROOT = __dirname;
@@ -38,6 +38,16 @@ function startProcess(label, command, args, cwd, extraEnv = {}) {
   });
 
   return child;
+}
+
+// 0. Sync Prisma schema → DB (runs at startup where env vars are available)
+try {
+  console.log('[SRAtix] Running prisma db push...');
+  execSync('npx prisma db push --skip-generate', { cwd: SERVER_DIR, stdio: 'inherit' });
+  console.log('[SRAtix] Database schema synced.');
+} catch (err) {
+  console.error('[SRAtix] prisma db push failed:', err.message);
+  // Continue anyway — tables may already exist from a previous deploy
 }
 
 // 1. Start Dashboard first (NestJS will proxy to it)
