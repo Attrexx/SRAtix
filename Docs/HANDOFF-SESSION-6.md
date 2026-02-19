@@ -1,10 +1,11 @@
 # SRAtix — Session 6 Handoff
 
 **Date**: 2026-02-19  
-**Focus**: Build Audit, Webhook Management Page, WP Sync Webhooks, Infomaniak Deployment (10 Iterations)  
+**Focus**: Build Audit, Webhook Management Page, WP Sync Webhooks, Infomaniak Deployment (10 Iterations), App-Native Auth, User Management, Stripe Config  
 **Architecture change**: Dashboard converted from SSR to static export — single-process, single-port deployment  
-**Deployment result**: ✅ Server running on Infomaniak — Dashboard login page confirmed live  
-**Commits this session**: 15 (from `cec97d1` to `c29ee96`)
+**Auth change**: App-native email+password auth (primary), WP bridge (secondary/Super Admin only)  
+**Deployment result**: ✅ Server running on Infomaniak — Dashboard login page confirmed live, Super Admin can sign in  
+**Commits this session**: 22 (from `cec97d1` to `1306cb3`)
 
 ---
 
@@ -161,7 +162,151 @@ The `_` acts as a placeholder — Next.js pre-renders one copy, and the SPA fall
 
 ---
 
-## Challenges & Observations
+### 5. Production Secrets Generation (`620f5f6`)
+
+Regenerated all `.env` secrets with cryptographically random values using `crypto.randomBytes()`. Previous placeholders contained `#` characters which `dotenv` interprets as comments, silently truncating values. All secrets now use URL-safe Base64 (no `#`, `+`, `/`).
+
+**Secrets regenerated**: `JWT_SECRET`, `JWT_REFRESH_SECRET`, `WP_API_SECRET`
+
+---
+
+### 6. Auto-Login from WP Control Plugin (`0c3c068`) ✅
+
+Implemented seamless login flow from the WordPress Control plugin to the SRAtix Dashboard:
+
+**WP Control plugin changes** (`sratix-control/includes/class-sratix-control-admin.php`):
+- "Open Dashboard" button generates an HMAC-signed token via `POST /api/auth/token`
+- Redirects admin to `https://tix.swiss-robotics.org/login?token=<jwt>&refresh=<refresh>`
+
+**Dashboard login page** (`Dashboard/src/app/login/page.tsx`):
+- `useEffect` reads `?token=` and `?refresh=` URL params on mount
+- Calls `loginWithJwt(token, refresh)` to store tokens and redirect to `/dashboard`
+- Clears URL params after consumption via `window.history.replaceState`
+
+**WP Control plugin changes** (`sratix-control/includes/class-sratix-control.php`):
+- Added webhook secret generation on plugin activation
+- Stores shared secrets in WordPress options for HMAC token exchange
+
+---
+
+### 7. Persistent Sessions + Refresh Tokens (`7321ff9`) ✅
+
+Complete session persistence system so users stay logged in across page reloads:
+
+**Auth context** (`Dashboard/src/lib/auth.tsx`):
+- Tokens stored in `localStorage` (`sratix_access_token`, `sratix_refresh_token`)
+- On page load: restores session from localStorage, validates JWT expiry
+- If access token expired but refresh token valid: auto-refreshes via `POST /api/auth/refresh`
+- Auto-refresh timer: schedules refresh 1 minute before access token expiry
+- `loginWithJwt()` method for WP bridge URL param flow
+
+**Server auth** (`Server/src/auth/auth.service.ts`):
+- `refreshAccessToken(refreshToken)` — validates refresh JWT, issues new access token
+- `generateTokenPair(userId, roles)` — creates `{ accessToken, refreshToken }` pair
+- Access token: 15 min expiry, refresh token: 7 day expiry
+
+**API client** (`Dashboard/src/lib/api.ts`):
+- 401 response triggers automatic token refresh + request retry
+- Deduplication: concurrent 401s share a single refresh call (prevents race conditions)
+
+---
+
+### 8. App-Native Email+Password Auth (`544b749`) ✅
+
+Built a complete email+password authentication system independent of WordPress. SRA WP users don't have wp-admin access, so the WP token bridge is only useful for the Super Admin. All other dashboard users authenticate via app-native accounts.
+
+**Prisma schema changes** (`Server/prisma/schema.prisma`):
+- `passwordHash String? @db.VarChar(255)` — bcrypt hash
+- `emailConfirmedAt DateTime?` — email confirmation timestamp
+- `confirmToken String? @unique @db.VarChar(100)` — email confirmation token
+
+**Server auth** (`Server/src/auth/auth.service.ts`):
+- `loginWithPassword(email, password)` — validates credentials, returns TokenPair
+- `createAppUser(data)` — Super Admin creates users with bcrypt password hash (12 salt rounds)
+- `confirmEmail(token)` — email confirmation flow
+- `hashPassword(password)` — bcrypt utility
+- Installed `bcrypt@6.0.0`
+
+**Auth controller** (`Server/src/auth/auth.controller.ts`):
+- `POST /api/auth/login` — email+password login (rate-limited 10/min)
+- `GET /api/auth/confirm/:token` — email confirmation
+
+**Users CRUD module** (NEW — `Server/src/users/`):
+- `users.module.ts`, `users.service.ts`, `users.controller.ts`
+- All endpoints `@Roles('super_admin')` guarded
+- `GET /api/users` — list all users with roles
+- `GET /api/users/roles` — available role definitions (10 roles with labels/descriptions)
+- `GET /api/users/:id` — single user detail
+- `POST /api/users` — create user (email, name, password, roles array)
+- `PATCH /api/users/:id` — update user (optional password reset, role replacement)
+- `DELETE /api/users/:id` — soft-deactivate user
+- `POST /api/users/:id/activate` — reactivate user
+- 10 role definitions: `super_admin`, `org_admin`, `event_manager`, `check_in_staff`, `box_office`, `finance`, `marketing`, `support`, `api_consumer`, `exhibitor`
+
+**Super Admin seed** (NEW — `Server/prisma/seed.ts`):
+- Creates Super Admin account for `attrexx@gmail.com`
+- Generates random 20-char password, prints to console once
+- Idempotent — skips if email already exists
+- Run via: `npx ts-node --transpile-only prisma/seed.ts`
+
+**Dashboard login page** (`Dashboard/src/app/login/page.tsx`):
+- Changed from token-paste to email+password form (email input, password input, "Sign In" button)
+- Still supports `?token=&refresh=` auto-login from WP Control plugin via useEffect
+
+**Dashboard auth context** (`Dashboard/src/lib/auth.tsx`):
+- Added `loginWithPassword(email, password)` — calls `POST /api/auth/login`, stores JWT pair
+
+**Dashboard Users page** (NEW — `Dashboard/src/app/dashboard/users/page.tsx`):
+- Full user management UI (Super Admin only)
+- Users table: name, email, role badges, status, last login, edit/deactivate buttons
+- Create modal: email, display name, password with Generate button, visual 2-column role selector
+- Edit modal: update fields including optional password reset, role changes
+- Access denied for non-super_admin users
+
+**Dashboard sidebar** (`Dashboard/src/components/sidebar.tsx`):
+- Added Users nav item: `{ href: '/dashboard/users', label: 'Users', icon: '👤', roles: ['super_admin'] }`
+
+**Dashboard API client** (`Dashboard/src/lib/api.ts`):
+- Added `AppUser`, `RoleDefinition` interfaces
+- 7 new methods: `getUsers`, `getUser`, `getAvailableRoles`, `createUser`, `updateUser`, `deactivateUser`, `activateUser`
+
+**Architecture doc** (`Docs/PRODUCTION-ARCHITECTURE.md`):
+- RBAC section updated: auth is "app-native" primary, WP bridge secondary
+- Exhibitor role no longer tied to corporate-member CPT for authentication
+
+---
+
+### 9. Stripe Test Keys + .env Security Fix (`58e150d`) ✅
+
+**Stripe configuration**:
+- Set `STRIPE_SECRET_KEY=sk_test_51QzDJA03B3l9SMS...` (test mode)
+- Set `STRIPE_PUBLISHABLE_KEY=pk_test_51QzDJA03B3l9SMS...` (test mode)
+- `STRIPE_WEBHOOK_SECRET` — still blank, needs Stripe webhook endpoint setup
+
+**CRITICAL SECURITY FIX**: Discovered `.env` was NOT in `.gitignore` — all secrets (DB password, JWT keys, Redis token, WP secret) were being committed to git.
+- Added `.env`, `.env.*` to `.gitignore` (kept `!.env.example`)
+- Ran `git rm --cached Server/.env` to untrack the file
+- Created `Server/.env.example` with sanitized placeholder values
+- **Note**: Secrets remain in git history (private repo). Ideally rotate all secrets.
+
+**Server deployment impact**: Since `.env` is now gitignored, `git pull` won't deliver it. Must create `.env` manually on server via SSH (`nano .env`). File survives all git pulls, builds, and installs — only manual deletion removes it.
+
+---
+
+### 10. Build Fixes for Deployment (`9485de4`, `1306cb3`) ✅
+
+**Suspense boundary fix** (`9485de4`):
+- `useSearchParams()` in the login page requires a `<Suspense>` boundary for Next.js static export
+- Extracted login form into `LoginForm` child component
+- Wrapped in `<Suspense fallback={<spinner>}>` in the exported `LoginPage`
+- Without this fix, `next build` with `output: 'export'` fails
+
+**tsconfig.build fix** (`1306cb3`):
+- `prisma/seed.ts` was being included in the NestJS build
+- TypeScript saw files in both `src/` and `prisma/`, computed `rootDir` as `./`
+- Output went to `dist/src/main.js` instead of `dist/main.js`
+- Fix: added `"prisma"` to `exclude` array in `tsconfig.build.json`
+- Server crashed on Infomaniak because `npm start` looks for `dist/main.js`
 
 ### Challenge 1: Prisma 6 JSON Field Strictness
 Prisma 6 introduced stricter typing for JSON columns. The `Json` type maps to `Prisma.InputJsonValue`, which doesn't accept `Record<string, unknown>` or arbitrary objects. Every service that writes to a JSON column needed explicit `as any` casts. This affected ~8 files with 15+ locations. This is a known Prisma issue with no clean solution — the community recommends casting.
@@ -238,11 +383,11 @@ npm start
   → cd Server && node dist/main.js    # Serves API + Dashboard on port 3000
 ```
 
-### Dashboard Pages (12 — up from 11)
+### Dashboard Pages (13 — up from 11)
 
 | Route | Purpose | New? |
 |-------|---------|------|
-| `/login` | WP token exchange login | |
+| `/login` | Email+password login (+ WP auto-login via `?token=`) | **Updated** |
 | `/dashboard` | Events list (card grid) | |
 | `/dashboard/events/[id]` | Event overview (stats, ticket types) | |
 | `/dashboard/events/[id]/attendees` | Attendee DataTable + CSV export | |
@@ -252,7 +397,8 @@ npm start
 | `/dashboard/events/[id]/promo-codes` | Promo codes DataTable | |
 | `/dashboard/events/[id]/forms` | Form schemas card grid | |
 | `/dashboard/events/[id]/export` | Download CSV exports | |
-| `/dashboard/events/[id]/webhooks` | **Webhook endpoint management** | **✅** |
+| `/dashboard/events/[id]/webhooks` | **Webhook endpoint management** | **✅ S6** |
+| `/dashboard/users` | **User management (Super Admin only)** | **✅ S6** |
 | `/dashboard/settings` | *(Planned — Stripe/SMTP credential management)* | ⬜ |
 
 ---
@@ -275,16 +421,34 @@ npm start
 | `e8b65a7` | fix: Stripe graceful degradation — skip init when key is empty, `ensureStripe()` guard |
 | `f2780ef` | fix: replace setNotFoundHandler with onRequest hook — avoids NestJS conflict |
 | `c29ee96` | rename: Client/ → sratix-client/, Control/ → sratix-control/ — match WP plugin slugs |
+| `52789b1` | docs: update HANDOFF-SESSION-6 with deployment iterations 7-10 and folder renames |
+| `0b3ab9c` | fix: quote .env secrets containing # characters |
+| `620f5f6` | fix: regenerate secrets without # character (dotenv treats # as comment) |
+| `0c3c068` | feat: auto-login from WP Control plugin — token exchange + redirect |
+| `7321ff9` | feat: persistent sessions + shareable tokens + refresh endpoint |
+| `544b749` | feat: app-native email+password auth with user management |
+| `58e150d` | chore: add Stripe test keys, gitignore .env, add .env.example |
+| `9485de4` | fix: wrap login useSearchParams in Suspense for static export |
+| `1306cb3` | fix: exclude prisma/ from tsconfig.build to fix dist output path |
 
 ---
 
 ## Files Modified This Session
 
-### Server Files (14 modified, 0 new)
+### Server Files (20+ modified, 4 new)
 
 | File | Changes |
 |------|---------|
-| `src/main.ts` | **Major rewrite** — removed `@fastify/http-proxy`, added `@fastify/static` for Dashboard/out/, SPA fallback via `onRequest` hook (not `setNotFoundHandler` — conflicts with NestJS) |
+| `src/main.ts` | **Major rewrite** — removed `@fastify/http-proxy`, added `@fastify/static` for Dashboard/out/, SPA fallback via `onRequest` hook |
+| `src/app.module.ts` | +`UsersModule` import |
+| `src/auth/auth.service.ts` | **Major expansion** — +`loginWithPassword()`, `createAppUser()`, `confirmEmail()`, `hashPassword()`, `refreshAccessToken()`, `generateTokenPair()`. bcrypt import. |
+| `src/auth/auth.controller.ts` | +`POST /api/auth/login` (rate-limited 10/min), +`GET /api/auth/confirm/:token`, +`POST /api/auth/refresh` |
+| `src/users/users.module.ts` | **NEW** — Users CRUD module |
+| `src/users/users.service.ts` | **NEW** — Full CRUD: findAll, findOne, create, update, deactivate, activate, getAvailableRoles (10 roles) |
+| `src/users/users.controller.ts` | **NEW** — REST endpoints, all `@Roles('super_admin')` guarded |
+| `prisma/schema.prisma` | +`passwordHash`, `emailConfirmedAt`, `confirmToken` on User model |
+| `prisma/seed.ts` | **NEW** — Seeds Super Admin (attrexx@gmail.com, random password) |
+| `tsconfig.build.json` | +`"prisma"` in exclude array (fixes dist output path) |
 | `src/outgoing-webhooks/outgoing-webhooks.controller.ts` | Fixed `AuthGuard` pattern |
 | `src/audit-log/audit-log.service.ts` | Prisma 6 JSON field casts |
 | `src/forms/forms.service.ts` | Prisma 6 JSON field casts |
@@ -293,39 +457,50 @@ npm start
 | `src/payments/stripe-webhook.controller.ts` | `expires_after` → `expires_at`, JSON casts |
 | `src/outgoing-webhooks/outgoing-webhooks.service.ts` | JSON field casts |
 | `src/badge-templates/badge-templates.service.ts` | JSON field casts |
-| `src/payments/stripe.service.ts` | Stripe API version update + graceful degradation when key is empty (`ensureStripe()` guard) |
+| `src/payments/stripe.service.ts` | Stripe API version update + graceful degradation (`ensureStripe()` guard) |
 | `src/promo-codes/promo-codes.service.ts` | JSON field casts |
-| `src/queue/queue.service.ts` | BullMQ queue names `sratix:*` → `sratix-*` (colon not allowed) |
-| `src/tickets/tickets.service.ts` | **+Webhook dispatch** (`ticket.issued`, `ticket.voided`) |
+| `src/queue/queue.service.ts` | BullMQ queue names `sratix:*` → `sratix-*` |
+| `src/tickets/tickets.service.ts` | +Webhook dispatch (`ticket.issued`, `ticket.voided`) |
 | `src/tickets/tickets.module.ts` | +`OutgoingWebhooksModule` import |
-| `src/check-ins/check-ins.service.ts` | **+Webhook dispatch** (`checkin.created`) |
+| `src/check-ins/check-ins.service.ts` | +Webhook dispatch (`checkin.created`) |
 | `src/check-ins/check-ins.module.ts` | +`OutgoingWebhooksModule` import |
-| `src/attendees/attendees.service.ts` | **+Webhook dispatch** (`attendee.registered`) |
+| `src/attendees/attendees.service.ts` | +Webhook dispatch (`attendee.registered`) |
 | `src/attendees/attendees.module.ts` | +`OutgoingWebhooksModule` import |
 
-### Dashboard Files (7 modified, 1 new)
+### Dashboard Files (12 modified, 3 new)
 
 | File | Changes |
 |------|---------|
 | `next.config.ts` | **Converted to static export** — `output: 'export'`, `trailingSlash: true`, removed rewrites |
-| `src/lib/api.ts` | +Webhook types + 9 API methods |
-| `src/lib/auth.ts` → `auth.tsx` | Renamed (.ts → .tsx for JSX support) |
+| `src/lib/api.ts` | +Webhook types + 9 API methods, +`AppUser`/`RoleDefinition` interfaces + 7 user management methods |
+| `src/lib/auth.ts` → `auth.tsx` | Renamed (.ts → .tsx for JSX), +`loginWithPassword()`, +`loginWithJwt()`, +token persistence in localStorage, +auto-refresh timer |
 | `src/app/layout.tsx` | +`AuthProvider` wrapper (moved from dashboard layout) |
 | `src/app/page.tsx` | Converted to client component (`'use client'` + `router.replace`) |
+| `src/app/login/page.tsx` | **Rewritten** — email+password form, +`<Suspense>` boundary for `useSearchParams()`, `?token=` auto-login preserved |
 | `src/app/dashboard/layout.tsx` | Removed `AuthProvider` (now in root layout) |
-| `src/components/sidebar.tsx` | +Webhooks nav item |
+| `src/components/sidebar.tsx` | +Webhooks nav item, +Users nav item (super_admin only) |
 | `src/app/dashboard/events/[id]/webhooks/page.tsx` | **NEW** — Full webhook management page |
+| `src/app/dashboard/users/page.tsx` | **NEW** — User management page (table, create/edit modals, role selector) |
 | `src/app/dashboard/events/[id]/*/client.tsx` (×9) | **NEW** — Client components extracted from page.tsx for static export |
 | `src/app/dashboard/events/[id]/*/page.tsx` (×9) | **REWRITTEN** — Server wrappers with `generateStaticParams` returning `[{ id: '_' }]` |
 
-### Root Files (3 modified, 1 created)
+### Root Files (5 modified, 1 created)
 
 | File | Changes |
 |------|---------|
 | `package.json` | **Multiple iterations** — final: `start` = `cd Server && node dist/main.js` |
-| `.gitignore` | Removed `.env` exclusion, added `.next/`, `*.tsbuildinfo` |
+| `.gitignore` | +`.env`, `.env.*`, `!.env.example`, +`.next/`, `*.tsbuildinfo` |
 | `start.js` | Created then deprecated — still in repo but unused |
-| `Server/.env` | Stripe/SMTP keys set to empty placeholders |
+| `Server/.env` | **Now gitignored** — must be created manually on server |
+| `Server/.env.example` | **NEW** — placeholder template for all env vars |
+| `Docs/PRODUCTION-ARCHITECTURE.md` | RBAC section updated for app-native auth |
+
+### WP Plugin Files
+
+| File | Changes |
+|------|---------|
+| `sratix-control/includes/class-sratix-control-admin.php` | "Open Dashboard" button + HMAC token exchange + redirect |
+| `sratix-control/includes/class-sratix-control.php` | Webhook secret generation on activation |
 
 ### Dependencies Changed
 
@@ -335,6 +510,7 @@ npm start
 | `@resvg/resvg-js` | Installed in Server | SVG→PNG conversion for badges |
 | `@fastify/static` | Installed in Server | Serve Dashboard static files |
 | `@fastify/http-proxy` | **Removed** from Server | No longer needed (was proxy to Dashboard SSR) |
+| `bcrypt@6.0.0` | Installed in Server | Password hashing for app-native auth (12 salt rounds) |
 
 ---
 
@@ -344,19 +520,23 @@ npm start
 
 | Priority | Task | Notes |
 |----------|------|-------|
-| ~~**P0**~~ | ~~Verify Infomaniak rebuild~~ | ✅ Server running — Dashboard login page confirmed live |
-| **P0** | `prisma db push` via SSH | Creates 4 new tables: `badge_templates`, `badge_renders`, `webhook_endpoints`, `webhook_deliveries` |
-| **P0** | Set real JWT/WP secrets | Currently using dev placeholders — insecure |
-| **P1** | Dashboard settings page | Store Stripe keys + SMTP creds via UI (not .env) |
-| **P1** | Set Stripe webhook endpoint | `https://tix.swiss-robotics.org/webhooks/stripe` in Stripe Dashboard |
+| ~~**P0**~~ | ~~Verify Infomaniak rebuild~~ | ✅ Server running — Dashboard confirmed live |
+| ~~**P0**~~ | ~~`prisma db push` via SSH~~ | ✅ Done — passwordHash, emailConfirmedAt, confirmToken columns added + unique constraint |
+| ~~**P0**~~ | ~~Set real JWT/WP secrets~~ | ✅ Done — cryptographically random secrets in `.env` |
+| ~~**P0**~~ | ~~App-native auth~~ | ✅ Done — email+password login independent of WP |
+| ~~**P0**~~ | ~~Fix `dist/` output path~~ | ✅ Done — excluded `prisma/` from tsconfig.build |
+| **P0** | Seed Super Admin account | Run `npx ts-node --transpile-only prisma/seed.ts` on server — prints password once |
+| **P1** | Set Stripe webhook endpoint | Point to `https://tix.swiss-robotics.org/api/payments/stripe/webhook` in Stripe Dashboard, then add `STRIPE_WEBHOOK_SECRET` to `.env` |
+| **P1** | Configure SMTP | Set SMTP_HOST/PORT/USER/PASS/FROM in `.env` for email notifications |
+| **P1** | Dashboard settings page | Store Stripe keys + SMTP creds via UI (not .env) — deferred |
 
 ### Cleanup
 
 | Task | Notes |
 |------|-------|
 | Delete `start.js` | Orphaned — no longer referenced by any script |
-| Add `CORS` origin for Dashboard | Dashboard served from same origin now (no CORS needed for SPA), but WP sites still need it |
-| Test SSE from static Dashboard | `EventSource` requires same-origin or CORS — should work since Dashboard is served from same port |
+| Rotate secrets (optional) | Old secrets in git history (private repo). Consider rotating JWT_SECRET, JWT_REFRESH_SECRET, WP_API_SECRET |
+| Test SSE from static Dashboard | `EventSource` on same origin — should work since Dashboard served from same port |
 
 ---
 
@@ -381,18 +561,52 @@ npm start
 
 ---
 
+## Auth System Summary
+
+### Two Auth Paths
+
+| Path | Method | Use Case |
+|------|--------|----------|
+| **App-native** (primary) | `POST /api/auth/login` with email+password | All dashboard users |
+| **WP bridge** (secondary) | `POST /api/auth/token` with HMAC-signed WP token | Super Admin only ("Open Dashboard" from WP admin) |
+
+### Token Lifecycle
+- Access token: 15 min expiry (JWT)
+- Refresh token: 7 day expiry (JWT)
+- Auto-refresh: scheduled 1 min before access token expiry
+- Storage: `localStorage` keys `sratix_access_token`, `sratix_refresh_token`
+- 401 retry: API client auto-refreshes on 401 and retries the request (with dedup)
+
+### Available Roles (10)
+`super_admin`, `org_admin`, `event_manager`, `check_in_staff`, `box_office`, `finance`, `marketing`, `support`, `api_consumer`, `exhibitor`
+
+---
+
+## Server .env Notes
+
+- `.env` is **gitignored** — must be created manually on server via SSH
+- File is safe across `git pull`, `npm install`, `npm run build`, `git reset --hard`
+- Only manual `rm` or directory wipe removes it
+- Template: `Server/.env.example` (committed to repo)
+- `NODE_ENV=production` on server (vs `development` locally)
+- `STRIPE_WEBHOOK_SECRET` still blank — needs Stripe endpoint setup
+- SMTP vars all blank — configure when ready for email notifications
+
+---
+
 ## Project Totals
 
 | Metric | Session 5 | Session 6 |
-|--------|-----------|-----------|
-| Server TypeScript files | 72 | 72 |
-| NestJS modules | 22 | 22 |
+|--------|-----------|----------|
+| Server TypeScript files | 72 | 78 |
+| NestJS modules | 22 | 23 |
 | Prisma models | 20 | 20 |
-| REST API endpoints | ~65 | ~65 |
-| Dashboard TypeScript/TSX files | 22 | 33 |
-| Dashboard pages | 11 | 12 |
+| REST API endpoints | ~65 | ~75 |
+| Dashboard TypeScript/TSX files | 22 | 35 |
+| Dashboard pages | 11 | 13 |
 | WP plugin folders | `Client/`, `Control/` | `sratix-client/`, `sratix-control/` |
-| Git commits (total) | ~10 | 25 |
+| Git commits (total) | ~10 | 32 |
 | Phase 1 items | 19/19 ✅ | 19/19 ✅ |
 | Phase 2 items done | 3 | **5** |
 | Deployment status | Not deployed | ✅ Live on Infomaniak |
+| Auth system | WP bridge only | App-native + WP bridge |
