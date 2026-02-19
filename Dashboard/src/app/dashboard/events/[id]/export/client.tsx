@@ -25,6 +25,12 @@ export default function ExportPage() {
       icon: '✅',
       url: api.exportCheckIns(eventId),
     },
+    {
+      label: 'Form Submissions',
+      description: 'Registration form answers, custom field responses',
+      icon: '📝',
+      url: api.exportFormSubmissions(eventId),
+    },
   ];
 
   return (
@@ -38,7 +44,7 @@ export default function ExportPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {exports.map((exp) => (
           <a
             key={exp.label}

@@ -38,6 +38,8 @@ export class AttendeesService {
     email: string;
     firstName: string;
     lastName: string;
+    phone?: string;
+    company?: string;
     wpUserId?: number;
     meta?: Record<string, unknown>;
   }) {
@@ -48,6 +50,8 @@ export class AttendeesService {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        phone: data.phone,
+        company: data.company,
         wpUserId: data.wpUserId,
         meta: data.meta ? JSON.stringify(data.meta) : undefined,
       },
@@ -72,6 +76,8 @@ export class AttendeesService {
   async update(id: string, data: Partial<{
     firstName: string;
     lastName: string;
+    phone: string;
+    company: string;
     meta: Record<string, unknown>;
   }>) {
     await this.findOne(id);

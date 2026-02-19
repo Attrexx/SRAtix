@@ -15,12 +15,14 @@ interface NavItem {
 function getEventNav(eventId: string): NavItem[] {
   return [
     { href: `/dashboard/events/${eventId}`, label: 'Overview', icon: '📊' },
+    { href: `/dashboard/events/${eventId}/ticket-types`, label: 'Ticket Types', icon: '🎫' },
     { href: `/dashboard/events/${eventId}/attendees`, label: 'Attendees', icon: '👥' },
     { href: `/dashboard/events/${eventId}/orders`, label: 'Orders', icon: '🛒' },
     { href: `/dashboard/events/${eventId}/check-in`, label: 'Check-In Live', icon: '✅' },
     { href: `/dashboard/events/${eventId}/analytics`, label: 'Analytics', icon: '📈' },
     { href: `/dashboard/events/${eventId}/promo-codes`, label: 'Promo Codes', icon: '🏷️' },
     { href: `/dashboard/events/${eventId}/forms`, label: 'Forms', icon: '📋' },
+    { href: `/dashboard/events/${eventId}/audit-log`, label: 'Activity Log', icon: '📝' },
     { href: `/dashboard/events/${eventId}/export`, label: 'Export', icon: '📤' },
     { href: `/dashboard/events/${eventId}/webhooks`, label: 'Webhooks', icon: '🔗', roles: ['admin', 'owner'] },
   ];

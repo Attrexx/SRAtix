@@ -176,9 +176,19 @@ export interface TicketType {
   description?: string;
   priceCents: number;
   currency: string;
-  maxQuantity?: number;
-  soldCount: number;
+  quantity?: number | null;
+  sold: number;
+  maxPerOrder: number;
+  salesStart?: string | null;
+  salesEnd?: string | null;
+  status: string;
   sortOrder: number;
+  formSchemaId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Aliases for backward compat in overview
+  maxQuantity?: number | null;
+  soldCount: number;
   active: boolean;
 }
 
@@ -242,13 +252,32 @@ export interface PromoCode {
   id: string;
   eventId: string;
   code: string;
+  description?: string;
   discountType: string;
   discountValue: number;
-  usageLimit?: number;
+  currency: string;
+  usageLimit?: number | null;
   usedCount: number;
+  perCustomerLimit: number;
+  validFrom?: string | null;
+  validTo?: string | null;
+  applicableTicketIds?: string[] | null;
+  minOrderCents?: number | null;
   active: boolean;
-  validFrom?: string;
-  validTo?: string;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  eventId?: string | null;
+  userId?: string | null;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  detail?: Record<string, unknown> | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  timestamp: string;
 }
 
 export interface DashboardStats {
@@ -359,11 +388,44 @@ export const api = {
 
   // Ticket Types
   getTicketTypes: (eventId: string, signal?: AbortSignal) =>
-    request<TicketType[]>(`/ticket-types/event/${eventId}`, { signal }),
+    request<TicketType[]>(`/events/${eventId}/ticket-types`, { signal }),
+
+  createTicketType: (eventId: string, data: {
+    name: string;
+    description?: string;
+    priceCents: number;
+    currency: string;
+    capacity?: number;
+    salesStart?: string;
+    salesEnd?: string;
+    sortOrder?: number;
+  }) =>
+    request<TicketType>(`/events/${eventId}/ticket-types`, { method: 'POST', body: data }),
+
+  updateTicketType: (eventId: string, id: string, data: Record<string, unknown>) =>
+    request<TicketType>(`/events/${eventId}/ticket-types/${id}`, { method: 'PATCH', body: data }),
 
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>
     request<Attendee[]>(`/attendees/event/${eventId}`, { signal }),
+
+  createAttendee: (data: {
+    eventId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    company?: string;
+  }) =>
+    request<Attendee>('/attendees', { method: 'POST', body: data }),
+
+  updateAttendee: (id: string, data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    company?: string;
+  }) =>
+    request<Attendee>(`/attendees/${id}`, { method: 'PATCH', body: data }),
 
   // Orders
   getOrders: (eventId: string, signal?: AbortSignal) =>
@@ -390,6 +452,28 @@ export const api = {
   getPromoCodes: (eventId: string, signal?: AbortSignal) =>
     request<PromoCode[]>(`/promo-codes/event/${eventId}`, { signal }),
 
+  createPromoCode: (data: {
+    eventId: string;
+    code: string;
+    description?: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    currency?: string;
+    usageLimit?: number;
+    perCustomerLimit?: number;
+    validFrom?: string;
+    validTo?: string;
+    applicableTicketIds?: string[];
+    minOrderCents?: number;
+  }) =>
+    request<PromoCode>('/promo-codes', { method: 'POST', body: data }),
+
+  updatePromoCode: (id: string, eventId: string, data: Record<string, unknown>) =>
+    request<PromoCode>(`/promo-codes/${id}/event/${eventId}`, { method: 'PATCH', body: data }),
+
+  deactivatePromoCode: (id: string, eventId: string) =>
+    request<PromoCode>(`/promo-codes/${id}/event/${eventId}/deactivate`, { method: 'PATCH' }),
+
   // Forms
   getFormSchemas: (eventId: string, signal?: AbortSignal) =>
     request<unknown[]>(`/forms/event/${eventId}`, { signal }),
@@ -403,6 +487,19 @@ export const api = {
 
   exportCheckIns: (eventId: string) =>
     `${API_BASE}/api/export/check-ins/event/${eventId}`,
+
+  exportFormSubmissions: (eventId: string, formSchemaId?: string) =>
+    `${API_BASE}/api/export/submissions/event/${eventId}${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
+
+  // Audit Log
+  getAuditLog: (eventId: string, options?: { take?: number; skip?: number; action?: string }, signal?: AbortSignal) => {
+    const params = new URLSearchParams();
+    if (options?.take) params.set('take', String(options.take));
+    if (options?.skip) params.set('skip', String(options.skip));
+    if (options?.action) params.set('action', String(options.action));
+    const qs = params.toString();
+    return request<AuditLogEntry[]>(`/audit-log/event/${eventId}${qs ? `?${qs}` : ''}`, { signal });
+  },
 
   // Webhooks
   getWebhookEventTypes: (signal?: AbortSignal) =>

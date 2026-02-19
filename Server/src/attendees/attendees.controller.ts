@@ -12,21 +12,31 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { JwtPayload } from '../auth/auth.service';
 import { AttendeesService } from './attendees.service';
+import { EventsService } from '../events/events.service';
 import { IsString, IsEmail, IsOptional, IsNumber } from 'class-validator';
 
 class CreateAttendeeDto {
   @IsString()
-  eventId: string;
+  eventId!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsString()
-  lastName: string;
+  lastName!: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
 
   @IsOptional()
   @IsNumber()
@@ -41,12 +51,23 @@ class UpdateAttendeeDto {
   @IsOptional()
   @IsString()
   lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
 }
 
 @Controller('attendees')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class AttendeesController {
-  constructor(private readonly attendeesService: AttendeesService) {}
+  constructor(
+    private readonly attendeesService: AttendeesService,
+    private readonly eventsService: EventsService,
+  ) {}
 
   @Get('event/:eventId')
   @Roles('event_admin', 'super_admin')
@@ -71,13 +92,17 @@ export class AttendeesController {
 
   @Post()
   @Roles('event_admin', 'super_admin', 'box_office')
-  create(
+  async create(
     @Body() dto: CreateAttendeeDto,
-    @CurrentUser() user: { orgId: string },
+    @CurrentUser() user: JwtPayload,
   ) {
+    let orgId = user.orgId;
+    if (!orgId) {
+      orgId = await this.eventsService.getOrCreateDefaultOrgId();
+    }
     return this.attendeesService.create({
       ...dto,
-      orgId: user.orgId,
+      orgId,
     });
   }
 
