@@ -49,8 +49,8 @@ export default function AnalyticsPage() {
 
     const totalRevenue = paidOrders.reduce((s, o) => s + o.totalCents, 0);
     const avgOrderValue = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
-    const totalTickets = ticketTypes.reduce((s, tt) => s + (tt.sold ?? tt.soldCount ?? 0), 0);
-    const totalCapacity = ticketTypes.reduce((s, tt) => s + (tt.quantity ?? tt.maxQuantity ?? 0), 0);
+    const totalTickets = ticketTypes.reduce((s, tt) => s + (tt.sold ?? 0), 0);
+    const totalCapacity = ticketTypes.reduce((s, tt) => s + (tt.quantity ?? 0), 0);
     const capacityUtilization = totalCapacity > 0 ? Math.round((totalTickets / totalCapacity) * 100) : 0;
 
     // Check-in rate
@@ -102,9 +102,9 @@ export default function AnalyticsPage() {
       capacity: number;
     }> = ticketTypes.map((tt) => ({
       name: tt.name,
-      revenue: (tt.sold ?? tt.soldCount ?? 0) * tt.priceCents,
-      sold: tt.sold ?? tt.soldCount ?? 0,
-      capacity: tt.quantity ?? tt.maxQuantity ?? 0,
+      revenue: (tt.sold ?? 0) * tt.priceCents,
+      sold: tt.sold ?? 0,
+      capacity: tt.quantity ?? 0,
     }));
 
     // Top promo codes

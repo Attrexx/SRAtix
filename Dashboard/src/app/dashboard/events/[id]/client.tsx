@@ -36,7 +36,7 @@ export default function EventOverviewPage() {
         setStats({
           totalOrders: orders.length,
           totalRevenue: paidOrders.reduce((sum, o) => sum + o.totalCents, 0),
-          ticketsSold: tts.reduce((sum, tt) => sum + tt.soldCount, 0),
+          ticketsSold: tts.reduce((sum, tt) => sum + (tt.sold ?? 0), 0),
           checkIns: checkInStats.total,
         });
       })
@@ -137,10 +137,9 @@ export default function EventOverviewPage() {
             </p>
           ) : (
             ticketTypes.map((tt) => {
-              const soldPct =
-                tt.maxQuantity && tt.maxQuantity > 0
-                  ? Math.round((tt.soldCount / tt.maxQuantity) * 100)
-                  : 0;
+              const sold = tt.sold ?? 0;
+              const cap = tt.quantity ?? 0;
+              const soldPct = cap > 0 ? Math.round((sold / cap) * 100) : 0;
               return (
                 <div
                   key={tt.id}
@@ -160,10 +159,10 @@ export default function EventOverviewPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                      {tt.soldCount}
-                      {tt.maxQuantity ? ` / ${tt.maxQuantity}` : ''} sold
+                      {sold}
+                      {cap > 0 ? ` / ${cap}` : ''} sold
                     </p>
-                    {tt.maxQuantity && (
+                    {cap > 0 && (
                       <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full" style={{ background: 'var(--color-bg-muted)' }}>
                         <div
                           className="h-full rounded-full transition-all"

@@ -52,7 +52,7 @@ export default function CheckInLivePage() {
     ])
       .then(([s, tts]) => {
         setStats(s);
-        setTotalTickets(tts.reduce((sum, tt) => sum + tt.soldCount, 0));
+        setTotalTickets(tts.reduce((sum, tt) => sum + (tt.sold ?? 0), 0));
       })
       .finally(() => setLoading(false));
 

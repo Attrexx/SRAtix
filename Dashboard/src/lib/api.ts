@@ -186,10 +186,6 @@ export interface TicketType {
   formSchemaId?: string | null;
   createdAt: string;
   updatedAt: string;
-  // Aliases for backward compat in overview
-  maxQuantity?: number | null;
-  soldCount: number;
-  active: boolean;
 }
 
 export interface Attendee {
@@ -477,6 +473,21 @@ export const api = {
   // Forms
   getFormSchemas: (eventId: string, signal?: AbortSignal) =>
     request<unknown[]>(`/forms/event/${eventId}`, { signal }),
+
+  createFormSchema: (data: {
+    eventId: string;
+    name: string;
+    fields: {
+      fields: Array<{
+        id: string;
+        type: string;
+        label: Record<string, string>;
+        required?: boolean;
+        options?: Array<{ value: string; label: Record<string, string> }>;
+      }>;
+    };
+  }) =>
+    request<unknown>('/forms', { method: 'POST', body: data }),
 
   // Exports
   exportAttendees: (eventId: string) =>
