@@ -7,4 +7,9 @@ tmp/
 .DS_Store
 Thumbs.db
 
+# Secrets
+.env
+.env.*
+!.env.example
+
 /generated/prisma
