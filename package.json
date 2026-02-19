@@ -4,7 +4,7 @@
   "private": true,
   "description": "SRAtix — Root orchestrator for Infomaniak deployment",
   "scripts": {
-    "postinstall": "cd Server && npm install && npx prisma generate && cd ../Dashboard && npm install",
+    "postinstall": "rm -rf Server/node_modules && cd Server && npm install && npx prisma generate && cd .. && rm -rf Dashboard/node_modules && cd Dashboard && npm install",
     "build": "cd Server && npx prisma db push && npm run build && cd ../Dashboard && npm run build",
     "start": "node start.js"
   }
