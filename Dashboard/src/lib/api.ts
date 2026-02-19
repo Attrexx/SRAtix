@@ -315,6 +315,25 @@ export interface RoleDefinition {
   description: string;
 }
 
+export interface SettingValue {
+  key: string;
+  envVar: string;
+  label: string;
+  group: string;
+  description: string;
+  type: string;
+  sensitive: boolean;
+  required: boolean;
+  value: string;
+  source: 'database' | 'env' | 'default';
+  isSet: boolean;
+}
+
+export interface SettingsResponse {
+  settings: SettingValue[];
+  groups: Record<string, SettingValue[]>;
+}
+
 // ─── API Methods ────────────────────────────────────────────────
 
 export const api = {
@@ -452,6 +471,17 @@ export const api = {
 
   activateUser: (id: string) =>
     request<{ success: boolean }>(`/users/${id}/activate`, { method: 'POST' }),
+
+  // ─── Settings (Super Admin) ────────────────────────────────────
+
+  getSettings: (signal?: AbortSignal) =>
+    request<SettingsResponse>('/settings', { signal }),
+
+  updateSettings: (settings: Array<{ key: string; value: string }>) =>
+    request<{ updated: string[]; requiresRestart: boolean }>('/settings', {
+      method: 'PATCH',
+      body: { settings },
+    }),
 };
 
 export { ApiError };

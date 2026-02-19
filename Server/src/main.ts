@@ -134,6 +134,13 @@ async function bootstrap() {
           return reply.type('text/html').send(indexHtml);
         }
 
+        // Any other /dashboard/* or /login* path → SPA fallback (serve root index.html)
+        // This handles client-side routing for pages that aren't pre-rendered
+        // with an exact index.html match (e.g. /dashboard/settings)
+        if (urlPath.startsWith('/dashboard') || urlPath.startsWith('/login')) {
+          return reply.type('text/html').send(indexHtml);
+        }
+
         // Unknown non-API path: let NestJS handle (will 404)
       });
 

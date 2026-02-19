@@ -22,6 +22,7 @@ import { QueueModule } from './queue/queue.module';
 import { BadgeTemplatesModule } from './badge-templates/badge-templates.module';
 import { OutgoingWebhooksModule } from './outgoing-webhooks/outgoing-webhooks.module';
 import { UsersModule } from './users/users.module';
+import { SettingsModule } from './settings/settings.module';
 import { join } from 'path';
 
 @Module({
@@ -90,6 +91,9 @@ import { join } from 'path';
 
     // User management (app-native accounts, Super Admin CRUD)
     UsersModule,
+
+    // Platform settings (Super Admin UI for .env overrides)
+    SettingsModule,
   ],
 })
 export class AppModule {}

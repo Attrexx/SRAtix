@@ -1,24 +1,94 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type Event } from '@/lib/api';
 import { StatusBadge } from '@/components/status-badge';
+import { StatCard } from '@/components/stat-card';
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 80);
+}
 
 export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Create form state
+  const [formName, setFormName] = useState('');
+  const [formSlug, setFormSlug] = useState('');
+  const [formVenue, setFormVenue] = useState('');
+  const [formStart, setFormStart] = useState('');
+  const [formEnd, setFormEnd] = useState('');
+  const [formTimezone, setFormTimezone] = useState('Europe/Zurich');
+  const [formCurrency, setFormCurrency] = useState('CHF');
+  const [formDescription, setFormDescription] = useState('');
+  const [slugManual, setSlugManual] = useState(false);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      const data = await api.getEvents();
+      setEvents(data);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const ac = new AbortController();
-    api
-      .getEvents(ac.signal)
-      .then(setEvents)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => ac.abort();
-  }, []);
+    loadEvents();
+  }, [loadEvents]);
+
+  const resetForm = () => {
+    setFormName('');
+    setFormSlug('');
+    setFormVenue('');
+    setFormStart('');
+    setFormEnd('');
+    setFormTimezone('Europe/Zurich');
+    setFormCurrency('CHF');
+    setFormDescription('');
+    setSlugManual(false);
+    setError(null);
+  };
+
+  const handleCreate = async () => {
+    if (!formName.trim() || !formStart || !formEnd) {
+      setError('Name, start date, and end date are required.');
+      return;
+    }
+    setCreating(true);
+    setError(null);
+
+    try {
+      const event = await api.createEvent({
+        name: formName.trim(),
+        slug: formSlug || generateSlug(formName),
+        venue: formVenue.trim() || undefined,
+        startDate: new Date(formStart).toISOString(),
+        endDate: new Date(formEnd).toISOString(),
+        timezone: formTimezone,
+        currency: formCurrency,
+        description: formDescription.trim() || undefined,
+      });
+      setShowCreate(false);
+      resetForm();
+      router.push(`/dashboard/events/${event.id}`);
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to create event');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -40,11 +110,36 @@ export default function EventsPage() {
           className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
           style={{ background: 'var(--color-primary)' }}
           onClick={() => {
-            // TODO: Create event modal
+            resetForm();
+            setShowCreate(true);
           }}
         >
           + New Event
         </button>
+      </div>
+
+      {/* Platform Overview Stats */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon="🎪"
+          label="Total Events"
+          value={events.length}
+        />
+        <StatCard
+          icon="📅"
+          label="Active Events"
+          value={events.filter((e) => e.status === 'active' || e.status === 'published').length}
+        />
+        <StatCard
+          icon="🟢"
+          label="Upcoming"
+          value={events.filter((e) => new Date(e.startDate) > new Date()).length}
+        />
+        <StatCard
+          icon="✅"
+          label="Completed"
+          value={events.filter((e) => e.status === 'completed' || (e.endDate && new Date(e.endDate) < new Date())).length}
+        />
       </div>
 
       {/* Event Cards Grid */}
@@ -63,6 +158,16 @@ export default function EventsPage() {
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>
             Create your first event to get started.
           </p>
+          <button
+            className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white"
+            style={{ background: 'var(--color-primary)' }}
+            onClick={() => {
+              resetForm();
+              setShowCreate(true);
+            }}
+          >
+            + Create Event
+          </button>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -73,6 +178,251 @@ export default function EventsPage() {
               onClick={() => router.push(`/dashboard/events/${event.id}`)}
             />
           ))}
+        </div>
+      )}
+
+      {/* ── Create Event Modal ── */}
+      {showCreate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCreate(false);
+          }}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-2xl"
+            style={{
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-lg, 0 25px 50px -12px rgba(0,0,0,0.25))',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex items-center justify-between border-b px-6 py-4"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: 'var(--color-text)' }}
+              >
+                Create Event
+              </h2>
+              <button
+                onClick={() => setShowCreate(false)}
+                className="text-xl leading-none"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
+              {error && (
+                <div
+                  className="mb-4 rounded-lg px-4 py-2 text-sm"
+                  style={{
+                    background: 'var(--color-error-bg, #fee2e2)',
+                    color: 'var(--color-error-text, #991b1b)',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Event Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={(e) => {
+                      setFormName(e.target.value);
+                      if (!slugManual) setFormSlug(generateSlug(e.target.value));
+                    }}
+                    placeholder="e.g. Swiss Robotics Day 2026"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{
+                      background: 'var(--color-bg-subtle)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  />
+                </div>
+
+                {/* Slug */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    URL Slug
+                  </label>
+                  <input
+                    type="text"
+                    value={formSlug}
+                    onChange={(e) => {
+                      setFormSlug(e.target.value);
+                      setSlugManual(true);
+                    }}
+                    placeholder="auto-generated-from-name"
+                    className="w-full rounded-lg px-3 py-2 text-sm font-mono"
+                    style={{
+                      background: 'var(--color-bg-subtle)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  />
+                </div>
+
+                {/* Dates — side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Start Date *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formStart}
+                      onChange={(e) => setFormStart(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={{
+                        background: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      End Date *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formEnd}
+                      onChange={(e) => setFormEnd(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={{
+                        background: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Timezone + Currency — side by side */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Timezone
+                    </label>
+                    <select
+                      value={formTimezone}
+                      onChange={(e) => setFormTimezone(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={{
+                        background: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      <option value="Europe/Zurich">Europe/Zurich (CET)</option>
+                      <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET)</option>
+                      <option value="Europe/London">Europe/London (GMT)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Currency
+                    </label>
+                    <select
+                      value={formCurrency}
+                      onChange={(e) => setFormCurrency(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-sm"
+                      style={{
+                        background: 'var(--color-bg-subtle)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      <option value="CHF">CHF — Swiss Franc</option>
+                      <option value="EUR">EUR — Euro</option>
+                      <option value="USD">USD — US Dollar</option>
+                      <option value="GBP">GBP — British Pound</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Venue */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Venue
+                  </label>
+                  <input
+                    type="text"
+                    value={formVenue}
+                    onChange={(e) => setFormVenue(e.target.value)}
+                    placeholder="e.g. Bern Expo, Switzerland"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{
+                      background: 'var(--color-bg-subtle)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Description
+                  </label>
+                  <textarea
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Brief event description…"
+                    className="w-full resize-none rounded-lg px-3 py-2 text-sm"
+                    style={{
+                      background: 'var(--color-bg-subtle)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              className="flex justify-end gap-2 border-t px-6 py-4"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <button
+                onClick={() => setShowCreate(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={creating || !formName.trim() || !formStart || !formEnd}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                style={{ background: 'var(--color-primary)' }}
+              >
+                {creating ? 'Creating…' : 'Create Event'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
