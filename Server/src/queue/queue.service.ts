@@ -123,7 +123,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
 
     const queueNames = ['email', 'pdf', 'badge', 'export', 'sync', 'webhook'];
     for (const name of queueNames) {
-      const queue = new Queue(`sratix:${name}`, {
+      const queue = new Queue(`sratix-${name}`, {
         connection: this.connectionConfig as Record<string, unknown>,
         defaultJobOptions: {
           removeOnComplete: { count: 100 },
@@ -208,7 +208,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     const { Worker } = await import('bullmq');
 
     const worker = new Worker(
-      `sratix:${queueName}`,
+      `sratix-${queueName}`,
       async (job) => {
         this.logger.debug(`Processing job ${job.name} [${job.id}]`);
         try {
