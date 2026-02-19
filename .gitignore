@@ -6,6 +6,5 @@ dist/
 tmp/
 .DS_Store
 Thumbs.db
-.env
 
 /generated/prisma
