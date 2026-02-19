@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 import { Sidebar } from '@/components/sidebar';
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -48,9 +48,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      <DashboardShell>{children}</DashboardShell>
-    </AuthProvider>
-  );
+  return <DashboardShell>{children}</DashboardShell>;
 }
