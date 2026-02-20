@@ -71,11 +71,11 @@ export function Sidebar({ eventId }: { eventId?: string }) {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="flex items-center px-5 py-4">
+      <div className="flex items-center px-5 py-5">
         <img
           src="/logo.png"
           alt="SRAtix"
-          className="h-9 w-auto"
+          className="h-12 w-auto"
           draggable={false}
         />
       </div>
