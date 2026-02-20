@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import { api, type TicketType, type Event } from '@/lib/api';
+import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 
@@ -34,8 +35,8 @@ export default function TicketTypesPage() {
       ]);
       setEvent(ev);
       setTicketTypes(tts);
-    } catch {
-      // silent
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load ticket types');
     } finally {
       setLoading(false);
     }
@@ -118,8 +119,8 @@ export default function TicketTypesPage() {
     try {
       await api.updateTicketType(eventId, tt.id, { status: newStatus });
       await loadData();
-    } catch {
-      // silent
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update ticket type status');
     }
   };
 
@@ -142,9 +143,9 @@ export default function TicketTypesPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
             Ticket Types
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
@@ -200,7 +201,7 @@ export default function TicketTypesPage() {
             return (
               <div
                 key={tt.id}
-                className="flex items-center justify-between rounded-xl px-5 py-4"
+                className="flex flex-col gap-3 rounded-xl px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 style={{
                   background: 'var(--color-bg-card)',
                   border: '1px solid var(--color-border)',
@@ -246,7 +247,7 @@ export default function TicketTypesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pl-4">
+                <div className="flex items-center gap-2 sm:pl-4">
                   <button
                     onClick={() => toggleStatus(tt)}
                     className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"

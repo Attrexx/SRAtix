@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -39,17 +39,37 @@ const topNav: NavItem[] = [
 export function Sidebar({ eventId }: { eventId?: string }) {
   const pathname = usePathname();
   const { user, logout, hasRole } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const eventNav = eventId ? getEventNav(eventId) : [];
 
-  return (
-    <aside
-      className="flex h-screen w-64 flex-col"
-      style={{
-        background: 'var(--color-sidebar)',
-        color: 'var(--color-sidebar-text)',
-      }}
-    >
+  // Close drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Close drawer on Escape key
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div className="flex items-center px-5 py-4">
         <img
@@ -108,7 +128,75 @@ export function Sidebar({ eventId }: { eventId?: string }) {
           </div>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* ── Mobile top bar ── */}
+      <div
+        className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 px-4 md:hidden"
+        style={{
+          background: 'var(--color-sidebar)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="rounded-lg p-1.5 text-white transition-colors hover:bg-white/10"
+          aria-label="Open menu"
+        >
+          <Icons.BarChart size={22} className="hidden" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <img src="/logo.png" alt="SRAtix" className="h-7 w-auto" draggable={false} />
+      </div>
+
+      {/* ── Mobile drawer overlay ── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" />
+          {/* Drawer */}
+          <aside
+            className="relative flex h-full w-72 flex-col"
+            style={{
+              background: 'var(--color-sidebar)',
+              color: 'var(--color-sidebar-text)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="absolute right-3 top-4 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Close menu"
+            >
+              <Icons.X size={20} />
+            </button>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+
+      {/* ── Desktop sidebar ── */}
+      <aside
+        className="hidden md:flex h-screen w-64 flex-col flex-shrink-0"
+        style={{
+          background: 'var(--color-sidebar)',
+          color: 'var(--color-sidebar-text)',
+        }}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
 

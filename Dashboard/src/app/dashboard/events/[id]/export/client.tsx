@@ -38,7 +38,7 @@ export default function ExportPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+        <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
           Data Export
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>

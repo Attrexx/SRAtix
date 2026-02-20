@@ -56,9 +56,9 @@ export default function UsersPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
             User Management
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
@@ -124,13 +124,13 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div
-        className="overflow-hidden rounded-xl"
+        className="overflow-x-auto rounded-xl"
         style={{
           background: 'var(--color-bg-card)',
           border: '1px solid var(--color-border)',
         }}
       >
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-sm" style={{ minWidth: '640px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
               <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>User</th>

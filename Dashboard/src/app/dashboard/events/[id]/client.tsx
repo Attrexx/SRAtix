@@ -68,7 +68,7 @@ export default function EventOverviewPage() {
       {/* Event Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
             {event.name}
           </h1>
           <StatusBadge status={event.status} />
@@ -143,7 +143,7 @@ export default function EventOverviewPage() {
               return (
                 <div
                   key={tt.id}
-                  className="flex items-center justify-between rounded-lg px-4 py-3"
+                  className="flex flex-col gap-2 rounded-lg px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
                   style={{
                     background: 'var(--color-bg-subtle)',
                     border: '1px solid var(--color-border-subtle)',

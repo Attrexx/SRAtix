@@ -42,10 +42,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden">
       <Sidebar eventId={eventId} />
       <main
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto pt-14 md:pt-0"
         style={{ background: 'var(--color-bg-subtle)' }}
       >
-        <div className="mx-auto max-w-7xl px-6 py-6">{children}</div>
+        <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">{children}</div>
       </main>
     </div>
   );

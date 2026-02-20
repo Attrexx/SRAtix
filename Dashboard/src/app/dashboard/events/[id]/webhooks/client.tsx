@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
+import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 
@@ -47,8 +48,8 @@ export default function WebhooksPage() {
         eventId,
       );
       setEndpoints(data);
-    } catch {
-      // silent
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load webhooks');
     } finally {
       setLoading(false);
     }
@@ -127,11 +128,11 @@ export default function WebhooksPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="h-8 w-48 rounded bg-gray-200 animate-pulse mb-6" />
+      <div className="space-y-6">
+        <div className="h-8 w-48 rounded animate-pulse mb-6" style={{ background: 'var(--color-bg-muted)' }} />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-lg bg-gray-100 animate-pulse" />
+            <div key={i} className="h-20 rounded-lg animate-pulse" style={{ background: 'var(--color-bg-muted)' }} />
           ))}
         </div>
       </div>
@@ -139,11 +140,11 @@ export default function WebhooksPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
             Outgoing Webhooks
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
@@ -212,7 +213,7 @@ export default function WebhooksPage() {
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
               Events to subscribe
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {ALL_EVENT_TYPES.map((type) => (
                 <label
                   key={type}
@@ -286,7 +287,7 @@ export default function WebhooksPage() {
                 opacity: ep.active ? 1 : 0.6,
               }}
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <StatusBadge status={ep.active ? 'active' : 'inactive'} />
@@ -317,7 +318,7 @@ export default function WebhooksPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleViewDeliveries(ep)}
                     className="rounded px-3 py-1.5 text-xs"
