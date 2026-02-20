@@ -102,14 +102,8 @@ function LoginForm() {
       >
         {/* Header */}
         <div className="mb-8 text-center">
-          <span style={{ color: 'var(--color-primary)' }}><Icons.Ticket size={48} /></span>
-          <h1
-            className="mt-4 text-2xl font-bold tracking-tight"
-            style={{ color: 'var(--color-text)' }}
-          >
-            SRAtix Dashboard
-          </h1>
-          <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          <img src="/logo.png" alt="SRAtix" className="mx-auto h-12 w-auto" draggable={false} />
+          <p className="mt-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             Sign in to your account
           </p>
         </div>

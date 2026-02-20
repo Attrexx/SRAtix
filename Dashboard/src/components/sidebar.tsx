@@ -51,12 +51,13 @@ export function Sidebar({ eventId }: { eventId?: string }) {
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5">
-        <Icons.Ticket size={24} className="text-white" />
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-white">SRAtix</h1>
-          <p className="text-xs opacity-60">Event Dashboard</p>
-        </div>
+      <div className="flex items-center px-5 py-4">
+        <img
+          src="/logo.png"
+          alt="SRAtix"
+          className="h-9 w-auto"
+          draggable={false}
+        />
       </div>
 
       {/* Top Navigation */}
