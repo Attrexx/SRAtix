@@ -124,6 +124,97 @@ export class EmailService {
     });
   }
 
+  // ─── Admin Notification Emails ────────────────────────────────
+
+  /**
+   * Send admin notification: new ticket order paid.
+   */
+  async sendNewOrderNotification(
+    recipients: string[],
+    data: {
+      orderNumber: string;
+      customerName: string;
+      customerEmail: string;
+      totalFormatted: string;
+      currency: string;
+      ticketCount: number;
+      eventName: string;
+      eventDate: string;
+    },
+  ): Promise<void> {
+    const html = this.renderAdminNewOrder(data);
+    const text = `New Order: ${data.orderNumber}\n\nCustomer: ${data.customerName} (${data.customerEmail})\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nTickets: ${data.ticketCount}\nTotal: ${data.totalFormatted} ${data.currency}\n\n— SRAtix`;
+
+    for (const to of recipients) {
+      this.send({
+        to,
+        subject: `🎫 New order ${data.orderNumber} — ${data.eventName}`,
+        html,
+        text,
+      }).catch((err) =>
+        this.logger.error(`Admin notification failed for ${to}: ${err}`),
+      );
+    }
+  }
+
+  /**
+   * Send admin notification: new event draft created.
+   */
+  async sendEventDraftNotification(
+    recipients: string[],
+    data: {
+      eventName: string;
+      createdBy: string;
+      startDate: string;
+      endDate: string;
+      venue: string;
+      dashboardUrl: string;
+    },
+  ): Promise<void> {
+    const html = this.renderAdminEventDraft(data);
+    const text = `New Event Draft: ${data.eventName}\n\nCreated by: ${data.createdBy}\nDates: ${data.startDate} — ${data.endDate}\nVenue: ${data.venue}\n\nReview: ${data.dashboardUrl}\n\n— SRAtix`;
+
+    for (const to of recipients) {
+      this.send({
+        to,
+        subject: `📝 New event draft — ${data.eventName}`,
+        html,
+        text,
+      }).catch((err) =>
+        this.logger.error(`Admin notification failed for ${to}: ${err}`),
+      );
+    }
+  }
+
+  /**
+   * Send admin notification: event published.
+   */
+  async sendEventPublishedNotification(
+    recipients: string[],
+    data: {
+      eventName: string;
+      publishedBy: string;
+      startDate: string;
+      endDate: string;
+      venue: string;
+      dashboardUrl: string;
+    },
+  ): Promise<void> {
+    const html = this.renderAdminEventPublished(data);
+    const text = `Event Published: ${data.eventName}\n\nPublished by: ${data.publishedBy}\nDates: ${data.startDate} — ${data.endDate}\nVenue: ${data.venue}\n\nView: ${data.dashboardUrl}\n\n— SRAtix`;
+
+    for (const to of recipients) {
+      this.send({
+        to,
+        subject: `🚀 Event published — ${data.eventName}`,
+        html,
+        text,
+      }).catch((err) =>
+        this.logger.error(`Admin notification failed for ${to}: ${err}`),
+      );
+    }
+  }
+
   /**
    * Low-level send — delegates to transport.
    */
@@ -360,5 +451,134 @@ Your ticket QR codes will be available in your account.
       </table>
     </body>
     </html>`;
+  }
+
+  // ─── Admin Notification Templates ─────────────────────────────
+
+  private adminWrapper(subtitle: string, body: string): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <tr>
+          <td style="padding: 24px 40px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white;">
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">🎫 SRAtix</h1>
+            <p style="margin: 6px 0 0; opacity: 0.85; font-size: 14px;">${subtitle}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 28px 40px;">
+            ${body}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 16px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 11px; color: #999;">
+            <p style="margin: 0;">Swiss Robotics Association — SRAtix Admin Notification</p>
+            <p style="margin: 4px 0 0;">This is an automated notification. Do not reply.</p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>`;
+  }
+
+  private adminInfoRow(label: string, value: string): string {
+    return `<tr>
+      <td style="padding: 6px 0; font-size: 13px; color: #888; width: 130px; vertical-align: top;">${label}</td>
+      <td style="padding: 6px 0; font-size: 14px; color: #333; font-weight: 500;">${value}</td>
+    </tr>`;
+  }
+
+  private renderAdminNewOrder(data: {
+    orderNumber: string;
+    customerName: string;
+    customerEmail: string;
+    totalFormatted: string;
+    currency: string;
+    ticketCount: number;
+    eventName: string;
+    eventDate: string;
+  }): string {
+    const rows = [
+      this.adminInfoRow('Order', `#${data.orderNumber}`),
+      this.adminInfoRow('Customer', `${data.customerName}`),
+      this.adminInfoRow('Email', `<a href="mailto:${data.customerEmail}" style="color: #4f46e5; text-decoration: none;">${data.customerEmail}</a>`),
+      this.adminInfoRow('Event', data.eventName),
+      this.adminInfoRow('Date', data.eventDate),
+      this.adminInfoRow('Tickets', `${data.ticketCount}`),
+    ].join('');
+
+    return this.adminWrapper('New Ticket Order', `
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <p style="margin: 0; font-size: 26px; font-weight: 700; color: #15803d;">${data.totalFormatted} ${data.currency}</p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #16a34a;">Payment confirmed</p>
+      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows}
+      </table>
+    `);
+  }
+
+  private renderAdminEventDraft(data: {
+    eventName: string;
+    createdBy: string;
+    startDate: string;
+    endDate: string;
+    venue: string;
+    dashboardUrl: string;
+  }): string {
+    const rows = [
+      this.adminInfoRow('Event', data.eventName),
+      this.adminInfoRow('Created by', data.createdBy),
+      this.adminInfoRow('Start', data.startDate),
+      this.adminInfoRow('End', data.endDate),
+      this.adminInfoRow('Venue', data.venue || '—'),
+    ].join('');
+
+    return this.adminWrapper('New Event Draft', `
+      <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 14px 20px; margin: 0 0 20px;">
+        <p style="margin: 0; font-size: 14px; color: #92400e;">A new event draft has been created and is awaiting review.</p>
+      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows}
+      </table>
+      <div style="margin: 24px 0 0; text-align: center;">
+        <a href="${data.dashboardUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">Review Event</a>
+      </div>
+    `);
+  }
+
+  private renderAdminEventPublished(data: {
+    eventName: string;
+    publishedBy: string;
+    startDate: string;
+    endDate: string;
+    venue: string;
+    dashboardUrl: string;
+  }): string {
+    const rows = [
+      this.adminInfoRow('Event', data.eventName),
+      this.adminInfoRow('Published by', data.publishedBy),
+      this.adminInfoRow('Start', data.startDate),
+      this.adminInfoRow('End', data.endDate),
+      this.adminInfoRow('Venue', data.venue || '—'),
+    ].join('');
+
+    return this.adminWrapper('Event Published', `
+      <div style="background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 14px 20px; margin: 0 0 20px;">
+        <p style="margin: 0; font-size: 14px; color: #1e40af;">This event is now live and accepting registrations.</p>
+      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows}
+      </table>
+      <div style="margin: 24px 0 0; text-align: center;">
+        <a href="${data.dashboardUrl}" style="display: inline-block; background: #22c55e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Event</a>
+      </div>
+    `);
   }
 }

@@ -25,6 +25,7 @@ import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
 import { FieldRepositoryModule } from './field-repository/field-repository.module';
 import { FormTemplatesModule } from './form-templates/form-templates.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { join } from 'path';
 
 @Module({
@@ -102,6 +103,9 @@ import { join } from 'path';
 
     // Form templates — reusable form configurations per Organization
     FormTemplatesModule,
+
+    // Analytics — time-series aggregation for line graphs
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

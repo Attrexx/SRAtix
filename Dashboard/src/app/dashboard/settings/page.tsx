@@ -10,6 +10,7 @@ import { type ReactNode } from 'react';
 const GROUP_ORDER = [
   'Stripe',
   'Email',
+  'Notifications',
   'WordPress',
   'Security',
   'Infrastructure',
@@ -291,6 +292,7 @@ export default function SettingsPage() {
 const GROUP_ICONS: Record<string, ReactNode> = {
   Stripe: <Icons.CreditCard size={18} />,
   Email: <Icons.Mail size={18} />,
+  Notifications: <Icons.Bell size={18} />,
   WordPress: <Icons.ExternalLink size={18} />,
   Security: <Icons.Shield size={18} />,
   Infrastructure: <Icons.Settings size={18} />,

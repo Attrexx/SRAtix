@@ -341,6 +341,20 @@ export interface SettingsResponse {
   groups: Record<string, SettingValue[]>;
 }
 
+export interface TimeSeriesPoint {
+  date: string;
+  sales: number;
+  registrations: number;
+  memberships: number;
+  pageViews: number;
+}
+
+export interface TimeSeriesResponse {
+  series: TimeSeriesPoint[];
+  range: { from: string; to: string };
+  firstSaleDate: string | null;
+}
+
 export interface FieldDefinition {
   id: string;
   slug: string;
@@ -613,6 +627,19 @@ export const api = {
       method: 'PATCH',
       body: { settings },
     }),
+
+  // ─── Analytics ─────────────────────────────────────────────────
+
+  getTimeSeries: (
+    eventId: string,
+    from: string,
+    to: string,
+    signal?: AbortSignal,
+  ) =>
+    request<TimeSeriesResponse>(
+      `/analytics/${eventId}/timeseries?from=${from}&to=${to}`,
+      { signal },
+    ),
 };
 
 export { ApiError };

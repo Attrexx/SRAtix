@@ -18,6 +18,7 @@ import { EmailService } from '../email/email.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 
 /**
@@ -45,6 +46,7 @@ export class StripeWebhookController {
     private readonly promoCodes: PromoCodesService,
     private readonly outgoingWebhooks: OutgoingWebhooksService,
     private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
   ) {}
 
   @Post()
@@ -174,6 +176,34 @@ export class StripeWebhookController {
       } catch (err) {
         this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);
       }
+    }
+
+    // Send admin notification for new order
+    try {
+      const notifyEnabled = await this.settings.resolve('notify_new_order');
+      if (notifyEnabled === 'true') {
+        const recipientStr = await this.settings.resolve('notification_emails');
+        const recipients = recipientStr.split(',').map((e) => e.trim()).filter(Boolean);
+        if (recipients.length > 0 && paidOrder) {
+          const event = await this.orders.findEventForOrder(orderId);
+          const ticketCount = paidOrder.items.reduce(
+            (sum: number, item: { quantity: number }) => sum + item.quantity, 0,
+          );
+          await this.email.sendNewOrderNotification(recipients, {
+            orderNumber: paidOrder.orderNumber,
+            customerName: paidOrder.customerName ?? 'Guest',
+            customerEmail: paidOrder.customerEmail ?? '',
+            totalFormatted: (paidOrder.totalCents / 100).toFixed(2),
+            currency: paidOrder.currency,
+            ticketCount,
+            eventName: event?.name ?? 'Event',
+            eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+          });
+          this.logger.log(`Admin notification sent for order ${orderId}`);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Failed to send admin order notification: ${err}`);
     }
 
     // Fire outgoing webhook to SRAtix Control / Client plugins

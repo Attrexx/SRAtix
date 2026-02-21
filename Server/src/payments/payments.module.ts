@@ -10,9 +10,10 @@ import { EmailModule } from '../email/email.module';
 import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 import { OutgoingWebhooksModule } from '../outgoing-webhooks/outgoing-webhooks.module';
 import { AttendeesModule } from '../attendees/attendees.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
-  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule],
+  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule, SettingsModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
   providers: [StripeService],
   exports: [StripeService],

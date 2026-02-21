@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -13,12 +14,20 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/auth.service';
 import { EventsService } from './events.service';
+import { EmailService } from '../email/email.service';
+import { SettingsService } from '../settings/settings.service';
 import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
 
 @Controller('events')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  private readonly logger = new Logger(EventsController.name);
+
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly email: EmailService,
+    private readonly settings: SettingsService,
+  ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
     return user.roles?.includes('super_admin') ?? false;
@@ -52,28 +61,96 @@ export class EventsController {
     if (!orgId) {
       orgId = await this.eventsService.getOrCreateDefaultOrgId();
     }
-    return this.eventsService.create({
+    const event = await this.eventsService.create({
       ...dto,
       startDate: new Date(dto.startDate),
       endDate: new Date(dto.endDate),
       orgId,
     });
+
+    // Send event draft notification
+    this.sendEventNotification('notify_event_draft', event, user, 'draft').catch(
+      (err) => this.logger.error(`Event draft notification failed: ${err}`),
+    );
+
+    return event;
   }
 
   @Patch(':id')
   @Roles('event_admin', 'super_admin')
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateEventDto,
     @CurrentUser() user: JwtPayload,
   ) {
+    // Fetch current event to detect status change
+    const currentEvent = this.isSuperAdmin(user)
+      ? await this.eventsService.findOne(id)
+      : await this.eventsService.findOne(id, user.orgId);
+
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
     // Super admins can update any event
-    if (this.isSuperAdmin(user)) {
-      return this.eventsService.update(id, undefined, data);
+    const updated = this.isSuperAdmin(user)
+      ? await this.eventsService.update(id, undefined, data)
+      : await this.eventsService.update(id, user.orgId, data);
+
+    // Send published notification if status changed to published
+    if (dto.status === 'published' && currentEvent.status !== 'published') {
+      this.sendEventNotification('notify_event_published', updated, user, 'published').catch(
+        (err) => this.logger.error(`Event published notification failed: ${err}`),
+      );
     }
-    return this.eventsService.update(id, user.orgId, data);
+
+    return updated;
+  }
+
+  /**
+   * Helper: send admin notification for event lifecycle changes.
+   */
+  private async sendEventNotification(
+    settingKey: string,
+    event: any,
+    user: JwtPayload,
+    type: 'draft' | 'published',
+  ): Promise<void> {
+    const enabled = await this.settings.resolve(settingKey);
+    if (enabled !== 'true') return;
+
+    const recipientStr = await this.settings.resolve('notification_emails');
+    const recipients = recipientStr.split(',').map((e) => e.trim()).filter(Boolean);
+    if (recipients.length === 0) return;
+
+    const dashboardUrl = `https://tix.swiss-robotics.org/dashboard/events/${event.id}`;
+    const startDate = event.startDate instanceof Date
+      ? event.startDate.toISOString().split('T')[0]
+      : String(event.startDate).split('T')[0];
+    const endDate = event.endDate instanceof Date
+      ? event.endDate.toISOString().split('T')[0]
+      : String(event.endDate).split('T')[0];
+    const actor = user.email ?? 'Unknown user';
+
+    if (type === 'draft') {
+      await this.email.sendEventDraftNotification(recipients, {
+        eventName: event.name,
+        createdBy: actor,
+        startDate,
+        endDate,
+        venue: event.venue ?? '',
+        dashboardUrl,
+      });
+    } else {
+      await this.email.sendEventPublishedNotification(recipients, {
+        eventName: event.name,
+        publishedBy: actor,
+        startDate,
+        endDate,
+        venue: event.venue ?? '',
+        dashboardUrl,
+      });
+    }
+
+    this.logger.log(`Admin ${type} notification sent for event ${event.id}`);
   }
 }

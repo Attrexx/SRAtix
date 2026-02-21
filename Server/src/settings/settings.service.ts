@@ -198,6 +198,48 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     required: true,
   },
 
+  // ── Notifications ──
+  {
+    key: 'notification_emails',
+    envVar: 'NOTIFICATION_EMAILS',
+    label: 'Notification Recipients',
+    group: 'Notifications',
+    description: 'Comma-separated email addresses that receive admin notifications',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'notify_new_order',
+    envVar: 'NOTIFY_NEW_ORDER',
+    label: 'New Ticket Order',
+    group: 'Notifications',
+    description: 'Send email notification when a new ticket order is paid',
+    type: 'boolean',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'notify_event_draft',
+    envVar: 'NOTIFY_EVENT_DRAFT',
+    label: 'New Event Draft',
+    group: 'Notifications',
+    description: 'Send email notification when a new event draft is created',
+    type: 'boolean',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'notify_event_published',
+    envVar: 'NOTIFY_EVENT_PUBLISHED',
+    label: 'Event Published',
+    group: 'Notifications',
+    description: 'Send email notification when an event is published',
+    type: 'boolean',
+    sensitive: false,
+    required: false,
+  },
+
   // ── General ──
   {
     key: 'node_env',

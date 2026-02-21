@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Order, type TicketType, type PromoCode } from '@/lib/api';
+import { api, type Order, type TicketType, type PromoCode, type TimeSeriesPoint } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
 import { Icons } from '@/components/icons';
+import {
+  TimeSeriesChart,
+  computeDateRange,
+  type RangePreset,
+} from '@/components/time-series-chart';
 
 export default function AnalyticsPage() {
   const eventId = useEventId();
@@ -18,6 +23,12 @@ export default function AnalyticsPage() {
   }>({ total: 0, today: 0, byTicketType: {} });
   const [loading, setLoading] = useState(true);
   const [currency, setCurrency] = useState('CHF');
+
+  // ── Time-series state ──
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesPoint[]>([]);
+  const [timeSeriesLoading, setTimeSeriesLoading] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<RangePreset>('year');
+  const [firstSaleDate, setFirstSaleDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!eventId || eventId === '_') return;
@@ -39,6 +50,39 @@ export default function AnalyticsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    return () => ac.abort();
+  }, [eventId]);
+
+  // ── Fetch time-series data ──
+  const fetchTimeSeries = useCallback(
+    async (range: RangePreset) => {
+      if (!eventId || eventId === '_') return;
+      setTimeSeriesLoading(true);
+      try {
+        const { from, to } = computeDateRange(range, firstSaleDate);
+        const result = await api.getTimeSeries(eventId, from, to);
+        setTimeSeriesData(result.series);
+        if (result.firstSaleDate) {
+          setFirstSaleDate(result.firstSaleDate);
+        }
+      } catch {
+        setTimeSeriesData([]);
+      } finally {
+        setTimeSeriesLoading(false);
+      }
+    },
+    [eventId, firstSaleDate],
+  );
+
+  // Initial load + reload on range change
+  useEffect(() => {
+    fetchTimeSeries(selectedRange);
+  }, [selectedRange, fetchTimeSeries]);
+
+  const handleRangeChange = useCallback((range: RangePreset) => {
+    setSelectedRange(range);
+  }, []);
 
     return () => ac.abort();
   }, [eventId]);
@@ -165,6 +209,17 @@ export default function AnalyticsPage() {
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Event performance &amp; key metrics
         </p>
+      </div>
+
+      {/* ── Performance Overview Line Graph ── */}
+      <div className="mb-8">
+        <TimeSeriesChart
+          data={timeSeriesData}
+          currency={currency}
+          selectedRange={selectedRange}
+          onRangeChange={handleRangeChange}
+          loading={timeSeriesLoading}
+        />
       </div>
 
       {/* ── Row 1: Revenue KPIs ── */}
