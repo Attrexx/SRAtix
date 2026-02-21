@@ -1,5 +1,5 @@
 // ============================================================================
-// SRAtix — Phase 1 Prisma Schema
+// SRAtix — Prisma Schema (Phase 1 + Phase 2)
 // Database: MariaDB 10.6 on Infomaniak (ks704.myd.infomaniak.com)
 // ============================================================================
 
@@ -36,6 +36,7 @@ model Organization {
   attendees  Attendee[]
   tickets    Ticket[]
   webhookEndpoints WebhookEndpoint[]
+  formTemplates    FormTemplate[]
 
   @@map("organizations")
 }
@@ -93,28 +94,61 @@ model TicketType {
   eventId       String   @db.Char(36)
   name          String   @db.VarChar(255)
   description   String?  @db.Text
-  priceCents    Int      @default(0) // 0 = free ticket
+  priceCents    Int      @default(0) // base/fallback price (0 = free). Overridden by PricingVariant if present.
   currency      String   @default("CHF") @db.VarChar(3)
   quantity      Int?     // null = unlimited
   sold          Int      @default(0)
   maxPerOrder   Int      @default(10)
   salesStart    DateTime? @db.DateTime(3)
   salesEnd      DateTime? @db.DateTime(3)
-  status        String   @default("active") @db.VarChar(30) // active | paused | sold_out | archived
+  status        String   @default("active") @db.VarChar(30) // draft | active | paused | sold_out | archived
   sortOrder     Int      @default(0)
   formSchemaId  String?  @db.Char(36)  // which reg form to show
+  // ── Ticket category & membership linkage ──────────────────
+  category      String   @default("general") @db.VarChar(30) // general | individual | legal
+  membershipTier String? @db.VarChar(50) // student | individual | retired | industry_small | industry_medium | industry_large | academic | startup
+  wpProductId   Int?     // WooCommerce product ID to create on SRA for membership-inclusive tickets
+  // ──────────────────────────────────────────────────────────
   meta          Json?    // badge template ref, visibility rules, etc.
   createdAt     DateTime @default(now()) @db.DateTime(3)
   updatedAt     DateTime @updatedAt @db.DateTime(3)
 
-  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  formSchema FormSchema? @relation(fields: [formSchemaId], references: [id])
-  orderItems OrderItem[]
-  tickets    Ticket[]
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  formSchema      FormSchema?      @relation(fields: [formSchemaId], references: [id])
+  orderItems      OrderItem[]
+  tickets         Ticket[]
+  pricingVariants PricingVariant[]
 
   @@index([eventId])
   @@index([status])
+  @@index([category])
   @@map("ticket_types")
+}
+
+// ============================================================================
+// PRICING VARIANTS
+// ============================================================================
+
+model PricingVariant {
+  id            String    @id @default(uuid()) @db.Char(36)
+  ticketTypeId  String    @db.Char(36)
+  variantType   String    @db.VarChar(30) // early_bird | full_price | membership
+  label         String    @db.VarChar(100) // display label: "Early Bird", "Full Price", "SRD + SRA Membership"
+  priceCents    Int       @default(0)
+  validFrom     DateTime? @db.DateTime(3) // null = valid from ticket type salesStart
+  validUntil    DateTime? @db.DateTime(3) // null = no expiry (valid until salesEnd)
+  wpProductId   Int?      // WooCommerce product ID (only for membership variants)
+  membershipTier String?  @db.VarChar(50) // redundant with TicketType for easy access in variant context
+  sortOrder     Int       @default(0)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @db.DateTime(3)
+  updatedAt     DateTime  @updatedAt @db.DateTime(3)
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketTypeId, variantType])
+  @@index([ticketTypeId])
+  @@map("pricing_variants")
 }
 
 // ============================================================================
@@ -186,6 +220,17 @@ model Attendee {
   wpUserId  Int?     // linked WP user, if any
   phone     String?  @db.VarChar(50)
   company   String?  @db.VarChar(255)
+  // ── Extended profile fields (Section 3.1) ─────────────────────────────
+  badgeName          String?  @db.VarChar(100)    // preferred display name for badge
+  jobTitle           String?  @db.VarChar(150)
+  orgRole            String?  @db.VarChar(100)    // e.g. "CTO", "PhD Researcher"
+  dietaryNeeds       String?  @db.VarChar(255)    // free text or comma-separated values
+  accessibilityNeeds String?  @db.VarChar(255)
+  consentMarketing   Boolean  @default(false)
+  consentDataSharing Boolean  @default(false)
+  consentTimestamp   DateTime? @db.DateTime(3)
+  tags               Json?    // admin-applied string tags for filtering
+  // ──────────────────────────────────────────────────────────────────────
   meta      Json?    // flexible attendee data
   createdAt DateTime @default(now()) @db.DateTime(3)
   updatedAt DateTime @updatedAt @db.DateTime(3)
@@ -272,6 +317,57 @@ model FormSubmission {
   @@index([eventId])
   @@index([attendeeId])
   @@map("form_submissions")
+}
+
+// ============================================================================
+// FORM TEMPLATES (reusable form configurations scoped to Organization)
+// ============================================================================
+
+model FormTemplate {
+  id          String   @id @default(uuid()) @db.Char(36)
+  orgId       String   @db.Char(36)
+  name        String   @db.VarChar(255)
+  description String?  @db.VarChar(500)
+  category    String?  @db.VarChar(50) // general | individual | legal | null (any)
+  fields      Json     // FormSchemaDefinition — same structure as FormSchema.fields
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@map("form_templates")
+}
+
+// ============================================================================
+// FIELD REPOSITORY (global catalog of available form fields)
+// ============================================================================
+
+model FieldDefinition {
+  id                String   @id @default(uuid()) @db.Char(36)
+  slug              String   @unique @db.VarChar(100) // e.g. "first_name", "company_name", "dietary_requirements"
+  label             Json     // i18n: { en: "First Name", de: "Vorname", fr: "Prénom" }
+  type              String   @db.VarChar(30) // text | email | phone | select | multi-select | checkbox | radio | textarea | url | image-upload | yes-no | dropdown | number | date | consent
+  group             String   @db.VarChar(50) // must_have | legal_compliance | profile | company | b2b | privacy | questions | community
+  options           Json?    // for select/multi-select: [{ value, label }]
+  defaultWidthDesktop Int    @default(100) // 25 | 50 | 75 | 100
+  defaultWidthMobile  Int    @default(100) // 25 | 50 | 75 | 100
+  validationRules   Json?    // { required?, minLength?, maxLength?, pattern? }
+  helpText          Json?    // i18n help text
+  placeholder       Json?    // i18n placeholder
+  defaultValue      Json?    // default value (if any)
+  categoryFilter    Json?    // ["general","individual","legal"] — which ticket categories can use this field; null = all
+  conditionalOn     Json?    // { field: "billing_details_differ", operator: "eq", value: true } — show only when condition met
+  sortOrder         Int      @default(0)
+  isSystem          Boolean  @default(false) // system fields (ticket_id, event_id, etc.) — hidden from form builder
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now()) @db.DateTime(3)
+  updatedAt         DateTime @updatedAt @db.DateTime(3)
+
+  @@index([group])
+  @@index([isSystem])
+  @@map("field_definitions")
 }
 
 // ============================================================================

@@ -17,6 +17,7 @@ import { SseService } from '../sse/sse.service';
 import { EmailService } from '../email/email.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 
 /**
@@ -43,6 +44,7 @@ export class StripeWebhookController {
     private readonly email: EmailService,
     private readonly promoCodes: PromoCodesService,
     private readonly outgoingWebhooks: OutgoingWebhooksService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post()
@@ -175,18 +177,14 @@ export class StripeWebhookController {
     }
 
     // Fire outgoing webhook to SRAtix Control / Client plugins
+    // Includes full attendee + ticket type data for WP sync (membership creation, entity creation, etc.)
     const orgId = session.metadata?.sratix_org_id;
     const eventId = session.metadata?.sratix_event_id;
-    if (orgId && eventId) {
+    if (orgId && eventId && paidOrder) {
+      // Gather enriched payload for WP plugins
+      const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
       this.outgoingWebhooks
-        .dispatch(orgId, eventId, 'order.paid', {
-          orderId,
-          orderNumber: paidOrder?.orderNumber,
-          totalCents: paidOrder?.totalCents,
-          currency: paidOrder?.currency,
-          customerEmail: paidOrder?.customerEmail,
-          ticketCount: paidOrder?.items?.length ?? 0,
-        })
+        .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
         .catch((err) =>
           this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
         );
@@ -262,5 +260,148 @@ export class StripeWebhookController {
         }
       }
     }
+  }
+
+  // ─── Enriched Webhook Payload Builder ───────────────────────
+
+  /**
+   * Build a comprehensive `order.paid` webhook payload containing:
+   *  - Order details (id, number, amount, currency)
+   *  - Attendee data (name, email, company, etc.)
+   *  - Ticket type metadata (category, membershipTier, wpProductId)
+   *  - Form submission answers (all fields the attendee filled in)
+   *  - Event metadata
+   *
+   * This enriched payload is what sratix-control on swiss-robotics.org uses
+   * to orchestrate WP user creation, WooCommerce order creation, SRA MAP
+   * entity matching/creation, and corporate profile creation.
+   */
+  private async buildOrderPaidPayload(
+    paidOrder: any,
+    eventId: string,
+  ): Promise<Record<string, unknown>> {
+    // Base order info
+    const payload: Record<string, unknown> = {
+      orderId: paidOrder.id,
+      orderNumber: paidOrder.orderNumber,
+      totalCents: paidOrder.totalCents,
+      currency: paidOrder.currency,
+      customerEmail: paidOrder.customerEmail,
+      customerName: paidOrder.customerName,
+      paidAt: paidOrder.paidAt,
+    };
+
+    // Fetch event info
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { name: true, slug: true, startDate: true, endDate: true, venue: true },
+    });
+    payload.event = event;
+
+    // Fetch ticket types with pricing variants for this order's items
+    const ticketTypeIds = (paidOrder.items ?? []).map(
+      (item: any) => item.ticketTypeId,
+    );
+    if (ticketTypeIds.length > 0) {
+      const ticketTypes = await this.prisma.ticketType.findMany({
+        where: { id: { in: ticketTypeIds } },
+        include: { pricingVariants: true },
+      });
+
+      payload.ticketTypes = ticketTypes.map((tt) => ({
+        id: tt.id,
+        name: tt.name,
+        category: tt.category,
+        membershipTier: tt.membershipTier,
+        wpProductId: tt.wpProductId,
+        priceCents: tt.priceCents,
+        pricingVariants: tt.pricingVariants.map((v) => ({
+          variantType: v.variantType,
+          label: v.label,
+          priceCents: v.priceCents,
+          wpProductId: v.wpProductId,
+          membershipTier: v.membershipTier,
+        })),
+      }));
+
+      // Extract primary membership info (first membership-type ticket)
+      const membershipTicket = ticketTypes.find(
+        (tt) => tt.membershipTier && tt.wpProductId,
+      );
+      if (membershipTicket) {
+        payload.membership = {
+          tier: membershipTicket.membershipTier,
+          wpProductId: membershipTicket.wpProductId,
+          category: membershipTicket.category,
+        };
+      }
+    }
+
+    // Fetch attendee data
+    const attendee = paidOrder.attendeeId
+      ? await this.prisma.attendee.findUnique({
+          where: { id: paidOrder.attendeeId },
+        })
+      : await this.prisma.attendee.findFirst({
+          where: { eventId, email: paidOrder.customerEmail ?? '' },
+        });
+
+    if (attendee) {
+      payload.attendee = {
+        id: attendee.id,
+        email: attendee.email,
+        firstName: attendee.firstName,
+        lastName: attendee.lastName,
+        phone: attendee.phone,
+        company: attendee.company,
+        wpUserId: attendee.wpUserId,
+        badgeName: attendee.badgeName,
+        jobTitle: attendee.jobTitle,
+        orgRole: attendee.orgRole,
+        dietaryNeeds: attendee.dietaryNeeds,
+        accessibilityNeeds: attendee.accessibilityNeeds,
+        consentMarketing: attendee.consentMarketing,
+        consentDataSharing: attendee.consentDataSharing,
+        meta: attendee.meta,
+      };
+
+      // Fetch form submissions for this attendee
+      const submissions = await this.prisma.formSubmission.findMany({
+        where: { eventId, attendeeId: attendee.id },
+        include: {
+          formSchema: { select: { name: true, version: true } },
+        },
+        orderBy: { submittedAt: 'desc' },
+      });
+
+      if (submissions.length > 0) {
+        payload.formSubmissions = submissions.map((s) => ({
+          schemaName: s.formSchema.name,
+          schemaVersion: s.formSchema.version,
+          data: s.data,
+          submittedAt: s.submittedAt,
+        }));
+
+        // Flatten the most recent submission's data for easy access
+        const latest = submissions[0];
+        payload.formData = latest.data;
+      }
+    }
+
+    // Order items detail
+    payload.items = (paidOrder.items ?? []).map((item: any) => ({
+      ticketTypeId: item.ticketTypeId,
+      quantity: item.quantity,
+      unitPriceCents: item.unitPriceCents,
+      subtotalCents: item.subtotalCents,
+    }));
+
+    // Ticket count
+    payload.ticketCount = (paidOrder.items ?? []).reduce(
+      (sum: number, item: any) => sum + (item.quantity ?? 0),
+      0,
+    );
+
+    return payload;
   }
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/lib/auth';
+import { I18nProvider } from '@/i18n/i18n-provider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <I18nProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </I18nProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

@@ -15,7 +15,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/auth.service';
 import { AttendeesService } from './attendees.service';
 import { EventsService } from '../events/events.service';
-import { IsString, IsEmail, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 class CreateAttendeeDto {
   @IsString()
@@ -41,6 +41,14 @@ class CreateAttendeeDto {
   @IsOptional()
   @IsNumber()
   wpUserId?: number;
+
+  @IsOptional() @IsString() badgeName?: string;
+  @IsOptional() @IsString() jobTitle?: string;
+  @IsOptional() @IsString() orgRole?: string;
+  @IsOptional() @IsString() dietaryNeeds?: string;
+  @IsOptional() @IsString() accessibilityNeeds?: string;
+  @IsOptional() @IsBoolean() consentMarketing?: boolean;
+  @IsOptional() @IsBoolean() consentDataSharing?: boolean;
 }
 
 class UpdateAttendeeDto {
@@ -52,13 +60,17 @@ class UpdateAttendeeDto {
   @IsString()
   lastName?: string;
 
-  @IsOptional()
-  @IsString()
-  phone?: string;
+  @IsOptional() @IsString() phone?: string;
 
-  @IsOptional()
-  @IsString()
-  company?: string;
+  @IsOptional() @IsString() company?: string;
+
+  @IsOptional() @IsString() badgeName?: string;
+  @IsOptional() @IsString() jobTitle?: string;
+  @IsOptional() @IsString() orgRole?: string;
+  @IsOptional() @IsString() dietaryNeeds?: string;
+  @IsOptional() @IsString() accessibilityNeeds?: string;
+  @IsOptional() @IsBoolean() consentMarketing?: boolean;
+  @IsOptional() @IsBoolean() consentDataSharing?: boolean;
 }
 
 @Controller('attendees')

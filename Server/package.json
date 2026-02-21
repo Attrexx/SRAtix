@@ -16,6 +16,7 @@
     "prisma:push": "prisma db push"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/static": "^9.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",

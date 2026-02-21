@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -10,7 +11,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { TicketTypesService } from './ticket-types.service';
+import { TicketTypesService, TicketCategory, MembershipTier, VariantType } from './ticket-types.service';
 
 @Controller('events/:eventId/ticket-types')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -33,15 +34,39 @@ export class TicketTypesController {
   @Roles('event_admin', 'super_admin')
   create(
     @Param('eventId') eventId: string,
-    @Body() dto: Record<string, unknown>,
+    @Body() dto: {
+      name: string;
+      description?: string;
+      priceCents?: number;
+      currency?: string;
+      quantity?: number;
+      maxPerOrder?: number;
+      salesStart?: string;
+      salesEnd?: string;
+      sortOrder?: number;
+      formSchemaId?: string;
+      category?: TicketCategory;
+      membershipTier?: MembershipTier;
+      wpProductId?: number;
+      meta?: Record<string, unknown>;
+    },
   ) {
     return this.ticketTypesService.create({
       eventId,
-      name: dto.name as string,
-      description: dto.description as string | undefined,
-      priceCents: dto.priceCents as number,
-      currency: dto.currency as string,
-      capacity: dto.capacity as number | undefined,
+      name: dto.name,
+      description: dto.description,
+      priceCents: dto.priceCents,
+      currency: dto.currency,
+      quantity: dto.quantity,
+      maxPerOrder: dto.maxPerOrder,
+      salesStart: dto.salesStart ? new Date(dto.salesStart) : undefined,
+      salesEnd: dto.salesEnd ? new Date(dto.salesEnd) : undefined,
+      sortOrder: dto.sortOrder,
+      formSchemaId: dto.formSchemaId,
+      category: dto.category,
+      membershipTier: dto.membershipTier,
+      wpProductId: dto.wpProductId,
+      meta: dto.meta,
     });
   }
 
@@ -53,5 +78,74 @@ export class TicketTypesController {
     @Body() dto: Record<string, unknown>,
   ) {
     return this.ticketTypesService.update(id, eventId, dto);
+  }
+
+  // ─── Pricing Variant CRUD ─────────────────────────────────────
+
+  @Get(':id/variants')
+  @Roles('event_admin', 'super_admin')
+  findVariants(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+  ) {
+    return this.ticketTypesService.findVariantsByTicketType(ticketTypeId);
+  }
+
+  @Post(':id/variants')
+  @Roles('event_admin', 'super_admin')
+  createVariant(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+    @Body() dto: {
+      variantType: VariantType;
+      label: string;
+      priceCents: number;
+      validFrom?: string;
+      validUntil?: string;
+      wpProductId?: number;
+      membershipTier?: string;
+      sortOrder?: number;
+    },
+  ) {
+    return this.ticketTypesService.createVariant(ticketTypeId, eventId, {
+      variantType: dto.variantType,
+      label: dto.label,
+      priceCents: dto.priceCents,
+      validFrom: dto.validFrom ? new Date(dto.validFrom) : undefined,
+      validUntil: dto.validUntil ? new Date(dto.validUntil) : undefined,
+      wpProductId: dto.wpProductId,
+      membershipTier: dto.membershipTier,
+      sortOrder: dto.sortOrder,
+    });
+  }
+
+  @Patch(':id/variants/:variantId')
+  @Roles('event_admin', 'super_admin')
+  updateVariant(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+    @Param('variantId') variantId: string,
+    @Body() dto: Record<string, unknown>,
+  ) {
+    return this.ticketTypesService.updateVariant(
+      variantId,
+      ticketTypeId,
+      eventId,
+      dto,
+    );
+  }
+
+  @Delete(':id/variants/:variantId')
+  @Roles('event_admin', 'super_admin')
+  deleteVariant(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+    @Param('variantId') variantId: string,
+  ) {
+    return this.ticketTypesService.deleteVariant(
+      variantId,
+      ticketTypeId,
+      eventId,
+    );
   }
 }

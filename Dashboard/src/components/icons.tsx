@@ -632,6 +632,39 @@ function Undo({ size, ...props }: IconProps) {
   );
 }
 
+/** Grip vertical — drag handle */
+function GripVertical({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="9" cy="5" r="1" fill="currentColor" />
+      <circle cx="9" cy="19" r="1" fill="currentColor" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+      <circle cx="15" cy="5" r="1" fill="currentColor" />
+      <circle cx="15" cy="19" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Columns — width/layout icon */
+function Columns({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="12" y1="3" x2="12" y2="21" />
+    </svg>
+  );
+}
+
+/** Chevron down */
+function ChevronDown({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
 /* ──────────────────────── Export as namespace ──────────────────────── */
 
 export const Icons = {
@@ -697,6 +730,9 @@ export const Icons = {
   Target,
   UserCheck,
   Undo,
+  GripVertical,
+  Columns,
+  ChevronDown,
 } as const;
 
 export type IconName = keyof typeof Icons;

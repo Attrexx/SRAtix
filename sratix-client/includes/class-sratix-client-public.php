@@ -43,9 +43,17 @@ class SRAtix_Client_Public {
 		);
 
 		wp_enqueue_script(
+			'sratix-client-i18n',
+			SRATIX_CLIENT_URL . 'public/js/sratix-i18n.js',
+			array(),
+			SRATIX_CLIENT_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
 			'sratix-client-embed',
 			SRATIX_CLIENT_URL . 'public/js/sratix-embed.js',
-			array(),
+			array( 'sratix-client-i18n' ),
 			SRATIX_CLIENT_VERSION,
 			true
 		);
@@ -55,13 +63,41 @@ class SRAtix_Client_Public {
 		$event_id = get_option( 'sratix_client_event_id', '' );
 		$config   = json_decode( get_option( 'sratix_client_embed_config', '{}' ), true );
 
-		wp_localize_script( 'sratix-client-embed', 'sratixConfig', array(
-			'apiUrl'   => esc_url( $api_url ),
-			'eventId'  => sanitize_text_field( $event_id ),
-			'theme'    => $config['theme'] ?? 'light',
+		$localize_data = array(
+			'apiUrl'       => esc_url( $api_url ),
+			'eventId'      => sanitize_text_field( $event_id ),
+			'theme'        => $config['theme'] ?? 'light',
 			'primaryColor' => $config['primaryColor'] ?? '#0073aa',
-			'nonce'    => wp_create_nonce( 'sratix_client_nonce' ),
-		) );
+			'nonce'        => wp_create_nonce( 'sratix_client_nonce' ),
+			'isLoggedIn'   => is_user_logged_in(),
+			'locale'       => $this->detect_locale(),
+		);
+
+		// For logged-in users, provide identity + HMAC token so the JS widget
+		// can call authenticated Server endpoints (My Tickets, prefill, etc.).
+		if ( is_user_logged_in() ) {
+			$user   = wp_get_current_user();
+			$secret = get_option( 'sratix_client_api_secret', '' );
+			$source = wp_parse_url( home_url(), PHP_URL_HOST );
+
+			// Build HMAC payload identical to sratix-control: userId:roles:sourceSite
+			$roles = (array) $user->roles;
+			sort( $roles );
+			$payload   = $user->ID . ':' . implode( ',', $roles ) . ':' . $source;
+			$signature = $secret ? hash_hmac( 'sha256', $payload, $secret ) : '';
+
+			$localize_data['user'] = array(
+				'wpUserId'   => $user->ID,
+				'email'      => $user->user_email,
+				'firstName'  => $user->first_name,
+				'lastName'   => $user->last_name,
+				'roles'      => $roles,
+				'signature'  => $signature,
+				'sourceSite' => $source,
+			);
+		}
+
+		wp_localize_script( 'sratix-client-embed', 'sratixConfig', $localize_data );
 	}
 
 	/*──────────────────────────────────────────────────────────
@@ -123,5 +159,46 @@ class SRAtix_Client_Public {
 			'<div id="sratix-schedule-widget" data-event-id="%s"></div>',
 			esc_attr( $atts['event_id'] )
 		);
+	}
+
+	/*──────────────────────────────────────────────────────────
+	 * Locale detection
+	 *────────────────────────────────────────────────────────*/
+
+	/**
+	 * Detect the best locale for the widget.
+	 *
+	 * Priority: sratix_client_locale option → WP locale → 'en'.
+	 * Maps WP locale codes (fr_FR, de_CH, it_IT, zh_TW) to SRAtix short codes.
+	 *
+	 * @return string One of: en, fr, de, it, zh-TW
+	 */
+	private function detect_locale() {
+		// 1. Plugin-level override
+		$override = get_option( 'sratix_client_locale', '' );
+		if ( $override && in_array( $override, array( 'en', 'fr', 'de', 'it', 'zh-TW' ), true ) ) {
+			return $override;
+		}
+
+		// 2. WP locale → SRAtix locale map
+		$wp_locale = get_locale(); // e.g. 'fr_FR', 'de_CH', 'zh_TW'
+		$map = array(
+			'fr'    => 'fr', 'fr_FR' => 'fr', 'fr_CH' => 'fr', 'fr_BE' => 'fr', 'fr_CA' => 'fr',
+			'de'    => 'de', 'de_DE' => 'de', 'de_CH' => 'de', 'de_AT' => 'de', 'de_DE_formal' => 'de', 'de_CH_informal' => 'de',
+			'it'    => 'it', 'it_IT' => 'it', 'it_CH' => 'it',
+			'zh_TW' => 'zh-TW', 'zh_Hant' => 'zh-TW',
+		);
+
+		if ( isset( $map[ $wp_locale ] ) ) {
+			return $map[ $wp_locale ];
+		}
+
+		// 3. Try just the language prefix (e.g. 'fr' from 'fr_BE')
+		$prefix = substr( $wp_locale, 0, 2 );
+		if ( isset( $map[ $prefix ] ) ) {
+			return $map[ $prefix ];
+		}
+
+		return 'en';
 	}
 }

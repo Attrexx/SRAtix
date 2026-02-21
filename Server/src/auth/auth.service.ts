@@ -4,10 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHmac, randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { VALID_ROLES } from '../users/users.service';
 
 export interface JwtPayload {
   sub: string; // user ID
   email: string;
+  displayName?: string;
   roles: string[];
   eventId?: string;
   orgId?: string;
@@ -19,6 +21,13 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  /** User identity included so callers can build a client response without decoding the JWT. */
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    roles: string[];
+  };
 }
 
 @Injectable()
@@ -69,6 +78,7 @@ export class AuthService {
 
     let userId: string;
     let email = '';
+    let displayName = '';
     let orgId: string | undefined;
 
     if (mapping) {
@@ -76,10 +86,10 @@ export class AuthService {
       userId = mapping.sratixEntityId;
       orgId = mapping.orgId ?? undefined;
 
-      // Fetch email from User record
+      // Fetch display info from User record
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true },
+        select: { email: true, displayName: true },
       });
       if (user) {
         email = user.email;
@@ -93,6 +103,8 @@ export class AuthService {
           },
         });
         if (wpEmail) email = wpEmail;
+        if (wpDisplayName) displayName = wpDisplayName;
+        else if (!displayName) displayName = user.displayName;
       }
     } else {
       // First login — create User + WpMapping
@@ -141,6 +153,7 @@ export class AuthService {
     return this.generateTokenPair({
       sub: userId,
       email,
+      displayName: displayName || email.split('@')[0],
       roles: sratixRoles,
       orgId,
     });
@@ -148,9 +161,11 @@ export class AuthService {
 
   /**
    * Generate a new access + refresh token pair.
+   * Also returns the user identity so the controller can build a client response
+   * without an extra DB call or client-side JWT decoding.
    */
   async generateTokenPair(
-    payload: Omit<JwtPayload, 'iat' | 'exp'>,
+    payload: Omit<JwtPayload, 'iat' | 'exp'> & { displayName?: string },
   ): Promise<TokenPair> {
     const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwt.sign(
@@ -162,6 +177,12 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn: 900, // 15 minutes in seconds
+      user: {
+        id: payload.sub,
+        email: payload.email,
+        displayName: payload.displayName ?? payload.email.split('@')[0],
+        roles: payload.roles,
+      },
     };
   }
 
@@ -184,7 +205,7 @@ export class AuthService {
     // Look up user from DB to get current data
     const user = await this.prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, wpUserId: true },
+      select: { id: true, email: true, displayName: true, wpUserId: true },
     });
 
     if (!user) {
@@ -225,6 +246,7 @@ export class AuthService {
     return this.generateTokenPair({
       sub: decoded.sub,
       email: user.email,
+      displayName: user.displayName,
       roles: effectiveRoles,
       orgId,
     });
@@ -302,6 +324,7 @@ export class AuthService {
     return this.generateTokenPair({
       sub: user.id,
       email: user.email,
+      displayName: user.displayName,
       roles: effectiveRoles,
       orgId,
     });
@@ -318,6 +341,12 @@ export class AuthService {
     roles: string[];
     orgId?: string;
   }) {
+    // Validate all roles before creating the user
+    const invalidRoles = data.roles.filter((r) => !(VALID_ROLES as readonly string[]).includes(r));
+    if (invalidRoles.length > 0) {
+      throw new UnauthorizedException(`Unknown role(s): ${invalidRoles.join(', ')}`);
+    }
+
     // Check for duplicate email
     const existing = await this.prisma.user.findUnique({
       where: { email: data.email },

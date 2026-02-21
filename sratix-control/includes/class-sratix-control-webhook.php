@@ -76,6 +76,9 @@ class SRAtix_Control_Webhook {
 				$this->on_order_paid( $payload );
 				break;
 
+			case 'entity.search':
+				return $this->on_entity_search( $payload );
+
 			case 'entity.create_request':
 				return $this->on_entity_create_request( $payload );
 
@@ -126,15 +129,479 @@ class SRAtix_Control_Webhook {
 
 	/**
 	 * order.paid — Server confirms payment for an order.
+	 *
+	 * This is the main Flow C orchestrator. The enriched payload includes
+	 * full attendee data, ticket type metadata (category, membershipTier,
+	 * wpProductId), pricing variants, form submission answers, and event info.
+	 *
+	 * Steps:
+	 *  1. Extract attendee & ticket data from enriched payload
+	 *  2. Find or create WP user by email
+	 *  3. Assign WP role (candidate/employer) based on ticket category
+	 *  4. Assign ProfileGrid group based on wpProductId
+	 *  5. Create WC order with the correct membership product
+	 *  6. Mark the WC order as SRAtix-originated (prevents sync loop)
+	 *  7. Auto-complete the WC order (triggers SRA Company Profiles + role assigner)
+	 *  8. Store SRAtix ↔ WP mappings
+	 *  9. Update user meta with ticket info
+	 *
+	 * @param array $payload Enriched order.paid webhook payload.
 	 */
 	private function on_order_paid( $payload ) {
-		$wp_user_id   = $payload['data']['wpUserId'] ?? null;
-		$order_number = $payload['data']['orderNumber'] ?? '';
+		$data = $payload['data'] ?? array();
 
-		if ( $wp_user_id ) {
-			update_user_meta( $wp_user_id, 'sratix_payment_status', 'paid' );
-			update_user_meta( $wp_user_id, 'sratix_paid_at', current_time( 'mysql', true ) );
+		// ── 1. Extract data ───────────────────────────────────────
+		$order_id_sratix  = $data['orderId'] ?? '';
+		$order_number     = $data['orderNumber'] ?? '';
+		$total_cents      = $data['totalCents'] ?? 0;
+		$currency         = $data['currency'] ?? 'CHF';
+		$paid_at          = $data['paidAt'] ?? current_time( 'mysql', true );
+
+		$attendees     = $data['attendees'] ?? array();
+		$event         = $data['event'] ?? array();
+
+		if ( empty( $attendees ) ) {
+			error_log( 'SRAtix Control [order.paid]: No attendees in payload for order ' . $order_number );
+			return;
 		}
+
+		// Process each attendee in the order
+		foreach ( $attendees as $attendee ) {
+			$this->process_attendee_registration( $attendee, $order_id_sratix, $order_number, $event, $currency );
+		}
+	}
+
+	/**
+	 * Process a single attendee from an order.paid webhook.
+	 *
+	 * @param array  $attendee       Attendee data from enriched payload.
+	 * @param string $order_id       SRAtix order UUID.
+	 * @param string $order_number   Human-readable order number.
+	 * @param array  $event          Event metadata.
+	 * @param string $currency       Currency code.
+	 */
+	private function process_attendee_registration( $attendee, $order_id, $order_number, $event, $currency ) {
+		$email       = sanitize_email( $attendee['email'] ?? '' );
+		$first_name  = sanitize_text_field( $attendee['firstName'] ?? '' );
+		$last_name   = sanitize_text_field( $attendee['lastName'] ?? '' );
+		$ticket_type = $attendee['ticketType'] ?? array();
+		$form_data   = $attendee['formSubmission'] ?? array();
+
+		if ( empty( $email ) ) {
+			error_log( 'SRAtix Control [order.paid]: Attendee has no email, skipping.' );
+			return;
+		}
+
+		$category       = $ticket_type['category'] ?? 'general';      // general|individual|legal
+		$membership_tier = $ticket_type['membershipTier'] ?? '';       // e.g. 'student', 'industry_large'
+		$wp_product_id  = intval( $ticket_type['wpProductId'] ?? 0 ); // e.g. 4603
+		$ticket_name    = $ticket_type['name'] ?? '';
+
+		// ── 2. Find or create WP user ─────────────────────────────
+		$wp_user = get_user_by( 'email', $email );
+		$is_new_user = false;
+
+		if ( ! $wp_user ) {
+			$user_id = $this->create_wp_user( $email, $first_name, $last_name, $form_data );
+			if ( is_wp_error( $user_id ) ) {
+				error_log( 'SRAtix Control [order.paid]: Failed to create user for ' . $email . ': ' . $user_id->get_error_message() );
+				return;
+			}
+			$wp_user = get_userdata( $user_id );
+			$is_new_user = true;
+		} else {
+			$user_id = $wp_user->ID;
+			// Update name if it was empty
+			if ( empty( $wp_user->first_name ) && ! empty( $first_name ) ) {
+				update_user_meta( $user_id, 'first_name', $first_name );
+			}
+			if ( empty( $wp_user->last_name ) && ! empty( $last_name ) ) {
+				update_user_meta( $user_id, 'last_name', $last_name );
+			}
+		}
+
+		// ── 3. Assign WP role ─────────────────────────────────────
+		if ( $category !== 'general' && $wp_product_id ) {
+			$role = $this->get_wp_role_for_product( $wp_product_id );
+			if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
+				$wp_user->set_role( $role );
+				error_log( "SRAtix Control [order.paid]: Set user {$user_id} role to {$role}" );
+			}
+		}
+
+		// ── 4. Assign ProfileGrid group ───────────────────────────
+		if ( $wp_product_id ) {
+			$this->assign_profilegrid_group( $user_id, $wp_product_id );
+		}
+
+		// ── 5-7. Create & complete WC order ───────────────────────
+		$wc_order_id = null;
+		if ( $wp_product_id && $category !== 'general' ) {
+			$wc_order_id = $this->create_membership_order( $user_id, $wp_product_id, $order_id, $order_number, $currency );
+		}
+
+		// ── 8. Store mappings ─────────────────────────────────────
+		SRAtix_Control_Sync::set_mapping(
+			'user',
+			$user_id,
+			'attendee',
+			$attendee['id'] ?? ''
+		);
+
+		update_user_meta( $user_id, 'sratix_actor_id', $attendee['actorId'] ?? '' );
+
+		// ── 9. Store ticket meta ──────────────────────────────────
+		update_user_meta( $user_id, 'sratix_ticket_type', $ticket_name );
+		update_user_meta( $user_id, 'sratix_ticket_category', $category );
+		update_user_meta( $user_id, 'sratix_membership_tier', $membership_tier );
+		update_user_meta( $user_id, 'sratix_order_number', $order_number );
+		update_user_meta( $user_id, 'sratix_order_id', $order_id );
+		update_user_meta( $user_id, 'sratix_payment_status', 'paid' );
+		update_user_meta( $user_id, 'sratix_paid_at', $paid_at ?? current_time( 'mysql', true ) );
+		update_user_meta( $user_id, 'sratix_event_id', $event['id'] ?? '' );
+		update_user_meta( $user_id, 'sratix_event_name', $event['name'] ?? '' );
+
+		if ( $wc_order_id ) {
+			update_user_meta( $user_id, 'sratix_wc_order_id', $wc_order_id );
+		}
+
+		// Store additional form data as user meta
+		$this->store_form_data( $user_id, $form_data );
+
+		error_log( sprintf(
+			'SRAtix Control [order.paid]: Processed attendee %s (WP user %d, %s, WC order %s)',
+			$email,
+			$user_id,
+			$is_new_user ? 'NEW' : 'existing',
+			$wc_order_id ?: 'none'
+		) );
+	}
+
+	/*──────────────────────────────────────────────────────────
+	 * Helper methods for order.paid processing
+	 *────────────────────────────────────────────────────────*/
+
+	/**
+	 * Create a new WordPress user from SRAtix attendee data.
+	 *
+	 * @param string $email      User email.
+	 * @param string $first_name First name.
+	 * @param string $last_name  Last name.
+	 * @param array  $form_data  Form submission data (may contain company, phone, etc.).
+	 * @return int|WP_Error      User ID or error.
+	 */
+	private function create_wp_user( $email, $first_name, $last_name, $form_data ) {
+		$username = sanitize_user( strstr( $email, '@', true ), true );
+
+		// Ensure unique username
+		if ( username_exists( $username ) ) {
+			$username = $username . '_' . wp_rand( 100, 999 );
+		}
+		if ( username_exists( $username ) ) {
+			$username = 'sratix_' . wp_rand( 10000, 99999 );
+		}
+
+		$password = wp_generate_password( 16, true, true );
+
+		$user_id = wp_insert_user( array(
+			'user_login'   => $username,
+			'user_email'   => $email,
+			'user_pass'    => $password,
+			'first_name'   => $first_name,
+			'last_name'    => $last_name,
+			'display_name' => trim( $first_name . ' ' . $last_name ) ?: $username,
+			'role'         => 'subscriber', // Will be upgraded by role assignment step
+		) );
+
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
+
+		// Store company name from form data if available
+		$company = $form_data['company_name'] ?? $form_data['institution_company'] ?? '';
+		if ( ! empty( $company ) ) {
+			update_user_meta( $user_id, 'pm_field_institution_company', sanitize_text_field( $company ) );
+		}
+
+		// Mark as SRAtix-created
+		update_user_meta( $user_id, '_sratix_created', true );
+		update_user_meta( $user_id, '_sratix_created_at', current_time( 'mysql', true ) );
+
+		// Send WP new-user notification so they can set their password
+		wp_new_user_notification( $user_id, null, 'user' );
+
+		error_log( "SRAtix Control: Created WP user {$user_id} ({$email})" );
+
+		return $user_id;
+	}
+
+	/**
+	 * Get the WP role for a given WC product ID.
+	 *
+	 * Individual tiers → 'candidate', Legal entity tiers → 'employer'.
+	 *
+	 * @param int $product_id WC product ID.
+	 * @return string|null     WP role slug or null.
+	 */
+	private function get_wp_role_for_product( $product_id ) {
+		// Individual membership products → candidate role
+		$candidate_products = array( 4601, 4603, 4605, 5335 );
+		// Legal entity membership products → employer role
+		$employer_products  = array( 4591, 4593, 4595, 4597, 4599 );
+
+		if ( in_array( $product_id, $candidate_products, true ) ) {
+			return 'candidate';
+		}
+		if ( in_array( $product_id, $employer_products, true ) ) {
+			return 'employer';
+		}
+
+		return null;
+	}
+
+	/**
+	 * Assign the user to the correct ProfileGrid group based on product ID.
+	 *
+	 * Uses the same mapping as sra-wprole-assigner.php:
+	 *   Group 18 → Academic (4597), 17 → Startup (4599), 16 → Lg (4595),
+	 *   15 → Med (4593), 14 → Sm (4591), 13 → Student (4603),
+	 *   12 → Retired (4605), 11 → Individual (4601), 19 → Others (5335).
+	 *
+	 * @param int $user_id    WP user ID.
+	 * @param int $product_id WC product ID.
+	 */
+	private function assign_profilegrid_group( $user_id, $product_id ) {
+		// Product ID → ProfileGrid Group ID
+		$product_to_group = array(
+			4597 => 18, // Academic
+			4599 => 17, // Startup
+			4595 => 16, // Industry Large
+			4593 => 15, // Industry Medium
+			4591 => 14, // Industry Small
+			5335 => 19, // Others
+			4603 => 13, // Student
+			4605 => 12, // Retired
+			4601 => 11, // Individual
+		);
+
+		if ( ! isset( $product_to_group[ $product_id ] ) ) {
+			return;
+		}
+
+		$group_id = $product_to_group[ $product_id ];
+
+		// Use ProfileGrid's native function if available
+		if ( function_exists( 'pm_add_user_to_group' ) ) {
+			// Check if already in group
+			$current_groups = get_user_meta( $user_id, 'pm_group', true );
+			if ( is_array( $current_groups ) && in_array( $group_id, $current_groups ) ) {
+				return; // Already assigned
+			}
+
+			pm_add_user_to_group( $user_id, $group_id );
+			error_log( "SRAtix Control: Assigned user {$user_id} to ProfileGrid group {$group_id}" );
+		} else {
+			// Fallback: set group via user meta
+			$current_groups = get_user_meta( $user_id, 'pm_group', true );
+			if ( empty( $current_groups ) || ! is_array( $current_groups ) ) {
+				$current_groups = array();
+			}
+			if ( ! in_array( $group_id, $current_groups ) ) {
+				$current_groups[] = $group_id;
+				update_user_meta( $user_id, 'pm_group', $current_groups );
+			}
+			update_user_meta( $user_id, 'gid', $group_id );
+			error_log( "SRAtix Control: Assigned user {$user_id} to ProfileGrid group {$group_id} (meta fallback)" );
+		}
+	}
+
+	/**
+	 * Create a WooCommerce order for the membership product.
+	 *
+	 * The order is auto-completed, which triggers downstream hooks:
+	 *  - sra-wprole-assigner assigns WP role + ProfileGrid group (duplicate-safe)
+	 *  - SRA Company Profiles creates corporate-member CPT for legal entities
+	 *  - Membership emails are sent
+	 *
+	 * The order is tagged with `_sratix_order_id` meta so the sync handler
+	 * (on_order_complete) knows NOT to re-notify SRAtix Server.
+	 *
+	 * @param int    $user_id       WP user ID.
+	 * @param int    $product_id    WC product ID.
+	 * @param string $sratix_order  SRAtix order UUID.
+	 * @param string $order_number  SRAtix order number.
+	 * @param string $currency      Currency code.
+	 * @return int|null             WC order ID or null on failure.
+	 */
+	private function create_membership_order( $user_id, $product_id, $sratix_order, $order_number, $currency ) {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			error_log( 'SRAtix Control: WooCommerce not available, cannot create order.' );
+			return null;
+		}
+
+		// Check if we already created a WC order for this SRAtix order + user combo
+		$existing = $this->find_existing_wc_order( $sratix_order, $user_id );
+		if ( $existing ) {
+			error_log( "SRAtix Control: WC order {$existing} already exists for SRAtix order {$sratix_order}, user {$user_id}" );
+			return $existing;
+		}
+
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			error_log( "SRAtix Control: WC product {$product_id} not found." );
+			return null;
+		}
+
+		try {
+			$order = wc_create_order( array(
+				'customer_id' => $user_id,
+				'status'      => 'pending',
+			) );
+
+			if ( is_wp_error( $order ) ) {
+				error_log( 'SRAtix Control: wc_create_order failed: ' . $order->get_error_message() );
+				return null;
+			}
+
+			// Add the membership product
+			$order->add_product( $product, 1 );
+
+			// Set billing details from WP user
+			$user = get_userdata( $user_id );
+			$order->set_billing_first_name( $user->first_name );
+			$order->set_billing_last_name( $user->last_name );
+			$order->set_billing_email( $user->user_email );
+
+			$company = get_user_meta( $user_id, 'pm_field_institution_company', true );
+			if ( $company ) {
+				$order->set_billing_company( $company );
+			}
+
+			$order->set_currency( $currency ?: 'CHF' );
+			$order->set_payment_method( 'cod' ); // "Cash on Delivery" = manual/external payment
+			$order->set_payment_method_title( 'SRAtix (Stripe)' );
+
+			// Tag as SRAtix-originated to prevent sync loops
+			$order->update_meta_data( '_sratix_order_id', $sratix_order );
+			$order->update_meta_data( '_sratix_order_number', $order_number );
+			$order->update_meta_data( '_sratix_created', true );
+
+			$order->add_order_note( sprintf(
+				/* translators: 1: SRAtix order number, 2: event name */
+				__( 'Auto-created by SRAtix for order %1$s. Payment collected via Stripe on SRAtix.', 'sratix-control' ),
+				$order_number
+			) );
+
+			$order->calculate_totals();
+			$order->save();
+
+			// Auto-complete → triggers woocommerce_order_status_completed hooks
+			// This fires: sra-wprole-assigner, SRA Company Profiles, etc.
+			$order->update_status( 'completed', __( 'Auto-completed by SRAtix Control.', 'sratix-control' ) );
+
+			error_log( "SRAtix Control: Created and completed WC order {$order->get_id()} for user {$user_id}, product {$product_id}" );
+
+			return $order->get_id();
+
+		} catch ( \Exception $e ) {
+			error_log( 'SRAtix Control: Exception creating WC order: ' . $e->getMessage() );
+			return null;
+		}
+	}
+
+	/**
+	 * Check if a WC order already exists for a SRAtix order + user combo.
+	 *
+	 * @param string $sratix_order_id SRAtix order UUID.
+	 * @param int    $user_id         WP user ID.
+	 * @return int|null               Existing WC order ID or null.
+	 */
+	private function find_existing_wc_order( $sratix_order_id, $user_id ) {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return null;
+		}
+
+		$orders = wc_get_orders( array(
+			'customer_id' => $user_id,
+			'meta_key'    => '_sratix_order_id',
+			'meta_value'  => $sratix_order_id,
+			'limit'       => 1,
+			'return'      => 'ids',
+		) );
+
+		return ! empty( $orders ) ? $orders[0] : null;
+	}
+
+	/**
+	 * Store form submission data as WP user meta.
+	 *
+	 * Maps known SRAtix field slugs to WordPress / ProfileGrid meta keys.
+	 *
+	 * @param int   $user_id   WP user ID.
+	 * @param array $form_data Form submission answers (slug => value).
+	 */
+	private function store_form_data( $user_id, $form_data ) {
+		if ( empty( $form_data ) || ! is_array( $form_data ) ) {
+			return;
+		}
+
+		// Known field mappings: SRAtix slug → WP user meta key
+		$field_map = array(
+			'company_name'         => 'pm_field_institution_company',
+			'institution_company'  => 'pm_field_institution_company',
+			'job_title'            => 'pm_field_job_title',
+			'phone'                => 'pm_field_phone',
+			'website'              => 'pm_field_website',
+			'country'              => 'pm_field_country',
+			'city'                 => 'pm_field_city',
+			'swiss_canton'         => 'pm_field_canton',
+			'dietary_requirements' => 'sratix_dietary_requirements',
+			'accessibility_needs'  => 'sratix_accessibility_needs',
+			'tshirt_size'          => 'sratix_tshirt_size',
+		);
+
+		foreach ( $form_data as $slug => $value ) {
+			$meta_key = $field_map[ $slug ] ?? 'sratix_field_' . sanitize_key( $slug );
+			if ( is_array( $value ) ) {
+				$value = wp_json_encode( $value );
+			}
+			update_user_meta( $user_id, $meta_key, sanitize_text_field( $value ) );
+		}
+	}
+
+	/**
+	 * entity.search — Server requests a fuzzy search for existing SRA MAP entities.
+	 *
+	 * Called by the Dashboard admin UI to find entity matches before creating new ones.
+	 * Returns an array of matches with similarity scores for admin validation.
+	 *
+	 * @param array $payload Webhook payload with data.name, data.limit, data.threshold.
+	 * @return WP_REST_Response
+	 */
+	private function on_entity_search( $payload ) {
+		$name      = $payload['data']['name'] ?? '';
+		$limit     = intval( $payload['data']['limit'] ?? 5 );
+		$threshold = floatval( $payload['data']['threshold'] ?? 60 );
+
+		if ( empty( $name ) ) {
+			return new \WP_REST_Response( array(
+				'received' => true,
+				'matches'  => array(),
+				'reason'   => 'No search name provided',
+			), 200 );
+		}
+
+		$matches = array();
+
+		if ( function_exists( 'sra_map_search_entities' ) ) {
+			$matches = sra_map_search_entities( $name, $limit, $threshold );
+		}
+
+		return new \WP_REST_Response( array(
+			'received' => true,
+			'matches'  => $matches,
+			'count'    => count( $matches ),
+		), 200 );
 	}
 
 	/**

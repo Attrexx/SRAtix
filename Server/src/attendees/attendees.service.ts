@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 
@@ -41,8 +41,27 @@ export class AttendeesService {
     phone?: string;
     company?: string;
     wpUserId?: number;
+    badgeName?: string;
+    jobTitle?: string;
+    orgRole?: string;
+    dietaryNeeds?: string;
+    accessibilityNeeds?: string;
+    consentMarketing?: boolean;
+    consentDataSharing?: boolean;
+    consentTimestamp?: Date;
+    tags?: unknown;
     meta?: Record<string, unknown>;
   }) {
+    // Check for duplicate email in this event before attempting insert
+    const existing = await this.prisma.attendee.findFirst({
+      where: { eventId: data.eventId, email: data.email },
+    });
+    if (existing) {
+      throw new ConflictException(
+        'An attendee with this email is already registered for this event.',
+      );
+    }
+
     const attendee = await this.prisma.attendee.create({
       data: {
         eventId: data.eventId,
@@ -53,6 +72,15 @@ export class AttendeesService {
         phone: data.phone,
         company: data.company,
         wpUserId: data.wpUserId,
+        badgeName: data.badgeName,
+        jobTitle: data.jobTitle,
+        orgRole: data.orgRole,
+        dietaryNeeds: data.dietaryNeeds,
+        accessibilityNeeds: data.accessibilityNeeds,
+        consentMarketing: data.consentMarketing,
+        consentDataSharing: data.consentDataSharing,
+        consentTimestamp: data.consentTimestamp,
+        tags: data.tags as any,
         meta: data.meta ? JSON.stringify(data.meta) : undefined,
       },
     });
@@ -78,14 +106,25 @@ export class AttendeesService {
     lastName: string;
     phone: string;
     company: string;
+    badgeName: string;
+    jobTitle: string;
+    orgRole: string;
+    dietaryNeeds: string;
+    accessibilityNeeds: string;
+    consentMarketing: boolean;
+    consentDataSharing: boolean;
+    consentTimestamp: Date;
+    tags: unknown;
     meta: Record<string, unknown>;
   }>) {
     await this.findOne(id);
+    const { meta, tags, ...rest } = data;
     return this.prisma.attendee.update({
       where: { id },
       data: {
-        ...data,
-        meta: data.meta ? JSON.stringify(data.meta) : undefined,
+        ...rest,
+        ...(tags !== undefined && { tags: tags as any }),
+        ...(meta !== undefined && { meta: JSON.stringify(meta) }),
       },
     });
   }

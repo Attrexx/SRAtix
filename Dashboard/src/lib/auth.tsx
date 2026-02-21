@@ -9,7 +9,9 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { api, type AuthResponse } from './api';
+import { setApiToken } from './api';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface User {
   id: string;
@@ -25,43 +27,54 @@ interface AuthContextType {
   login: (wpToken: string) => Promise<void>;
   loginWithPassword: (email: string, password: string) => Promise<void>;
   loginWithJwt: (jwt: string, refreshToken?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   hasRole: (role: string) => boolean;
 }
 
+// ── Server response shape ─────────────────────────────────────────────────────
+// Matches ClientAuthResponse from auth.controller.ts
+interface ServerAuthResponse {
+  accessToken: string;
+  expiresIn: number;
+  user: User;
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
-/** Decode a JWT payload without verification (client-side). */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Decode a JWT payload without verification (client-side).
+ * Used ONLY as a last-resort fallback when no server exchange is possible.
+ */
 function decodeJwtPayload(jwt: string): Record<string, unknown> {
   const parts = jwt.split('.');
   if (parts.length !== 3) throw new Error('Invalid token format');
   return JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 }
 
-/** Check if a JWT is expired (with 2-minute buffer). */
-function isExpired(jwt: string): boolean {
+/**
+ * Call POST /api/auth/refresh with credentials: 'include'.
+ * The httpOnly sratix_rt cookie is sent automatically if present.
+ * Returns the server response or null if no valid cookie session.
+ */
+async function callRefresh(): Promise<ServerAuthResponse | null> {
   try {
-    const payload = decodeJwtPayload(jwt);
-    const exp = payload.exp as number;
-    if (!exp) return true;
-    return exp * 1000 < Date.now() + 120_000;
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    return res.json();
   } catch {
-    return true;
+    return null;
   }
 }
 
-/** Time in ms until token expires (minus 2 min buffer). Returns 0 if already expired. */
-function msUntilExpiry(jwt: string): number {
-  try {
-    const payload = decodeJwtPayload(jwt);
-    const exp = payload.exp as number;
-    if (!exp) return 0;
-    const ms = exp * 1000 - Date.now() - 120_000;
-    return Math.max(0, ms);
-  } catch {
-    return 0;
-  }
-}
+// ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -69,227 +82,209 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Schedule a silent token refresh before expiry. */
-  const scheduleRefresh = useCallback((accessToken: string) => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+  /**
+   * Persist user identity in sessionStorage so the UI can render the user's
+   * name immediately on page load while the async refresh is in flight.
+   * NOTE: No token values are ever written to sessionStorage / localStorage.
+   */
+  const persistUser = (u: User | null) => {
+    if (u) {
+      sessionStorage.setItem('sratix_user', JSON.stringify(u));
+    } else {
+      sessionStorage.removeItem('sratix_user');
+    }
+  };
 
-    const delay = msUntilExpiry(accessToken);
-    if (delay <= 0) return; // already expired
+  /**
+   * Commit a successful auth response: update React state, sync the api module's
+   * in-memory token, persist user identity, and schedule the next refresh.
+   */
+  const applyAuthResponse = useCallback(
+    (data: ServerAuthResponse) => {
+      setToken(data.accessToken);
+      setUser(data.user);
+      setApiToken(data.accessToken);
+      persistUser(data.user);
+      scheduleRefresh(data.expiresIn);
+    },
+    // scheduleRefresh is stable (defined below); eslint needs this hint
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  /**
+   * Schedule a silent token refresh before the access token expires.
+   * @param expiresIn  Seconds until the access token expires (from server response).
+   */
+  const scheduleRefresh = useCallback((expiresIn: number) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    const delay = Math.max(0, (expiresIn - 60) * 1000); // refresh 60 s before expiry
+    if (delay <= 0) return;
 
     refreshTimerRef.current = setTimeout(async () => {
-      const rt = localStorage.getItem('sratix_refresh_token');
-      if (!rt) return;
-
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/auth/refresh`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: rt }),
-          },
-        );
-
-        if (!res.ok) throw new Error('Refresh failed');
-
-        const data: { accessToken: string; refreshToken: string; expiresIn: number } =
-          await res.json();
-
-        localStorage.setItem('sratix_token', data.accessToken);
-        localStorage.setItem('sratix_refresh_token', data.refreshToken);
+      const data = await callRefresh();
+      if (data) {
         setToken(data.accessToken);
-
-        // Decode and update user from fresh token
-        const payload = decodeJwtPayload(data.accessToken);
-        const freshUser: User = {
-          id: payload.sub as string,
-          email: payload.email as string,
-          displayName: (payload.displayName as string) || (payload.email as string).split('@')[0],
-          roles: (payload.roles as string[]) || [],
-        };
-        localStorage.setItem('sratix_user', JSON.stringify(freshUser));
-        setUser(freshUser);
-
-        // Schedule next refresh
-        scheduleRefresh(data.accessToken);
-      } catch {
-        // Refresh failed — clear session
-        localStorage.removeItem('sratix_token');
-        localStorage.removeItem('sratix_refresh_token');
-        localStorage.removeItem('sratix_user');
+        setUser(data.user);
+        setApiToken(data.accessToken);
+        persistUser(data.user);
+        scheduleRefresh(data.expiresIn);
+      } else {
+        // Cookie expired — clear session
         setToken(null);
         setUser(null);
+        setApiToken(null);
+        persistUser(null);
       }
     }, delay);
   }, []);
 
-  // Restore session from localStorage
+  // Re-bind applyAuthResponse now that scheduleRefresh is stable
+  // (useCallback deps need to be declared after scheduleRefresh is defined)
+  const stableApply = useCallback(
+    (data: ServerAuthResponse) => {
+      setToken(data.accessToken);
+      setUser(data.user);
+      setApiToken(data.accessToken);
+      persistUser(data.user);
+      scheduleRefresh(data.expiresIn);
+    },
+    [scheduleRefresh],
+  );
+
+  // ── Restore session on mount ────────────────────────────────────────────────
   useEffect(() => {
-    const storedToken = localStorage.getItem('sratix_token');
-    const storedUser = localStorage.getItem('sratix_user');
-    const storedRefresh = localStorage.getItem('sratix_refresh_token');
-
-    if (storedToken && storedUser) {
-      try {
-        if (!isExpired(storedToken)) {
-          // Token still valid — restore session
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-          scheduleRefresh(storedToken);
-        } else if (storedRefresh) {
-          // Token expired but we have a refresh token — refresh immediately
-          fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: storedRefresh }),
-          })
-            .then((res) => {
-              if (!res.ok) throw new Error('Refresh failed');
-              return res.json();
-            })
-            .then(
-              (data: { accessToken: string; refreshToken: string; expiresIn: number }) => {
-                localStorage.setItem('sratix_token', data.accessToken);
-                localStorage.setItem('sratix_refresh_token', data.refreshToken);
-                setToken(data.accessToken);
-
-                const payload = decodeJwtPayload(data.accessToken);
-                const freshUser: User = {
-                  id: payload.sub as string,
-                  email: payload.email as string,
-                  displayName:
-                    (payload.displayName as string) || (payload.email as string).split('@')[0],
-                  roles: (payload.roles as string[]) || [],
-                };
-                localStorage.setItem('sratix_user', JSON.stringify(freshUser));
-                setUser(freshUser);
-                scheduleRefresh(data.accessToken);
-              },
-            )
-            .catch(() => {
-              localStorage.removeItem('sratix_token');
-              localStorage.removeItem('sratix_refresh_token');
-              localStorage.removeItem('sratix_user');
-            })
-            .finally(() => setIsLoading(false));
-          return; // Don't setIsLoading(false) until refresh completes
-        } else {
-          // Expired and no refresh token — clear
-          localStorage.removeItem('sratix_token');
-          localStorage.removeItem('sratix_user');
-        }
-      } catch {
-        localStorage.removeItem('sratix_token');
-        localStorage.removeItem('sratix_refresh_token');
-        localStorage.removeItem('sratix_user');
-      }
+    // Show cached user immediately (eliminates visible "logged-out" flash)
+    const storedUser = sessionStorage.getItem('sratix_user');
+    if (storedUser) {
+      try { setUser(JSON.parse(storedUser)); } catch { /* ignore */ }
     }
-    setIsLoading(false);
-  }, [scheduleRefresh]);
+
+    // Attempt to restore session via httpOnly refresh cookie
+    callRefresh().then((data) => {
+      if (data) {
+        stableApply(data);
+      } else {
+        // No valid cookie session — clear any stale display state
+        setToken(null);
+        setUser(null);
+        setApiToken(null);
+        persistUser(null);
+      }
+    }).finally(() => setIsLoading(false));
+  }, [stableApply]);
 
   // Cleanup timer on unmount
   useEffect(() => {
-    return () => {
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    };
+    return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
   }, []);
 
-  const login = useCallback(async (wpToken: string) => {
-    const res: AuthResponse = await api.login(wpToken);
-    localStorage.setItem('sratix_token', res.access_token);
-    localStorage.setItem('sratix_user', JSON.stringify(res.user));
-    setToken(res.access_token);
-    setUser(res.user);
-  }, []);
+  // ── Auth actions ────────────────────────────────────────────────────────────
 
   /**
-   * Login with email + password (app-native accounts).
-   * Calls POST /api/auth/login → receives token pair → stores session.
+   * Login via WP HMAC bridge token (legacy — calls existing wp-exchange endpoint).
+   */
+  const login = useCallback(async (wpToken: string) => {
+    const res = await fetch(`${API_BASE}/api/auth/wp-exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token: wpToken }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.message ?? 'Authentication failed');
+    }
+    stableApply(await res.json());
+  }, [stableApply]);
+
+  /**
+   * Login with email + password.
+   * Server sets the httpOnly refresh cookie; only the access token is returned
+   * in the response body and stored in-memory.
    */
   const loginWithPassword = useCallback(
     async (email: string, password: string) => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/auth/login`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message ?? 'Authentication failed');
       }
-
-      const data: { accessToken: string; refreshToken: string; expiresIn: number } =
-        await res.json();
-
-      const payload = decodeJwtPayload(data.accessToken);
-      const userData: User = {
-        id: payload.sub as string,
-        email: payload.email as string,
-        displayName:
-          (payload.displayName as string) || (payload.email as string).split('@')[0],
-        roles: (payload.roles as string[]) || [],
-      };
-
-      localStorage.setItem('sratix_token', data.accessToken);
-      localStorage.setItem('sratix_refresh_token', data.refreshToken);
-      localStorage.setItem('sratix_user', JSON.stringify(userData));
-      setToken(data.accessToken);
-      setUser(userData);
-      scheduleRefresh(data.accessToken);
+      stableApply(await res.json());
     },
-    [scheduleRefresh],
+    [stableApply],
   );
 
   /**
-   * Login with a pre-issued JWT (from WP Control plugin redirect).
-   * Decodes the JWT payload to extract user data — no server round-trip needed.
-   * Optionally stores a refresh token for session persistence.
+   * Login with a pre-issued JWT from the WP Control plugin redirect.
+   *
+   * Security flow:
+   *   1. If a refresh token is present in the URL (?token=...&refresh=...):
+   *      POST /api/auth/init-session { refreshToken } — the server validates
+   *      the token, sets the httpOnly refresh cookie, and returns a fresh
+   *      access token.  The refresh token is never stored client-side.
+   *   2. If only an access token is present (fallback): decode it client-side
+   *      and use it directly until it expires (15 min), then the user must
+   *      re-authenticate.
+   *
+   * In both cases the URL params are cleared by the calling code in login/page.tsx
+   * immediately after this function returns.
    */
   const loginWithJwt = useCallback(
     async (jwt: string, refreshToken?: string) => {
-      try {
-        const payload = decodeJwtPayload(jwt);
-
-        if (!payload.sub || !payload.email) {
-          throw new Error('Token missing required fields');
+      if (refreshToken) {
+        // Promote refresh token to httpOnly cookie via server round-trip
+        const res = await fetch(`${API_BASE}/api/auth/init-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (res.ok) {
+          stableApply(await res.json());
+          return;
         }
-
-        const userData: User = {
-          id: payload.sub as string,
-          email: payload.email as string,
-          displayName:
-            (payload.displayName as string) || (payload.email as string).split('@')[0],
-          roles: (payload.roles as string[]) || [],
-        };
-
-        localStorage.setItem('sratix_token', jwt);
-        localStorage.setItem('sratix_user', JSON.stringify(userData));
-        if (refreshToken) {
-          localStorage.setItem('sratix_refresh_token', refreshToken);
-        }
-        setToken(jwt);
-        setUser(userData);
-
-        // Schedule automatic refresh
-        scheduleRefresh(jwt);
-      } catch (err) {
-        throw new Error(err instanceof Error ? err.message : 'Failed to decode token');
+        // init-session failed — fall through to JWT-only path
       }
+
+      // Fallback: decode the access JWT client-side (no persistent session)
+      const payload = decodeJwtPayload(jwt);
+      if (!payload.sub || !payload.email) throw new Error('Token missing required fields');
+
+      const userData: User = {
+        id: payload.sub as string,
+        email: payload.email as string,
+        displayName: (payload.displayName as string) || (payload.email as string).split('@')[0],
+        roles: (payload.roles as string[]) || [],
+      };
+      setToken(jwt);
+      setUser(userData);
+      setApiToken(jwt);
+      persistUser(userData);
+      // No scheduleRefresh — no refresh cookie available; token expires in ~15 min
     },
-    [scheduleRefresh],
+    [stableApply],
   );
 
-  const logout = useCallback(() => {
+  /**
+   * Logout: clear the httpOnly refresh cookie server-side and wipe in-memory state.
+   */
+  const logout = useCallback(async () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    localStorage.removeItem('sratix_token');
-    localStorage.removeItem('sratix_refresh_token');
-    localStorage.removeItem('sratix_user');
+    // Ask the server to clear the refresh cookie
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => { /* fire-and-forget */ });
     setToken(null);
     setUser(null);
+    setApiToken(null);
+    persistUser(null);
   }, []);
 
   const hasRole = useCallback(

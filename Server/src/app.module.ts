@@ -23,6 +23,8 @@ import { BadgeTemplatesModule } from './badge-templates/badge-templates.module';
 import { OutgoingWebhooksModule } from './outgoing-webhooks/outgoing-webhooks.module';
 import { UsersModule } from './users/users.module';
 import { SettingsModule } from './settings/settings.module';
+import { FieldRepositoryModule } from './field-repository/field-repository.module';
+import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { join } from 'path';
 
 @Module({
@@ -94,6 +96,12 @@ import { join } from 'path';
 
     // Platform settings (Super Admin UI for .env overrides)
     SettingsModule,
+
+    // Field repository — global catalog of form field definitions
+    FieldRepositoryModule,
+
+    // Form templates — reusable form configurations per Organization
+    FormTemplatesModule,
   ],
 })
 export class AppModule {}

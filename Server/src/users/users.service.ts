@@ -2,10 +2,42 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+
+/**
+ * Canonical SRAtix role names.
+ * This is the single source of truth for valid role values.
+ * Any role assignment not in this set will be rejected with a 400 error.
+ * Role descriptions and scoping rules are documented in PRODUCTION-ARCHITECTURE.md.
+ */
+export const VALID_ROLES = [
+  'super_admin',         // Platform owner — full access (global scope)
+  'organization_admin',  // Full org admin (org-scoped)
+  'event_admin',         // Manages events, attendees, check-ins (org-scoped)
+  'staff',               // Check-in ops + attendee assistance (org-scoped)
+  'scanner',             // QR scan + check-in, kiosk/device accounts (org-scoped)
+  'volunteer',           // Read-only event view (org-scoped)
+  'exhibitor',           // Booth data, lead capture, badge scanning (org-scoped)
+  'sponsor',             // Branding assets, impression analytics (org-scoped)
+  'partner',             // Limited analytics, co-branding (org-scoped)
+  'attendee',            // End-user self-service — own ticket + schedule (org-scoped)
+] as const;
+
+export type SratixRole = typeof VALID_ROLES[number];
+
+/** Validate a set of role strings and throw 400 if any are unknown. */
+function validateRoles(roles: string[]): void {
+  const invalid = roles.filter((r) => !(VALID_ROLES as readonly string[]).includes(r));
+  if (invalid.length > 0) {
+    throw new BadRequestException(
+      `Unknown role(s): ${invalid.join(', ')}. Valid roles: ${VALID_ROLES.join(', ')}`,
+    );
+  }
+}
 
 export interface UserWithRoles {
   id: string;
@@ -84,6 +116,8 @@ export class UsersService {
     roles: string[];
     orgId?: string;
   }): Promise<UserWithRoles> {
+    validateRoles(data.roles);
+
     const existing = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -168,6 +202,7 @@ export class UsersService {
     // Update roles if provided
     let finalRoles = user.roles.map((r) => r.role);
     if (data.roles !== undefined) {
+      validateRoles(data.roles);
       // Replace all roles (delete existing, insert new)
       await this.prisma.userRole.deleteMany({ where: { userId: id } });
       for (const role of data.roles) {
@@ -231,19 +266,21 @@ export class UsersService {
 
   /**
    * Get available SRAtix roles for the role selector UI.
+   * Values are sourced from the VALID_ROLES constant — the single source of truth.
    */
   getAvailableRoles() {
-    return [
-      { value: 'super_admin', label: 'Super Admin', description: 'Full platform access' },
-      { value: 'event_admin', label: 'Event Admin', description: 'Manage events, attendees, check-ins' },
-      { value: 'organization_admin', label: 'Organization Admin', description: 'Manage org exhibitor/sponsor data' },
-      { value: 'exhibitor', label: 'Exhibitor', description: 'Booth data, lead capture, badge scanning' },
-      { value: 'sponsor', label: 'Sponsor', description: 'Branding assets, impression analytics' },
-      { value: 'partner', label: 'Partner', description: 'Limited analytics, co-branding' },
-      { value: 'staff', label: 'Staff', description: 'Check-in ops, attendee assistance' },
-      { value: 'volunteer', label: 'Volunteer', description: 'Check-in scanning only' },
-      { value: 'scanner', label: 'Scanner', description: 'QR scan + check-in (kiosk/device)' },
-      { value: 'attendee', label: 'Attendee', description: 'Own ticket, schedule, badge' },
-    ];
+    const meta: Record<string, { label: string; description: string }> = {
+      super_admin:         { label: 'Super Admin',         description: 'Full platform access' },
+      organization_admin:  { label: 'Organization Admin',  description: 'Manage org exhibitor/sponsor data' },
+      event_admin:         { label: 'Event Admin',         description: 'Manage events, attendees, check-ins' },
+      staff:               { label: 'Staff',               description: 'Check-in ops, attendee assistance' },
+      scanner:             { label: 'Scanner',             description: 'QR scan + check-in (kiosk/device)' },
+      volunteer:           { label: 'Volunteer',           description: 'Check-in scanning only' },
+      exhibitor:           { label: 'Exhibitor',           description: 'Booth data, lead capture, badge scanning' },
+      sponsor:             { label: 'Sponsor',             description: 'Branding assets, impression analytics' },
+      partner:             { label: 'Partner',             description: 'Limited analytics, co-branding' },
+      attendee:            { label: 'Attendee',            description: 'Own ticket, schedule, badge' },
+    };
+    return VALID_ROLES.map((r) => ({ value: r, ...meta[r] }));
   }
 }

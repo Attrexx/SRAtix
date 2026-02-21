@@ -110,11 +110,22 @@ class SRAtix_Control_Sync {
 	 * Fires when a WooCommerce order is completed.
 	 * Links the purchasing user's org in SRAtix if applicable.
 	 *
+	 * GUARD: If the order was created by SRAtix Control (has _sratix_order_id meta),
+	 * skip notifying the Server — the Server already knows about this order.
+	 * This prevents infinite loops: Server→webhook→WC order→completed→notify Server.
+	 *
 	 * @param int $order_id WooCommerce order ID.
 	 */
 	public function on_order_complete( $order_id ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {
+			return;
+		}
+
+		// ── Loop guard: skip SRAtix-originated orders ─────────────
+		$sratix_order_id = $order->get_meta( '_sratix_order_id' );
+		if ( ! empty( $sratix_order_id ) ) {
+			error_log( "SRAtix Control Sync: Skipping order {$order_id} — originated from SRAtix (order {$sratix_order_id})" );
 			return;
 		}
 

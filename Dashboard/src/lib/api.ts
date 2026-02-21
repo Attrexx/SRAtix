@@ -1,12 +1,26 @@
 /**
  * SRAtix API Client — connects Dashboard to the NestJS Server.
  *
- * Uses fetch API with JWT Bearer token.
- * In development, requests are proxied via Next.js rewrites to localhost:3000.
- * In production, both apps are behind the same domain (tix.swiss-robotics.org).
+ * Security model:
+ *   - Access token: stored in-memory only (module-level variable + React state in auth.tsx).
+ *     Never written to localStorage or sessionStorage.
+ *   - Refresh token: stored as httpOnly cookie (set by server on login/refresh).
+ *     The browser sends it automatically via credentials: 'include'.
+ *   - All fetch() calls include credentials: 'include' so the refresh cookie travels
+ *     with every request to the same origin.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+// ── In-memory token store ─────────────────────────────────────────────────────
+// auth.tsx calls setApiToken() after every successful login / refresh.
+// This module never reads from localStorage.
+let _apiToken: string | null = null;
+
+/** Update the in-memory access token.  Called by AuthProvider. */
+export function setApiToken(t: string | null): void {
+  _apiToken = t;
+}
 
 interface ApiOptions {
   method?: string;
@@ -27,57 +41,33 @@ class ApiError extends Error {
 }
 
 function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('sratix_token');
-}
-
-function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('sratix_refresh_token');
-}
-
-/** Check if a JWT is expired (with 60s buffer). */
-function isTokenExpired(token: string): boolean {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return true;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    if (!payload.exp) return true;
-    return payload.exp * 1000 < Date.now() + 60_000; // 60s buffer
-  } catch {
-    return true;
-  }
+  return _apiToken;
 }
 
 /** Flag to prevent concurrent refresh requests. */
 let refreshPromise: Promise<string | null> | null = null;
 
 /**
- * Attempt to refresh the access token using the stored refresh token.
- * Returns the new access token or null if refresh failed.
+ * Attempt to refresh the access token using the httpOnly sratix_rt cookie.
+ * The cookie is sent automatically by the browser (credentials: 'include').
+ * Returns the new access token or null if no valid cookie session.
  */
 async function doRefreshToken(): Promise<string | null> {
-  const rt = getRefreshToken();
-  if (!rt) return null;
-
   try {
     const res = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: rt }),
+      credentials: 'include',
+      // No body — the refresh token is in the httpOnly sratix_rt cookie
     });
 
     if (!res.ok) {
-      // Refresh failed — clear stored tokens
-      localStorage.removeItem('sratix_token');
-      localStorage.removeItem('sratix_refresh_token');
-      localStorage.removeItem('sratix_user');
+      _apiToken = null;
       return null;
     }
 
-    const data: { accessToken: string; refreshToken: string; expiresIn: number } = await res.json();
-    localStorage.setItem('sratix_token', data.accessToken);
-    localStorage.setItem('sratix_refresh_token', data.refreshToken);
+    const data: { accessToken: string; expiresIn: number } = await res.json();
+    _apiToken = data.accessToken;
     return data.accessToken;
   } catch {
     return null;
@@ -95,8 +85,8 @@ async function refreshAccessToken(): Promise<string | null> {
 async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
   let token = getToken();
 
-  // If access token is expired, try refreshing before the request
-  if (token && isTokenExpired(token)) {
+  // If no access token is in memory, try refreshing before the request
+  if (!token) {
     token = await refreshAccessToken();
   }
 
@@ -114,10 +104,11 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
+    credentials: 'include',
   });
 
   // On 401, try refreshing token and retrying once
-  if (res.status === 401 && getRefreshToken()) {
+  if (res.status === 401) {
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers['Authorization'] = `Bearer ${newToken}`;
@@ -126,6 +117,7 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined,
         signal: options.signal,
+        credentials: 'include',
       });
       if (!retry.ok) {
         const data = await retry.json().catch(() => null);
@@ -311,16 +303,6 @@ export interface WebhookDelivery {
   createdAt: string;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  user: {
-    id: string;
-    email: string;
-    displayName: string;
-    roles: string[];
-  };
-}
-
 export interface AppUser {
   id: string;
   email: string;
@@ -359,16 +341,32 @@ export interface SettingsResponse {
   groups: Record<string, SettingValue[]>;
 }
 
+export interface FieldDefinition {
+  id: string;
+  slug: string;
+  label: Record<string, string>;       // i18n: { en, fr, de, it, 'zh-TW' }
+  type: string;
+  group: string;                        // must_have | billing | legal_compliance | profile | company | b2b | privacy | questions | community
+  options?: Array<{ value: string; label: Record<string, string> }>;
+  defaultWidthDesktop: number;          // 25 | 33 | 50 | 75 | 100
+  defaultWidthMobile: number;
+  validationRules?: Record<string, unknown>;
+  helpText?: Record<string, string>;
+  placeholder?: Record<string, string>;
+  defaultValue?: unknown;
+  categoryFilter?: string[];
+  conditionalOn?: Record<string, unknown>;
+  sortOrder: number;
+  isSystem: boolean;
+  active: boolean;
+}
+
 // ─── API Methods ────────────────────────────────────────────────
+// Note: auth flows (login, logout, refresh) are handled directly in
+// Dashboard/src/lib/auth.tsx via fetch() with credentials: 'include'.
+// The api object covers all authenticated resource endpoints only.
 
 export const api = {
-  // Auth
-  login: (token: string) =>
-    request<AuthResponse>('/auth/wp-exchange', {
-      method: 'POST',
-      body: { token },
-    }),
-
   // Events
   getEvents: (signal?: AbortSignal) =>
     request<Event[]>('/events', { signal }),
@@ -500,11 +498,19 @@ export const api = {
         type: string;
         label: Record<string, string>;
         required?: boolean;
+        width?: number;
         options?: Array<{ value: string; label: Record<string, string> }>;
       }>;
     };
   }) =>
     request<unknown>('/forms', { method: 'POST', body: data }),
+
+  // Field Repository
+  getFieldRepository: (signal?: AbortSignal) =>
+    request<FieldDefinition[]>('/field-repository', { signal }),
+
+  getFieldRepositoryGroups: (signal?: AbortSignal) =>
+    request<string[]>('/field-repository/groups', { signal }),
 
   // Exports
   exportAttendees: (eventId: string) =>

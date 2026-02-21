@@ -12,4 +12,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Credentials files — must never be committed to version control
+attrexx-account.txt
+*.credentials.txt
+*.secrets.txt
+
 /generated/prisma

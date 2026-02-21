@@ -4,7 +4,9 @@ import { type ReactNode, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useI18n } from '@/i18n/i18n-provider';
 import { ThemeToggle } from './theme-toggle';
+import { LocaleSwitcher } from './locale-switcher';
 import { Icons } from './icons';
 
 interface NavItem {
@@ -14,34 +16,35 @@ interface NavItem {
   roles?: string[];
 }
 
-function getEventNav(eventId: string): NavItem[] {
+function getEventNav(eventId: string, t: (key: string) => string): NavItem[] {
   return [
-    { href: `/dashboard/events/${eventId}`, label: 'Overview', icon: <Icons.BarChart size={18} /> },
-    { href: `/dashboard/events/${eventId}/ticket-types`, label: 'Ticket Types', icon: <Icons.Ticket size={18} /> },
-    { href: `/dashboard/events/${eventId}/attendees`, label: 'Attendees', icon: <Icons.Users size={18} /> },
-    { href: `/dashboard/events/${eventId}/orders`, label: 'Orders', icon: <Icons.ShoppingCart size={18} /> },
-    { href: `/dashboard/events/${eventId}/check-in`, label: 'Check-In Live', icon: <Icons.CheckCircle size={18} /> },
-    { href: `/dashboard/events/${eventId}/analytics`, label: 'Analytics', icon: <Icons.TrendingUp size={18} /> },
-    { href: `/dashboard/events/${eventId}/promo-codes`, label: 'Promo Codes', icon: <Icons.Tag size={18} /> },
-    { href: `/dashboard/events/${eventId}/forms`, label: 'Forms', icon: <Icons.Clipboard size={18} /> },
-    { href: `/dashboard/events/${eventId}/audit-log`, label: 'Activity Log', icon: <Icons.FileText size={18} /> },
-    { href: `/dashboard/events/${eventId}/export`, label: 'Export', icon: <Icons.Upload size={18} /> },
-    { href: `/dashboard/events/${eventId}/webhooks`, label: 'Webhooks', icon: <Icons.Link size={18} />, roles: ['admin', 'owner'] },
+    { href: `/dashboard/events/${eventId}`, label: t('nav.overview'), icon: <Icons.BarChart size={18} /> },
+    { href: `/dashboard/events/${eventId}/ticket-types`, label: t('nav.ticketTypes'), icon: <Icons.Ticket size={18} /> },
+    { href: `/dashboard/events/${eventId}/attendees`, label: t('nav.attendees'), icon: <Icons.Users size={18} /> },
+    { href: `/dashboard/events/${eventId}/orders`, label: t('nav.orders'), icon: <Icons.ShoppingCart size={18} /> },
+    { href: `/dashboard/events/${eventId}/check-in`, label: t('nav.checkInLive'), icon: <Icons.CheckCircle size={18} /> },
+    { href: `/dashboard/events/${eventId}/analytics`, label: t('nav.analytics'), icon: <Icons.TrendingUp size={18} /> },
+    { href: `/dashboard/events/${eventId}/promo-codes`, label: t('nav.promoCodes'), icon: <Icons.Tag size={18} /> },
+    { href: `/dashboard/events/${eventId}/forms`, label: t('nav.forms'), icon: <Icons.Clipboard size={18} /> },
+    { href: `/dashboard/events/${eventId}/audit-log`, label: t('nav.activityLog'), icon: <Icons.FileText size={18} /> },
+    { href: `/dashboard/events/${eventId}/export`, label: t('nav.export'), icon: <Icons.Upload size={18} /> },
+    { href: `/dashboard/events/${eventId}/webhooks`, label: t('nav.webhooks'), icon: <Icons.Link size={18} />, roles: ['admin', 'owner'] },
   ];
 }
-
-const topNav: NavItem[] = [
-  { href: '/dashboard', label: 'Events', icon: <Icons.Calendar size={18} /> },
-  { href: '/dashboard/users', label: 'Users', icon: <Icons.User size={18} />, roles: ['super_admin'] },
-  { href: '/dashboard/settings', label: 'Settings', icon: <Icons.Settings size={18} />, roles: ['super_admin'] },
-];
 
 export function Sidebar({ eventId }: { eventId?: string }) {
   const pathname = usePathname();
   const { user, logout, hasRole } = useAuth();
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const eventNav = eventId ? getEventNav(eventId) : [];
+  const topNav: NavItem[] = [
+    { href: '/dashboard', label: t('nav.events'), icon: <Icons.Calendar size={18} /> },
+    { href: '/dashboard/users', label: t('nav.users'), icon: <Icons.User size={18} />, roles: ['super_admin'] },
+    { href: '/dashboard/settings', label: t('nav.settings'), icon: <Icons.Settings size={18} />, roles: ['super_admin'] },
+  ];
+
+  const eventNav = eventId ? getEventNav(eventId, t) : [];
 
   // Close drawer on route change
   useEffect(() => {
@@ -83,7 +86,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
       {/* Top Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest opacity-40">
-          Platform
+          {t('nav.platform')}
         </p>
         {topNav
           .filter((item) => !item.roles || item.roles.some((r) => hasRole(r)))
@@ -96,7 +99,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
           <>
             <div className="my-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
             <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest opacity-40">
-              Event
+              {t('nav.event')}
             </p>
             {eventNav.map((item) => (
               <SidebarLink key={item.href} item={item} active={pathname === item.href} />
@@ -107,8 +110,11 @@ export function Sidebar({ eventId }: { eventId?: string }) {
 
       {/* Footer */}
       <div className="border-t px-4 py-3" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-        <div className="mb-3 flex items-center justify-between">
-          <ThemeToggle />
+        <div className="mb-3 flex items-center gap-2">
+          <LocaleSwitcher />
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
         {user && (
           <div className="flex items-center justify-between">
@@ -121,7 +127,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
             <button
               onClick={logout}
               className="ml-2 rounded px-2 py-1 text-xs transition-colors hover:bg-white/10"
-              aria-label="Sign out"
+              aria-label={t('nav.signOut')}
             >
               <Icons.LogOut size={14} />
             </button>
@@ -144,7 +150,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
         <button
           onClick={() => setMobileOpen(true)}
           className="rounded-lg p-1.5 text-white transition-colors hover:bg-white/10"
-          aria-label="Open menu"
+          aria-label={t('nav.openMenu')}
         >
           <Icons.BarChart size={22} className="hidden" />
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -177,7 +183,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute right-3 top-4 rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Close menu"
+              aria-label={t('nav.closeMenu')}
             >
               <Icons.X size={20} />
             </button>

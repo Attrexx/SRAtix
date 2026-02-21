@@ -15,6 +15,7 @@ import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import fastifyStatic from '@fastify/static';
+import fastifyCookie from '@fastify/cookie';
 import { existsSync, readFileSync } from 'fs';
 
 async function bootstrap() {
@@ -32,6 +33,12 @@ async function bootstrap() {
         rawBody: true, // Required for Stripe webhook signature verification
       },
     );
+
+    // Cookie support — required for httpOnly refresh token storage
+    const configService = app.get(ConfigService);
+    await app.register(fastifyCookie as any, {
+      secret: configService.get<string>('COOKIE_SECRET', configService.get<string>('JWT_SECRET', 'sratix-dev-key')),
+    });
 
     // Global validation pipe — DTOs auto-validated
     app.useGlobalPipes(
@@ -63,7 +70,6 @@ async function bootstrap() {
     const reflector = app.get(Reflector);
     app.useGlobalGuards(new RateLimitGuard(reflector));
 
-    const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT', 3000);
 
     // ── Dashboard Static Files ───────────────────────────────────
@@ -74,11 +80,21 @@ async function bootstrap() {
 
     if (existsSync(dashboardDir)) {
       // Serve static assets (_next/*, images, etc.)
+      // HTML files get Cache-Control: no-cache so browsers always refetch the SPA shell after deploys.
+      // Hashed JS/CSS assets from _next/ are immutably cached by the browser.
       await fastify.register(fastifyStatic, {
         root: dashboardDir,
         prefix: '/',
         decorateReply: false,
         wildcard: false,     // Don't intercept all routes — let NestJS handle /api/*
+        setHeaders(res: any, filePath: string) {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+          } else if (filePath.includes('/_next/static/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
       });
 
       // SPA fallback via onRequest hook (not setNotFoundHandler — NestJS
@@ -140,6 +156,7 @@ async function bootstrap() {
           );
           if (existsSync(placeholderHtml)) {
             return reply
+              .header('Cache-Control', 'no-cache, no-store, must-revalidate')
               .type('text/html')
               .send(readFileSync(placeholderHtml, 'utf-8'));
           }
@@ -149,20 +166,27 @@ async function bootstrap() {
         const exactHtml = join(dashboardDir, urlPath, 'index.html');
         if (existsSync(exactHtml)) {
           return reply
+            .header('Cache-Control', 'no-cache, no-store, must-revalidate')
             .type('text/html')
             .send(readFileSync(exactHtml, 'utf-8'));
         }
 
         // Root path → root index.html
         if (urlPath === '/' || urlPath === '') {
-          return reply.type('text/html').send(indexHtml);
+          return reply
+            .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            .type('text/html')
+            .send(indexHtml);
         }
 
         // Any other /dashboard/* or /login* path → SPA fallback (serve root index.html)
         // This handles client-side routing for pages that aren't pre-rendered
         // with an exact index.html match (e.g. /dashboard/settings)
         if (urlPath.startsWith('/dashboard') || urlPath.startsWith('/login')) {
-          return reply.type('text/html').send(indexHtml);
+          return reply
+            .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            .type('text/html')
+            .send(indexHtml);
         }
 
         // Unknown non-API path: let NestJS handle (will 404)

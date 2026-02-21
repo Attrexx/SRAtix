@@ -3,12 +3,30 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+
+// ─── Ticket Status Transition Matrix ──────────────────────────────────────
+//
+// Enforces which status transitions are valid.  The `super_admin` restriction
+// on used → voided prevents accidental un-doing of check-ins by event staff.
+//
+// valid    → used     : check-in (scanner or manual check-in endpoint)
+// valid    → voided   : admin voids before check-in (e.g. refund, error)
+// used     → voided   : super_admin only override (e.g. fraudulent check-in)
+// voided   → (none)   : terminal state — audit trail must be append-only
+//
+const TICKET_TRANSITIONS: Record<string, Set<string>> = {
+  valid:  new Set(['used', 'voided']),
+  used:   new Set(['voided']),   // super_admin only — enforced in validateTransition
+  voided: new Set([]),           // terminal — no outbound transitions
+};
 
 /**
  * Tickets Service — issues, validates, and manages individual tickets.
@@ -33,6 +51,38 @@ export class TicketsService {
     private readonly outgoingWebhooks: OutgoingWebhooksService,
   ) {}
 
+  // ─── Transition Guard ─────────────────────────────────────────
+
+  /**
+   * Validate that transitioning a ticket from `currentStatus` to `nextStatus`
+   * is permitted.  Throws `BadRequestException` for unknown/disallowed
+   * transitions and `ForbiddenException` when the actor lacks required role.
+   *
+   * @param currentStatus - Current `Ticket.status` value
+   * @param nextStatus    - Desired target status
+   * @param actorRoles    - Array of JWT roles for the requesting user
+   */
+  private validateTransition(
+    currentStatus: string,
+    nextStatus: string,
+    actorRoles: string[],
+  ): void {
+    const allowed = TICKET_TRANSITIONS[currentStatus] ?? new Set<string>();
+    if (!allowed.has(nextStatus)) {
+      throw new BadRequestException(
+        `Cannot transition ticket from '${currentStatus}' to '${nextStatus}'.`,
+      );
+    }
+    // used → voided requires super_admin
+    if (currentStatus === 'used' && nextStatus === 'voided') {
+      if (!actorRoles.includes('super_admin')) {
+        throw new ForbiddenException(
+          'Only super_admin can void a ticket that has already been checked in.',
+        );
+      }
+    }
+  }
+
   // ─── QR Code Helpers ───────────────────────────────────────────
 
   /**
@@ -51,6 +101,36 @@ export class TicketsService {
   /**
    * Compute the HMAC signature for a ticket code.
    * Uses the JWT_SECRET as the base key + eventId for scoping.
+   *
+   * ── Threat model & design rationale ──────────────────────────────────────
+   *
+   * Truncation:  The output is truncated to 16 hex characters (= 64 bits).
+   *
+   *   • 64-bit HMAC is intentionally weaker than full SHA-256, but is
+   *     sufficient here because:
+   *
+   *     1. SINGLE-USE TICKETS — the moment a ticket is scanned it transitions
+   *        to `used` status.  An attacker cannot iterate guesses against a
+   *        live ticket because the first valid scan consumes the ticket.
+   *
+   *     2. CONSTANT-TIME COMPARISON — verifyQrPayload() uses timingSafeEqual,
+   *        which closes the timing side-channel that could otherwise let an
+   *        attacker narrow the search space byte-by-byte.
+   *
+   *     3. EVENT-SCOPED KEY — the HMAC key includes the event ID, so a valid
+   *        HMAC from event A cannot be replayed against event B.
+   *
+   *     4. HIGH-ENTROPY CODE — the 12-char base36 ticket code is derived from
+   *        72 bits of randomBytes, making brute-forcing the code itself the
+   *        binding constraint, not the HMAC truncation.
+   *
+   *   • Increasing to 32 hex chars (128-bit) would quadruple the QR payload
+   *     length with negligible practical security benefit given the above
+   *     mitigations.  16 hex chars produce a compact, scannable QR code.
+   *
+   *   • This tradeoff has been reviewed and is an **intentional design decision**.
+   *     If the threat model changes (e.g. NFC tap-once tickets stored in
+   *     wallets), revisit this with a full HMAC or ECDSA approach.
    */
   private computeHmac(code: string, eventId: string): string {
     const baseKey = this.config.get<string>('JWT_SECRET', 'sratix-dev-key');
@@ -216,14 +296,21 @@ export class TicketsService {
 
   // ─── Status Management ────────────────────────────────────────
 
-  async void(id: string, eventId: string) {
+  async void(id: string, eventId: string, reason: string, actorRoles: string[]) {
     const ticket = await this.findOne(id, eventId);
-    if (ticket.status === 'voided') {
-      throw new ConflictException('Ticket is already voided');
-    }
+    this.validateTransition(ticket.status, 'voided', actorRoles);
+
+    // Persist reason in meta so it survives without a schema migration
+    const existingMeta = (ticket.meta ?? {}) as Record<string, unknown>;
+    const updatedMeta = {
+      ...existingMeta,
+      voidReason: reason,
+      voidedAt: new Date().toISOString(),
+    };
+
     const voided = await this.prisma.ticket.update({
       where: { id },
-      data: { status: 'voided' },
+      data: { status: 'voided', meta: updatedMeta },
     });
 
     this.audit.log({
@@ -231,7 +318,7 @@ export class TicketsService {
       action: AuditAction.TICKET_VOIDED,
       entity: 'ticket',
       entityId: id,
-      detail: { code: ticket.code },
+      detail: { code: ticket.code, reason },
     });
 
     // Fire outgoing webhook: ticket.voided
@@ -258,10 +345,17 @@ export class TicketsService {
   }
 
   /**
-   * Mark a ticket as checked in. Updates status and checkedInAt.
-   * Used by the check-in module after validation.
+   * Mark a ticket as checked in. Validates that the ticket is in `valid` state
+   * before updating to `used`. Used by the check-in module after QR validation.
    */
   async markCheckedIn(id: string) {
+    // Fetch first so we can run the transition guard
+    const ticket = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) throw new NotFoundException(`Ticket ${id} not found`);
+
+    // Transition guard — check-in staff can only move valid → used
+    this.validateTransition(ticket.status, 'used', ['event_admin']);
+
     return this.prisma.ticket.update({
       where: { id },
       data: {
