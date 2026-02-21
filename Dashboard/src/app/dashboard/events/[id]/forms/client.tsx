@@ -117,6 +117,7 @@ export default function FormsPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [repoError, setRepoError] = useState('');
 
   // Drag state
   const dragIdx = useRef<number | null>(null);
@@ -139,7 +140,10 @@ export default function FormsPage() {
       const data = await api.getFieldRepository();
       setRepoFields(data);
       setRepoLoaded(true);
-    } catch { /* ignore */ }
+      setRepoError('');
+    } catch (err: unknown) {
+      setRepoError(err instanceof Error ? err.message : 'Failed to load field repository. Please ensure the database is up to date.');
+    }
   }, [repoLoaded]);
 
   useEffect(() => { loadSchemas(); }, [loadSchemas]);
@@ -147,8 +151,8 @@ export default function FormsPage() {
   // ── Builder actions ─────────────────────────────────
 
   const openBuilder = async () => {
-    await loadRepo();
     setShowBuilder(true);
+    await loadRepo();
   };
 
   // Seed default fields when repo loads and builder is open
@@ -300,28 +304,25 @@ export default function FormsPage() {
         </button>
       </div>
 
-      {/* ────────── Builder full-page overlay ────────── */}
+      {/* ────────── Builder (inline) ────────── */}
       {showBuilder && (
-        <div className="fixed inset-0 z-50 flex bg-black/50">
+        <div className="flex gap-0 rounded-xl" style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', boxShadow: 'var(--shadow-sm)' }}>
           {/* Main builder panel */}
-          <div
-            className="relative flex flex-1 flex-col overflow-hidden"
-            style={{ background: 'var(--color-bg)', maxWidth: showPicker ? 'calc(100% - 340px)' : '100%' }}
-          >
+          <div className="flex flex-1 flex-col overflow-hidden" style={{ minHeight: '60vh' }}>
             {/* Builder top bar */}
             <div
-              className="flex items-center justify-between border-b px-6 py-4"
-              style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-card)' }}
+              className="flex items-center justify-between border-b px-5 py-3"
+              style={{ borderColor: 'var(--color-border)' }}
             >
-              <div className="flex items-center gap-4">
-                <button onClick={resetBuilder} className="rounded p-1 transition-colors hover:opacity-70" style={{ color: 'var(--color-text-secondary)' }}>
-                  <Icons.X size={20} />
-                </button>
-                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{t('forms.newRegistrationForm')}</h2>
-              </div>
               <div className="flex items-center gap-3">
+                <button onClick={resetBuilder} className="rounded p-1 transition-colors hover:opacity-70" style={{ color: 'var(--color-text-secondary)' }}>
+                  <Icons.ArrowLeft size={18} />
+                </button>
+                <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>{t('forms.newRegistrationForm')}</h2>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowPicker(!showPicker)}
+                  onClick={() => { setShowPicker(!showPicker); if (!repoLoaded) loadRepo(); }}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
                   style={{
                     background: showPicker ? 'var(--color-primary)' : 'var(--color-bg-subtle)',
@@ -335,7 +336,7 @@ export default function FormsPage() {
                 <button
                   onClick={handleCreate}
                   disabled={saving}
-                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+                  className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                   style={{ background: 'var(--color-primary)' }}
                 >
                   {saving ? t('common.saving') : t('forms.createForm')}
@@ -345,13 +346,13 @@ export default function FormsPage() {
 
             {/* Error bar */}
             {error && (
-              <div className="mx-6 mt-4 rounded-lg px-4 py-2 text-sm" style={{ background: 'var(--color-danger-light)', color: 'var(--color-danger)' }}>
+              <div className="mx-5 mt-3 rounded-lg px-4 py-2 text-sm" style={{ background: 'var(--color-danger-light)', color: 'var(--color-danger)' }}>
                 {error}
               </div>
             )}
 
             {/* Form name */}
-            <div className="px-6 pt-5 pb-3">
+            <div className="px-5 pt-4 pb-2">
               <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 {t('forms.formName')}
               </label>
@@ -365,7 +366,7 @@ export default function FormsPage() {
             </div>
 
             {/* Field list header */}
-            <div className="flex items-center justify-between px-6 pb-2">
+            <div className="flex items-center justify-between px-5 pb-2">
               <label className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 {t('forms.fields')} ({fields.length})
               </label>
@@ -379,14 +380,14 @@ export default function FormsPage() {
             </div>
 
             {/* ── Field grid / preview ── */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="flex-1 overflow-y-auto px-5 pb-5">
               {fields.length === 0 ? (
                 <div
-                  className="flex flex-col items-center justify-center rounded-xl py-16"
+                  className="flex flex-col items-center justify-center rounded-xl py-12"
                   style={{ border: '2px dashed var(--color-border)', background: 'var(--color-bg-subtle)' }}
                 >
-                  <Icons.Clipboard size={36} style={{ color: 'var(--color-text-muted)', opacity: 0.4 }} />
-                  <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.emptyState')}</p>
+                  <Icons.Clipboard size={32} style={{ color: 'var(--color-text-muted)', opacity: 0.3 }} />
+                  <p className="mt-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.emptyState')}</p>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">
@@ -481,76 +482,85 @@ export default function FormsPage() {
 
           {/* ────────── Field Repository Picker sidebar ────────── */}
           {showPicker && (
-            <div className="flex w-[340px] flex-col border-l" style={{ background: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}>
+            <div className="flex w-[300px] flex-col border-l" style={{ borderColor: 'var(--color-border)' }}>
               <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
                 <h3 className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{t('forms.fieldRepository')}</h3>
                 <button onClick={() => setShowPicker(false)} className="rounded p-1 hover:opacity-70" style={{ color: 'var(--color-text-secondary)' }}>
                   <Icons.X size={16} />
                 </button>
               </div>
-              <div className="px-4 py-3">
-                <div className="relative">
-                  <Icons.Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
-                  <input
-                    value={pickerSearch}
-                    onChange={(e) => setPickerSearch(e.target.value)}
-                    placeholder={t('forms.searchFields')}
-                    className="w-full rounded-lg py-1.5 pl-8 pr-3 text-sm"
-                    style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                  />
+              {repoError ? (
+                <div className="p-4 text-center">
+                  <p className="text-sm" style={{ color: 'var(--color-danger)' }}>{repoError}</p>
+                  <button onClick={() => { setRepoError(''); setRepoLoaded(false); loadRepo(); }} className="mt-2 text-xs font-medium" style={{ color: 'var(--color-primary)' }}>Retry</button>
                 </div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-2 pb-4">
-                {filteredGroups.map(({ group, defs }) => {
-                  const isExpanded = expandedGroups.has(group);
-                  return (
-                    <div key={group} className="mb-1">
-                      <button
-                        onClick={() => toggleGroup(group)}
-                        className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-white/5"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        <span className="transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : '' }}>
-                          <Icons.ChevronRight size={12} />
-                        </span>
-                        {t(GROUP_KEYS[group] ?? group)} ({defs.length})
-                      </button>
-                      {isExpanded && (
-                        <div className="space-y-0.5 px-1 pb-1">
-                          {defs.map((fd) => {
-                            const used = isFieldUsed(fd.slug);
-                            return (
-                              <button
-                                key={fd.id}
-                                onClick={() => !used && addFieldFromRepo(fd)}
-                                disabled={used}
-                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors"
-                                style={{ color: used ? 'var(--color-text-muted)' : 'var(--color-text)', opacity: used ? 0.5 : 1, cursor: used ? 'default' : 'pointer' }}
-                                onMouseEnter={(e) => !used && (e.currentTarget.style.background = 'var(--color-bg-muted)')}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-                              >
-                                <Icons.Plus size={12} style={{ color: used ? 'var(--color-text-muted)' : 'var(--color-primary)', flexShrink: 0 }} />
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate font-medium">{resolveLabel(fd.label, locale)}</div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{fd.slug}</span>
-                                    <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>·</span>
-                                    <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{fd.type}</span>
-                                  </div>
-                                </div>
-                                {used && <Icons.CheckCircle size={12} style={{ color: 'var(--color-success)', flexShrink: 0 }} />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+              ) : (
+                <>
+                  <div className="px-4 py-3">
+                    <div className="relative">
+                      <Icons.Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-muted)' }} />
+                      <input
+                        value={pickerSearch}
+                        onChange={(e) => setPickerSearch(e.target.value)}
+                        placeholder={t('forms.searchFields')}
+                        className="w-full rounded-lg py-1.5 pl-8 pr-3 text-sm"
+                        style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                      />
                     </div>
-                  );
-                })}
-                {filteredGroups.length === 0 && (
-                  <p className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.noFieldsMatch')}</p>
-                )}
-              </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-2 pb-4">
+                    {filteredGroups.map(({ group, defs }) => {
+                      const isExpanded = expandedGroups.has(group);
+                      return (
+                        <div key={group} className="mb-1">
+                          <button
+                            onClick={() => toggleGroup(group)}
+                            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-white/5"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            <span className="transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : '' }}>
+                              <Icons.ChevronRight size={12} />
+                            </span>
+                            {t(GROUP_KEYS[group] ?? group)} ({defs.length})
+                          </button>
+                          {isExpanded && (
+                            <div className="space-y-0.5 px-1 pb-1">
+                              {defs.map((fd) => {
+                                const used = isFieldUsed(fd.slug);
+                                return (
+                                  <button
+                                    key={fd.id}
+                                    onClick={() => !used && addFieldFromRepo(fd)}
+                                    disabled={used}
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors"
+                                    style={{ color: used ? 'var(--color-text-muted)' : 'var(--color-text)', opacity: used ? 0.5 : 1, cursor: used ? 'default' : 'pointer' }}
+                                    onMouseEnter={(e) => !used && (e.currentTarget.style.background = 'var(--color-bg-muted)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                                  >
+                                    <Icons.Plus size={12} style={{ color: used ? 'var(--color-text-muted)' : 'var(--color-primary)', flexShrink: 0 }} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="truncate font-medium">{resolveLabel(fd.label, locale)}</div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{fd.slug}</span>
+                                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>·</span>
+                                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{fd.type}</span>
+                                      </div>
+                                    </div>
+                                    {used && <Icons.CheckCircle size={12} style={{ color: 'var(--color-success)', flexShrink: 0 }} />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {filteredGroups.length === 0 && (
+                      <p className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.noFieldsMatch')}</p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

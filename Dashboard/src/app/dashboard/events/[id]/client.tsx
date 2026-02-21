@@ -23,30 +23,30 @@ export default function EventOverviewPage() {
     if (!id || id === '_') return;
     const ac = new AbortController();
 
-    Promise.all([
-      api.getEvent(id, ac.signal),
-      api.getTicketTypes(id, ac.signal),
-      api.getOrders(id, ac.signal),
-      api.getCheckInStats(id, ac.signal).catch(() => ({ total: 0, today: 0, byTicketType: {} })),
-    ])
+    // Fetch independently so a single failure doesn't block the whole page
+    const evP = api.getEvent(id, ac.signal).catch(() => null);
+    const ttsP = api.getTicketTypes(id, ac.signal).catch(() => [] as TicketType[]);
+    const ordP = api.getOrders(id, ac.signal).catch(() => [] as any[]);
+    const ciP = api.getCheckInStats(id, ac.signal).catch(() => ({ total: 0, today: 0, byTicketType: {} }));
+
+    Promise.all([evP, ttsP, ordP, ciP])
       .then(([ev, tts, orders, checkInStats]) => {
-        setEvent(ev);
+        if (ev) setEvent(ev);
         setTicketTypes(tts);
-        const paidOrders = orders.filter((o) => o.status === 'paid');
+        const paidOrders = orders.filter((o: any) => o.status === 'paid');
         setStats({
           totalOrders: orders.length,
-          totalRevenue: paidOrders.reduce((sum, o) => sum + o.totalCents, 0),
+          totalRevenue: paidOrders.reduce((sum: number, o: any) => sum + o.totalCents, 0),
           ticketsSold: tts.reduce((sum, tt) => sum + (tt.sold ?? 0), 0),
           checkIns: checkInStats.total,
         });
       })
-      .catch(() => {})
       .finally(() => setLoading(false));
 
     return () => ac.abort();
   }, [id]);
 
-  if (loading || !event) {
+  if (loading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
@@ -56,6 +56,14 @@ export default function EventOverviewPage() {
             style={{ background: 'var(--color-bg-muted)' }}
           />
         ))}
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="rounded-xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Failed to load event details. Please try refreshing the page.</p>
       </div>
     );
   }
