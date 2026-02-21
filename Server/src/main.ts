@@ -62,6 +62,7 @@ async function bootstrap() {
         'https://www.swiss-robotics.org',
         'https://swissroboticsday.ch',
         'https://www.swissroboticsday.ch',
+        'https://tix.swiss-robotics.org',
       ],
       credentials: true,
     });
