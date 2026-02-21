@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { api, type SettingValue } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
+import { useI18n } from '@/i18n/i18n-provider';
 
 /** Group order for display. */
 const GROUP_ORDER = [
@@ -19,6 +20,7 @@ const GROUP_ORDER = [
 
 export default function SettingsPage() {
   const { hasRole } = useAuth();
+  const { t } = useI18n();
   const [settings, setSettings] = useState<SettingValue[]>([]);
   const [groups, setGroups] = useState<Record<string, SettingValue[]>>({});
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function SettingsPage() {
       setSettings(data.settings);
       setGroups(data.groups);
     } catch (err: any) {
-      setMessage({ type: 'error', text: err?.message ?? 'Failed to load settings' });
+      setMessage({ type: 'error', text: err?.message ?? t('settings.failedToLoad') });
     } finally {
       setLoading(false);
     }
@@ -71,13 +73,13 @@ export default function SettingsPage() {
           className="mt-4 text-lg font-medium"
           style={{ color: 'var(--color-text)' }}
         >
-          Access Denied
+          {t('settings.accessDenied')}
         </p>
         <p
           className="mt-1 text-sm"
           style={{ color: 'var(--color-text-muted)' }}
         >
-          Only Super Admins can access platform settings.
+          {t('settings.accessDeniedHint')}
         </p>
       </div>
     );
@@ -115,12 +117,12 @@ export default function SettingsPage() {
       if (result.requiresRestart) {
         setMessage({
           type: 'warning',
-          text: `${result.updated.length} setting(s) saved. Some changes require a server restart to take effect.`,
+          text: t('settings.savedWithRestart').replace('{count}', String(result.updated.length)),
         });
       } else {
         setMessage({
           type: 'success',
-          text: `${result.updated.length} setting(s) saved successfully.`,
+          text: t('settings.savedSuccess').replace('{count}', String(result.updated.length)),
         });
       }
 
@@ -130,7 +132,7 @@ export default function SettingsPage() {
     } catch (err: any) {
       setMessage({
         type: 'error',
-        text: err?.message ?? 'Failed to save settings',
+        text: err?.message ?? t('settings.failedToSave'),
       });
     } finally {
       setSaving(false);
@@ -169,14 +171,13 @@ export default function SettingsPage() {
             className="text-xl font-bold sm:text-2xl"
             style={{ color: 'var(--color-text)' }}
           >
-            Settings
+            {t('settings.title')}
           </h1>
           <p
             className="mt-1 text-sm"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Platform configuration — values stored in the database override .env
-            file settings
+            {t('settings.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -189,7 +190,7 @@ export default function SettingsPage() {
                 border: '1px solid var(--color-border)',
               }}
             >
-              Discard
+              {t('settings.discard')}
             </button>
           )}
           <button
@@ -198,7 +199,7 @@ export default function SettingsPage() {
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
             style={{ background: hasChanges ? 'var(--color-primary)' : 'var(--color-bg-muted)' }}
           >
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? t('common.saving') : t('common.saveChanges')}
           </button>
         </div>
       </div>
@@ -239,8 +240,7 @@ export default function SettingsPage() {
             border: '1px solid var(--color-primary)',
           }}
         >
-          You have {Object.keys(edits).length} unsaved change
-          {Object.keys(edits).length !== 1 ? 's' : ''}.
+          {t('settings.unsavedChanges').replace('{count}', String(Object.keys(edits).length))}
         </div>
       )}
 
@@ -269,17 +269,17 @@ export default function SettingsPage() {
         }}
       >
         <p className="mb-2 font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
-          Source indicators:
+          {t('settings.sourceIndicators')}
         </p>
         <div className="flex flex-wrap gap-4">
           <span>
-            <SourceBadge source="database" /> Stored in database (overrides .env)
+            <SourceBadge source="database" /> {t('settings.sourceDb')}
           </span>
           <span>
-            <SourceBadge source="env" /> Read from .env file
+            <SourceBadge source="env" /> {t('settings.sourceEnv')}
           </span>
           <span>
-            <SourceBadge source="default" /> Not configured
+            <SourceBadge source="default" /> {t('settings.sourceDefault')}
           </span>
         </div>
       </div>
@@ -365,6 +365,7 @@ function SettingRow({
   onChange: (value: string) => void;
   onToggleReveal: () => void;
 }) {
+  const { t } = useI18n();
   const currentValue = editValue ?? setting.value;
   const isEdited = editValue !== undefined;
   const isSensitive = setting.sensitive;
@@ -387,7 +388,7 @@ function SettingRow({
                 className="text-xs font-medium"
                 style={{ color: 'var(--color-error, #ef4444)' }}
               >
-                Required
+                {t('common.required')}
               </span>
             )}
           </div>
@@ -421,9 +422,9 @@ function SettingRow({
                   color: 'var(--color-text)',
                 }}
               >
-                <option value="">Not set</option>
-                <option value="true">true</option>
-                <option value="false">false</option>
+                <option value="">{t('settings.notSet')}</option>
+                <option value="true">{t('common.true')}</option>
+                <option value="false">{t('common.false')}</option>
               </select>
             ) : (
               <input
@@ -432,7 +433,7 @@ function SettingRow({
                 }
                 value={currentValue}
                 onChange={(e) => onChange(e.target.value)}
-                placeholder={setting.isSet ? '(unchanged)' : 'Not configured'}
+                placeholder={setting.isSet ? t('settings.unchangedPlaceholder') : t('settings.notConfiguredPlaceholder')}
                 className="w-full rounded-lg px-3 py-2 text-sm font-mono"
                 style={{
                   background: 'var(--color-bg-subtle)',
@@ -449,7 +450,7 @@ function SettingRow({
                 onClick={onToggleReveal}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
                 style={{ color: 'var(--color-text-muted)' }}
-                title={isRevealed ? 'Hide' : 'Reveal'}
+                title={isRevealed ? t('settings.hide') : t('settings.reveal')}
               >
                 {isRevealed ? <Icons.EyeOff size={14} /> : <Icons.Eye size={14} />}
               </button>
@@ -460,7 +461,7 @@ function SettingRow({
               className="mt-1 text-xs"
               style={{ color: 'var(--color-primary)' }}
             >
-              Modified — save to apply
+              {t('settings.modifiedHint')}
             </p>
           )}
         </div>
@@ -472,16 +473,17 @@ function SettingRow({
 // ── Source Badge ─────────────────────────────────────────────────
 
 function SourceBadge({ source }: { source: 'database' | 'env' | 'default' }) {
+  const { t } = useI18n();
   const styles: Record<string, { bg: string; color: string; label: string }> = {
     database: {
       bg: 'var(--color-success-bg, #d1fae5)',
       color: 'var(--color-success-text, #065f46)',
-      label: 'DB',
+      label: t('settings.badgeDb'),
     },
     env: {
       bg: 'var(--color-info-bg, #fde8e8)',
       color: 'var(--color-info-text, #a01f24)',
-      label: '.env',
+      label: t('settings.badgeEnv'),
     },
     default: {
       bg: 'var(--color-bg-muted, #f3f4f6)',

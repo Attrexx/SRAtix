@@ -33,7 +33,7 @@ export const LOCALE_FLAGS: Record<Locale, string> = {
   fr: '🇫🇷',
   de: '🇩🇪',
   it: '🇮🇹',
-  'zh-TW': '🇹🇼',
+  'zh-TW': '�🇳',
 };
 
 /** ISO 639-1 / BCP 47 codes mapped to our locale keys. */
@@ -42,7 +42,7 @@ export const BCP47_MAP: Record<Locale, string> = {
   fr: 'fr-CH',
   de: 'de-CH',
   it: 'it-CH',
-  'zh-TW': 'zh-Hant-TW',
+  'zh-TW': 'zh-Hant',
 };
 
 // ─── i18n types ─────────────────────────────────────────────────────────────

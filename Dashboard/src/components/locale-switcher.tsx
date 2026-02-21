@@ -10,7 +10,7 @@ const FLAG_CODES: Record<Locale, string> = {
   fr: 'fr',
   de: 'de',
   it: 'it',
-  'zh-TW': 'tw',
+  'zh-TW': 'cn',
 };
 
 function Flag({ locale, size = 18 }: { locale: Locale; size?: number }) {

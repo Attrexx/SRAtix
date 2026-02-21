@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -26,10 +27,26 @@ import { PrismaService } from '../prisma/prisma.service';
  *   - community:        Community tagging & matching
  */
 @Injectable()
-export class FieldRepositoryService {
+export class FieldRepositoryService implements OnModuleInit {
   private readonly logger = new Logger(FieldRepositoryService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Auto-seed field definitions on startup. Idempotent — skips existing slugs.
+   */
+  async onModuleInit() {
+    try {
+      const { created, skipped } = await this.seedDefaults();
+      if (created > 0) {
+        this.logger.log(`Field repository seeded: ${created} created, ${skipped} skipped`);
+      } else {
+        this.logger.debug(`Field repository up to date (${skipped} fields exist)`);
+      }
+    } catch (error) {
+      this.logger.warn('Failed to auto-seed field repository — will retry on next restart', error);
+    }
+  }
 
   /**
    * Get all field definitions, optionally filtered by group or system flag.

@@ -6,8 +6,10 @@ import { api, type TicketType, type Event } from '@/lib/api';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function TicketTypesPage() {
+  const { t } = useI18n();
   const eventId = useEventId();
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
@@ -36,7 +38,7 @@ export default function TicketTypesPage() {
       setEvent(ev);
       setTicketTypes(tts);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load ticket types');
+      toast.error(err instanceof Error ? err.message : t('tickets.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,7 @@ export default function TicketTypesPage() {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      setError('Name is required.');
+      setError(t('tickets.validation.nameRequired'));
       return;
     }
     setSaving(true);
@@ -108,7 +110,7 @@ export default function TicketTypesPage() {
       resetForm();
       await loadData();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save ticket type');
+      setError(err?.message ?? t('tickets.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +122,7 @@ export default function TicketTypesPage() {
       await api.updateTicketType(eventId, tt.id, { status: newStatus });
       await loadData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update ticket type status');
+      toast.error(err instanceof Error ? err.message : t('tickets.failedToUpdateStatus'));
     }
   };
 
@@ -146,10 +148,10 @@ export default function TicketTypesPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Ticket Types
+            {t('tickets.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {ticketTypes.length} ticket type{ticketTypes.length !== 1 ? 's' : ''} configured
+            {t('tickets.subtitle').replace('{count}', String(ticketTypes.length))}
           </p>
         </div>
         <button
@@ -160,7 +162,7 @@ export default function TicketTypesPage() {
             setShowCreate(true);
           }}
         >
-          + New Ticket Type
+          {t('tickets.newTicketType')}
         </button>
       </div>
 
@@ -175,10 +177,10 @@ export default function TicketTypesPage() {
         >
           <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Ticket size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-            No ticket types yet
+            {t('tickets.noTicketTypesYet')}
           </p>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Create ticket types to start selling.
+            {t('tickets.noTicketTypesHint')}
           </p>
           <button
             className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white"
@@ -188,7 +190,7 @@ export default function TicketTypesPage() {
               setShowCreate(true);
             }}
           >
-            + Create Ticket Type
+            {t('tickets.createFirstTicketType')}
           </button>
         </div>
       ) : (
@@ -222,14 +224,14 @@ export default function TicketTypesPage() {
                   )}
                   <div className="mt-2 flex flex-wrap gap-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                     <span className="inline-flex items-center gap-1">
-                      <Icons.DollarSign size={14} /> {tt.priceCents === 0 ? 'Free' : `${(tt.priceCents / 100).toFixed(2)} ${currency}`}
+                      <Icons.DollarSign size={14} /> {tt.priceCents === 0 ? t('common.free') : `${(tt.priceCents / 100).toFixed(2)} ${currency}`}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Icons.Ticket size={14} /> {tt.sold}{tt.quantity != null ? ` / ${tt.quantity}` : ''} sold
+                      <Icons.Ticket size={14} /> {tt.sold}{tt.quantity != null ? ` / ${tt.quantity}` : ''} {t('common.sold')}
                     </span>
-                    <span className="inline-flex items-center gap-1"><Icons.Package size={14} /> Max {tt.maxPerOrder}/order</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Package size={14} /> {t('tickets.maxPerOrder').replace('{max}', String(tt.maxPerOrder))}</span>
                     {tt.salesStart && (
-                      <span className="inline-flex items-center gap-1"><Icons.Clock size={14} /> Sales: {new Date(tt.salesStart).toLocaleDateString('en-CH')} — {tt.salesEnd ? new Date(tt.salesEnd).toLocaleDateString('en-CH') : '∞'}</span>
+                      <span className="inline-flex items-center gap-1"><Icons.Clock size={14} /> {tt.salesEnd ? t('tickets.salesPeriod').replace('{start}', new Date(tt.salesStart).toLocaleDateString('en-CH')).replace('{end}', new Date(tt.salesEnd).toLocaleDateString('en-CH')) : t('tickets.salesPeriodOpen').replace('{start}', new Date(tt.salesStart).toLocaleDateString('en-CH'))}</span>
                     )}
                   </div>
                   {tt.quantity != null && (
@@ -255,9 +257,9 @@ export default function TicketTypesPage() {
                       border: '1px solid var(--color-border)',
                       color: 'var(--color-text-secondary)',
                     }}
-                    title={tt.status === 'active' ? 'Pause sales' : 'Resume sales'}
+                    title={tt.status === 'active' ? t('tickets.pauseSales') : t('tickets.resumeSales')}
                   >
-                    {tt.status === 'active' ? <><Icons.Pause size={14} /> Pause</> : <><Icons.Play size={14} /> Resume</>}
+                    {tt.status === 'active' ? <><Icons.Pause size={14} /> {t('common.pause')}</> : <><Icons.Play size={14} /> {t('common.resume')}</>}
                   </button>
                   <button
                     onClick={() => openEdit(tt)}
@@ -267,7 +269,7 @@ export default function TicketTypesPage() {
                       color: 'var(--color-text-secondary)',
                     }}
                   >
-                    <span className="inline-flex items-center gap-1"><Icons.Edit size={14} /> Edit</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Edit size={14} /> {t('common.edit')}</span>
                   </button>
                 </div>
               </div>
@@ -301,7 +303,7 @@ export default function TicketTypesPage() {
               style={{ borderColor: 'var(--color-border)' }}
             >
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-                {editId ? 'Edit Ticket Type' : 'Create Ticket Type'}
+                {editId ? t('tickets.editTicketType') : t('tickets.createTicketType')}
               </h2>
               <button
                 onClick={() => { setShowCreate(false); resetForm(); }}
@@ -323,19 +325,19 @@ export default function TicketTypesPage() {
               )}
 
               <div className="space-y-4">
-                <Field label="Name *" value={formName} onChange={setFormName} placeholder="e.g. General Admission" />
-                <Field label="Description" value={formDescription} onChange={setFormDescription} placeholder="Optional description" />
+                <Field label={t('tickets.form.name')} value={formName} onChange={setFormName} placeholder={t('tickets.form.namePlaceholder')} />
+                <Field label={t('tickets.form.description')} value={formDescription} onChange={setFormDescription} placeholder={t('tickets.form.descriptionPlaceholder')} />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label={`Price (${currency})`} value={formPrice} onChange={setFormPrice} placeholder="0.00" type="number" />
-                  <Field label="Capacity" value={formCapacity} onChange={setFormCapacity} placeholder="Unlimited" type="number" />
+                  <Field label={t('tickets.form.price').replace('{currency}', currency)} value={formPrice} onChange={setFormPrice} placeholder={t('tickets.form.pricePlaceholder')} type="number" />
+                  <Field label={t('tickets.form.capacity')} value={formCapacity} onChange={setFormCapacity} placeholder={t('tickets.form.capacityPlaceholder')} type="number" />
                 </div>
 
-                <Field label="Max per Order" value={formMaxPerOrder} onChange={setFormMaxPerOrder} placeholder="10" type="number" />
+                <Field label={t('tickets.form.maxPerOrder')} value={formMaxPerOrder} onChange={setFormMaxPerOrder} placeholder={t('tickets.form.maxPerOrderPlaceholder')} type="number" />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Sales Start" value={formSalesStart} onChange={setFormSalesStart} type="datetime-local" />
-                  <Field label="Sales End" value={formSalesEnd} onChange={setFormSalesEnd} type="datetime-local" />
+                  <Field label={t('tickets.form.salesStart')} value={formSalesStart} onChange={setFormSalesStart} type="datetime-local" />
+                  <Field label={t('tickets.form.salesEnd')} value={formSalesEnd} onChange={setFormSalesEnd} type="datetime-local" />
                 </div>
               </div>
             </div>
@@ -349,7 +351,7 @@ export default function TicketTypesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-medium"
                 style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -357,7 +359,7 @@ export default function TicketTypesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                 style={{ background: 'var(--color-primary)' }}
               >
-                {saving ? 'Saving…' : editId ? 'Save Changes' : 'Create Ticket Type'}
+                {saving ? t('common.saving') : editId ? t('common.saveChanges') : t('tickets.createTicketType')}
               </button>
             </div>
           </div>

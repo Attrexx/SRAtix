@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type Event } from '@/lib/api';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/i18n-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { StatCard } from '@/components/stat-card';
 import { Icons } from '@/components/icons';
@@ -18,6 +19,7 @@ function generateSlug(name: string): string {
 
 export default function EventsPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -40,7 +42,7 @@ export default function EventsPage() {
       const data = await api.getEvents();
       setEvents(data);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load events');
+      toast.error(err instanceof Error ? err.message : t('events.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export default function EventsPage() {
 
   const handleCreate = async () => {
     if (!formName.trim() || !formStart || !formEnd) {
-      setError('Name, start date, and end date are required.');
+      setError(t('events.validationRequired'));
       return;
     }
     setCreating(true);
@@ -86,7 +88,7 @@ export default function EventsPage() {
       resetForm();
       router.push(`/dashboard/events/${event.id}/`);
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to create event');
+      setError(err?.message ?? t('events.failedToCreate'));
     } finally {
       setCreating(false);
     }
@@ -102,10 +104,10 @@ export default function EventsPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Events
+            {t('events.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Manage your ticketed events
+            {t('events.subtitle')}
           </p>
         </div>
         <button
@@ -116,7 +118,7 @@ export default function EventsPage() {
             setShowCreate(true);
           }}
         >
-          + New Event
+          {t('events.newEvent')}
         </button>
       </div>
 
@@ -124,22 +126,22 @@ export default function EventsPage() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Icons.Calendar size={20} />}
-          label="Total Events"
+          label={t('events.totalEvents')}
           value={events.length}
         />
         <StatCard
           icon={<Icons.Activity size={20} />}
-          label="Active Events"
+          label={t('events.activeEvents')}
           value={events.filter((e) => e.status === 'active' || e.status === 'published').length}
         />
         <StatCard
           icon={<Icons.Clock size={20} />}
-          label="Upcoming"
+          label={t('events.upcoming')}
           value={events.filter((e) => new Date(e.startDate) > new Date()).length}
         />
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
-          label="Completed"
+          label={t('events.completed')}
           value={events.filter((e) => e.status === 'completed' || (e.endDate && new Date(e.endDate) < new Date())).length}
         />
       </div>
@@ -155,10 +157,10 @@ export default function EventsPage() {
         >
           <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Calendar size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-            No events yet
+            {t('events.noEventsYet')}
           </p>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Create your first event to get started.
+            {t('events.noEventsHint')}
           </p>
           <button
             className="mt-4 rounded-lg px-4 py-2 text-sm font-semibold text-white"
@@ -168,7 +170,7 @@ export default function EventsPage() {
               setShowCreate(true);
             }}
           >
-            + Create Event
+            {t('events.createFirstEvent')}
           </button>
         </div>
       ) : (
@@ -209,7 +211,7 @@ export default function EventsPage() {
                 className="text-lg font-semibold"
                 style={{ color: 'var(--color-text)' }}
               >
-                Create Event
+                {t('events.createEvent')}
               </h2>
               <button
                 onClick={() => setShowCreate(false)}
@@ -238,7 +240,7 @@ export default function EventsPage() {
                 {/* Name */}
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Event Name *
+                    {t('events.form.eventName')}
                   </label>
                   <input
                     type="text"
@@ -247,7 +249,7 @@ export default function EventsPage() {
                       setFormName(e.target.value);
                       if (!slugManual) setFormSlug(generateSlug(e.target.value));
                     }}
-                    placeholder="e.g. Swiss Robotics Day 2026"
+                    placeholder={t('events.form.eventNamePlaceholder')}
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={{
                       background: 'var(--color-bg-subtle)',
@@ -260,7 +262,7 @@ export default function EventsPage() {
                 {/* Slug */}
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    URL Slug
+                    {t('events.form.urlSlug')}
                   </label>
                   <input
                     type="text"
@@ -269,7 +271,7 @@ export default function EventsPage() {
                       setFormSlug(e.target.value);
                       setSlugManual(true);
                     }}
-                    placeholder="auto-generated-from-name"
+                    placeholder={t('events.form.urlSlugPlaceholder')}
                     className="w-full rounded-lg px-3 py-2 text-sm font-mono"
                     style={{
                       background: 'var(--color-bg-subtle)',
@@ -283,7 +285,7 @@ export default function EventsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      Start Date *
+                      {t('events.form.startDate')}
                     </label>
                     <input
                       type="datetime-local"
@@ -299,7 +301,7 @@ export default function EventsPage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      End Date *
+                      {t('events.form.endDate')}
                     </label>
                     <input
                       type="datetime-local"
@@ -319,7 +321,7 @@ export default function EventsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      Timezone
+                      {t('events.form.timezone')}
                     </label>
                     <select
                       value={formTimezone}
@@ -331,16 +333,16 @@ export default function EventsPage() {
                         color: 'var(--color-text)',
                       }}
                     >
-                      <option value="Europe/Zurich">Europe/Zurich (CET)</option>
-                      <option value="Europe/Berlin">Europe/Berlin (CET)</option>
-                      <option value="Europe/Paris">Europe/Paris (CET)</option>
-                      <option value="Europe/London">Europe/London (GMT)</option>
-                      <option value="UTC">UTC</option>
+                      <option value="Europe/Zurich">{t('events.form.tz.zurich')}</option>
+                      <option value="Europe/Berlin">{t('events.form.tz.berlin')}</option>
+                      <option value="Europe/Paris">{t('events.form.tz.paris')}</option>
+                      <option value="Europe/London">{t('events.form.tz.london')}</option>
+                      <option value="UTC">{t('events.form.tz.utc')}</option>
                     </select>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      Currency
+                      {t('events.form.currency')}
                     </label>
                     <select
                       value={formCurrency}
@@ -352,10 +354,10 @@ export default function EventsPage() {
                         color: 'var(--color-text)',
                       }}
                     >
-                      <option value="CHF">CHF — Swiss Franc</option>
-                      <option value="EUR">EUR — Euro</option>
-                      <option value="USD">USD — US Dollar</option>
-                      <option value="GBP">GBP — British Pound</option>
+                      <option value="CHF">{t('events.form.cur.chf')}</option>
+                      <option value="EUR">{t('events.form.cur.eur')}</option>
+                      <option value="USD">{t('events.form.cur.usd')}</option>
+                      <option value="GBP">{t('events.form.cur.gbp')}</option>
                     </select>
                   </div>
                 </div>
@@ -363,13 +365,13 @@ export default function EventsPage() {
                 {/* Venue */}
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Venue
+                    {t('events.form.venue')}
                   </label>
                   <input
                     type="text"
                     value={formVenue}
                     onChange={(e) => setFormVenue(e.target.value)}
-                    placeholder="e.g. Bern Expo, Switzerland"
+                    placeholder={t('events.form.venuePlaceholder')}
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={{
                       background: 'var(--color-bg-subtle)',
@@ -382,13 +384,13 @@ export default function EventsPage() {
                 {/* Description */}
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Description
+                    {t('events.form.description')}
                   </label>
                   <textarea
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
                     rows={3}
-                    placeholder="Brief event description…"
+                    placeholder={t('events.form.descriptionPlaceholder')}
                     className="w-full resize-none rounded-lg px-3 py-2 text-sm"
                     style={{
                       background: 'var(--color-bg-subtle)',
@@ -413,7 +415,7 @@ export default function EventsPage() {
                   border: '1px solid var(--color-border)',
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleCreate}
@@ -421,7 +423,7 @@ export default function EventsPage() {
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                 style={{ background: 'var(--color-primary)' }}
               >
-                {creating ? 'Creating…' : 'Create Event'}
+                {creating ? t('events.creatingEvent') : t('events.createEventButton')}
               </button>
             </div>
           </div>
@@ -432,8 +434,9 @@ export default function EventsPage() {
 }
 
 function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
+  const { t, locale } = useI18n();
   const startDate = new Date(event.startDate);
-  const month = startDate.toLocaleString('en', { month: 'short' }).toUpperCase();
+  const month = startDate.toLocaleString(locale, { month: 'short' }).toUpperCase();
   const day = startDate.getDate();
 
   return (
@@ -486,7 +489,7 @@ function EventCard({ event, onClick }: { event: Event; onClick: () => void }) {
             className="mt-0.5 truncate text-sm"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            {event.venue ?? 'No venue set'}
+            {event.venue ?? t('events.noVenueSet')}
           </p>
           <div className="mt-2">
             <StatusBadge status={event.status} />

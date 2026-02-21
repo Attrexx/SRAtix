@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useSSEBuffer } from '@/lib/sse';
 import { StatCard } from '@/components/stat-card';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 interface CheckInEvent {
   ticketId: string;
@@ -25,6 +26,7 @@ interface CheckInStats {
 
 export default function CheckInLivePage() {
   const eventId = useEventId();
+  const { t } = useI18n();
   const [stats, setStats] = useState<CheckInStats>({ total: 0, today: 0, byTicketType: {} });
   const [totalTickets, setTotalTickets] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -81,10 +83,10 @@ export default function CheckInLivePage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Check-In Live
+            {t('checkin.title')}
           </h1>
           <p className="mt-1 flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Real-time check-in monitoring
+            {t('checkin.subtitle')}
             {isConnected ? (
               <span
                 className="inline-flex items-center gap-1 text-xs font-medium"
@@ -94,7 +96,7 @@ export default function CheckInLivePage() {
                   className="animate-pulse-live inline-block h-2 w-2 rounded-full"
                   style={{ background: 'var(--color-success)' }}
                 />
-                Connected
+                {t('common.connected')}
               </span>
             ) : (
               <span
@@ -102,7 +104,7 @@ export default function CheckInLivePage() {
                 style={{ color: 'var(--color-danger)' }}
               >
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: 'var(--color-danger)' }} />
-                Disconnected
+                {t('common.disconnected')}
               </span>
             )}
           </p>
@@ -118,7 +120,7 @@ export default function CheckInLivePage() {
             color: 'var(--color-text)',
           }}
         >
-                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
         </a>
       </div>
 
@@ -126,19 +128,19 @@ export default function CheckInLivePage() {
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
-          label="Total Check-Ins"
+          label={t('checkin.totalCheckIns')}
           value={(effectiveTotal ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.Ticket size={20} />}
-          label="Attendance Rate"
+          label={t('checkin.attendanceRate')}
           value={`${checkedInPct}%`}
-          trend={`${effectiveTotal} of ${totalTickets}`}
+          trend={t('checkin.attendanceOf').replace('{checkIns}', String(effectiveTotal)).replace('{total}', String(totalTickets))}
           trendUp
         />
         <StatCard
           icon={<Icons.BarChart size={20} />}
-          label="Today"
+          label={t('checkin.today')}
           value={(stats?.today ?? 0).toLocaleString()}
         />
       </div>
@@ -154,7 +156,7 @@ export default function CheckInLivePage() {
       >
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-            Capacity
+            {t('checkin.capacity')}
           </span>
           <span className="text-sm font-bold" style={{ color: 'var(--color-primary)' }}>
             {checkedInPct}%
@@ -193,10 +195,10 @@ export default function CheckInLivePage() {
           style={{ borderBottom: '1px solid var(--color-border)' }}
         >
           <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-            Live Feed
+            {t('checkin.liveFeed')}
           </h2>
           <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Last {liveCheckIns.length} check-ins
+            {t('checkin.lastCheckIns').replace('{count}', String(liveCheckIns.length))}
           </span>
         </div>
 
@@ -205,7 +207,7 @@ export default function CheckInLivePage() {
             <div className="px-5 py-12 text-center">
               <span className="text-4xl opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Activity size={48} /></span>
               <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                Waiting for check-ins...
+                {t('checkin.waitingForCheckIns')}
               </p>
             </div>
           ) : (

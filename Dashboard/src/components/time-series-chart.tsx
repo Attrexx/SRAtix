@@ -2,12 +2,13 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { type TimeSeriesPoint } from '@/lib/api';
+import { useI18n } from '@/i18n/i18n-provider';
 
 // ── Series Configuration ────────────────────────────────────────
 
 interface SeriesConfig {
   key: keyof Pick<TimeSeriesPoint, 'sales' | 'registrations' | 'memberships' | 'pageViews'>;
-  label: string;
+  labelKey: string;
   color: string;
   /** Transform the raw value for display (e.g. cents → CHF) */
   format: (v: number, currency: string) => string;
@@ -15,10 +16,10 @@ interface SeriesConfig {
   unit: 'currency' | 'count';
 }
 
-const SERIES: SeriesConfig[] = [
+const SERIES_CONFIG: SeriesConfig[] = [
   {
     key: 'sales',
-    label: 'Sales',
+    labelKey: 'analytics.chart.sales',
     color: '#22c55e', // green
     format: (v, cur) =>
       `${(v / 100).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${cur}`,
@@ -26,21 +27,21 @@ const SERIES: SeriesConfig[] = [
   },
   {
     key: 'registrations',
-    label: 'Registrations',
+    labelKey: 'analytics.chart.registrations',
     color: '#3b82f6', // blue
     format: (v) => v.toLocaleString(),
     unit: 'count',
   },
   {
     key: 'memberships',
-    label: 'SRA Memberships',
+    labelKey: 'analytics.chart.memberships',
     color: '#a855f7', // purple
     format: (v) => v.toLocaleString(),
     unit: 'count',
   },
   {
     key: 'pageViews',
-    label: 'Page Views',
+    labelKey: 'analytics.chart.pageViews',
     color: '#f97316', // orange
     format: (v) => v.toLocaleString(),
     unit: 'count',
@@ -53,15 +54,15 @@ export type RangePreset = '7d' | '30d' | 'year' | 'all' | 'today';
 
 interface RangeOption {
   key: RangePreset;
-  label: string;
+  labelKey: string;
 }
 
-const RANGE_OPTIONS: RangeOption[] = [
-  { key: 'today', label: 'Live / Today' },
-  { key: '7d', label: 'Past 7 days' },
-  { key: '30d', label: 'Past 30 days' },
-  { key: 'year', label: 'Current Year' },
-  { key: 'all', label: 'Since 1st Sale' },
+const RANGE_CONFIG: RangeOption[] = [
+  { key: 'today', labelKey: 'analytics.range.today' },
+  { key: '7d', labelKey: 'analytics.range.7d' },
+  { key: '30d', labelKey: 'analytics.range.30d' },
+  { key: 'year', labelKey: 'analytics.range.year' },
+  { key: 'all', labelKey: 'analytics.range.all' },
 ];
 
 export function computeDateRange(
@@ -114,8 +115,19 @@ export function TimeSeriesChart({
   onRangeChange,
   loading,
 }: TimeSeriesChartProps) {
+  const { t } = useI18n();
+
+  const series = useMemo(
+    () => SERIES_CONFIG.map((s) => ({ ...s, label: t(s.labelKey) })),
+    [t],
+  );
+  const rangeOptions = useMemo(
+    () => RANGE_CONFIG.map((r) => ({ ...r, label: t(r.labelKey) })),
+    [t],
+  );
+
   const [enabledSeries, setEnabledSeries] = useState<Set<string>>(
-    new Set(SERIES.map((s) => s.key)),
+    new Set(SERIES_CONFIG.map((s) => s.key)),
   );
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -135,8 +147,8 @@ export function TimeSeriesChart({
 
   // Filter enabled series configs
   const activeSeries = useMemo(
-    () => SERIES.filter((s) => enabledSeries.has(s.key)),
-    [enabledSeries],
+    () => series.filter((s) => enabledSeries.has(s.key)),
+    [enabledSeries, series],
   );
 
   // Compute scales
@@ -268,10 +280,10 @@ export function TimeSeriesChart({
           className="text-lg font-semibold"
           style={{ color: 'var(--color-text)' }}
         >
-          Performance Overview
+          {t('analytics.performanceOverview')}
         </h2>
         <div className="flex flex-wrap gap-1">
-          {RANGE_OPTIONS.map((opt) => (
+          {rangeOptions.map((opt) => (
             <button
               key={opt.key}
               onClick={() => onRangeChange(opt.key)}
@@ -302,7 +314,7 @@ export function TimeSeriesChart({
         className="flex flex-wrap gap-3 border-b px-5 py-3"
         style={{ borderColor: 'var(--color-border)' }}
       >
-        {SERIES.map((s) => {
+        {series.map((s) => {
           const active = enabledSeries.has(s.key);
           return (
             <button
@@ -339,7 +351,7 @@ export function TimeSeriesChart({
         {data.length === 0 && !loading ? (
           <div className="flex h-[300px] items-center justify-center">
             <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              No data available for this date range.
+              {t('analytics.noDataForRange')}
             </p>
           </div>
         ) : (

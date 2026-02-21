@@ -7,8 +7,10 @@ import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { useSSE } from '@/lib/sse';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function OrdersPage() {
+  const { t } = useI18n();
   const eventId = useEventId();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,19 +59,21 @@ export default function OrdersPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Orders
+            {t('orders.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {orders.length} order{orders.length !== 1 ? 's' : ''}
-            {totalRevenue > 0 &&
-              ` · ${(totalRevenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 })} CHF revenue`}
+            {totalRevenue > 0
+              ? t('orders.revenueSubtitle')
+                  .replace('{count}', String(orders.length))
+                  .replace('{revenue}', (totalRevenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 }))
+              : t('orders.subtitle').replace('{count}', String(orders.length))}
             {isConnected && (
               <span
                 className="ml-2 inline-flex items-center gap-1 text-xs"
                 style={{ color: 'var(--color-success)' }}
               >
                 <span className="animate-pulse-live inline-block h-2 w-2 rounded-full" style={{ background: 'var(--color-success)' }} />
-                Live
+                {t('common.live')}
               </span>
             )}
           </p>
@@ -85,29 +89,29 @@ export default function OrdersPage() {
             color: 'var(--color-text)',
           }}
         >
-                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
         </a>
       </div>
 
       <DataTable<Order & Record<string, unknown>>
         columns={[
-          { key: 'orderNumber', header: 'Order #' },
-          { key: 'customerName', header: 'Customer' },
-          { key: 'customerEmail', header: 'Email' },
+          { key: 'orderNumber', header: t('orders.column.orderNumber') },
+          { key: 'customerName', header: t('orders.column.customer') },
+          { key: 'customerEmail', header: t('orders.column.email') },
           {
             key: 'totalCents',
-            header: 'Total',
+            header: t('orders.column.total'),
             render: (row) =>
               `${((row.totalCents as number) / 100).toFixed(2)} ${row.currency}`,
           },
           {
             key: 'status',
-            header: 'Status',
+            header: t('orders.column.status'),
             render: (row) => <StatusBadge status={row.status as string} />,
           },
           {
             key: 'createdAt',
-            header: 'Date',
+            header: t('orders.column.date'),
             render: (row) =>
               new Date(row.createdAt as string).toLocaleDateString('en-CH', {
                 day: '2-digit',
@@ -120,7 +124,7 @@ export default function OrdersPage() {
         ]}
         data={orders as (Order & Record<string, unknown>)[]}
         searchKeys={['orderNumber', 'customerName', 'customerEmail']}
-        emptyMessage="No orders yet."
+        emptyMessage={t('orders.empty')}
       />
     </div>
   );

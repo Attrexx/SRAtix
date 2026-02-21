@@ -4,32 +4,34 @@ import { useEventId } from '@/hooks/use-event-id';
 import { api } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function ExportPage() {
   const eventId = useEventId();
+  const { t } = useI18n();
 
   const exports: { label: string; description: string; icon: ReactNode; url: string }[] = [
     {
-      label: 'Attendees',
-      description: 'Name, email, phone, company, ticket codes',
+      label: t('export.attendees'),
+      description: t('export.attendeesDesc'),
       icon: <Icons.Users size={28} />,
       url: api.exportAttendees(eventId),
     },
     {
-      label: 'Orders',
-      description: 'Order number, status, customer info, line items, Stripe ref',
+      label: t('export.orders'),
+      description: t('export.ordersDesc'),
       icon: <Icons.ShoppingCart size={28} />,
       url: api.exportOrders(eventId),
     },
     {
-      label: 'Check-Ins',
-      description: 'Ticket code, type, attendee, method, direction, timestamp',
+      label: t('export.checkIns'),
+      description: t('export.checkInsDesc'),
       icon: <Icons.CheckCircle size={28} />,
       url: api.exportCheckIns(eventId),
     },
     {
-      label: 'Form Submissions',
-      description: 'Registration form answers, custom field responses',
+      label: t('export.formSubmissions'),
+      description: t('export.formSubmissionsDesc'),
       icon: <Icons.FileText size={28} />,
       url: api.exportFormSubmissions(eventId),
     },
@@ -39,10 +41,10 @@ export default function ExportPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-          Data Export
+          {t('export.title')}
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Download event data as CSV files (Excel-compatible with UTF-8 BOM)
+          {t('export.subtitle')}
         </p>
       </div>
 
@@ -82,7 +84,7 @@ export default function ExportPage() {
               className="mt-3 inline-flex items-center gap-1 text-sm font-medium"
               style={{ color: 'var(--color-primary)' }}
             >
-                            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Download CSV</span>
+                            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.downloadCsv')}</span>
             </span>
           </a>
         ))}

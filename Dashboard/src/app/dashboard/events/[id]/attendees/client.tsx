@@ -5,8 +5,10 @@ import { useEventId } from '@/hooks/use-event-id';
 import { api, type Attendee } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function AttendeesPage() {
+  const { t } = useI18n();
   const eventId = useEventId();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,8 +67,8 @@ export default function AttendeesPage() {
   };
 
   const handleSave = async () => {
-    if (!fFirst.trim() || !fLast.trim()) { setError('First and last name are required.'); return; }
-    if (!fEmail.trim()) { setError('Email is required.'); return; }
+    if (!fFirst.trim() || !fLast.trim()) { setError(t('attendees.validation.nameRequired')); return; }
+    if (!fEmail.trim()) { setError(t('attendees.validation.emailRequired')); return; }
     setSaving(true);
     setError(null);
 
@@ -88,7 +90,7 @@ export default function AttendeesPage() {
       resetForm();
       await loadData();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save attendee');
+      setError(err?.message ?? t('attendees.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -113,10 +115,10 @@ export default function AttendeesPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Attendees
+            {t('attendees.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {attendees.length} registered attendee{attendees.length !== 1 ? 's' : ''}
+            {t('attendees.subtitle').replace('{count}', String(attendees.length))}
           </p>
         </div>
         <div className="flex gap-2">
@@ -131,14 +133,14 @@ export default function AttendeesPage() {
               color: 'var(--color-text)',
             }}
           >
-                        <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> Export CSV</span>
+                        <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
           </a>
           <button
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
             style={{ background: 'var(--color-primary)' }}
             onClick={openCreate}
           >
-            + Add Attendee
+            {t('attendees.addAttendee')}
           </button>
         </div>
       </div>
@@ -147,7 +149,7 @@ export default function AttendeesPage() {
         columns={[
           {
             key: 'firstName',
-            header: 'Name',
+            header: t('attendees.column.name'),
             render: (row) => (
               <span
                 className="cursor-pointer font-medium hover:underline"
@@ -157,12 +159,12 @@ export default function AttendeesPage() {
               </span>
             ),
           },
-          { key: 'email', header: 'Email' },
-          { key: 'phone', header: 'Phone' },
-          { key: 'company', header: 'Company' },
+          { key: 'email', header: t('attendees.column.email') },
+          { key: 'phone', header: t('attendees.column.phone') },
+          { key: 'company', header: t('attendees.column.company') },
           {
             key: 'createdAt',
-            header: 'Registered',
+            header: t('attendees.column.registered'),
             render: (row) =>
               new Date(row.createdAt as string).toLocaleDateString('en-CH', {
                 day: '2-digit',
@@ -186,7 +188,7 @@ export default function AttendeesPage() {
         ]}
         data={attendees as (Attendee & Record<string, unknown>)[]}
         searchKeys={['firstName', 'lastName', 'email', 'company']}
-        emptyMessage="No attendees registered yet."
+        emptyMessage={t('attendees.empty')}
       />
 
       {/* ── Create / Edit Modal ── */}
@@ -211,7 +213,7 @@ export default function AttendeesPage() {
               style={{ borderColor: 'var(--color-border)' }}
             >
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-                {editAttendee ? 'Edit Attendee' : 'Add Attendee'}
+                {editAttendee ? t('attendees.editAttendee') : t('attendees.addAttendeeModal')}
               </h2>
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
@@ -234,12 +236,12 @@ export default function AttendeesPage() {
 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <FieldInput label="First Name *" value={fFirst} onChange={setFFirst} placeholder="Jane" />
-                  <FieldInput label="Last Name *" value={fLast} onChange={setFLast} placeholder="Doe" />
+                  <FieldInput label={t('attendees.form.firstName')} value={fFirst} onChange={setFFirst} placeholder={t('attendees.form.firstNamePlaceholder')} />
+                  <FieldInput label={t('attendees.form.lastName')} value={fLast} onChange={setFLast} placeholder={t('attendees.form.lastNamePlaceholder')} />
                 </div>
-                <FieldInput label="Email *" value={fEmail} onChange={setFEmail} placeholder="jane@example.com" type="email" />
-                <FieldInput label="Phone" value={fPhone} onChange={setFPhone} placeholder="+41 79 123 45 67" type="tel" />
-                <FieldInput label="Company" value={fCompany} onChange={setFCompany} placeholder="Acme AG" />
+                <FieldInput label={t('attendees.form.email')} value={fEmail} onChange={setFEmail} placeholder={t('attendees.form.emailPlaceholder')} type="email" />
+                <FieldInput label={t('attendees.form.phone')} value={fPhone} onChange={setFPhone} placeholder={t('attendees.form.phonePlaceholder')} type="tel" />
+                <FieldInput label={t('attendees.form.company')} value={fCompany} onChange={setFCompany} placeholder={t('attendees.form.companyPlaceholder')} />
               </div>
             </div>
 
@@ -252,7 +254,7 @@ export default function AttendeesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-medium"
                 style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -260,7 +262,7 @@ export default function AttendeesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                 style={{ background: 'var(--color-primary)' }}
               >
-                {saving ? 'Saving…' : editAttendee ? 'Save Changes' : 'Add Attendee'}
+                {saving ? t('common.saving') : editAttendee ? t('common.saveChanges') : t('attendees.addAttendeeModal')}
               </button>
             </div>
           </div>

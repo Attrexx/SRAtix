@@ -6,8 +6,10 @@ import { api, type Event, type TicketType } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function EventOverviewPage() {
+  const { t } = useI18n();
   const id = useEventId();
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
@@ -63,7 +65,7 @@ export default function EventOverviewPage() {
   if (!event) {
     return (
       <div className="rounded-xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Failed to load event details. Please try refreshing the page.</p>
+        <p style={{ color: 'var(--color-text-muted)' }}>{t('events.overview.failedToLoad')}</p>
       </div>
     );
   }
@@ -96,30 +98,30 @@ export default function EventOverviewPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Icons.Ticket size={20} />}
-          label="Tickets Sold"
+          label={t('events.overview.ticketsSold')}
           value={(stats.ticketsSold ?? 0).toLocaleString()}
-          trend={capacity > 0 ? `${capacityPct}% of capacity` : undefined}
+          trend={capacity > 0 ? t('events.overview.capacityPercent').replace('{pct}', String(capacityPct)) : undefined}
           trendUp={capacityPct < 90}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}
-          label="Orders"
+          label={t('events.overview.orders')}
           value={(stats.totalOrders ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.DollarSign size={20} />}
-          label="Revenue"
+          label={t('events.overview.revenue')}
           value={`${((stats.totalRevenue ?? 0) / 100).toLocaleString('de-CH', {
             minimumFractionDigits: 2,
           })} ${event.currency ?? 'CHF'}`}
         />
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
-          label="Check-Ins"
+          label={t('events.overview.checkIns')}
           value={(stats.checkIns ?? 0).toLocaleString()}
           trend={
             stats.ticketsSold > 0
-              ? `${Math.round(((stats.checkIns ?? 0) / stats.ticketsSold) * 100)}% checked in`
+              ? t('events.overview.checkedInPercent').replace('{pct}', String(Math.round(((stats.checkIns ?? 0) / stats.ticketsSold) * 100)))
               : undefined
           }
           trendUp
@@ -136,12 +138,12 @@ export default function EventOverviewPage() {
         }}
       >
         <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-          Ticket Types
+          {t('events.overview.ticketTypes')}
         </h2>
         <div className="space-y-3">
           {ticketTypes.length === 0 ? (
             <p className="py-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              No ticket types defined yet.
+              {t('events.overview.noTicketTypes')}
             </p>
           ) : (
             ticketTypes.map((tt) => {
@@ -167,8 +169,9 @@ export default function EventOverviewPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
-                      {sold}
-                      {cap > 0 ? ` / ${cap}` : ''} sold
+                      {cap > 0
+                        ? t('events.overview.soldOfCapacity').replace('{sold}', String(sold)).replace('{capacity}', String(cap))
+                        : t('events.overview.soldCount').replace('{sold}', String(sold))}
                     </p>
                     {cap > 0 && (
                       <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full" style={{ background: 'var(--color-bg-muted)' }}>

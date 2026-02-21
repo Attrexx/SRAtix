@@ -6,6 +6,7 @@ import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 const ALL_EVENT_TYPES = [
   'order.paid',
@@ -19,6 +20,7 @@ const ALL_EVENT_TYPES = [
 
 export default function WebhooksPage() {
   const id = useEventId();
+  const { t } = useI18n();
   const [eventId, setEventId] = useState('');
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [selectedEndpoint, setSelectedEndpoint] = useState<
@@ -49,7 +51,7 @@ export default function WebhooksPage() {
       );
       setEndpoints(data);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load webhooks');
+      toast.error(err instanceof Error ? err.message : t('webhooks.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -63,11 +65,11 @@ export default function WebhooksPage() {
     e.preventDefault();
     setFormError('');
     if (!newUrl.trim()) {
-      setFormError('URL is required');
+      setFormError(t('webhooks.urlRequired'));
       return;
     }
     if (newEvents.length === 0) {
-      setFormError('Select at least one event type');
+      setFormError(t('webhooks.selectEventType'));
       return;
     }
     try {
@@ -83,7 +85,7 @@ export default function WebhooksPage() {
       setShowCreate(false);
       loadEndpoints();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create endpoint');
+      setFormError(err instanceof Error ? err.message : t('webhooks.failedToCreate'));
     }
   };
 
@@ -93,14 +95,14 @@ export default function WebhooksPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this webhook endpoint? This cannot be undone.')) return;
+    if (!confirm(t('webhooks.confirmDelete'))) return;
     await api.deleteWebhookEndpoint(id);
     if (selectedEndpoint?.id === id) setSelectedEndpoint(null);
     loadEndpoints();
   };
 
   const handleRotateSecret = async (id: string) => {
-    if (!confirm('Rotate signing secret? The old secret will stop working immediately.')) return;
+    if (!confirm(t('webhooks.confirmRotate'))) return;
     const updated = await api.rotateWebhookSecret(id);
     setShowSecret(updated.secret);
     loadEndpoints();
@@ -145,10 +147,10 @@ export default function WebhooksPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Outgoing Webhooks
+            {t('webhooks.title')}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Notify external services when events occur (orders, check-ins, tickets).
+            {t('webhooks.subtitle')}
           </p>
         </div>
         <button
@@ -156,7 +158,7 @@ export default function WebhooksPage() {
           className="rounded-lg px-4 py-2 text-sm font-medium text-white"
           style={{ background: 'var(--color-primary)' }}
         >
-          {showCreate ? 'Cancel' : '+ Add Endpoint'}
+          {showCreate ? t('common.cancel') : t('webhooks.addEndpoint')}
         </button>
       </div>
 
@@ -166,7 +168,7 @@ export default function WebhooksPage() {
           className="rounded-lg p-4 text-sm"
           style={{ background: 'var(--color-success-bg, #f0fdf4)', border: '1px solid var(--color-success, #22c55e)' }}
         >
-          <p className="font-semibold mb-1">New Signing Secret (save this now — it won't be shown again):</p>
+          <p className="font-semibold mb-1">{t('webhooks.newSigningSecret')}</p>
           <code className="block p-2 rounded font-mono text-xs break-all" style={{ background: 'var(--color-bg)' }}>
             {showSecret}
           </code>
@@ -174,7 +176,7 @@ export default function WebhooksPage() {
             onClick={() => setShowSecret(null)}
             className="mt-2 text-xs underline"
           >
-            Dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       )}
@@ -187,18 +189,18 @@ export default function WebhooksPage() {
           style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
         >
           <h3 className="font-semibold text-lg" style={{ color: 'var(--color-text)' }}>
-            New Webhook Endpoint
+            {t('webhooks.newEndpoint')}
           </h3>
 
           <div>
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
-              Payload URL
+              {t('webhooks.payloadUrl')}
             </label>
             <input
               type="url"
               value={newUrl}
               onChange={(e) => setNewUrl(e.target.value)}
-              placeholder="https://your-site.com/wp-json/sratix/v1/webhook"
+              placeholder={t('webhooks.payloadUrlPlaceholder')}
               className="w-full rounded-lg px-3 py-2 text-sm"
               style={{
                 background: 'var(--color-bg)',
@@ -211,7 +213,7 @@ export default function WebhooksPage() {
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
-              Events to subscribe
+              {t('webhooks.eventsToSubscribe')}
             </label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {ALL_EVENT_TYPES.map((type) => (
@@ -247,7 +249,7 @@ export default function WebhooksPage() {
               className="rounded-lg px-4 py-2 text-sm font-medium text-white"
               style={{ background: 'var(--color-primary)' }}
             >
-              Create Endpoint
+              {t('webhooks.createEndpoint')}
             </button>
             <button
               type="button"
@@ -255,7 +257,7 @@ export default function WebhooksPage() {
               className="rounded-lg px-4 py-2 text-sm"
               style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -269,10 +271,10 @@ export default function WebhooksPage() {
         >
           <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Link size={40} /></span>
           <p className="font-medium" style={{ color: 'var(--color-text)' }}>
-            No webhook endpoints configured
+            {t('webhooks.noEndpoints')}
           </p>
           <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Add an endpoint to receive real-time notifications about orders, tickets, and check-ins.
+            {t('webhooks.noEndpointsHint')}
           </p>
         </div>
       ) : (
@@ -293,11 +295,11 @@ export default function WebhooksPage() {
                     <StatusBadge status={ep.active ? 'active' : 'inactive'} />
                     {ep.eventId ? (
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-bg)', color: 'var(--color-text-muted)' }}>
-                        Event-scoped
+                        {t('webhooks.eventScoped')}
                       </span>
                     ) : (
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-warning-bg, #fef3c7)', color: 'var(--color-warning, #d97706)' }}>
-                        Org-wide
+                        {t('webhooks.orgWide')}
                       </span>
                     )}
                   </div>
@@ -323,17 +325,17 @@ export default function WebhooksPage() {
                     onClick={() => handleViewDeliveries(ep)}
                     className="rounded px-3 py-1.5 text-xs"
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                    title="View delivery log"
+                    title={t('webhooks.viewDeliveryLog')}
                   >
-                                        <span className="inline-flex items-center gap-1"><Icons.FileText size={14} /> Log</span>
+                                        <span className="inline-flex items-center gap-1"><Icons.FileText size={14} /> {t('webhooks.log')}</span>
                   </button>
                   <button
                     onClick={() => handleRotateSecret(ep.id)}
                     className="rounded px-3 py-1.5 text-xs"
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                    title="Rotate signing secret"
+                    title={t('webhooks.rotateSigningSecret')}
                   >
-                                        <span className="inline-flex items-center gap-1"><Icons.Key size={14} /> Rotate</span>
+                                        <span className="inline-flex items-center gap-1"><Icons.Key size={14} /> {t('webhooks.rotate')}</span>
                   </button>
                   <button
                     onClick={() => handleToggleActive(ep)}
@@ -343,7 +345,7 @@ export default function WebhooksPage() {
                       color: ep.active ? 'var(--color-warning, #d97706)' : 'var(--color-success, #22c55e)',
                     }}
                   >
-                    {ep.active ? <><Icons.Pause size={14} /> Disable</> : <><Icons.Play size={14} /> Enable</>}
+                    {ep.active ? <><Icons.Pause size={14} /> {t('common.disable')}</> : <><Icons.Play size={14} /> {t('common.enable')}</>}
                   </button>
                   <button
                     onClick={() => handleDelete(ep.id)}
@@ -367,14 +369,14 @@ export default function WebhooksPage() {
         >
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-lg" style={{ color: 'var(--color-text)' }}>
-              Recent Deliveries
+              {t('webhooks.recentDeliveries')}
             </h3>
             <button
               onClick={() => setSelectedEndpoint(null)}
               className="text-sm"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              <span className="flex items-center gap-1"><Icons.X size={14} /> Close</span>
+              <span className="flex items-center gap-1"><Icons.X size={14} /> {t('common.close')}</span>
             </button>
           </div>
           <p className="text-xs font-mono" style={{ color: 'var(--color-text-muted)' }}>
@@ -383,7 +385,7 @@ export default function WebhooksPage() {
 
           {selectedEndpoint.deliveries.length === 0 ? (
             <p className="text-sm py-4 text-center" style={{ color: 'var(--color-text-muted)' }}>
-              No deliveries yet
+              {t('webhooks.noDeliveries')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -423,7 +425,7 @@ export default function WebhooksPage() {
                           color: 'var(--color-primary)',
                         }}
                       >
-                        ↻ Retry
+                        ↻ {t('common.retry')}
                       </button>
                     )}
                   </div>

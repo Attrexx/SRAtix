@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { api, type AppUser, type RoleDefinition } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 interface CreateFormData {
   email: string;
@@ -14,6 +15,7 @@ interface CreateFormData {
 
 export default function UsersPage() {
   const { hasRole } = useAuth();
+  const { t } = useI18n();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function UsersPage() {
         setUsers(u);
         setRoles(r);
       })
-      .catch(() => setError('Failed to load users'))
+      .catch(() => setError(t('users.failedToLoad')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -42,10 +44,10 @@ export default function UsersPage() {
       <div className="py-16 text-center">
         <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Lock size={48} /></span>
         <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-          Access Denied
+          {t('users.accessDenied')}
         </p>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          Only Super Admins can manage users.
+          {t('users.accessDeniedHint')}
         </p>
       </div>
     );
@@ -59,10 +61,10 @@ export default function UsersPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            User Management
+            {t('users.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Create and manage app accounts
+            {t('users.subtitle')}
           </p>
         </div>
         <button
@@ -70,7 +72,7 @@ export default function UsersPage() {
           style={{ background: 'var(--color-primary)' }}
           onClick={() => { setShowCreate(true); setEditingId(null); }}
         >
-          + New User
+          {t('users.newUser')}
         </button>
       </div>
 
@@ -113,7 +115,7 @@ export default function UsersPage() {
           roles={roles}
           onClose={() => setEditingId(null)}
           onSaved={() => {
-            setSuccess('User updated');
+            setSuccess(t('users.userUpdated'));
             setEditingId(null);
             loadData();
             setTimeout(() => setSuccess(''), 5000);
@@ -133,11 +135,11 @@ export default function UsersPage() {
         <table className="w-full text-left text-sm" style={{ minWidth: '640px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>User</th>
-              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Roles</th>
-              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Status</th>
-              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Last Login</th>
-              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>Actions</th>
+              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('users.column.user')}</th>
+              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('users.column.roles')}</th>
+              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('users.column.status')}</th>
+              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('users.column.lastLogin')}</th>
+              <th className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('users.column.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -155,7 +157,7 @@ export default function UsersPage() {
                     }
                     loadData();
                   } catch {
-                    setError('Failed to update user status');
+                    setError(t('users.failedToUpdateStatus'));
                   }
                 }}
               />
@@ -165,7 +167,7 @@ export default function UsersPage() {
 
         {users.length === 0 && (
           <div className="px-4 py-12 text-center">
-            <p style={{ color: 'var(--color-text-muted)' }}>No users yet. Create the first one.</p>
+            <p style={{ color: 'var(--color-text-muted)' }}>{t('users.noUsersYet')}</p>
           </div>
         )}
       </div>
@@ -184,6 +186,7 @@ function UserRow({
   onEdit: () => void;
   onToggleActive: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
       <td className="px-4 py-3">
@@ -224,14 +227,14 @@ function UserRow({
               : 'var(--color-danger)',
           }}
         >
-          {user.active ? 'Active' : 'Inactive'}
+          {user.active ? t('common.active') : t('common.inactive')}
         </span>
         {user.wpUserId && (
           <span
             className="ml-1 rounded-full px-2 py-0.5 text-xs"
             style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-muted)' }}
           >
-            WP
+            {t('users.badge.wp')}
           </span>
         )}
       </td>
@@ -244,7 +247,7 @@ function UserRow({
               hour: '2-digit',
               minute: '2-digit',
             })
-          : 'Never'}
+          : t('common.never')}
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
@@ -255,7 +258,7 @@ function UserRow({
             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-primary-light)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
-            Edit
+            {t('common.edit')}
           </button>
           <button
             onClick={onToggleActive}
@@ -268,7 +271,7 @@ function UserRow({
             }
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
-            {user.active ? 'Deactivate' : 'Activate'}
+            {user.active ? t('common.deactivate') : t('common.activate')}
           </button>
         </div>
       </td>
@@ -289,6 +292,7 @@ function CreateUserModal({
   onCreated: (msg: string) => void;
   onError: (msg: string) => void;
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<CreateFormData>({
     email: '',
     displayName: '',
@@ -311,7 +315,7 @@ function CreateUserModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.displayName || !form.password || form.roles.length === 0) {
-      onError('All fields are required');
+      onError(t('common.allFields'));
       return;
     }
     setSubmitting(true);
@@ -322,7 +326,7 @@ function CreateUserModal({
         : `User created: ${form.email}`;
       onCreated(credMsg);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to create user');
+      onError(err instanceof Error ? err.message : t('users.failedToCreate'));
     } finally {
       setSubmitting(false);
     }
@@ -347,7 +351,7 @@ function CreateUserModal({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-            Create User
+            {t('users.createUser')}
           </h2>
           <button onClick={onClose} className="text-xl leading-none" style={{ color: 'var(--color-text-muted)' }}>
             &times;
@@ -355,12 +359,12 @@ function CreateUserModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FieldInput label="Email" type="email" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} />
-          <FieldInput label="Display Name" value={form.displayName} onChange={(v) => setForm((f) => ({ ...f, displayName: v }))} />
+          <FieldInput label={t('users.form.email')} type="email" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} />
+          <FieldInput label={t('users.form.displayName')} value={form.displayName} onChange={(v) => setForm((f) => ({ ...f, displayName: v }))} />
 
           <div>
             <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              Password
+              {t('users.form.password')}
             </label>
             <div className="flex gap-2">
               <input
@@ -374,7 +378,7 @@ function CreateUserModal({
                   color: 'var(--color-text)',
                   fontFamily: 'monospace',
                 }}
-                placeholder="Min 8 characters"
+                placeholder={t('users.form.passwordPlaceholder')}
               />
               <button
                 type="button"
@@ -386,12 +390,12 @@ function CreateUserModal({
                   border: '1px solid var(--color-border)',
                 }}
               >
-                Generate
+                {t('common.generate')}
               </button>
             </div>
             {genPassword && (
               <p className="mt-1 text-xs font-mono" style={{ color: 'var(--color-primary)' }}>
-                Save this password — it won&apos;t be shown again
+                {t('users.form.savePasswordHint')}
               </p>
             )}
           </div>
@@ -399,7 +403,7 @@ function CreateUserModal({
           {/* Role selector */}
           <div>
             <label className="mb-2 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              Roles
+              {t('users.form.roles')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {roles.map((role) => (
@@ -429,7 +433,7 @@ function CreateUserModal({
               className="rounded-lg px-4 py-2 text-sm transition-colors"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -437,7 +441,7 @@ function CreateUserModal({
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               style={{ background: 'var(--color-primary)' }}
             >
-              {submitting ? 'Creating...' : 'Create User'}
+              {submitting ? t('common.creating') : t('users.createUser')}
             </button>
           </div>
         </form>
@@ -467,6 +471,7 @@ function EditUserModal({
   const [password, setPassword] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     api
@@ -477,8 +482,8 @@ function EditUserModal({
         setDisplayName(u.displayName);
         setSelectedRoles(u.roles);
       })
-      .catch(() => onError('Failed to load user'));
-  }, [userId, onError]);
+      .catch(() => onError(t('users.failedToLoadUser')));
+  }, [userId, onError, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -494,7 +499,7 @@ function EditUserModal({
       await api.updateUser(userId, data);
       onSaved();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to update user');
+      onError(err instanceof Error ? err.message : t('users.failedToUpdate'));
     } finally {
       setSubmitting(false);
     }
@@ -528,7 +533,7 @@ function EditUserModal({
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
-            Edit User
+            {t('users.editUser')}
           </h2>
           <button onClick={onClose} className="text-xl leading-none" style={{ color: 'var(--color-text-muted)' }}>
             &times;
@@ -536,20 +541,20 @@ function EditUserModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <FieldInput label="Email" type="email" value={email} onChange={setEmail} />
-          <FieldInput label="Display Name" value={displayName} onChange={setDisplayName} />
+          <FieldInput label={t('users.form.email')} type="email" value={email} onChange={setEmail} />
+          <FieldInput label={t('users.form.displayName')} value={displayName} onChange={setDisplayName} />
           <FieldInput
-            label="New Password (leave blank to keep current)"
+            label={t('users.form.newPassword')}
             type="password"
             value={password}
             onChange={setPassword}
-            placeholder="Enter new password"
+            placeholder={t('users.form.newPasswordPlaceholder')}
           />
 
           {/* Role selector */}
           <div>
             <label className="mb-2 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-              Roles
+              {t('users.form.roles')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {availableRoles.map((role) => (
@@ -574,7 +579,7 @@ function EditUserModal({
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -582,7 +587,7 @@ function EditUserModal({
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               style={{ background: 'var(--color-primary)' }}
             >
-              {submitting ? 'Saving...' : 'Save Changes'}
+              {submitting ? t('common.saving') : t('common.saveChanges')}
             </button>
           </div>
         </form>

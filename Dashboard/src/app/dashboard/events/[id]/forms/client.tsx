@@ -142,7 +142,7 @@ export default function FormsPage() {
       setRepoLoaded(true);
       setRepoError('');
     } catch (err: unknown) {
-      setRepoError(err instanceof Error ? err.message : 'Failed to load field repository. Please ensure the database is up to date.');
+      setRepoError(err instanceof Error ? err.message : t('forms.failedToLoadRepo'));
     }
   }, [repoLoaded]);
 
@@ -492,7 +492,7 @@ export default function FormsPage() {
               {repoError ? (
                 <div className="p-4 text-center">
                   <p className="text-sm" style={{ color: 'var(--color-danger)' }}>{repoError}</p>
-                  <button onClick={() => { setRepoError(''); setRepoLoaded(false); loadRepo(); }} className="mt-2 text-xs font-medium" style={{ color: 'var(--color-primary)' }}>Retry</button>
+                  <button onClick={() => { setRepoError(''); setRepoLoaded(false); loadRepo(); }} className="mt-2 text-xs font-medium" style={{ color: 'var(--color-primary)' }}>{t('common.retry')}</button>
                 </div>
               ) : (
                 <>
@@ -586,7 +586,7 @@ export default function FormsPage() {
                   <div>
                     <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{schema.name}</h3>
                     <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      v{schema.version} · {schemaFields.length} {schemaFields.length === 1 ? 'field' : 'fields'}
+                      v{schema.version} · {t('forms.fieldCount').replace('{count}', String(schemaFields.length))}
                     </p>
                   </div>
                   <span

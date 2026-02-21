@@ -6,8 +6,10 @@ import { api, type PromoCode } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function PromoCodesPage() {
+  const { t } = useI18n();
   const eventId = useEventId();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,8 +81,8 @@ export default function PromoCodesPage() {
   };
 
   const handleSave = async () => {
-    if (!fCode.trim()) { setError('Code is required.'); return; }
-    if (!fDiscountValue) { setError('Discount value is required.'); return; }
+    if (!fCode.trim()) { setError(t('promo.validation.codeRequired')); return; }
+    if (!fDiscountValue) { setError(t('promo.validation.discountRequired')); return; }
     setSaving(true);
     setError(null);
 
@@ -111,7 +113,7 @@ export default function PromoCodesPage() {
       resetForm();
       await loadData();
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to save promo code');
+      setError(err?.message ?? t('promo.failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -145,10 +147,10 @@ export default function PromoCodesPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Promo Codes
+            {t('promo.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {promoCodes.length} code{promoCodes.length !== 1 ? 's' : ''} configured
+            {t('promo.subtitle').replace('{count}', String(promoCodes.length))}
           </p>
         </div>
         <button
@@ -156,7 +158,7 @@ export default function PromoCodesPage() {
           style={{ background: 'var(--color-primary)' }}
           onClick={openCreate}
         >
-          + New Code
+          {t('promo.newCode')}
         </button>
       </div>
 
@@ -164,14 +166,14 @@ export default function PromoCodesPage() {
         columns={[
           {
             key: 'code',
-            header: 'Code',
+            header: t('promo.column.code'),
             render: (row) => (
               <span className="font-mono text-sm font-bold">{row.code}</span>
             ),
           },
           {
             key: 'discountType',
-            header: 'Discount',
+            header: t('promo.column.discount'),
             render: (row) =>
               row.discountType === 'percentage'
                 ? `${row.discountValue}%`
@@ -179,20 +181,20 @@ export default function PromoCodesPage() {
           },
           {
             key: 'usedCount',
-            header: 'Usage',
+            header: t('promo.column.usage'),
             render: (row) =>
               `${row.usedCount}${row.usageLimit ? ` / ${row.usageLimit}` : ''}`,
           },
           {
             key: 'active',
-            header: 'Status',
+            header: t('promo.column.status'),
             render: (row) => (
               <StatusBadge status={(row.active as boolean) ? 'active' : 'expired'} />
             ),
           },
           {
             key: 'validTo',
-            header: 'Expires',
+            header: t('promo.column.expires'),
             render: (row) =>
               row.validTo
                 ? new Date(row.validTo as string).toLocaleDateString('en-CH')
@@ -225,7 +227,7 @@ export default function PromoCodesPage() {
         ]}
         data={promoCodes as (PromoCode & Record<string, unknown>)[]}
         searchKeys={['code']}
-        emptyMessage="No promo codes yet."
+        emptyMessage={t('promo.empty')}
       />
 
       {/* ── Create / Edit Modal ── */}
@@ -250,7 +252,7 @@ export default function PromoCodesPage() {
               style={{ borderColor: 'var(--color-border)' }}
             >
               <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-                {editCode ? 'Edit Promo Code' : 'Create Promo Code'}
+                {editCode ? t('promo.editPromoCode') : t('promo.createPromoCode')}
               </h2>
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
@@ -272,13 +274,13 @@ export default function PromoCodesPage() {
               )}
 
               <div className="space-y-4">
-                <FieldInput label="Code *" value={fCode} onChange={setFCode} placeholder="e.g. EARLY20" />
-                <FieldInput label="Description" value={fDescription} onChange={setFDescription} placeholder="For early-bird attendees" />
+                <FieldInput label={t('promo.form.code')} value={fCode} onChange={setFCode} placeholder={t('promo.form.codePlaceholder')} />
+                <FieldInput label={t('promo.form.description')} value={fDescription} onChange={setFDescription} placeholder={t('promo.form.descriptionPlaceholder')} />
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      Discount Type
+                      {t('promo.form.discountType')}
                     </label>
                     <select
                       value={fDiscountType}
@@ -290,27 +292,27 @@ export default function PromoCodesPage() {
                         color: 'var(--color-text)',
                       }}
                     >
-                      <option value="percentage">Percentage (%)</option>
-                      <option value="fixed_amount">Fixed (CHF)</option>
+                      <option value="percentage">{t('promo.form.percentage')}</option>
+                      <option value="fixed_amount">{t('promo.form.fixedAmount')}</option>
                     </select>
                   </div>
                   <FieldInput
-                    label={fDiscountType === 'percentage' ? 'Value (%)' : 'Value (CHF)'}
+                    label={fDiscountType === 'percentage' ? t('promo.form.valuePercent') : t('promo.form.valueFixed')}
                     value={fDiscountValue}
                     onChange={setFDiscountValue}
-                    placeholder={fDiscountType === 'percentage' ? '20' : '10.00'}
+                    placeholder={fDiscountType === 'percentage' ? t('promo.form.valuePlaceholderPercent') : t('promo.form.valuePlaceholderFixed')}
                     type="number"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <FieldInput label="Usage Limit" value={fUsageLimit} onChange={setFUsageLimit} placeholder="Unlimited" type="number" />
-                  <FieldInput label="Per Customer" value={fPerCustomerLimit} onChange={setFPerCustomerLimit} placeholder="1" type="number" />
+                  <FieldInput label={t('promo.form.usageLimit')} value={fUsageLimit} onChange={setFUsageLimit} placeholder={t('promo.form.usageLimitPlaceholder')} type="number" />
+                  <FieldInput label={t('promo.form.perCustomer')} value={fPerCustomerLimit} onChange={setFPerCustomerLimit} placeholder={t('promo.form.perCustomerPlaceholder')} type="number" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <FieldInput label="Valid From" value={fValidFrom} onChange={setFValidFrom} type="datetime-local" />
-                  <FieldInput label="Valid To" value={fValidTo} onChange={setFValidTo} type="datetime-local" />
+                  <FieldInput label={t('promo.form.validFrom')} value={fValidFrom} onChange={setFValidFrom} type="datetime-local" />
+                  <FieldInput label={t('promo.form.validTo')} value={fValidTo} onChange={setFValidTo} type="datetime-local" />
                 </div>
               </div>
             </div>
@@ -324,7 +326,7 @@ export default function PromoCodesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-medium"
                 style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -332,7 +334,7 @@ export default function PromoCodesPage() {
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                 style={{ background: 'var(--color-primary)' }}
               >
-                {saving ? 'Saving…' : editCode ? 'Save Changes' : 'Create Code'}
+                {saving ? t('common.saving') : editCode ? t('common.saveChanges') : t('promo.createCode')}
               </button>
             </div>
           </div>

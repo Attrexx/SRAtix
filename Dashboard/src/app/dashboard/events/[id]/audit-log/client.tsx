@@ -5,33 +5,61 @@ import { useEventId } from '@/hooks/use-event-id';
 import { api, type AuditLogEntry } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
+import { useI18n } from '@/i18n/i18n-provider';
 
 const PAGE_SIZE = 30;
 
-const ACTION_LABELS: Record<string, { icon: ReactNode; label: string }> = {
-  'event.created':        { icon: <Icons.Sparkles size={16} />, label: 'Event created' },
-  'event.updated':        { icon: <Icons.Edit size={16} />, label: 'Event updated' },
-  'ticket_type.created':  { icon: <Icons.Ticket size={16} />, label: 'Ticket type created' },
-  'ticket_type.updated':  { icon: <Icons.Ticket size={16} />, label: 'Ticket type updated' },
-  'order.created':        { icon: <Icons.ShoppingCart size={16} />, label: 'Order created' },
-  'order.paid':           { icon: <Icons.DollarSign size={16} />, label: 'Order paid' },
-  'order.refunded':       { icon: <Icons.Undo size={16} />, label: 'Order refunded' },
-  'order.cancelled':      { icon: <Icons.X size={16} />, label: 'Order cancelled' },
-  'attendee.created':     { icon: <Icons.User size={16} />, label: 'Attendee created' },
-  'attendee.updated':     { icon: <Icons.User size={16} />, label: 'Attendee updated' },
-  'check_in.recorded':    { icon: <Icons.CheckCircle size={16} />, label: 'Check-in recorded' },
-  'check_in.reverted':    { icon: <Icons.Undo size={16} />, label: 'Check-in reverted' },
-  'promo_code.created':   { icon: <Icons.Tag size={16} />, label: 'Promo code created' },
-  'promo_code.updated':   { icon: <Icons.Tag size={16} />, label: 'Promo code updated' },
-  'promo_code.deactivated': { icon: <Icons.Ban size={16} />, label: 'Promo code deactivated' },
-  'webhook.delivered':    { icon: <Icons.Link size={16} />, label: 'Webhook delivered' },
-  'webhook.failed':       { icon: <Icons.AlertTriangle size={16} />, label: 'Webhook failed' },
+const ACTION_ICONS: Record<string, ReactNode> = {
+  'event.created':          <Icons.Sparkles size={16} />,
+  'event.updated':          <Icons.Edit size={16} />,
+  'ticket_type.created':    <Icons.Ticket size={16} />,
+  'ticket_type.updated':    <Icons.Ticket size={16} />,
+  'order.created':          <Icons.ShoppingCart size={16} />,
+  'order.paid':             <Icons.DollarSign size={16} />,
+  'order.refunded':         <Icons.Undo size={16} />,
+  'order.cancelled':        <Icons.X size={16} />,
+  'attendee.created':       <Icons.User size={16} />,
+  'attendee.updated':       <Icons.User size={16} />,
+  'check_in.recorded':      <Icons.CheckCircle size={16} />,
+  'check_in.reverted':      <Icons.Undo size={16} />,
+  'promo_code.created':     <Icons.Tag size={16} />,
+  'promo_code.updated':     <Icons.Tag size={16} />,
+  'promo_code.deactivated': <Icons.Ban size={16} />,
+  'webhook.delivered':      <Icons.Link size={16} />,
+  'webhook.failed':         <Icons.AlertTriangle size={16} />,
 };
 
-const ACTION_FILTER_OPTIONS = Object.keys(ACTION_LABELS);
+const ACTION_FILTER_OPTIONS = Object.keys(ACTION_ICONS);
 
 export default function AuditLogPage() {
   const eventId = useEventId();
+  const { t } = useI18n();
+
+  const getActionLabel = (action: string): { icon: ReactNode; label: string } => {
+    const labels: Record<string, string> = {
+      'event.created':          t('audit.action.eventCreated'),
+      'event.updated':          t('audit.action.eventUpdated'),
+      'ticket_type.created':    t('audit.action.ticketTypeCreated'),
+      'ticket_type.updated':    t('audit.action.ticketTypeUpdated'),
+      'order.created':          t('audit.action.orderCreated'),
+      'order.paid':             t('audit.action.orderPaid'),
+      'order.refunded':         t('audit.action.orderRefunded'),
+      'order.cancelled':        t('audit.action.orderCancelled'),
+      'attendee.created':       t('audit.action.attendeeCreated'),
+      'attendee.updated':       t('audit.action.attendeeUpdated'),
+      'check_in.recorded':      t('audit.action.checkInRecorded'),
+      'check_in.reverted':      t('audit.action.checkInReverted'),
+      'promo_code.created':     t('audit.action.promoCodeCreated'),
+      'promo_code.updated':     t('audit.action.promoCodeUpdated'),
+      'promo_code.deactivated': t('audit.action.promoCodeDeactivated'),
+      'webhook.delivered':      t('audit.action.webhookDelivered'),
+      'webhook.failed':         t('audit.action.webhookFailed'),
+    };
+    return {
+      icon: ACTION_ICONS[action] ?? <Icons.Clipboard size={16} />,
+      label: labels[action] ?? action.replace(/[._]/g, ' '),
+    };
+  };
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -95,8 +123,7 @@ export default function AuditLogPage() {
     });
   };
 
-  const meta = (entry: AuditLogEntry) =>
-    ACTION_LABELS[entry.action] ?? { icon: <Icons.Clipboard size={16} />, label: entry.action.replace(/[._]/g, ' ') };
+  const meta = (entry: AuditLogEntry) => getActionLabel(entry.action);
 
   return (
     <div>
@@ -104,10 +131,10 @@ export default function AuditLogPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-            Activity Log
+            {t('audit.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Full audit trail for this event
+            {t('audit.subtitle')}
           </p>
         </div>
 
@@ -122,10 +149,10 @@ export default function AuditLogPage() {
             color: 'var(--color-text)',
           }}
         >
-          <option value="">All actions</option>
+          <option value="">{t('audit.allActions')}</option>
           {ACTION_FILTER_OPTIONS.map((a) => (
             <option key={a} value={a}>
-              {ACTION_LABELS[a]?.label ?? a}
+              {getActionLabel(a).label}
             </option>
           ))}
         </select>
@@ -152,10 +179,10 @@ export default function AuditLogPage() {
         >
           <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Clipboard size={48} /></span>
           <p className="mt-4 text-lg font-medium" style={{ color: 'var(--color-text)' }}>
-            No activity recorded yet
+            {t('audit.noActivityYet')}
           </p>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Actions like creating tickets, processing orders, and check-ins will appear here.
+            {t('audit.noActivityHint')}
           </p>
         </div>
       ) : (
@@ -229,7 +256,7 @@ export default function AuditLogPage() {
                   color: 'var(--color-text-secondary)',
                 }}
               >
-                {loadingMore ? 'Loading…' : 'Load more'}
+                {loadingMore ? t('common.loading') : t('common.loadMore')}
               </button>
             </div>
           )}

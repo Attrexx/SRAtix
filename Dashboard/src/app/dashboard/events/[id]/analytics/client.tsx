@@ -10,8 +10,10 @@ import {
   computeDateRange,
   type RangePreset,
 } from '@/components/time-series-chart';
+import { useI18n } from '@/i18n/i18n-provider';
 
 export default function AnalyticsPage() {
+  const { t } = useI18n();
   const eventId = useEventId();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
@@ -204,10 +206,10 @@ export default function AnalyticsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
-          Analytics
+          {t('analytics.title')}
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          Event performance &amp; key metrics
+          {t('analytics.subtitle')}
         </p>
       </div>
 
@@ -226,25 +228,25 @@ export default function AnalyticsPage() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Icons.DollarSign size={20} />}
-          label="Total Revenue"
+          label={t('analytics.totalRevenue')}
           value={fmt(analytics.totalRevenue)}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}
-          label="Avg. Order Value"
+          label={t('analytics.avgOrderValue')}
           value={fmt(analytics.avgOrderValue)}
-          trend={`${analytics.paidOrders} paid orders`}
+          trend={t('analytics.paidOrders').replace('{count}', String(analytics.paidOrders))}
         />
         <StatCard
           icon={<Icons.Target size={20} />}
-          label="Revenue / Attendee"
+          label={t('analytics.revenuePerAttendee')}
           value={fmt(analytics.revenuePerAttendee)}
         />
         <StatCard
           icon={<Icons.TrendingUp size={20} />}
-          label="Conversion Rate"
+          label={t('analytics.conversionRate')}
           value={`${analytics.conversionRate}%`}
-          trend={`${analytics.paidOrders} paid / ${analytics.totalOrders} total`}
+          trend={t('analytics.conversionTrend').replace('{paid}', String(analytics.paidOrders)).replace('{total}', String(analytics.totalOrders))}
           trendUp={analytics.conversionRate >= 50}
         />
       </div>
@@ -253,7 +255,7 @@ export default function AnalyticsPage() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           icon={<Icons.Ticket size={20} />}
-          label="Tickets Sold"
+          label={t('analytics.ticketsSold')}
           value={(analytics.totalTickets ?? 0).toLocaleString()}
           trend={
             analytics.totalCapacity > 0
@@ -264,32 +266,32 @@ export default function AnalyticsPage() {
         />
         <StatCard
           icon={<Icons.Percent size={20} />}
-          label="Capacity Utilization"
+          label={t('analytics.capacityUtilization')}
           value={`${analytics.capacityUtilization}%`}
           trend={
             analytics.totalCapacity > 0
               ? `${analytics.totalTickets} / ${analytics.totalCapacity}`
-              : 'No cap set'
+              : t('analytics.noCapSet')
           }
           trendUp={analytics.capacityUtilization < 95}
         />
         <StatCard
           icon={<Icons.CheckCircle size={20} />}
-          label="Check-In Rate"
+          label={t('analytics.checkInRate')}
           value={`${analytics.checkInRate}%`}
-          trend={`${analytics.checkInTotal} checked in`}
+          trend={t('analytics.checkedIn').replace('{count}', String(analytics.checkInTotal))}
           trendUp
         />
         <StatCard
           icon={<Icons.Activity size={20} />}
-          label="Registrations Today"
+          label={t('analytics.registrationsToday')}
           value={(analytics.registrationsToday ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.Undo size={20} />}
-          label="Refund Rate"
+          label={t('analytics.refundRate')}
           value={`${analytics.refundRate}%`}
-          trend={`${analytics.refundedOrders} refunded`}
+          trend={t('analytics.refunded').replace('{count}', String(analytics.refundedOrders))}
           trendUp={analytics.refundRate <= 5}
         />
       </div>
@@ -297,7 +299,7 @@ export default function AnalyticsPage() {
       {/* ── Charts Row ── */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Revenue by Ticket Type */}
-        <Card title="Revenue by Ticket Type">
+        <Card title={t('analytics.revenueByTicketType')}>
           {analytics.revenueByTicketType.length === 0 ? (
             <EmptyState />
           ) : (
@@ -339,8 +341,9 @@ export default function AnalyticsPage() {
                       className="mt-0.5 text-xs"
                       style={{ color: 'var(--color-text-muted)' }}
                     >
-                      {tt.sold} sold
-                      {tt.capacity > 0 ? ` / ${tt.capacity} (${soldPct}%)` : ''}
+                      {tt.capacity > 0
+                        ? t('analytics.soldOfCapacity').replace('{sold}', String(tt.sold)).replace('{capacity}', String(tt.capacity)).replace('{pct}', String(soldPct))
+                        : t('analytics.soldCount').replace('{sold}', String(tt.sold))}
                     </p>
                   </div>
                 );
@@ -350,7 +353,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Order Funnel / Status Breakdown */}
-        <Card title="Order Status">
+        <Card title={t('analytics.orderStatus')}>
           <div className="space-y-3">
             {Object.entries(analytics.ordersByStatus).map(([status, count]) => {
               const pct =
@@ -403,14 +406,14 @@ export default function AnalyticsPage() {
               className="mb-3 flex items-center gap-2 text-sm font-semibold"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              <Icons.CheckCircle size={14} /> Check-In Breakdown
+              <Icons.CheckCircle size={14} /> {t('analytics.checkInBreakdown')}
             </h3>
             <div className="flex items-center justify-between">
               <span
                 className="text-sm"
                 style={{ color: 'var(--color-text)' }}
               >
-                Total checked in
+                {t('analytics.totalCheckedIn')}
               </span>
               <span
                 className="font-semibold"
@@ -424,7 +427,7 @@ export default function AnalyticsPage() {
                 className="text-sm"
                 style={{ color: 'var(--color-text)' }}
               >
-                Today
+                {t('analytics.today')}
               </span>
               <span
                 className="font-semibold"
@@ -450,7 +453,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Promo Code Performance */}
-        <Card title="Promo Code Usage">
+        <Card title={t('analytics.promoCodeUsage')}>
           <div className="mb-4 flex gap-6">
             <div>
               <p
@@ -463,7 +466,7 @@ export default function AnalyticsPage() {
                 className="text-xs"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                Total redemptions
+                {t('analytics.totalRedemptions')}
               </p>
             </div>
             <div>
@@ -477,7 +480,7 @@ export default function AnalyticsPage() {
                 className="text-xs"
                 style={{ color: 'var(--color-text-muted)' }}
               >
-                Of orders used a code
+                {t('analytics.ordersUsedCode')}
               </p>
             </div>
           </div>
@@ -486,7 +489,7 @@ export default function AnalyticsPage() {
               className="text-sm"
               style={{ color: 'var(--color-text-muted)' }}
             >
-              No promo codes configured.
+              {t('analytics.noPromoCodes')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -520,8 +523,9 @@ export default function AnalyticsPage() {
                     className="text-sm font-semibold"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {pc.usedCount}
-                    {pc.usageLimit ? ` / ${pc.usageLimit}` : ''} uses
+                    {pc.usageLimit
+                      ? t('analytics.usesOfLimit').replace('{used}', String(pc.usedCount)).replace('{limit}', String(pc.usageLimit))
+                      : t('analytics.uses').replace('{used}', String(pc.usedCount))}
                   </span>
                 </div>
               ))}
@@ -530,7 +534,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Daily Revenue Chart */}
-        <Card title="Daily Revenue (Last 30 Days)">
+        <Card title={t('analytics.dailyRevenue')}>
           {Object.keys(analytics.revenueByDay).length === 0 ? (
             <EmptyState />
           ) : (
@@ -576,7 +580,7 @@ export default function AnalyticsPage() {
                         className="w-12 flex-shrink-0 text-right text-xs"
                         style={{ color: 'var(--color-text-muted)' }}
                       >
-                        {dayOrders} ord
+                        {dayOrders} {t('analytics.ordersAbbrev')}
                       </span>
                     </div>
                   );
@@ -619,9 +623,10 @@ function Card({
 }
 
 function EmptyState() {
+  const { t } = useI18n();
   return (
     <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-      No data yet.
+      {t('analytics.noDataYet')}
     </p>
   );
 }
