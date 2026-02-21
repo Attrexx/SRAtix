@@ -86,9 +86,6 @@ export default function AnalyticsPage() {
     setSelectedRange(range);
   }, []);
 
-    return () => ac.abort();
-  }, [eventId]);
-
   const analytics = useMemo(() => {
     const paidOrders = orders.filter((o) => o.status === 'paid');
     const refundedOrders = orders.filter((o) => o.status === 'refunded');
