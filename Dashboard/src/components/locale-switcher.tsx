@@ -24,7 +24,7 @@ export function LocaleSwitcher() {
       >
         {SUPPORTED_LOCALES.map((l) => (
           <option key={l} value={l}>
-            {LOCALE_FLAGS[l]} {l.toUpperCase()}
+            {LOCALE_FLAGS[l]} {LOCALE_LABELS[l]}
           </option>
         ))}
       </select>

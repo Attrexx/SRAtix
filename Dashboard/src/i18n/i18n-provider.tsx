@@ -40,11 +40,11 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 };
 
 export const LOCALE_FLAGS: Record<Locale, string> = {
-  en: '🇬🇧',
-  fr: '🇫🇷',
-  de: '🇩🇪',
-  it: '🇮🇹',
-  'zh-TW': '🇹🇼',
+  en: 'EN',
+  fr: 'FR',
+  de: 'DE',
+  it: 'IT',
+  'zh-TW': '中',
 };
 
 type TranslationDict = Record<string, unknown>;
@@ -75,16 +75,20 @@ const translations: Record<Locale, TranslationDict> = {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-/** Resolve a nested key like 'nav.events' from a flat or nested dict. */
+/** Resolve a key from a translation dict. Tries flat key first, then nested. */
 function resolveKey(dict: TranslationDict, key: string): string | undefined {
+  // 1. Direct flat lookup (keys like "nav.events": "Events")
+  if (key in dict && typeof dict[key] === 'string') {
+    return dict[key] as string;
+  }
+
+  // 2. Nested object lookup (keys like { nav: { events: "Events" } })
   const parts = key.split('.');
   let current: unknown = dict;
-
   for (const part of parts) {
     if (current == null || typeof current !== 'object') return undefined;
     current = (current as Record<string, unknown>)[part];
   }
-
   return typeof current === 'string' ? current : undefined;
 }
 

@@ -84,7 +84,7 @@ export default function EventsPage() {
       });
       setShowCreate(false);
       resetForm();
-      window.location.href = `/dashboard/events/${event.id}`;
+      router.push(`/dashboard/events/${event.id}/`);
     } catch (err: any) {
       setError(err?.message ?? 'Failed to create event');
     } finally {
@@ -177,7 +177,7 @@ export default function EventsPage() {
             <EventCard
               key={event.id}
               event={event}
-              onClick={() => { window.location.href = `/dashboard/events/${event.id}`; }}
+              onClick={() => { router.push(`/dashboard/events/${event.id}/`); }}
             />
           ))}
         </div>
