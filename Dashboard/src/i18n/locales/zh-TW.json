@@ -46,6 +46,7 @@
   "common.sortBy": "依 {column} 排序",
   "common.exportCsv": "匯出 CSV",
   "common.downloadCsv": "下載 CSV",
+  "common.downloadExcel": "下載 Excel",
   "common.tryAgain": "重試",
   "common.live": "即時",
   "common.connected": "已連線",
@@ -151,6 +152,10 @@
   "events.overview.soldCount": "已售 {sold} 張",
   "events.overview.soldOfCapacity": "已售 {sold} / {capacity}",
   "events.overview.failedToLoad": "無法載入活動詳情。請嘗試重新整理頁面。",
+  "events.overview.publish": "發布",
+  "events.overview.unpublish": "取消發布",
+  "events.overview.publishing": "發布中…",
+  "events.overview.unpublishing": "取消發布中…",
 
   "tickets.title": "票種管理",
   "tickets.subtitle": "已設定 {count} 種票種",
@@ -370,7 +375,7 @@
   "audit.action.webhookFailed": "Webhook 傳送失敗",
 
   "export.title": "資料匯出",
-  "export.subtitle": "將活動資料下載為 CSV 檔案（相容於 Excel，UTF-8 BOM）",
+  "export.subtitle": "將活動資料下載為 CSV 或 Excel 檔案",
   "export.attendees": "參加者",
   "export.attendeesDesc": "姓名、電子信箱、電話、公司、票券代碼",
   "export.orders": "訂單",

@@ -46,6 +46,7 @@
   "common.sortBy": "Ordina per {column}",
   "common.exportCsv": "Esporta CSV",
   "common.downloadCsv": "Scarica CSV",
+  "common.downloadExcel": "Scarica Excel",
   "common.tryAgain": "Riprova",
   "common.live": "Dal vivo",
   "common.connected": "Connesso",
@@ -151,6 +152,10 @@
   "events.overview.soldCount": "{sold} venduti",
   "events.overview.soldOfCapacity": "{sold} / {capacity} venduti",
   "events.overview.failedToLoad": "Impossibile caricare i dettagli dell'evento. Aggiorna la pagina.",
+  "events.overview.publish": "Pubblica",
+  "events.overview.unpublish": "Annulla pubblicazione",
+  "events.overview.publishing": "Pubblicazione…",
+  "events.overview.unpublishing": "Annullamento…",
 
   "tickets.title": "Tipi di biglietto",
   "tickets.subtitle": "{count} tipo/i di biglietto configurato/i",
@@ -370,7 +375,7 @@
   "audit.action.webhookFailed": "Webhook non riuscito",
 
   "export.title": "Esportazione dati",
-  "export.subtitle": "Scarica i dati dell'evento in formato CSV (compatibile Excel con BOM UTF-8)",
+  "export.subtitle": "Scarica i dati dell'evento in formato CSV o Excel",
   "export.attendees": "Partecipanti",
   "export.attendeesDesc": "Nome, e-mail, telefono, azienda, codici biglietto",
   "export.orders": "Ordini",

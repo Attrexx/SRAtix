@@ -10,30 +10,40 @@ export default function ExportPage() {
   const eventId = useEventId();
   const { t } = useI18n();
 
-  const exports: { label: string; description: string; icon: ReactNode; url: string }[] = [
+  const exports: {
+    label: string;
+    description: string;
+    icon: ReactNode;
+    csvUrl: string;
+    xlsxUrl: string;
+  }[] = [
     {
       label: t('export.attendees'),
       description: t('export.attendeesDesc'),
       icon: <Icons.Users size={28} />,
-      url: api.exportAttendees(eventId),
+      csvUrl: api.exportAttendees(eventId),
+      xlsxUrl: api.exportAttendeesXlsx(eventId),
     },
     {
       label: t('export.orders'),
       description: t('export.ordersDesc'),
       icon: <Icons.ShoppingCart size={28} />,
-      url: api.exportOrders(eventId),
+      csvUrl: api.exportOrders(eventId),
+      xlsxUrl: api.exportOrdersXlsx(eventId),
     },
     {
       label: t('export.checkIns'),
       description: t('export.checkInsDesc'),
       icon: <Icons.CheckCircle size={28} />,
-      url: api.exportCheckIns(eventId),
+      csvUrl: api.exportCheckIns(eventId),
+      xlsxUrl: api.exportCheckInsXlsx(eventId),
     },
     {
       label: t('export.formSubmissions'),
       description: t('export.formSubmissionsDesc'),
       icon: <Icons.FileText size={28} />,
-      url: api.exportFormSubmissions(eventId),
+      csvUrl: api.exportFormSubmissions(eventId),
+      xlsxUrl: api.exportFormSubmissionsXlsx(eventId),
     },
   ];
 
@@ -50,11 +60,8 @@ export default function ExportPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {exports.map((exp) => (
-          <a
+          <div
             key={exp.label}
-            href={exp.url}
-            target="_blank"
-            rel="noopener noreferrer"
             className="rounded-xl p-5 transition-all"
             style={{
               background: 'var(--color-bg-card)',
@@ -80,13 +87,27 @@ export default function ExportPage() {
             <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               {exp.description}
             </p>
-            <span
-              className="mt-3 inline-flex items-center gap-1 text-sm font-medium"
-              style={{ color: 'var(--color-primary)' }}
-            >
-                            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.downloadCsv')}</span>
-            </span>
-          </a>
+            <div className="mt-3 flex items-center gap-3">
+              <a
+                href={exp.csvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                <Icons.Download size={14} /> {t('common.downloadCsv')}
+              </a>
+              <a
+                href={exp.xlsxUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium"
+                style={{ color: 'var(--color-primary)' }}
+              >
+                <Icons.Download size={14} /> {t('common.downloadExcel')}
+              </a>
+            </div>
+          </div>
         ))}
       </div>
     </div>

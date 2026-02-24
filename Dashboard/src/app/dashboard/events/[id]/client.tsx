@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import { api, type Event, type TicketType } from '@/lib/api';
 import { StatCard } from '@/components/stat-card';
@@ -20,6 +20,21 @@ export default function EventOverviewPage() {
     checkIns: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+
+  const togglePublish = useCallback(async () => {
+    if (!event || publishing) return;
+    const newStatus = event.status === 'published' ? 'draft' : 'published';
+    setPublishing(true);
+    try {
+      const updated = await api.updateEvent(id, { status: newStatus });
+      setEvent(updated);
+    } catch {
+      // Silently fail — StatusBadge stays unchanged
+    } finally {
+      setPublishing(false);
+    }
+  }, [event, id, publishing]);
 
   useEffect(() => {
     if (!id || id === '_') return;
@@ -82,6 +97,31 @@ export default function EventOverviewPage() {
             {event.name}
           </h1>
           <StatusBadge status={event.status} />
+          {(event.status === 'draft' || event.status === 'published') && (
+            <button
+              onClick={togglePublish}
+              disabled={publishing}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-50"
+              style={{
+                background:
+                  event.status === 'draft'
+                    ? 'var(--color-success, #22c55e)'
+                    : 'var(--color-warning, #f59e0b)',
+              }}
+            >
+              {event.status === 'draft' ? (
+                <>
+                  <Icons.Play size={14} />
+                  {publishing ? t('events.overview.publishing') : t('events.overview.publish')}
+                </>
+              ) : (
+                <>
+                  <Icons.Pause size={14} />
+                  {publishing ? t('events.overview.unpublishing') : t('events.overview.unpublish')}
+                </>
+              )}
+            </button>
+          )}
         </div>
         <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           {event.venue && `${event.venue} · `}

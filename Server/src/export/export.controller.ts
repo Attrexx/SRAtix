@@ -88,4 +88,76 @@ export class ExportController {
       .header('Content-Disposition', `attachment; filename="${fileName}"`)
       .send(csv);
   }
+
+  private sendExcel(reply: FastifyReply, buffer: Buffer, fileName: string) {
+    reply
+      .header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      )
+      .header('Content-Disposition', `attachment; filename="${fileName}"`)
+      .send(buffer);
+  }
+
+  // ─── Excel (xlsx) endpoints ──────────────────────────────────
+
+  /**
+   * GET /api/export/attendees/event/:eventId/xlsx
+   * Download attendee list as Excel.
+   */
+  @Get('attendees/event/:eventId/xlsx')
+  @Roles('event_admin', 'super_admin')
+  async exportAttendeesXlsx(
+    @Param('eventId') eventId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const buffer = await this.exportService.exportAttendeesXlsx(eventId);
+    this.sendExcel(reply, buffer, `attendees-${eventId.substring(0, 8)}.xlsx`);
+  }
+
+  /**
+   * GET /api/export/orders/event/:eventId/xlsx
+   * Download orders list as Excel.
+   */
+  @Get('orders/event/:eventId/xlsx')
+  @Roles('event_admin', 'super_admin')
+  async exportOrdersXlsx(
+    @Param('eventId') eventId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const buffer = await this.exportService.exportOrdersXlsx(eventId);
+    this.sendExcel(reply, buffer, `orders-${eventId.substring(0, 8)}.xlsx`);
+  }
+
+  /**
+   * GET /api/export/check-ins/event/:eventId/xlsx
+   * Download check-ins log as Excel.
+   */
+  @Get('check-ins/event/:eventId/xlsx')
+  @Roles('event_admin', 'super_admin')
+  async exportCheckInsXlsx(
+    @Param('eventId') eventId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const buffer = await this.exportService.exportCheckInsXlsx(eventId);
+    this.sendExcel(reply, buffer, `check-ins-${eventId.substring(0, 8)}.xlsx`);
+  }
+
+  /**
+   * GET /api/export/submissions/event/:eventId/xlsx
+   * Download form submissions as Excel.
+   */
+  @Get('submissions/event/:eventId/xlsx')
+  @Roles('event_admin', 'super_admin')
+  async exportSubmissionsXlsx(
+    @Param('eventId') eventId: string,
+    @Query('formSchemaId') formSchemaId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const buffer = await this.exportService.exportFormSubmissionsXlsx(
+      eventId,
+      formSchemaId || undefined,
+    );
+    this.sendExcel(reply, buffer, `submissions-${eventId.substring(0, 8)}.xlsx`);
+  }
 }

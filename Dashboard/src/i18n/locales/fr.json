@@ -46,6 +46,7 @@
   "common.sortBy": "Trier par {column}",
   "common.exportCsv": "Exporter en CSV",
   "common.downloadCsv": "Télécharger le CSV",
+  "common.downloadExcel": "Télécharger l'Excel",
   "common.tryAgain": "Réessayer",
   "common.live": "En direct",
   "common.connected": "Connecté",
@@ -151,6 +152,10 @@
   "events.overview.soldCount": "{sold} vendu(s)",
   "events.overview.soldOfCapacity": "{sold} / {capacity} vendus",
   "events.overview.failedToLoad": "Impossible de charger les détails de l'événement. Veuillez actualiser la page.",
+  "events.overview.publish": "Publier",
+  "events.overview.unpublish": "Dépublier",
+  "events.overview.publishing": "Publication…",
+  "events.overview.unpublishing": "Dépublication…",
 
   "tickets.title": "Types de billets",
   "tickets.subtitle": "{count} type(s) de billet configuré(s)",
@@ -370,7 +375,7 @@
   "audit.action.webhookFailed": "Échec du webhook",
 
   "export.title": "Exportation de données",
-  "export.subtitle": "Téléchargez les données au format CSV (compatible Excel avec BOM UTF-8)",
+  "export.subtitle": "Téléchargez les données au format CSV ou Excel",
   "export.attendees": "Participants",
   "export.attendeesDesc": "Nom, e-mail, téléphone, entreprise, codes de billets",
   "export.orders": "Commandes",

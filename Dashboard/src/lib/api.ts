@@ -526,7 +526,7 @@ export const api = {
   getFieldRepositoryGroups: (signal?: AbortSignal) =>
     request<string[]>('/field-repository/groups', { signal }),
 
-  // Exports
+  // Exports (CSV)
   exportAttendees: (eventId: string) =>
     `${API_BASE}/api/export/attendees/event/${eventId}`,
 
@@ -538,6 +538,19 @@ export const api = {
 
   exportFormSubmissions: (eventId: string, formSchemaId?: string) =>
     `${API_BASE}/api/export/submissions/event/${eventId}${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
+
+  // Exports (Excel/xlsx)
+  exportAttendeesXlsx: (eventId: string) =>
+    `${API_BASE}/api/export/attendees/event/${eventId}/xlsx`,
+
+  exportOrdersXlsx: (eventId: string) =>
+    `${API_BASE}/api/export/orders/event/${eventId}/xlsx`,
+
+  exportCheckInsXlsx: (eventId: string) =>
+    `${API_BASE}/api/export/check-ins/event/${eventId}/xlsx`,
+
+  exportFormSubmissionsXlsx: (eventId: string, formSchemaId?: string) =>
+    `${API_BASE}/api/export/submissions/event/${eventId}/xlsx${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
 
   // Audit Log
   getAuditLog: (eventId: string, options?: { take?: number; skip?: number; action?: string }, signal?: AbortSignal) => {
