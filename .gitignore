@@ -7,6 +7,9 @@ tmp/
 .DS_Store
 Thumbs.db
 
+# Root lockfile is generated on deploy by postinstall; don't track it
+/package-lock.json
+
 # Secrets
 .env
 .env.*
