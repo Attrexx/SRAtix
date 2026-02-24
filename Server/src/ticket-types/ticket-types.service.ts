@@ -434,6 +434,18 @@ export class TicketTypesService {
     });
   }
 
+  async remove(id: string, eventId: string) {
+    const tt = await this.findOne(id, eventId);
+    if (tt.sold > 0) {
+      throw new BadRequestException(
+        'Cannot delete a ticket type that already has sales.',
+      );
+    }
+    // Delete pricing variants first, then the ticket type
+    await this.prisma.pricingVariant.deleteMany({ where: { ticketTypeId: id } });
+    return this.prisma.ticketType.delete({ where: { id } });
+  }
+
   async deleteVariant(variantId: string, ticketTypeId: string, eventId: string) {
     await this.findOne(ticketTypeId, eventId);
     return this.prisma.pricingVariant.delete({ where: { id: variantId } });

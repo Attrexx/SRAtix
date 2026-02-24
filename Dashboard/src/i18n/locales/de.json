@@ -219,6 +219,12 @@
   "tickets.validation.nameRequired": "Name ist erforderlich.",
   "tickets.validation.fullPriceRequired": "Vollpreis ist erforderlich.",
   "tickets.validation.tierRequired": "Mitgliedschaftsstufe ist für SRA-Mitgliedschafts-Tickets erforderlich.",
+  "tickets.validation.duplicateTicket": "Ein identisches Ticket existiert bereits. Bitte ändern Sie mindestens ein Feld.",
+  "tickets.duplicateTicket": "Duplizieren",
+  "tickets.confirmDelete": "Möchten Sie \"{name}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "tickets.deleted": "Ticket gelöscht.",
+  "tickets.failedToDelete": "Ticket konnte nicht gelöscht werden.",
+  "tickets.cannotDeleteSold": "Ein Ticket mit Verkäufen kann nicht gelöscht werden.",
 
   "attendees.title": "Teilnehmer",
   "attendees.subtitle": "{count} registrierte(r) Teilnehmer",

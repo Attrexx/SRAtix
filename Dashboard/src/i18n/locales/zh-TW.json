@@ -219,6 +219,12 @@
   "tickets.validation.nameRequired": "名稱為必填。",
   "tickets.validation.fullPriceRequired": "原價為必填。",
   "tickets.validation.tierRequired": "SRA 會員票券必須選擇會員等級。",
+  "tickets.validation.duplicateTicket": "已存在完全相同的票券，請至少修改一個欄位。",
+  "tickets.duplicateTicket": "複製",
+  "tickets.confirmDelete": "確定要刪除「{name}」嗎？此操作無法復原。",
+  "tickets.deleted": "票券已刪除。",
+  "tickets.failedToDelete": "無法刪除票券。",
+  "tickets.cannotDeleteSold": "無法刪除已有銷售記錄的票券。",
 
   "attendees.title": "參加者",
   "attendees.subtitle": "已登記 {count} 位參加者",

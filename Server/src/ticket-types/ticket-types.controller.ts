@@ -160,6 +160,15 @@ export class TicketTypesController {
     );
   }
 
+  @Delete(':id')
+  @Roles('event_admin', 'super_admin')
+  remove(
+    @Param('eventId') eventId: string,
+    @Param('id') id: string,
+  ) {
+    return this.ticketTypesService.remove(id, eventId);
+  }
+
   @Delete(':id/variants/:variantId')
   @Roles('event_admin', 'super_admin')
   deleteVariant(

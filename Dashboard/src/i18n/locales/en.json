@@ -219,6 +219,12 @@
   "tickets.validation.nameRequired": "Name is required.",
   "tickets.validation.fullPriceRequired": "Full price is required.",
   "tickets.validation.tierRequired": "Membership tier is required for SRA Membership tickets.",
+  "tickets.validation.duplicateTicket": "An identical ticket already exists. Please change at least one field.",
+  "tickets.duplicateTicket": "Duplicate",
+  "tickets.confirmDelete": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+  "tickets.deleted": "Ticket deleted.",
+  "tickets.failedToDelete": "Failed to delete ticket.",
+  "tickets.cannotDeleteSold": "Cannot delete a ticket that already has sales.",
 
   "attendees.title": "Attendees",
   "attendees.subtitle": "{count} registered attendee(s)",

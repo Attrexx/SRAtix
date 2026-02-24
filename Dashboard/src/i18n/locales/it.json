@@ -219,6 +219,12 @@
   "tickets.validation.nameRequired": "Il nome è obbligatorio.",
   "tickets.validation.fullPriceRequired": "Il prezzo pieno è obbligatorio.",
   "tickets.validation.tierRequired": "Il livello di adesione è obbligatorio per i biglietti con adesione SRA.",
+  "tickets.validation.duplicateTicket": "Esiste già un biglietto identico. Modifica almeno un campo.",
+  "tickets.duplicateTicket": "Duplica",
+  "tickets.confirmDelete": "Eliminare \"{name}\"? Questa azione non può essere annullata.",
+  "tickets.deleted": "Biglietto eliminato.",
+  "tickets.failedToDelete": "Impossibile eliminare il biglietto.",
+  "tickets.cannotDeleteSold": "Non è possibile eliminare un biglietto con vendite.",
 
   "attendees.title": "Partecipanti",
   "attendees.subtitle": "{count} partecipante/i registrato/i",

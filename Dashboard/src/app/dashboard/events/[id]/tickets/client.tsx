@@ -143,6 +143,32 @@ export default function TicketsPage() {
     setError(null);
   };
 
+  /** Open create modal pre-populated with a ticket's data (no editId → new record). */
+  const openDuplicate = (tt: TicketType) => {
+    openEdit(tt);
+    // Clear the editId so we create a new ticket instead of updating
+    setEditId(null);
+  };
+
+  /** Delete a ticket type after user confirmation. */
+  const handleDelete = async (tt: TicketType) => {
+    if (tt.sold > 0) {
+      toast.error(t('tickets.cannotDeleteSold'));
+      return;
+    }
+    const confirmed = window.confirm(
+      t('tickets.confirmDelete').replace('{name}', tt.name),
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteTicketType(eventId, tt.id);
+      toast.success(t('tickets.deleted'));
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tickets.failedToDelete'));
+    }
+  };
+
   // ── Derived state ──
   const derivedCategory = formTier && meta
     ? meta.tierCategoryMap[formTier] ?? ''
@@ -171,6 +197,38 @@ export default function TicketsPage() {
     }
     if (formKind === 'membership' && !formTier) {
       setError(t('tickets.validation.tierRequired'));
+      return;
+    }
+
+    // ── Duplicate check: prevent identical tickets across all fields ──
+    const ebPriceCentsCheck = formEarlyBirdPrice
+      ? Math.round(parseFloat(formEarlyBirdPrice) * 100)
+      : 0;
+    const isDuplicate = tickets.some((tt) => {
+      // Skip the ticket being edited
+      if (editId && tt.id === editId) return false;
+      const matchName = tt.name === formName.trim();
+      const matchDesc = (tt.description ?? '') === formDescription.trim();
+      const matchPrice = tt.priceCents === fullPriceCents;
+      const matchCapacity =
+        (tt.quantity ?? null) === (formCapacity ? parseInt(formCapacity, 10) : null);
+      const matchMaxPerOrder = tt.maxPerOrder === (parseInt(formMaxPerOrder, 10) || 10);
+      const matchCategory =
+        (tt.category ?? 'general') ===
+        (formKind === 'membership' ? derivedCategory : 'general');
+      const matchTier = (tt.membershipTier ?? '') === (formKind === 'membership' ? formTier : '');
+      const matchSchema = (tt.formSchemaId ?? '') === (formSchemaId || '');
+      // Check early-bird variant
+      const existingEb = tt.pricingVariants?.find((v) => v.variantType === 'early_bird');
+      const matchEb =
+        (existingEb ? existingEb.priceCents : 0) === ebPriceCentsCheck;
+      return (
+        matchName && matchDesc && matchPrice && matchCapacity &&
+        matchMaxPerOrder && matchCategory && matchTier && matchSchema && matchEb
+      );
+    });
+    if (isDuplicate) {
+      setError(t('tickets.validation.duplicateTicket'));
       return;
     }
 
@@ -518,6 +576,37 @@ export default function TicketsPage() {
                   >
                     <span className="inline-flex items-center gap-1">
                       <Icons.Edit size={14} /> {t('common.edit')}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => openDuplicate(tt)}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                    title={t('tickets.duplicateTicket')}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Icons.Copy size={14} /> {t('tickets.duplicateTicket')}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(tt)}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      color: tt.sold > 0 ? 'var(--color-text-muted)' : 'var(--color-danger, #dc2626)',
+                    }}
+                    disabled={tt.sold > 0}
+                    title={
+                      tt.sold > 0
+                        ? t('tickets.cannotDeleteSold')
+                        : t('common.delete')
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Icons.Trash size={14} /> {t('common.delete')}
                     </span>
                   </button>
                 </div>

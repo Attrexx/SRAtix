@@ -522,6 +522,9 @@ export const api = {
   updateTicketType: (eventId: string, id: string, data: Record<string, unknown>) =>
     request<TicketType>(`/events/${eventId}/ticket-types/${id}`, { method: 'PATCH', body: data }),
 
+  deleteTicketType: (eventId: string, id: string) =>
+    request<void>(`/events/${eventId}/ticket-types/${id}`, { method: 'DELETE' }),
+
   // Pricing Variants
   getVariants: (eventId: string, ticketTypeId: string, signal?: AbortSignal) =>
     request<PricingVariant[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants`, { signal }),
