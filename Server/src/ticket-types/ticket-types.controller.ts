@@ -11,12 +11,37 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { TicketTypesService, TicketCategory, MembershipTier, VariantType } from './ticket-types.service';
+import {
+  TicketTypesService,
+  TicketCategory,
+  MembershipTier,
+  VariantType,
+  TICKET_CATEGORIES,
+  MEMBERSHIP_TIERS,
+  TIER_CATEGORY_MAP,
+  TIER_WP_PRODUCT_MAP,
+  TIER_LABELS,
+} from './ticket-types.service';
 
 @Controller('events/:eventId/ticket-types')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class TicketTypesController {
   constructor(private readonly ticketTypesService: TicketTypesService) {}
+
+  /**
+   * Static metadata for building ticket forms: tiers, categories, mappings.
+   */
+  @Get('meta')
+  @Roles('event_admin', 'super_admin')
+  getMeta() {
+    return {
+      categories: TICKET_CATEGORIES,
+      tiers: MEMBERSHIP_TIERS,
+      tierLabels: TIER_LABELS,
+      tierCategoryMap: TIER_CATEGORY_MAP,
+      tierWpProductMap: TIER_WP_PRODUCT_MAP,
+    };
+  }
 
   @Get()
   @Roles('event_admin', 'super_admin')

@@ -19,7 +19,7 @@ interface NavItem {
 function getEventNav(eventId: string, t: (key: string) => string): NavItem[] {
   return [
     { href: `/dashboard/events/${eventId}`, label: t('nav.overview'), icon: <Icons.BarChart size={18} /> },
-    { href: `/dashboard/events/${eventId}/ticket-types`, label: t('nav.ticketTypes'), icon: <Icons.Ticket size={18} /> },
+    { href: `/dashboard/events/${eventId}/tickets`, label: t('nav.tickets'), icon: <Icons.Ticket size={18} /> },
     { href: `/dashboard/events/${eventId}/attendees`, label: t('nav.attendees'), icon: <Icons.Users size={18} /> },
     { href: `/dashboard/events/${eventId}/orders`, label: t('nav.orders'), icon: <Icons.ShoppingCart size={18} /> },
     { href: `/dashboard/events/${eventId}/check-in`, label: t('nav.checkInLive'), icon: <Icons.CheckCircle size={18} /> },

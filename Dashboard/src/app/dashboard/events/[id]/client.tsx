@@ -178,12 +178,12 @@ export default function EventOverviewPage() {
         }}
       >
         <h2 className="mb-4 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-          {t('events.overview.ticketTypes')}
+          {t('events.overview.tickets')}
         </h2>
         <div className="space-y-3">
           {ticketTypes.length === 0 ? (
             <p className="py-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              {t('events.overview.noTicketTypes')}
+              {t('events.overview.noTickets')}
             </p>
           ) : (
             ticketTypes.map((tt) => {

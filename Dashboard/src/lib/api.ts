@@ -213,6 +213,20 @@ export interface Event {
   createdAt: string;
 }
 
+export interface PricingVariant {
+  id: string;
+  ticketTypeId: string;
+  variantType: string;  // early_bird | full_price | membership
+  label: string;
+  priceCents: number;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  wpProductId?: number | null;
+  membershipTier?: string | null;
+  sortOrder: number;
+  active: boolean;
+}
+
 export interface TicketType {
   id: string;
   eventId: string;
@@ -228,6 +242,39 @@ export interface TicketType {
   status: string;
   sortOrder: number;
   formSchemaId?: string | null;
+  category?: string;
+  membershipTier?: string | null;
+  wpProductId?: number | null;
+  meta?: Record<string, unknown> | null;
+  pricingVariants?: PricingVariant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketTypeMeta {
+  categories: readonly string[];
+  tiers: readonly string[];
+  tierLabels: Record<string, string>;
+  tierCategoryMap: Record<string, string>;
+  tierWpProductMap: Record<string, number>;
+}
+
+export interface FormTemplate {
+  id: string;
+  orgId: string;
+  name: string;
+  description?: string | null;
+  category?: string | null;
+  fields: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FormSchema {
+  id: string;
+  eventId: string;
+  name: string;
+  fields: unknown;
   createdAt: string;
   updatedAt: string;
 }
@@ -450,6 +497,9 @@ export const api = {
   getTicketTypes: (eventId: string, signal?: AbortSignal) =>
     request<TicketType[]>(`/events/${eventId}/ticket-types`, { signal }),
 
+  getTicketTypeMeta: (eventId: string, signal?: AbortSignal) =>
+    request<TicketTypeMeta>(`/events/${eventId}/ticket-types/meta`, { signal }),
+
   createTicketType: (eventId: string, data: {
     name: string;
     description?: string;
@@ -459,11 +509,37 @@ export const api = {
     salesStart?: string;
     salesEnd?: string;
     sortOrder?: number;
+    category?: string;
+    membershipTier?: string;
+    wpProductId?: number;
+    formSchemaId?: string;
   }) =>
     request<TicketType>(`/events/${eventId}/ticket-types`, { method: 'POST', body: data }),
 
   updateTicketType: (eventId: string, id: string, data: Record<string, unknown>) =>
     request<TicketType>(`/events/${eventId}/ticket-types/${id}`, { method: 'PATCH', body: data }),
+
+  // Pricing Variants
+  getVariants: (eventId: string, ticketTypeId: string, signal?: AbortSignal) =>
+    request<PricingVariant[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants`, { signal }),
+
+  createVariant: (eventId: string, ticketTypeId: string, data: {
+    variantType: string;
+    label: string;
+    priceCents: number;
+    validFrom?: string;
+    validUntil?: string;
+    wpProductId?: number;
+    membershipTier?: string;
+    sortOrder?: number;
+  }) =>
+    request<PricingVariant>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants`, { method: 'POST', body: data }),
+
+  updateVariant: (eventId: string, ticketTypeId: string, variantId: string, data: Record<string, unknown>) =>
+    request<PricingVariant>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants/${variantId}`, { method: 'PATCH', body: data }),
+
+  deleteVariant: (eventId: string, ticketTypeId: string, variantId: string) =>
+    request<void>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants/${variantId}`, { method: 'DELETE' }),
 
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>
@@ -553,7 +629,7 @@ export const api = {
 
   // Forms
   getFormSchemas: (eventId: string, signal?: AbortSignal) =>
-    request<unknown[]>(`/forms/event/${eventId}`, { signal }),
+    request<FormSchema[]>(`/forms/event/${eventId}`, { signal }),
 
   createFormSchema: (data: {
     eventId: string;
@@ -569,7 +645,14 @@ export const api = {
       }>;
     };
   }) =>
-    request<unknown>('/forms', { method: 'POST', body: data }),
+    request<FormSchema>('/forms', { method: 'POST', body: data }),
+
+  // Form Templates
+  getFormTemplates: (orgId: string, category?: string, signal?: AbortSignal) =>
+    request<FormTemplate[]>(
+      `/orgs/${orgId}/form-templates${category ? `?category=${category}` : ''}`,
+      { signal },
+    ),
 
   // Field Repository
   getFieldRepository: (signal?: AbortSignal) =>

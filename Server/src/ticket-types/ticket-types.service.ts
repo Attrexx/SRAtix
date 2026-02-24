@@ -52,6 +52,48 @@ export const WP_PRODUCT_TIER_MAP: Record<number, MembershipTier> = {
 };
 
 /**
+ * Tier → category mapping — derived from the WooCommerce product matrix.
+ */
+export const TIER_CATEGORY_MAP: Record<MembershipTier, TicketCategory> = {
+  student: 'individual',
+  individual: 'individual',
+  retired: 'individual',
+  industry_small: 'legal',
+  industry_medium: 'legal',
+  industry_large: 'legal',
+  academic: 'legal',
+  startup: 'legal',
+};
+
+/**
+ * Reverse lookup: tier → WooCommerce product ID.
+ */
+export const TIER_WP_PRODUCT_MAP: Record<MembershipTier, number> = {
+  student: 4603,
+  individual: 4601,
+  retired: 4605,
+  industry_small: 4591,
+  industry_medium: 4593,
+  industry_large: 4595,
+  academic: 4597,
+  startup: 4599,
+};
+
+/**
+ * Human-readable labels for membership tiers (English defaults).
+ */
+export const TIER_LABELS: Record<MembershipTier, string> = {
+  student: 'Student',
+  individual: 'Individual',
+  retired: 'Retired',
+  industry_small: 'Industry — Small',
+  industry_medium: 'Industry — Medium',
+  industry_large: 'Industry — Large',
+  academic: 'Academic',
+  startup: 'Startup',
+};
+
+/**
  * Pricing variant types — each ticket type can have up to one of each.
  */
 export const VARIANT_TYPES = ['early_bird', 'full_price', 'membership'] as const;
