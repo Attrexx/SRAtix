@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -108,6 +109,33 @@ export class FormsController {
     @Param('eventId') eventId: string,
   ) {
     return this.formsService.deactivateSchema(id, eventId);
+  }
+
+  /**
+   * PATCH /api/forms/:id/event/:eventId
+   * Update a form schema's name and/or fields.
+   */
+  @Patch(':id/event/:eventId')
+  @Roles('event_admin', 'super_admin')
+  updateSchema(
+    @Param('id') id: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: { name?: string; fields?: any },
+  ) {
+    return this.formsService.updateSchema(id, eventId, dto);
+  }
+
+  /**
+   * DELETE /api/forms/:id/event/:eventId
+   * Delete a form schema (only if no submissions exist).
+   */
+  @Delete(':id/event/:eventId')
+  @Roles('event_admin', 'super_admin')
+  deleteSchema(
+    @Param('id') id: string,
+    @Param('eventId') eventId: string,
+  ) {
+    return this.formsService.deleteSchema(id, eventId);
   }
 
   /**

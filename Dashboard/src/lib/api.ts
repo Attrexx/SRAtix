@@ -653,6 +653,12 @@ export const api = {
   }) =>
     request<FormSchema>('/forms', { method: 'POST', body: data }),
 
+  updateFormSchema: (id: string, eventId: string, data: { name?: string; fields?: unknown }) =>
+    request<FormSchema>(`/forms/${id}/event/${eventId}`, { method: 'PATCH', body: data }),
+
+  deleteFormSchema: (id: string, eventId: string) =>
+    request<void>(`/forms/${id}/event/${eventId}`, { method: 'DELETE' }),
+
   // Form Templates
   getFormTemplates: (orgId: string, category?: string, signal?: AbortSignal) =>
     request<FormTemplate[]>(

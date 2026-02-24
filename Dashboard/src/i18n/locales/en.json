@@ -389,6 +389,11 @@
   "forms.group.privacy": "Privacy",
   "forms.group.questions": "Questions",
   "forms.group.community": "Community",
+  "forms.editForm": "Edit Form",
+  "forms.confirmDelete": "Are you sure you want to delete \"{name}\"? This cannot be undone if the form has no submissions.",
+  "forms.deleted": "Form deleted.",
+  "forms.failedToDelete": "Failed to delete form. It may have existing submissions.",
+  "forms.hasSubmissions": "This form has submissions and cannot be deleted.",
 
   "audit.title": "Activity Log",
   "audit.subtitle": "Full audit trail for this event",

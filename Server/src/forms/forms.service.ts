@@ -165,6 +165,71 @@ export class FormsService {
     });
   }
 
+  /**
+   * Update an existing form schema's name and/or fields.
+   * Creates a new version if there are existing submissions referencing this schema.
+   */
+  async updateSchema(
+    id: string,
+    eventId: string,
+    data: { name?: string; fields?: FormSchemaDefinition },
+  ) {
+    const existing = await this.findSchema(id, eventId);
+
+    if (data.fields) {
+      this.validateFields(data.fields.fields);
+    }
+
+    // Check if submissions exist — if so, create a new version instead of mutating
+    const submissionCount = await this.prisma.formSubmission.count({
+      where: { formSchemaId: id },
+    });
+
+    if (submissionCount > 0) {
+      // Immutable: deactivate old, create new version
+      await this.prisma.formSchema.update({
+        where: { id },
+        data: { active: false },
+      });
+      return this.prisma.formSchema.create({
+        data: {
+          eventId,
+          name: data.name ?? existing.name,
+          version: existing.version + 1,
+          fields: (data.fields ?? existing.fields) as any,
+          active: true,
+        },
+      });
+    }
+
+    // No submissions — safe to update in place
+    return this.prisma.formSchema.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.fields !== undefined && { fields: data.fields as any }),
+      },
+    });
+  }
+
+  /**
+   * Delete a form schema. Only allowed if no submissions reference it.
+   */
+  async deleteSchema(id: string, eventId: string) {
+    await this.findSchema(id, eventId);
+
+    const submissionCount = await this.prisma.formSubmission.count({
+      where: { formSchemaId: id },
+    });
+    if (submissionCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete a form schema that has submissions. Deactivate it instead.',
+      );
+    }
+
+    return this.prisma.formSchema.delete({ where: { id } });
+  }
+
   // ─── Schema for Public (unauthenticated) ──────────────────────
 
   /**

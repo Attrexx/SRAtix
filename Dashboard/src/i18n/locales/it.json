@@ -389,6 +389,11 @@
   "forms.group.privacy": "Privacy",
   "forms.group.questions": "Domande",
   "forms.group.community": "Comunità",
+  "forms.editForm": "Modifica modulo",
+  "forms.confirmDelete": "Eliminare \"{name}\"? Questa azione non può essere annullata.",
+  "forms.deleted": "Modulo eliminato.",
+  "forms.failedToDelete": "Impossibile eliminare il modulo. Potrebbe avere invii esistenti.",
+  "forms.hasSubmissions": "Questo modulo ha degli invii e non può essere eliminato.",
 
   "audit.title": "Registro attività",
   "audit.subtitle": "Cronologia completa di questo evento",

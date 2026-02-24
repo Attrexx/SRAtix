@@ -389,6 +389,11 @@
   "forms.group.privacy": "Datenschutz",
   "forms.group.questions": "Fragen",
   "forms.group.community": "Community",
+  "forms.editForm": "Formular bearbeiten",
+  "forms.confirmDelete": "Möchten Sie \"{name}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+  "forms.deleted": "Formular gelöscht.",
+  "forms.failedToDelete": "Formular konnte nicht gelöscht werden. Es hat möglicherweise vorhandene Einreichungen.",
+  "forms.hasSubmissions": "Dieses Formular hat Einreichungen und kann nicht gelöscht werden.",
 
   "audit.title": "Aktivitätsprotokoll",
   "audit.subtitle": "Vollständiger Verlauf dieser Veranstaltung",

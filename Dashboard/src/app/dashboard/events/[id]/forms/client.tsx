@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef, type DragEvent } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type FieldDefinition } from '@/lib/api';
+import { api, type FieldDefinition, type FormSchema as ApiFormSchema } from '@/lib/api';
 import { useI18n } from '@/i18n/i18n-provider';
 import { resolveLabel } from '@/i18n/i18n-provider';
 import { Icons } from '@/components/icons';
+import { toast } from 'sonner';
 
 const FIELD_TYPES = [
   'text', 'email', 'phone', 'number', 'textarea', 'select',
@@ -112,6 +113,7 @@ export default function FormsPage() {
   const [fields, setFields] = useState<BuilderField[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [editSchemaId, setEditSchemaId] = useState<string | null>(null);
 
   // Field picker
   const [showPicker, setShowPicker] = useState(false);
@@ -155,12 +157,12 @@ export default function FormsPage() {
     await loadRepo();
   };
 
-  // Seed default fields when repo loads and builder is open
+  // Seed default fields when repo loads and builder is open (new form only)
   useEffect(() => {
-    if (showBuilder && repoLoaded && fields.length === 0) {
+    if (showBuilder && repoLoaded && fields.length === 0 && !editSchemaId) {
       setFields(getDefaultFields(repoFields));
     }
-  }, [showBuilder, repoLoaded, repoFields, fields.length]);
+  }, [showBuilder, repoLoaded, repoFields, fields.length, editSchemaId]);
 
   const updateField = (idx: number, patch: Partial<BuilderField>) => {
     setFields((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
@@ -185,9 +187,35 @@ export default function FormsPage() {
     setFormName('');
     setFields([]);
     setError('');
+    setEditSchemaId(null);
     setShowBuilder(false);
     setShowPicker(false);
     setPickerSearch('');
+  };
+
+  /** Open the builder pre-populated for editing an existing form schema. */
+  const openEditSchema = async (schema: FormSchema) => {
+    setEditSchemaId(schema.id);
+    setFormName(schema.name);
+    setFields(normalizeFields(schema));
+    setError('');
+    setShowBuilder(true);
+    await loadRepo();
+  };
+
+  /** Delete a form schema after user confirmation. */
+  const handleDeleteSchema = async (schema: FormSchema) => {
+    const confirmed = window.confirm(
+      t('forms.confirmDelete').replace('{name}', schema.name),
+    );
+    if (!confirmed) return;
+    try {
+      await api.deleteFormSchema(schema.id, eventId);
+      toast.success(t('forms.deleted'));
+      await loadSchemas();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('forms.failedToDelete'));
+    }
   };
 
   const handleCreate = async () => {
@@ -198,7 +226,14 @@ export default function FormsPage() {
     setSaving(true);
     setError('');
     try {
-      await api.createFormSchema({ eventId, name: formName.trim(), fields: { fields } });
+      if (editSchemaId) {
+        await api.updateFormSchema(editSchemaId, eventId, {
+          name: formName.trim(),
+          fields: { fields },
+        });
+      } else {
+        await api.createFormSchema({ eventId, name: formName.trim(), fields: { fields } });
+      }
       resetBuilder();
       await loadSchemas();
     } catch (err: unknown) {
@@ -318,7 +353,7 @@ export default function FormsPage() {
                 <button onClick={resetBuilder} className="rounded p-1 transition-colors hover:opacity-70" style={{ color: 'var(--color-text-secondary)' }}>
                   <Icons.ArrowLeft size={18} />
                 </button>
-                <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>{t('forms.newRegistrationForm')}</h2>
+                <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>{editSchemaId ? t('forms.editForm') : t('forms.newRegistrationForm')}</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -339,7 +374,7 @@ export default function FormsPage() {
                   className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-colors disabled:opacity-50"
                   style={{ background: 'var(--color-primary)' }}
                 >
-                  {saving ? t('common.saving') : t('forms.createForm')}
+                  {saving ? t('common.saving') : editSchemaId ? t('common.saveChanges') : t('forms.createForm')}
                 </button>
               </div>
             </div>
@@ -405,8 +440,10 @@ export default function FormsPage() {
                         width: `calc(${field.width}% - ${field.width < 100 ? '0.5rem' : '0px'})`,
                         minWidth: '180px',
                         background: 'var(--color-bg-card)',
-                        border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border-subtle)',
-                        boxShadow: dropIdx === idx ? '0 0 0 2px rgba(0,115,170,0.15)' : 'none',
+                        border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                        boxShadow: dropIdx === idx
+                          ? '0 0 0 2px rgba(0,115,170,0.15)'
+                          : '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
                       }}
                     >
                       {/* Field header: drag handle + label + remove */}
@@ -612,6 +649,29 @@ export default function FormsPage() {
                   {schemaFields.length > 5 && (
                     <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('forms.moreFields').replace('{count}', String(schemaFields.length - 5))}</span>
                   )}
+                </div>
+                {/* Actions */}
+                <div className="mt-3 flex items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
+                  <button
+                    onClick={() => openEditSchema(schema)}
+                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    <Icons.Edit size={14} /> {t('common.edit')}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSchema(schema)}
+                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-danger, #dc2626)',
+                    }}
+                  >
+                    <Icons.Trash size={14} /> {t('common.delete')}
+                  </button>
                 </div>
               </div>
             );

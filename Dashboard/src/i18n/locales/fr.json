@@ -389,6 +389,11 @@
   "forms.group.privacy": "Confidentialité",
   "forms.group.questions": "Questions",
   "forms.group.community": "Communauté",
+  "forms.editForm": "Modifier le formulaire",
+  "forms.confirmDelete": "Voulez-vous vraiment supprimer \"{name}\" ? Cette action est irréversible.",
+  "forms.deleted": "Formulaire supprimé.",
+  "forms.failedToDelete": "Impossible de supprimer le formulaire. Il contient peut-être des soumissions.",
+  "forms.hasSubmissions": "Ce formulaire contient des soumissions et ne peut pas être supprimé.",
 
   "audit.title": "Journal d'activité",
   "audit.subtitle": "Historique complet de cet événement",
