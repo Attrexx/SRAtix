@@ -274,6 +274,9 @@ export interface FormSchema {
   id: string;
   eventId: string;
   name: string;
+  version: number;
+  active: boolean;
+  ticketTypeId?: string;
   fields: unknown;
   createdAt: string;
   updatedAt: string;
