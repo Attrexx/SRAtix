@@ -143,6 +143,58 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
   return res.json();
 }
 
+/**
+ * Authenticated file download — fetches a URL with the Bearer token
+ * and triggers a browser download from the resulting blob.
+ * Used for export endpoints that require JWT auth.
+ */
+export async function downloadFile(url: string, fallbackFilename: string): Promise<void> {
+  let token = getToken();
+  if (!token) {
+    token = await refreshAccessToken();
+  }
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let res = await fetch(url, { headers, credentials: 'include' });
+
+  // Retry once on 401 after refreshing the token
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers['Authorization'] = `Bearer ${newToken}`;
+      res = await fetch(url, { headers, credentials: 'include' });
+    }
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.message ?? `HTTP ${res.status}`, data);
+  }
+
+  const blob = await res.blob();
+
+  // Extract filename from Content-Disposition header if available
+  const cd = res.headers.get('Content-Disposition');
+  const match = cd?.match(/filename="?([^";\n]+)"?/);
+  const filename = match?.[1] ?? fallbackFilename;
+
+  // Trigger browser download
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  // Clean up
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 100);
+}
+
 // ─── Type Definitions ───────────────────────────────────────────
 
 export interface Event {

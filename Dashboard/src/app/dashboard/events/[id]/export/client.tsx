@@ -1,14 +1,27 @@
 'use client';
 
 import { useEventId } from '@/hooks/use-event-id';
-import { api } from '@/lib/api';
+import { api, downloadFile } from '@/lib/api';
 import { Icons } from '@/components/icons';
-import { type ReactNode } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { useI18n } from '@/i18n/i18n-provider';
 
 export default function ExportPage() {
   const eventId = useEventId();
   const { t } = useI18n();
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const handleDownload = useCallback(async (url: string, fallback: string) => {
+    if (downloading) return;
+    setDownloading(fallback);
+    try {
+      await downloadFile(url, fallback);
+    } catch {
+      // Silently fail — could add toast notification later
+    } finally {
+      setDownloading(null);
+    }
+  }, [downloading]);
 
   const exports: {
     label: string;
@@ -88,24 +101,22 @@ export default function ExportPage() {
               {exp.description}
             </p>
             <div className="mt-3 flex items-center gap-3">
-              <a
-                href={exp.csvUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium"
+              <button
+                onClick={() => handleDownload(exp.csvUrl, `${exp.label}.csv`)}
+                disabled={downloading !== null}
+                className="inline-flex items-center gap-1 text-sm font-medium transition-opacity disabled:opacity-50"
                 style={{ color: 'var(--color-primary)' }}
               >
-                <Icons.Download size={14} /> {t('common.downloadCsv')}
-              </a>
-              <a
-                href={exp.xlsxUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium"
+                <Icons.Download size={14} /> {downloading?.endsWith('.csv') && downloading === `${exp.label}.csv` ? '…' : t('common.downloadCsv')}
+              </button>
+              <button
+                onClick={() => handleDownload(exp.xlsxUrl, `${exp.label}.xlsx`)}
+                disabled={downloading !== null}
+                className="inline-flex items-center gap-1 text-sm font-medium transition-opacity disabled:opacity-50"
                 style={{ color: 'var(--color-primary)' }}
               >
-                <Icons.Download size={14} /> {t('common.downloadExcel')}
-              </a>
+                <Icons.Download size={14} /> {downloading?.endsWith('.xlsx') && downloading === `${exp.label}.xlsx` ? '…' : t('common.downloadExcel')}
+              </button>
             </div>
           </div>
         ))}
