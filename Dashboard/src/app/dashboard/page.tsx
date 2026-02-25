@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { api, type Event } from '@/lib/api';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -18,7 +17,6 @@ function generateSlug(name: string): string {
 }
 
 export default function EventsPage() {
-  const router = useRouter();
   const { t, locale } = useI18n();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +84,7 @@ export default function EventsPage() {
       });
       setShowCreate(false);
       resetForm();
-      router.push(`/dashboard/events/${event.id}/`);
+      window.location.href = `/dashboard/events/${event.id}/`;
     } catch (err: any) {
       setError(err?.message ?? t('events.failedToCreate'));
     } finally {
@@ -179,7 +177,7 @@ export default function EventsPage() {
             <EventCard
               key={event.id}
               event={event}
-              onClick={() => { router.push(`/dashboard/events/${event.id}/`); }}
+              onClick={() => { window.location.href = `/dashboard/events/${event.id}/`; }}
             />
           ))}
         </div>

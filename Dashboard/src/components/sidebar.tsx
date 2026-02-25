@@ -16,6 +16,11 @@ interface NavItem {
   roles?: string[];
 }
 
+/** Strip trailing slash for consistent path comparison */
+function normalizePath(p: string): string {
+  return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+}
+
 function getEventNav(eventId: string, t: (key: string) => string): NavItem[] {
   return [
     { href: `/dashboard/events/${eventId}`, label: t('nav.overview'), icon: <Icons.BarChart size={18} /> },
@@ -93,7 +98,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
         {topNav
           .filter((item) => !item.roles || item.roles.some((r) => hasRole(r)))
           .map((item) => (
-            <SidebarLink key={item.href} item={item} active={pathname === item.href} />
+            <SidebarLink key={item.href} item={item} active={normalizePath(pathname) === normalizePath(item.href)} />
           ))}
 
         {/* Event-Scoped Navigation */}
@@ -104,7 +109,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
               {t('nav.event')}
             </p>
             {eventNav.map((item) => (
-              <SidebarLink key={item.href} item={item} active={pathname === item.href} />
+              <SidebarLink key={item.href} item={item} active={normalizePath(pathname) === normalizePath(item.href)} />
             ))}
           </>
         )}

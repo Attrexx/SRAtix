@@ -91,7 +91,7 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
   }
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...options.headers,
   };
 
