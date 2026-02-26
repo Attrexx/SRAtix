@@ -406,3 +406,43 @@
 .sratix-session-time    { font-weight: 700; min-width: 60px; color: #555; font-size: 0.9em; flex-shrink: 0; }
 .sratix-session-speaker { font-size: 0.88em; color: #666; margin-top: 2px; }
 .sratix-session-room    { font-size: 0.85em; color: #888; margin-top: 2px; }
+
+/* ── Auth prompt (shown when user is not logged in on My Tickets) ── */
+.sratix-auth-prompt {
+	text-align: center;
+	padding: 48px 24px;
+	background: #f9fafb;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	margin: 20px 0;
+}
+
+.sratix-auth-prompt__text {
+	font-size: 1.1em;
+	color: #555;
+	margin: 0 0 24px;
+}
+
+.sratix-auth-prompt__buttons {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.sratix-auth-prompt__buttons .sratix-btn {
+	min-width: 160px;
+	text-align: center;
+	text-decoration: none;
+}
+
+.sratix-btn--outline {
+	background: transparent;
+	color: #333;
+	border: 1px solid #ddd;
+}
+
+.sratix-btn--outline:hover {
+	background: #f3f3f3;
+	border-color: #ccc;
+}

@@ -397,7 +397,12 @@
     if (!container) return;
 
     if (!config.userEmail) {
-      container.innerHTML = `<p class="sratix-info">${escHtml(t('myTickets.login'))}</p>`;
+      // The PHP shortcode already renders a styled auth prompt with login/register
+      // buttons. If somehow the container exists but user isn't logged in, show the
+      // JS-side fallback (shouldn't normally happen since PHP gates first).
+      if (!container.querySelector('.sratix-auth-prompt')) {
+        container.innerHTML = `<p class="sratix-info">${escHtml(t('myTickets.login'))}</p>`;
+      }
       return;
     }
 

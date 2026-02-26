@@ -274,6 +274,13 @@ export class AuthService {
       subscriber: 'attendee',
       pm_group_leader: 'event_admin',
       corporate_member: 'organization_admin',
+      // SRAtix custom WP roles (created by SRA Ticketing plugin)
+      sratix_event_manager: 'event_admin',
+      sratix_attendee: 'attendee',
+      sratix_exhibitor: 'exhibitor',
+      sratix_speaker: 'attendee',
+      sratix_sponsor: 'sponsor',
+      sratix_volunteer: 'volunteer',
     };
 
     return wpRoles

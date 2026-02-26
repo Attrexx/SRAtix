@@ -666,6 +666,12 @@ export const api = {
       { signal },
     ),
 
+  seedFormTemplates: (orgId: string, force = false) =>
+    request<{ created: string[]; skipped: string[]; updated: string[] }>(
+      `/orgs/${orgId}/form-templates/seed`,
+      { method: 'POST', body: { force } },
+    ),
+
   // Field Repository
   getFieldRepository: (signal?: AbortSignal) =>
     request<FieldDefinition[]>('/field-repository', { signal }),

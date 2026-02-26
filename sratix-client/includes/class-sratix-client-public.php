@@ -127,10 +127,35 @@ class SRAtix_Client_Public {
 
 	/**
 	 * [sratix_my_tickets] — Attendee self-service portal.
+	 *
+	 * If SRD Auth is active, shows a branded login prompt with Sign In / Create Account
+	 * links instead of a bare "please log in" message.
 	 */
 	public function render_my_tickets( $atts ) {
 		if ( ! is_user_logged_in() ) {
-			return '<p class="sratix-info">' . esc_html__( 'Please log in to view your tickets.', 'sratix-client' ) . '</p>';
+			// Build a redirect URL back to this page after login.
+			$current_url = ( is_ssl() ? 'https' : 'http' ) . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+
+			// If SRD Auth plugin is available, use its URLs.
+			if ( class_exists( 'SRD_Auth' ) ) {
+				$login_url    = SRD_Auth::login_url( $current_url );
+				$register_url = SRD_Auth::register_url();
+			} else {
+				$login_url    = wp_login_url( $current_url );
+				$register_url = wp_registration_url();
+			}
+
+			return '<div class="sratix-auth-prompt">'
+				. '<p class="sratix-auth-prompt__text">'
+				. esc_html__( 'Sign in to view and manage your tickets.', 'sratix-client' )
+				. '</p>'
+				. '<div class="sratix-auth-prompt__buttons">'
+				. '<a href="' . esc_url( $login_url ) . '" class="sratix-btn sratix-btn--primary">'
+				. esc_html__( 'Sign In', 'sratix-client' ) . '</a>'
+				. '<a href="' . esc_url( $register_url ) . '" class="sratix-btn sratix-btn--outline">'
+				. esc_html__( 'Create Account', 'sratix-client' ) . '</a>'
+				. '</div>'
+				. '</div>';
 		}
 
 		$user     = wp_get_current_user();

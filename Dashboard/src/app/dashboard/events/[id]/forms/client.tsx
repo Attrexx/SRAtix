@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, type DragEvent } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type FieldDefinition, type FormSchema as ApiFormSchema } from '@/lib/api';
+import { api, type FieldDefinition, type FormSchema as ApiFormSchema, type FormTemplate } from '@/lib/api';
 import { useI18n } from '@/i18n/i18n-provider';
 import { resolveLabel } from '@/i18n/i18n-provider';
 import { Icons } from '@/components/icons';
@@ -128,6 +128,12 @@ export default function FormsPage() {
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
 
+  // Templates
+  const [templates, setTemplates] = useState<FormTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
+
   // Field repository
   const [repoFields, setRepoFields] = useState<FieldDefinition[]>([]);
   const [repoLoaded, setRepoLoaded] = useState(false);
@@ -173,6 +179,52 @@ export default function FormsPage() {
   }, [repoLoaded]);
 
   useEffect(() => { loadSchemas(); }, [loadSchemas]);
+
+  // ── Template loading ────────────────────────────────
+  // Fetch event to get orgId, then load templates (auto-seed if empty)
+
+  const loadTemplates = useCallback(async (oid: string) => {
+    setTemplatesLoading(true);
+    try {
+      let data = await api.getFormTemplates(oid);
+      // Auto-seed SRD26 templates if the org has none yet
+      if (data.length === 0) {
+        await api.seedFormTemplates(oid);
+        data = await api.getFormTemplates(oid);
+      }
+      setTemplates(data);
+    } catch { /* non-critical — template section just won't show */ }
+    setTemplatesLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!eventId) return;
+    (async () => {
+      try {
+        const event = await api.getEvent(eventId);
+        setOrgId(event.orgId);
+        await loadTemplates(event.orgId);
+      } catch { /* ignore */ }
+    })();
+  }, [eventId, loadTemplates]);
+
+  /** Apply a template: create a form schema from the template's fields. */
+  const handleApplyTemplate = async (tpl: FormTemplate) => {
+    setApplyingTemplate(tpl.id);
+    try {
+      await api.createFormSchema({
+        eventId,
+        name: tpl.name,
+        fields: tpl.fields as { fields: Array<{ id: string; type: string; label: Record<string, string>; required?: boolean; width?: number; options?: Array<{ value: string; label: Record<string, string> }> }> },
+      });
+      toast.success(t('forms.templateApplied').replace('{name}', tpl.name));
+      await loadSchemas();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('forms.failedToApplyTemplate'));
+    } finally {
+      setApplyingTemplate(null);
+    }
+  };
 
   // ── Builder actions ─────────────────────────────────
 
@@ -643,79 +695,175 @@ export default function FormsPage() {
 
       {/* ────────── Existing forms grid ────────── */}
       {schemas.length === 0 && !showBuilder ? (
-        <div className="rounded-xl py-12 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
-          <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Clipboard size={40} /></span>
-          <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.nFormsConfigured')}</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {schemas.map((schema) => {
-            const schemaFields = normalizeFields(schema);
-            return (
-              <div
-                key={schema.id}
-                className="rounded-xl p-5"
-                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{schema.name}</h3>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      v{schema.version} · {t('forms.fieldCount').replace('{count}', String(schemaFields.length))}
-                    </p>
-                  </div>
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                    style={{
-                      background: schema.active ? 'var(--color-success-light)' : 'var(--color-bg-muted)',
-                      color: schema.active ? 'var(--color-success)' : 'var(--color-text-muted)',
-                    }}
-                  >
-                    {schema.active ? t('common.active') : t('common.inactive')}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {schemaFields.slice(0, 5).map((field) => (
-                    <span
-                      key={field.id}
-                      className="rounded px-2 py-0.5 text-xs"
-                      style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-secondary)' }}
+        <>
+          {/* Templates section — primary CTA when no forms exist */}
+          {templates.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-1 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+                {t('forms.templates')}
+              </h2>
+              <p className="mb-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('forms.templatesHint')}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {templates.map((tpl) => {
+                  const tplFields = Array.isArray((tpl.fields as any)?.fields)
+                    ? (tpl.fields as any).fields as BuilderField[]
+                    : [];
+                  return (
+                    <div
+                      key={tpl.id}
+                      className="flex flex-col rounded-xl p-4"
+                      style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
                     >
-                      {resolveLabel(field.label, locale)}{field.required && ' *'}
-                    </span>
-                  ))}
-                  {schemaFields.length > 5 && (
-                    <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('forms.moreFields').replace('{count}', String(schemaFields.length - 5))}</span>
-                  )}
-                </div>
-                {/* Actions */}
-                <div className="mt-3 flex items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
-                  <button
-                    onClick={() => openEditSchema(schema)}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    <Icons.Edit size={14} /> {t('common.edit')}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSchema(schema)}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-danger, #dc2626)',
-                    }}
-                  >
-                    <Icons.Trash size={14} /> {t('common.delete')}
-                  </button>
-                </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{tpl.name}</h3>
+                          {tpl.description && (
+                            <p className="mt-0.5 line-clamp-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>{tpl.description}</p>
+                          )}
+                        </div>
+                        {tpl.category && (
+                          <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase" style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-muted)' }}>
+                            {tpl.category}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                        {tplFields.length} {tplFields.length === 1 ? 'field' : 'fields'}
+                      </p>
+                      <button
+                        onClick={() => handleApplyTemplate(tpl)}
+                        disabled={applyingTemplate === tpl.id}
+                        className="mt-3 w-full rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                        style={{ background: 'var(--color-primary)' }}
+                      >
+                        {applyingTemplate === tpl.id ? t('common.saving') : t('forms.useTemplate')}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          )}
+          {templates.length === 0 && !templatesLoading && (
+            <div className="rounded-xl py-12 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+              <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Clipboard size={40} /></span>
+              <p className="mt-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('forms.nFormsConfigured')}</p>
+            </div>
+          )}
+          {templatesLoading && (
+            <div className="space-y-3">
+              <div className="h-28 animate-pulse rounded-xl" style={{ background: 'var(--color-bg-muted)' }} />
+            </div>
+          )}
+        </>
+      ) : !showBuilder ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {schemas.map((schema) => {
+              const schemaFields = normalizeFields(schema);
+              return (
+                <div
+                  key={schema.id}
+                  className="rounded-xl p-5"
+                  style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>{schema.name}</h3>
+                      <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        v{schema.version} · {t('forms.fieldCount').replace('{count}', String(schemaFields.length))}
+                      </p>
+                    </div>
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{
+                        background: schema.active ? 'var(--color-success-light)' : 'var(--color-bg-muted)',
+                        color: schema.active ? 'var(--color-success)' : 'var(--color-text-muted)',
+                      }}
+                    >
+                      {schema.active ? t('common.active') : t('common.inactive')}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {schemaFields.slice(0, 5).map((field) => (
+                      <span
+                        key={field.id}
+                        className="rounded px-2 py-0.5 text-xs"
+                        style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-secondary)' }}
+                      >
+                        {resolveLabel(field.label, locale)}{field.required && ' *'}
+                      </span>
+                    ))}
+                    {schemaFields.length > 5 && (
+                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{t('forms.moreFields').replace('{count}', String(schemaFields.length - 5))}</span>
+                    )}
+                  </div>
+                  {/* Actions */}
+                  <div className="mt-3 flex items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--color-border)' }}>
+                    <button
+                      onClick={() => openEditSchema(schema)}
+                      className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                      style={{
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      <Icons.Edit size={14} /> {t('common.edit')}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSchema(schema)}
+                      className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                      style={{
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-danger, #dc2626)',
+                      }}
+                    >
+                      <Icons.Trash size={14} /> {t('common.delete')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Collapsed templates section when schemas exist */}
+          {templates.length > 0 && (
+            <details className="mt-6">
+              <summary className="cursor-pointer text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('forms.addFromTemplate')} ({templates.length})
+              </summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {templates.map((tpl) => {
+                  const tplFields = Array.isArray((tpl.fields as any)?.fields)
+                    ? (tpl.fields as any).fields as BuilderField[]
+                    : [];
+                  return (
+                    <div
+                      key={tpl.id}
+                      className="flex items-center justify-between rounded-lg px-4 py-3"
+                      style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text)' }}>{tpl.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{tplFields.length} fields{tpl.category ? ` · ${tpl.category}` : ''}</p>
+                      </div>
+                      <button
+                        onClick={() => handleApplyTemplate(tpl)}
+                        disabled={applyingTemplate === tpl.id}
+                        className="shrink-0 rounded-lg px-3 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                        style={{ background: 'var(--color-primary)' }}
+                      >
+                        {applyingTemplate === tpl.id ? '...' : t('forms.useTemplate')}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
