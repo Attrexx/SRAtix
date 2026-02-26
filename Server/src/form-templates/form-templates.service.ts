@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FormSchemaDefinition } from '../forms/forms.service';
+import { getSRD26TemplateSeedData } from './srd26-template-seeds';
 
 /**
  * Form Templates Service — manages reusable form configurations.
@@ -136,5 +137,69 @@ export class FormTemplatesService {
       category: source.category ?? undefined,
       fields: source.fields as unknown as FormSchemaDefinition,
     });
+  }
+
+  // ─── Template Seeding ───────────────────────────────────────
+
+  /**
+   * Seed SRD26 pre-made form templates for an organization.
+   *
+   * Idempotent: templates already present (matched by name + orgId)
+   * are skipped. Returns a summary of created vs skipped templates.
+   *
+   * @param orgId  The organization to seed templates into.
+   * @param force  If true, update existing templates with seed data.
+   */
+  async seedTemplatesForOrg(
+    orgId: string,
+    force = false,
+  ): Promise<{ created: string[]; skipped: string[]; updated: string[] }> {
+    const templates = getSRD26TemplateSeedData();
+    const created: string[] = [];
+    const skipped: string[] = [];
+    const updated: string[] = [];
+
+    for (const tpl of templates) {
+      const existing = await this.prisma.formTemplate.findFirst({
+        where: { orgId, name: tpl.name },
+      });
+
+      if (existing && !force) {
+        skipped.push(tpl.name);
+        this.logger.debug(`Seed skipped (exists): ${tpl.name}`);
+        continue;
+      }
+
+      if (existing && force) {
+        await this.prisma.formTemplate.update({
+          where: { id: existing.id },
+          data: {
+            description: tpl.description,
+            category: tpl.category,
+            fields: tpl.fields as any,
+          },
+        });
+        updated.push(tpl.name);
+        this.logger.log(`Seed updated: ${tpl.name}`);
+        continue;
+      }
+
+      await this.prisma.formTemplate.create({
+        data: {
+          orgId,
+          name: tpl.name,
+          description: tpl.description,
+          category: tpl.category,
+          fields: tpl.fields as any,
+        },
+      });
+      created.push(tpl.name);
+      this.logger.log(`Seed created: ${tpl.name}`);
+    }
+
+    this.logger.log(
+      `Seed summary for org ${orgId}: ${created.length} created, ${updated.length} updated, ${skipped.length} skipped`,
+    );
+    return { created, skipped, updated };
   }
 }

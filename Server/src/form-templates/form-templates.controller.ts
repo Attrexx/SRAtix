@@ -39,6 +39,24 @@ export class FormTemplatesController {
   }
 
   /**
+   * POST /api/orgs/:orgId/form-templates/seed
+   * Seed SRD26 pre-made form templates for the organization.
+   *
+   * Idempotent — templates already present are skipped unless
+   * `force: true` is sent to overwrite them with fresh seed data.
+   *
+   * Restricted to super_admin.
+   */
+  @Post('seed')
+  @Roles('super_admin')
+  seed(
+    @Param('orgId') orgId: string,
+    @Body('force') force?: boolean,
+  ) {
+    return this.formTemplates.seedTemplatesForOrg(orgId, force ?? false);
+  }
+
+  /**
    * GET /api/orgs/:orgId/form-templates/:id
    * Get a single template.
    */

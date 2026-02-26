@@ -547,17 +547,88 @@ class SRAtix_Control_Webhook {
 
 		// Known field mappings: SRAtix slug → WP user meta key
 		$field_map = array(
+			// ── Personal & Professional ──────────────────────────
 			'company_name'         => 'pm_field_institution_company',
 			'institution_company'  => 'pm_field_institution_company',
 			'job_title'            => 'pm_field_job_title',
 			'phone'                => 'pm_field_phone',
 			'website'              => 'pm_field_website',
+			'company_website'      => 'pm_field_website',
 			'country'              => 'pm_field_country',
 			'city'                 => 'pm_field_city',
 			'swiss_canton'         => 'pm_field_canton',
+			'state_canton'         => 'pm_field_canton',
+			'personal_linkedin'    => 'pm_field_linkedin_url',
+			'department'           => 'pm_field_department',
+			'industry_sector'      => 'pm_field_industry_sector',
+			'company_size'         => 'pm_field_company_size',
+
+			// ── Academic ─────────────────────────────────────────
+			'institution_name'      => 'pm_field_institution_company',
+			'institution_department' => 'pm_field_department',
+			'academic_role'         => 'pm_field_academic_role',
+			'research_areas'        => 'pm_field_research_areas',
+
+			// ── Student ──────────────────────────────────────────
+			'student_institution'   => 'pm_field_institution_company',
+			'student_level'         => 'pm_field_student_level',
+			'student_field_of_study' => 'pm_field_field_of_study',
+			'student_graduation_year' => 'pm_field_graduation_year',
+			'student_in_progress'   => 'pm_field_diploma_in_progress',
+			'student_supervisor'    => 'pm_field_supervisor',
+			'student_seeking'       => 'pm_field_student_seeking',
+
+			// ── Resume / SRA Profile ─────────────────────────────
+			'professional_title'    => '_candidate_title',
+			'short_bio_resume'      => '_candidate_about',
+			'work_permit'           => '_candidate_work_permit',
+			'expertise_area'        => '_candidate_expertise_area',
+			'skills_tools'          => '_candidate_skills_tools',
+			'education_level'       => '_candidate_education_level',
+			'diploma_specialization' => '_candidate_diploma_specialization',
+			'diploma_year'          => '_candidate_diploma_year',
+			'diploma_in_progress'   => '_candidate_diploma_in_progress',
+			'languages_proficiency' => '_candidate_languages',
+			'position_type_sought'  => '_candidate_position_type',
+			'remote_preference'     => '_candidate_remote_preference',
+			'availability_date'     => '_candidate_available_from',
+			'portfolio_url'         => '_candidate_portfolio_url',
+			'scholar_github_url'    => '_candidate_scholar_github',
+
+			// ── SRA Membership ───────────────────────────────────
+			'create_sra_profile'    => 'sratix_create_sra_profile',
+			'publish_resume'        => 'sratix_publish_resume',
+			'profile_visibility_resume' => 'sratix_profile_visibility',
+			'allow_employer_contact' => 'sratix_allow_employer_contact',
+
+			// ── Event preferences ────────────────────────────────
 			'dietary_requirements' => 'sratix_dietary_requirements',
 			'accessibility_needs'  => 'sratix_accessibility_needs',
 			'tshirt_size'          => 'sratix_tshirt_size',
+
+			// ── Startup ──────────────────────────────────────────
+			'startup_incorporated_recently' => 'sratix_startup_incorporated',
+			'startup_incorporation_year'    => 'sratix_startup_inc_year',
+			'startup_pitch_deck_url'        => 'sratix_startup_pitch_deck',
+			'startup_team_size'             => 'sratix_startup_team_size',
+			'startup_looking_for'           => 'sratix_startup_looking_for',
+
+			// ── Reduced ──────────────────────────────────────────
+			'reduced_status'        => 'sratix_reduced_status',
+			'reduced_note'          => 'sratix_reduced_note',
+
+			// ── Exhibitor / Org ──────────────────────────────────
+			'exhibitor_vat_uid'             => 'sratix_exhibitor_vat_uid',
+			'exhibitor_billing_address'     => 'sratix_exhibitor_billing_address',
+			'exhibitor_billing_email'       => 'sratix_exhibitor_billing_email',
+			'exhibitor_po_number'           => 'sratix_exhibitor_po_number',
+			'exhibitor_onsite_contact_name' => 'sratix_exhibitor_onsite_name',
+			'exhibitor_onsite_contact_phone' => 'sratix_exhibitor_onsite_phone',
+			'exhibitor_company_description' => 'sratix_exhibitor_description',
+			'exhibitor_member_id'           => 'sratix_exhibitor_member_id',
+			'exhibitor_staff_company'       => 'sratix_exhibitor_company',
+			'exhibitor_booth_role'          => 'sratix_exhibitor_booth_role',
+			'exhibitor_setup_access'        => 'sratix_exhibitor_setup_access',
 		);
 
 		foreach ( $form_data as $slug => $value ) {
@@ -567,6 +638,119 @@ class SRAtix_Control_Webhook {
 			}
 			update_user_meta( $user_id, $meta_key, sanitize_text_field( $value ) );
 		}
+
+		// ── Auto-create WP Job Manager resume if opted in ────
+		if ( ! empty( $form_data['publish_resume'] )
+			&& ( 'yes' === $form_data['publish_resume'] || true === $form_data['publish_resume'] )
+		) {
+			$this->maybe_create_resume( $user_id, $form_data );
+		}
+	}
+
+	/**
+	 * Create a WP Job Manager resume for the user from form data.
+	 *
+	 * @param int   $user_id   WP user ID.
+	 * @param array $form_data Form submission answers.
+	 */
+	private function maybe_create_resume( $user_id, $form_data ) {
+		if ( ! post_type_exists( 'resume' ) ) {
+			error_log( 'SRAtix Control: Resume post type not registered — skipping resume creation for user ' . $user_id );
+			return;
+		}
+
+		// Check if user already has a resume
+		$existing = get_posts( array(
+			'post_type'   => 'resume',
+			'author'      => $user_id,
+			'post_status' => array( 'publish', 'pending', 'hidden' ),
+			'numberposts' => 1,
+			'fields'      => 'ids',
+		) );
+
+		if ( ! empty( $existing ) ) {
+			error_log( 'SRAtix Control: User ' . $user_id . ' already has resume #' . $existing[0] . ' — skipping' );
+			return;
+		}
+
+		$user        = get_userdata( $user_id );
+		$title       = ! empty( $form_data['professional_title'] ) ? sanitize_text_field( $form_data['professional_title'] ) : '';
+		$post_title  = trim( $user->first_name . ' ' . $user->last_name );
+
+		$resume_id = wp_insert_post( array(
+			'post_type'    => 'resume',
+			'post_title'   => $post_title ?: $user->user_email,
+			'post_status'  => 'publish',
+			'post_author'  => $user_id,
+			'post_content' => sanitize_textarea_field( $form_data['short_bio_resume'] ?? '' ),
+		) );
+
+		if ( is_wp_error( $resume_id ) ) {
+			error_log( 'SRAtix Control: Failed to create resume for user ' . $user_id . ': ' . $resume_id->get_error_message() );
+			return;
+		}
+
+		// Store Resume Manager meta
+		update_post_meta( $resume_id, '_candidate_title', $title );
+		update_post_meta( $resume_id, '_candidate_email', $user->user_email );
+		update_post_meta( $resume_id, '_candidate_location', sanitize_text_field( $form_data['city'] ?? '' ) );
+
+		// Map form fields → resume meta
+		$resume_meta_fields = array(
+			'work_permit'           => '_candidate_work_permit',
+			'education_level'       => '_candidate_education_level',
+			'diploma_specialization' => '_candidate_diploma_specialization',
+			'diploma_year'          => '_candidate_diploma_year',
+			'diploma_in_progress'   => '_candidate_diploma_in_progress',
+			'languages_proficiency' => '_candidate_languages',
+			'position_type_sought'  => '_candidate_position_type',
+			'remote_preference'     => '_candidate_remote_preference',
+			'availability_date'     => '_candidate_available_from',
+			'portfolio_url'         => '_candidate_portfolio_url',
+			'scholar_github_url'    => '_candidate_scholar_github',
+		);
+
+		foreach ( $resume_meta_fields as $form_slug => $meta_key ) {
+			if ( isset( $form_data[ $form_slug ] ) ) {
+				$val = $form_data[ $form_slug ];
+				if ( is_array( $val ) ) {
+					$val = wp_json_encode( $val );
+				}
+				update_post_meta( $resume_id, $meta_key, sanitize_text_field( $val ) );
+			}
+		}
+
+		// Store multi-select taxonomy-like fields as JSON post meta
+		$multi_fields = array(
+			'expertise_area' => '_candidate_expertise_area',
+			'skills_tools'   => '_candidate_skills_tools',
+		);
+
+		foreach ( $multi_fields as $form_slug => $meta_key ) {
+			if ( ! empty( $form_data[ $form_slug ] ) && is_array( $form_data[ $form_slug ] ) ) {
+				update_post_meta( $resume_id, $meta_key, wp_json_encode( $form_data[ $form_slug ] ) );
+			}
+		}
+
+		// Assign resume_skill taxonomy terms if available
+		if ( ! empty( $form_data['skills_tools'] ) && taxonomy_exists( 'resume_skill' ) ) {
+			$skills = is_array( $form_data['skills_tools'] ) ? $form_data['skills_tools'] : array( $form_data['skills_tools'] );
+			wp_set_object_terms( $resume_id, $skills, 'resume_skill', false );
+		}
+
+		// Visibility
+		$visibility = $form_data['profile_visibility_resume'] ?? 'members';
+		update_post_meta( $resume_id, '_sra_visibility', sanitize_text_field( $visibility ) );
+
+		// Mark as SRAtix-created
+		update_post_meta( $resume_id, '_sratix_created', true );
+
+		error_log( sprintf(
+			'SRAtix Control: Created resume #%d for user %d (%s)',
+			$resume_id,
+			$user_id,
+			$user->user_email
+		) );
 	}
 
 	/**

@@ -570,6 +570,450 @@ function getDefaultFieldDefinitions() {
     fd('emergency_contact_phone', { en: 'Emergency contact phone', de: 'Notfallkontakt Telefon', fr: 'Contact d\'urgence téléphone', it: 'Telefono contatto di emergenza', 'zh-TW': '緊急聯絡人電話' }, 'phone', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 10,
     }),
+
+    // ── Reduced Ticket Fields ───────────────────────────────
+    fd('reduced_status', { en: 'Reduced ticket status', de: 'Ermässigungsstatus', fr: 'Statut de réduction', it: 'Stato riduzione', 'zh-TW': '優惠票身分' }, 'select', 'questions', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 11,
+      options: multiOptI18n([
+        { en: 'Unemployed', de: 'Arbeitslos', fr: 'Sans emploi', it: 'Disoccupato', 'zh-TW': '待業中' },
+        { en: 'Retired', de: 'Pensioniert', fr: 'Retraité', it: 'In pensione', 'zh-TW': '已退休' },
+        { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
+      ]),
+    }),
+    fd('reduced_note', { en: 'Additional note', de: 'Zusätzliche Bemerkung', fr: 'Remarque supplémentaire', it: 'Nota aggiuntiva', 'zh-TW': '補充說明' }, 'textarea', 'questions', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 12,
+    }),
+
+    // ── Academic / Institution Fields ────────────────────────
+    fd('institution_name', { en: 'Institution Name', de: 'Institutionsname', fr: 'Nom de l\'institution', it: 'Nome istituzione', 'zh-TW': '機構名稱' }, 'text', 'profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 10,
+    }),
+    fd('institution_department', { en: 'Department / Lab', de: 'Abteilung / Labor', fr: 'Département / Laboratoire', it: 'Dipartimento / Laboratorio', 'zh-TW': '系所 / 實驗室' }, 'text', 'profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 11,
+    }),
+    fd('academic_role', { en: 'Role', de: 'Rolle', fr: 'Rôle', it: 'Ruolo', 'zh-TW': '職位' }, 'select', 'profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 12,
+      options: multiOptI18n([
+        { en: 'Faculty', de: 'Fakultät', fr: 'Corps professoral', it: 'Docente', 'zh-TW': '教職員' },
+        { en: 'Researcher', de: 'Forscher/in', fr: 'Chercheur/euse', it: 'Ricercatore', 'zh-TW': '研究員' },
+        { en: 'Postdoc', de: 'Postdoktorand/in', fr: 'Post-doctorant/e', it: 'Post-doc', 'zh-TW': '博士後研究員' },
+        { en: 'PhD student', de: 'Doktorand/in', fr: 'Doctorant/e', it: 'Dottorando', 'zh-TW': '博士生' },
+        { en: 'Admin / Staff', de: 'Verwaltung / Personal', fr: 'Administration / Personnel', it: 'Amministrazione / Staff', 'zh-TW': '行政人員' },
+        { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
+      ]),
+    }),
+    fd('research_areas', { en: 'Research / Technology Areas', de: 'Forschungs- / Technologiebereiche', fr: 'Domaines de recherche / technologie', it: 'Aree di ricerca / tecnologia', 'zh-TW': '研究 / 技術領域' }, 'multi-select', 'profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 13,
+      options: roboticsExpertiseAreas(),
+      helpText: { en: 'Select your areas of research in robotics.', de: 'Wählen Sie Ihre Forschungsbereiche in der Robotik.', fr: 'Sélectionnez vos domaines de recherche en robotique.', it: 'Seleziona le tue aree di ricerca nella robotica.', 'zh-TW': '請選擇您在機器人領域的研究範疇。' },
+    }),
+
+    // ── Student Fields ──────────────────────────────────────
+    fd('student_institution', { en: 'University / School', de: 'Universität / Schule', fr: 'Université / École', it: 'Università / Scuola', 'zh-TW': '大學 / 學校' }, 'text', 'student', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 0,
+      categoryFilter: ['individual'],
+    }),
+    fd('student_level', { en: 'Study Level', de: 'Studienstufe', fr: 'Niveau d\'études', it: 'Livello di studio', 'zh-TW': '學歷程度' }, 'select', 'student', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 1,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'bsc', label: { en: 'Bachelor\'s (BSc)', de: 'Bachelor (BSc)', fr: 'Bachelor (BSc)', it: 'Bachelor (BSc)', 'zh-TW': '學士 (BSc)' } },
+        { value: 'msc', label: { en: 'Master\'s (MSc)', de: 'Master (MSc)', fr: 'Master (MSc)', it: 'Master (MSc)', 'zh-TW': '碩士 (MSc)' } },
+        { value: 'phd', label: { en: 'PhD', de: 'Doktorat', fr: 'Doctorat', it: 'Dottorato', 'zh-TW': '博士' } },
+      ],
+    }),
+    fd('student_field_of_study', { en: 'Field of Study', de: 'Studienrichtung', fr: 'Domaine d\'études', it: 'Campo di studio', 'zh-TW': '研究領域' }, 'text', 'student', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 2,
+      categoryFilter: ['individual'],
+    }),
+    fd('student_graduation_year', { en: 'Graduation Year', de: 'Abschlussjahr', fr: 'Année de diplôme', it: 'Anno di laurea', 'zh-TW': '畢業年份' }, 'text', 'student', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 3,
+      categoryFilter: ['individual'],
+      validation: { pattern: '[0-9]{4}' },
+      placeholder: { en: 'e.g. 2026', de: 'z.B. 2026', fr: 'ex. 2026', it: 'es. 2026', 'zh-TW': '例：2026' },
+    }),
+    fd('student_in_progress', { en: 'Diploma in progress', de: 'Studium laufend', fr: 'Diplôme en cours', it: 'Diploma in corso', 'zh-TW': '在學中' }, 'checkbox', 'student', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 4,
+      categoryFilter: ['individual'],
+    }),
+    fd('student_supervisor', { en: 'Supervisor / Lab', de: 'Betreuer/in / Labor', fr: 'Superviseur / Laboratoire', it: 'Supervisore / Laboratorio', 'zh-TW': '指導教授 / 實驗室' }, 'text', 'student', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 5,
+      categoryFilter: ['individual'],
+    }),
+    fd('student_seeking', { en: 'Seeking opportunities', de: 'Suche nach Möglichkeiten', fr: 'Recherche d\'opportunités', it: 'Cerco opportunità', 'zh-TW': '尋求機會' }, 'multi-select', 'student', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 6,
+      categoryFilter: ['individual'],
+      options: multiOptI18n([
+        { en: 'Internship', de: 'Praktikum', fr: 'Stage', it: 'Tirocinio', 'zh-TW': '實習' },
+        { en: 'Thesis project', de: 'Abschlussarbeit', fr: 'Projet de thèse', it: 'Progetto di tesi', 'zh-TW': '畢業論文專案' },
+        { en: 'Full-time position', de: 'Vollzeitstelle', fr: 'Poste à plein temps', it: 'Posizione a tempo pieno', 'zh-TW': '全職工作' },
+      ]),
+    }),
+
+    // ── Startup Fields ──────────────────────────────────────
+    fd('startup_incorporated_recently', { en: 'Company incorporated within last 5 years', de: 'Firma in den letzten 5 Jahren gegründet', fr: 'Société constituée il y a moins de 5 ans', it: 'Società costituita negli ultimi 5 anni', 'zh-TW': '公司於過去 5 年內成立' }, 'checkbox', 'startup', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 0,
+      categoryFilter: ['individual', 'legal'],
+    }),
+    fd('startup_incorporation_year', { en: 'Incorporation Year', de: 'Gründungsjahr', fr: 'Année de création', it: 'Anno di costituzione', 'zh-TW': '成立年份' }, 'text', 'startup', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 1,
+      categoryFilter: ['individual', 'legal'],
+      validation: { pattern: '[0-9]{4}' },
+      placeholder: { en: 'e.g. 2023', de: 'z.B. 2023', fr: 'ex. 2023', it: 'es. 2023', 'zh-TW': '例：2023' },
+    }),
+    fd('startup_pitch_deck_url', { en: 'Website / Pitch Deck URL', de: 'Website / Pitch Deck URL', fr: 'Site web / URL du pitch deck', it: 'Sito web / URL pitch deck', 'zh-TW': '網站 / 簡報連結' }, 'url', 'startup', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 2,
+      categoryFilter: ['individual', 'legal'],
+    }),
+    fd('startup_team_size', { en: 'Team Size', de: 'Teamgrösse', fr: 'Taille de l\'équipe', it: 'Dimensione del team', 'zh-TW': '團隊規模' }, 'select', 'startup', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 3,
+      categoryFilter: ['individual', 'legal'],
+      options: multiOpt(['1–5', '6–15', '16–50', '50+']),
+    }),
+    fd('startup_looking_for', { en: 'What are you looking for?', de: 'Was suchen Sie?', fr: 'Que recherchez-vous ?', it: 'Cosa cercate?', 'zh-TW': '您在尋找什麼？' }, 'multi-select', 'startup', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      categoryFilter: ['individual', 'legal'],
+      options: multiOptI18n([
+        { en: 'Partners', de: 'Partner', fr: 'Partenaires', it: 'Partner', 'zh-TW': '合作夥伴' },
+        { en: 'Pilot projects', de: 'Pilotprojekte', fr: 'Projets pilotes', it: 'Progetti pilota', 'zh-TW': '試行計畫' },
+        { en: 'Hiring talent', de: 'Talente einstellen', fr: 'Recrutement', it: 'Assunzione talenti', 'zh-TW': '招募人才' },
+        { en: 'Funding', de: 'Finanzierung', fr: 'Financement', it: 'Finanziamenti', 'zh-TW': '資金' },
+        { en: 'Customers', de: 'Kunden', fr: 'Clients', it: 'Clienti', 'zh-TW': '客戶' },
+        { en: 'Mentors', de: 'Mentoren', fr: 'Mentors', it: 'Mentor', 'zh-TW': '導師' },
+      ]),
+    }),
+
+    // ═══════════════════════════════════════════════════════════
+    // SRA MEMBERSHIP — Resume Creation Path (individual/student)
+    // ═══════════════════════════════════════════════════════════
+
+    // ── SRA Membership Opt-in Fields ────────────────────────
+    fd('create_sra_profile', { en: 'Create my SRA public profile', de: 'Mein öffentliches SRA-Profil erstellen', fr: 'Créer mon profil public SRA', it: 'Crea il mio profilo pubblico SRA', 'zh-TW': '建立我的 SRA 公開檔案' }, 'yes-no', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 0,
+      categoryFilter: ['individual'],
+      defaultValue: true,
+      helpText: { en: 'Your profile will be visible on swiss-robotics.org.', de: 'Ihr Profil wird auf swiss-robotics.org sichtbar sein.', fr: 'Votre profil sera visible sur swiss-robotics.org.', it: 'Il tuo profilo sarà visibile su swiss-robotics.org.', 'zh-TW': '您的個人檔案將顯示在 swiss-robotics.org。' },
+    }),
+    fd('publish_resume', { en: 'Publish my resume on SRA', de: 'Meinen Lebenslauf auf SRA veröffentlichen', fr: 'Publier mon CV sur SRA', it: 'Pubblica il mio CV su SRA', 'zh-TW': '在 SRA 發布我的履歷' }, 'yes-no', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 1,
+      categoryFilter: ['individual'],
+      defaultValue: false,
+      helpText: { en: 'Your resume will be searchable by employers on swiss-robotics.org.', de: 'Ihr Lebenslauf wird für Arbeitgeber auf swiss-robotics.org durchsuchbar sein.', fr: 'Votre CV sera consultable par les employeurs sur swiss-robotics.org.', it: 'Il tuo CV sarà ricercabile dai datori di lavoro su swiss-robotics.org.', 'zh-TW': '您的履歷將可被 swiss-robotics.org 上的雇主搜尋。' },
+    }),
+    fd('profile_visibility_resume', { en: 'Profile visibility', de: 'Profilsichtbarkeit', fr: 'Visibilité du profil', it: 'Visibilità del profilo', 'zh-TW': '個人檔案可見度' }, 'radio', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 2,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'public', label: { en: 'Public — visible to everyone', de: 'Öffentlich — für alle sichtbar', fr: 'Public — visible par tous', it: 'Pubblico — visibile a tutti', 'zh-TW': '公開 — 所有人可見' } },
+        { value: 'members', label: { en: 'Members only — visible to SRA members', de: 'Nur Mitglieder — für SRA-Mitglieder sichtbar', fr: 'Membres uniquement — visible par les membres SRA', it: 'Solo membri — visibile ai membri SRA', 'zh-TW': '僅限會員 — SRA 會員可見' } },
+        { value: 'hidden', label: { en: 'Hidden — not listed', de: 'Ausgeblendet — nicht gelistet', fr: 'Masqué — non listé', it: 'Nascosto — non elencato', 'zh-TW': '隱藏 — 不公開列出' } },
+      ],
+    }),
+    fd('allow_employer_contact', { en: 'Allow employers to contact me', de: 'Arbeitgebern erlauben, mich zu kontaktieren', fr: 'Autoriser les employeurs à me contacter', it: 'Consenti ai datori di lavoro di contattarmi', 'zh-TW': '允許雇主聯繫我' }, 'yes-no', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 3,
+      categoryFilter: ['individual'],
+    }),
+
+    // ── Resume Data Fields ──────────────────────────────────
+    fd('professional_title', { en: 'Professional Title / Headline', de: 'Berufstitel / Überschrift', fr: 'Titre professionnel', it: 'Titolo professionale', 'zh-TW': '職稱 / 標題' }, 'text', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      categoryFilter: ['individual'],
+      placeholder: { en: 'e.g. Robotics Engineer, PhD Candidate in AI', de: 'z.B. Robotik-Ingenieur, Doktorand in KI', fr: 'ex. Ingénieur robotique, Doctorant en IA', it: 'es. Ingegnere robotico, Dottorando in IA', 'zh-TW': '例：機器人工程師、AI 博士候選人' },
+    }),
+    fd('short_bio_resume', { en: 'Short Bio / Pitch', de: 'Kurzbiografie / Pitch', fr: 'Bio courte / Pitch', it: 'Breve bio / Pitch', 'zh-TW': '簡短自介 / 電梯簡報' }, 'textarea', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 5,
+      categoryFilter: ['individual'],
+      validation: { maxLength: 500 },
+      helpText: { en: 'Max 500 characters. Describe yourself in 2-3 sentences.', de: 'Max. 500 Zeichen. Beschreiben Sie sich in 2-3 Sätzen.', fr: 'Max. 500 caractères. Décrivez-vous en 2-3 phrases.', it: 'Max. 500 caratteri. Descriviti in 2-3 frasi.', 'zh-TW': '最多 500 字元。用 2-3 句話描述自己。' },
+    }),
+    fd('position_type_sought', { en: 'Type of position sought', de: 'Art der gesuchten Stelle', fr: 'Type de poste recherché', it: 'Tipo di posizione cercata', 'zh-TW': '尋求的職位類型' }, 'multi-select', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 6,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'full-time', label: { en: 'Full-time', de: 'Vollzeit', fr: 'Temps plein', it: 'Tempo pieno', 'zh-TW': '全職' } },
+        { value: 'part-time', label: { en: 'Part-time', de: 'Teilzeit', fr: 'Temps partiel', it: 'Part-time', 'zh-TW': '兼職' } },
+        { value: 'internship', label: { en: 'Internship', de: 'Praktikum', fr: 'Stage', it: 'Tirocinio', 'zh-TW': '實習' } },
+        { value: 'freelance', label: { en: 'Freelance / Consulting', de: 'Freiberuflich / Beratung', fr: 'Freelance / Conseil', it: 'Freelance / Consulenza', 'zh-TW': '自由工作 / 顧問' } },
+      ],
+    }),
+    fd('remote_preference', { en: 'Remote work preference', de: 'Remote-Arbeit Präferenz', fr: 'Préférence de télétravail', it: 'Preferenza lavoro da remoto', 'zh-TW': '遠端工作偏好' }, 'select', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 7,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'remote', label: { en: 'Remote only', de: 'Nur Remote', fr: 'Télétravail uniquement', it: 'Solo da remoto', 'zh-TW': '僅限遠端' } },
+        { value: 'hybrid', label: { en: 'Hybrid', de: 'Hybrid', fr: 'Hybride', it: 'Ibrido', 'zh-TW': '混合模式' } },
+        { value: 'onsite', label: { en: 'On-site', de: 'Vor Ort', fr: 'Sur place', it: 'In loco', 'zh-TW': '實體辦公' } },
+      ],
+    }),
+    fd('availability_date', { en: 'Available from', de: 'Verfügbar ab', fr: 'Disponible à partir de', it: 'Disponibile dal', 'zh-TW': '可開始日期' }, 'date', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 8,
+      categoryFilter: ['individual'],
+    }),
+    fd('work_permit', { en: 'Work permit status', de: 'Arbeitsbewilligungsstatus', fr: 'Statut du permis de travail', it: 'Stato permesso di lavoro', 'zh-TW': '工作許可狀態' }, 'select', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 9,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'none', label: { en: 'None', de: 'Keine', fr: 'Aucun', it: 'Nessuno', 'zh-TW': '無' } },
+        { value: 'l_g_permit', label: { en: 'L or G Permit', de: 'L- oder G-Bewilligung', fr: 'Permis L ou G', it: 'Permesso L o G', 'zh-TW': 'L 或 G 許可' } },
+        { value: 'b_permit', label: { en: 'B Permit', de: 'B-Bewilligung', fr: 'Permis B', it: 'Permesso B', 'zh-TW': 'B 許可' } },
+        { value: 'c_permit', label: { en: 'C Permit', de: 'C-Bewilligung', fr: 'Permis C', it: 'Permesso C', 'zh-TW': 'C 許可' } },
+        { value: 'swiss_citizen', label: { en: 'Swiss citizen', de: 'Schweizer Bürger/in', fr: 'Citoyen(ne) suisse', it: 'Cittadino/a svizzero/a', 'zh-TW': '瑞士公民' } },
+      ],
+    }),
+    fd('expertise_area', { en: 'Field(s) of experience', de: 'Erfahrungsbereiche', fr: 'Domaine(s) d\'expérience', it: 'Aree di esperienza', 'zh-TW': '經驗領域' }, 'multi-select', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 10,
+      categoryFilter: ['individual'],
+      options: roboticsExpertiseAreas(),
+      helpText: { en: 'Select your areas of expertise in robotics.', de: 'Wählen Sie Ihre Fachgebiete in der Robotik.', fr: 'Sélectionnez vos domaines d\'expertise en robotique.', it: 'Seleziona le tue aree di competenza nella robotica.', 'zh-TW': '請選擇您在機器人領域的專業範疇。' },
+    }),
+    fd('sub_expertise', { en: 'Sub-areas of expertise', de: 'Unterbereiche', fr: 'Sous-domaines d\'expertise', it: 'Sotto-aree di competenza', 'zh-TW': '專業子領域' }, 'multi-select', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 11,
+      categoryFilter: ['individual'],
+      helpText: { en: 'Specify more detailed sub-areas if applicable.', de: 'Geben Sie bei Bedarf detailliertere Unterbereiche an.', fr: 'Précisez les sous-domaines si applicable.', it: 'Specifica sotto-aree più dettagliate se applicabile.', 'zh-TW': '如適用，請指定更詳細的子領域。' },
+    }),
+    fd('skills_tools', { en: 'Skills & Tools', de: 'Fähigkeiten & Werkzeuge', fr: 'Compétences & Outils', it: 'Competenze & Strumenti', 'zh-TW': '技能與工具' }, 'multi-select', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 12,
+      categoryFilter: ['individual'],
+      options: roboticsSkillsTools(),
+    }),
+    fd('languages_proficiency', { en: 'Languages spoken (with proficiency)', de: 'Sprachkenntnisse (mit Niveau)', fr: 'Langues parlées (avec niveau)', it: 'Lingue parlate (con livello)', 'zh-TW': '語言能力（含程度）' }, 'text', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 13,
+      categoryFilter: ['individual'],
+      placeholder: { en: 'e.g. English (C1), German (B2), French (A2)', de: 'z.B. Deutsch (C1), Englisch (B2), Französisch (A2)', fr: 'ex. Français (C1), Anglais (B2), Allemand (A2)', it: 'es. Italiano (C1), Inglese (B2), Tedesco (A2)', 'zh-TW': '例：英語 (C1)、德語 (B2)、法語 (A2)' },
+    }),
+    fd('education_level', { en: 'Highest level of education', de: 'Höchster Bildungsabschluss', fr: 'Plus haut niveau d\'études', it: 'Più alto livello di istruzione', 'zh-TW': '最高學歷' }, 'select', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 14,
+      categoryFilter: ['individual'],
+      options: [
+        { value: 'bachelors', label: { en: 'Bachelor\'s', de: 'Bachelor', fr: 'Bachelor', it: 'Bachelor', 'zh-TW': '學士' } },
+        { value: 'masters', label: { en: 'Master\'s', de: 'Master', fr: 'Master', it: 'Master', 'zh-TW': '碩士' } },
+        { value: 'phd', label: { en: 'PhD', de: 'Doktorat', fr: 'Doctorat', it: 'Dottorato', 'zh-TW': '博士' } },
+      ],
+    }),
+    fd('diploma_specialization', { en: 'Specialization as per diploma', de: 'Spezialisierung gemäss Abschluss', fr: 'Spécialisation selon diplôme', it: 'Specializzazione da diploma', 'zh-TW': '學位專業' }, 'text', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 15,
+      categoryFilter: ['individual'],
+    }),
+    fd('diploma_year', { en: 'Year of diploma', de: 'Abschlussjahr', fr: 'Année du diplôme', it: 'Anno di diploma', 'zh-TW': '畢業年份' }, 'text', 'resume', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 16,
+      categoryFilter: ['individual'],
+      validation: { pattern: '[0-9]{4}' },
+    }),
+    fd('diploma_in_progress', { en: 'Diploma in progress', de: 'Studium laufend', fr: 'Diplôme en cours', it: 'Diploma in corso', 'zh-TW': '在學中' }, 'checkbox', 'resume', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 17,
+      categoryFilter: ['individual'],
+    }),
+    fd('resume_upload', { en: 'Upload full CV', de: 'Vollständigen Lebenslauf hochladen', fr: 'Télécharger le CV complet', it: 'Carica il CV completo', 'zh-TW': '上傳完整履歷' }, 'file', 'resume', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 18,
+      categoryFilter: ['individual'],
+    }),
+    fd('portfolio_url', { en: 'Portfolio link', de: 'Portfolio-Link', fr: 'Lien du portfolio', it: 'Link al portfolio', 'zh-TW': '作品集連結' }, 'url', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 19,
+      categoryFilter: ['individual'],
+    }),
+    fd('scholar_github_url', { en: 'Google Scholar / GitHub', de: 'Google Scholar / GitHub', fr: 'Google Scholar / GitHub', it: 'Google Scholar / GitHub', 'zh-TW': 'Google Scholar / GitHub' }, 'url', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 20,
+      categoryFilter: ['individual'],
+    }),
+
+    // ═══════════════════════════════════════════════════════════
+    // SRA MEMBERSHIP — Organization Profile + Map Card Path (legal)
+    // ═══════════════════════════════════════════════════════════
+
+    // ── Org Profile Opt-in Fields ───────────────────────────
+    fd('create_org_profile', { en: 'Create/claim organization profile in SRA directory', de: 'Organisationsprofil im SRA-Verzeichnis erstellen/beanspruchen', fr: 'Créer/revendiquer le profil dans l\'annuaire SRA', it: 'Crea/rivendica il profilo nell\'elenco SRA', 'zh-TW': '在 SRA 目錄中建立/認領組織檔案' }, 'yes-no', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 0,
+      categoryFilter: ['legal'],
+      defaultValue: true,
+    }),
+    fd('create_map_listing', { en: 'Create listing on Swiss Robotics Map', de: 'Eintrag auf der Swiss Robotics Map erstellen', fr: 'Créer une entrée sur la Swiss Robotics Map', it: 'Crea un\'inserzione sulla Swiss Robotics Map', 'zh-TW': '在瑞士機器人地圖建立據點' }, 'yes-no', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 1,
+      categoryFilter: ['legal'],
+      defaultValue: true,
+    }),
+    fd('org_profile_visibility', { en: 'Make profile public immediately?', de: 'Profil sofort veröffentlichen?', fr: 'Rendre le profil public immédiatement ?', it: 'Rendere il profilo pubblico immediatamente?', 'zh-TW': '立即公開個人檔案？' }, 'radio', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 2,
+      categoryFilter: ['legal'],
+      options: [
+        { value: 'publish', label: { en: 'Yes — publish now', de: 'Ja — jetzt veröffentlichen', fr: 'Oui — publier maintenant', it: 'Sì — pubblica ora', 'zh-TW': '是 — 立即發佈' } },
+        { value: 'draft', label: { en: 'No — save as draft pending review', de: 'Nein — als Entwurf speichern', fr: 'Non — enregistrer comme brouillon', it: 'No — salva come bozza', 'zh-TW': '否 — 儲存為草稿待審核' } },
+      ],
+    }),
+
+    // ── Org Identity ────────────────────────────────────────
+    fd('org_legal_name', { en: 'Legal Name', de: 'Offizieller Name', fr: 'Raison sociale', it: 'Denominazione legale', 'zh-TW': '法定名稱' }, 'text', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 3,
+      categoryFilter: ['legal'],
+      validation: { required: true },
+    }),
+    fd('org_display_name', { en: 'Display Name', de: 'Anzeigename', fr: 'Nom d\'affichage', it: 'Nome di visualizzazione', 'zh-TW': '顯示名稱' }, 'text', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 4,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_type', { en: 'Organization Type', de: 'Organisationstyp', fr: 'Type d\'organisation', it: 'Tipo di organizzazione', 'zh-TW': '組織類型' }, 'select', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 5,
+      categoryFilter: ['legal'],
+      options: [
+        { value: 'industry-large', label: { en: 'Industry Large', de: 'Grossunternehmen', fr: 'Grande industrie', it: 'Grande industria', 'zh-TW': '大型企業' } },
+        { value: 'industry-sme', label: { en: 'Industry SME', de: 'KMU', fr: 'PME', it: 'PMI', 'zh-TW': '中小企業' } },
+        { value: 'research', label: { en: 'Research / University', de: 'Forschung / Universität', fr: 'Recherche / Université', it: 'Ricerca / Università', 'zh-TW': '研究 / 大學' } },
+        { value: 'infrastructure-funding-providers', label: { en: 'Infrastructure & Funding', de: 'Infrastruktur & Finanzierung', fr: 'Infrastructure & Financement', it: 'Infrastruttura & Finanziamento', 'zh-TW': '基礎設施與資金' } },
+        { value: 'startup', label: { en: 'Startup / Spin-off', de: 'Startup / Spin-off', fr: 'Startup / Spin-off', it: 'Startup / Spin-off', 'zh-TW': '新創 / 衍生企業' } },
+        { value: 'ngo', label: { en: 'NGO / Non-profit', de: 'NGO / Non-Profit', fr: 'ONG / Association', it: 'ONG / Non-profit', 'zh-TW': 'NGO / 非營利組織' } },
+        { value: 'government', label: { en: 'Government / Public', de: 'Staat / Öffentlich', fr: 'Gouvernement / Public', it: 'Governo / Pubblico', 'zh-TW': '政府 / 公家機關' } },
+      ],
+    }),
+    fd('org_website', { en: 'Organization Website', de: 'Website der Organisation', fr: 'Site web de l\'organisation', it: 'Sito web dell\'organizzazione', 'zh-TW': '組織網站' }, 'url', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 6,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_contact_email', { en: 'Public Contact Email', de: 'Öffentliche Kontakt-E-Mail', fr: 'E-mail de contact public', it: 'E-mail di contatto pubblica', 'zh-TW': '公開聯絡信箱' }, 'email', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 7,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_phone', { en: 'Public Phone', de: 'Öffentliche Telefonnummer', fr: 'Téléphone public', it: 'Telefono pubblico', 'zh-TW': '公開電話' }, 'phone', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 8,
+      categoryFilter: ['legal'],
+    }),
+
+    // ── Org Location ────────────────────────────────────────
+    fd('org_address', { en: 'Address', de: 'Adresse', fr: 'Adresse', it: 'Indirizzo', 'zh-TW': '地址' }, 'text', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 9,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_city', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'text', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 10,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_canton', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'select', 'org_profile', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 11,
+      categoryFilter: ['legal'],
+      options: swissCantons(),
+    }),
+    fd('org_country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'country', 'org_profile', {
+      widthDesktop: 25, widthMobile: 50, sortOrder: 12,
+      categoryFilter: ['legal'],
+      defaultValue: 'ch',
+    }),
+
+    // ── Org Directory Content ───────────────────────────────
+    fd('org_description', { en: 'Short Description', de: 'Kurzbeschreibung', fr: 'Description courte', it: 'Descrizione breve', 'zh-TW': '簡短描述' }, 'textarea', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 13,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_logo', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo de l\'organisation', it: 'Logo dell\'organizzazione', 'zh-TW': '組織標誌' }, 'image-upload', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 14,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_we_offer', { en: 'We offer…', de: 'Wir bieten…', fr: 'Nous offrons…', it: 'Offriamo…', 'zh-TW': '我們提供…' }, 'textarea', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 15,
+      categoryFilter: ['legal'],
+      helpText: { en: 'Describe what your organization offers (products, services, expertise).', de: 'Beschreiben Sie, was Ihre Organisation anbietet.', fr: 'Décrivez ce que votre organisation propose.', it: 'Descrivi ciò che la tua organizzazione offre.', 'zh-TW': '說明您的組織提供的產品、服務或專業。' },
+    }),
+    fd('org_we_seek', { en: 'We are looking for…', de: 'Wir suchen…', fr: 'Nous recherchons…', it: 'Cerchiamo…', 'zh-TW': '我們正在尋找…' }, 'textarea', 'org_profile', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 16,
+      categoryFilter: ['legal'],
+      helpText: { en: 'Describe what your organization is looking for (partners, talent, etc.).', de: 'Beschreiben Sie, was Ihre Organisation sucht.', fr: 'Décrivez ce que votre organisation recherche.', it: 'Descrivi ciò che la tua organizzazione cerca.', 'zh-TW': '說明您的組織正在尋找的合作夥伴、人才等。' },
+    }),
+
+    // ── Org Taxonomy Mapping (for map filters) ──────────────
+    fd('org_robotics_fields', { en: 'Robotics Fields', de: 'Robotik-Bereiche', fr: 'Domaines de la robotique', it: 'Campi della robotica', 'zh-TW': '機器人領域' }, 'multi-select', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 17,
+      categoryFilter: ['legal'],
+      options: roboticsFieldOptions(),
+    }),
+    fd('org_robotics_subfields', { en: 'Robotics Sub-fields', de: 'Robotik-Unterbereiche', fr: 'Sous-domaines de la robotique', it: 'Sotto-campi della robotica', 'zh-TW': '機器人子領域' }, 'multi-select', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 18,
+      categoryFilter: ['legal'],
+      options: roboticsSubfieldOptions(),
+    }),
+    fd('org_tags', { en: 'Tags / Keywords', de: 'Tags / Schlüsselwörter', fr: 'Tags / Mots-clés', it: 'Tag / Parole chiave', 'zh-TW': '標籤 / 關鍵字' }, 'multi-select', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 19,
+      categoryFilter: ['legal'],
+    }),
+    fd('org_authorized_rep', { en: 'I confirm I am authorized to represent this organization', de: 'Ich bestätige, dass ich berechtigt bin, diese Organisation zu vertreten', fr: 'Je confirme être autorisé/e à représenter cette organisation', it: 'Confermo di essere autorizzato a rappresentare questa organizzazione', 'zh-TW': '我確認我有權代表此組織' }, 'checkbox', 'org_profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 20,
+      categoryFilter: ['legal'],
+      validation: { required: true },
+    }),
+
+    // ═══════════════════════════════════════════════════════════
+    // EXHIBITOR FIELDS
+    // ═══════════════════════════════════════════════════════════
+
+    // ── Exhibitor Package (Buyer/Admin) Fields ─────────────
+    fd('exhibitor_vat_uid', { en: 'VAT / UID Number', de: 'MwSt / UID-Nummer', fr: 'Numéro TVA / IDE', it: 'Numero IVA / IDI', 'zh-TW': '統一編號 / UID' }, 'text', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 0,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_billing_address', { en: 'Billing Address', de: 'Rechnungsadresse', fr: 'Adresse de facturation', it: 'Indirizzo di fatturazione', 'zh-TW': '帳單地址' }, 'text', 'exhibitor', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 1,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_billing_email', { en: 'Billing Email', de: 'Rechnungs-E-Mail', fr: 'E-mail de facturation', it: 'E-mail fatturazione', 'zh-TW': '帳單信箱' }, 'email', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 2,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_po_number', { en: 'PO Number (optional)', de: 'Bestellnummer (optional)', fr: 'Numéro de commande (optionnel)', it: 'Numero d\'ordine (opzionale)', 'zh-TW': '訂單編號（選填）' }, 'text', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 3,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_onsite_contact_name', { en: 'Primary On-site Contact Name', de: 'Kontaktperson vor Ort (Name)', fr: 'Nom du contact sur place', it: 'Nome referente in loco', 'zh-TW': '現場主要聯絡人姓名' }, 'text', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 4,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_onsite_contact_phone', { en: 'Primary On-site Contact Phone', de: 'Kontaktperson vor Ort (Telefon)', fr: 'Téléphone du contact sur place', it: 'Telefono referente in loco', 'zh-TW': '現場主要聯絡人電話' }, 'phone', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 5,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_company_description', { en: 'Company Description (for directory)', de: 'Firmenbeschreibung (für Verzeichnis)', fr: 'Description entreprise (pour l\'annuaire)', it: 'Descrizione azienda (per elenco)', 'zh-TW': '公司描述（供目錄使用）' }, 'textarea', 'exhibitor', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 6,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_logo', { en: 'Company Logo', de: 'Firmenlogo', fr: 'Logo entreprise', it: 'Logo aziendale', 'zh-TW': '公司標誌' }, 'image-upload', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 7,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_robotics_fields', { en: 'Robotics Fields (for map & exhibitor list)', de: 'Robotik-Bereiche (für Karte & Ausstellerliste)', fr: 'Domaines robotique (pour carte & liste)', it: 'Campi robotica (per mappa & elenco)', 'zh-TW': '機器人領域（供地圖與展商列表）' }, 'multi-select', 'exhibitor', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 8,
+      categoryFilter: ['legal'],
+      options: roboticsFieldOptions(),
+    }),
+    fd('exhibitor_robotics_subfields', { en: 'Robotics Sub-fields', de: 'Robotik-Unterbereiche', fr: 'Sous-domaines robotique', it: 'Sotto-campi robotica', 'zh-TW': '機器人子領域' }, 'multi-select', 'exhibitor', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 9,
+      categoryFilter: ['legal'],
+      options: roboticsSubfieldOptions(),
+    }),
+    fd('exhibitor_assign_passes_now', { en: 'Assign included passes now?', de: 'Inkludierte Pässe jetzt zuweisen?', fr: 'Attribuer les passes inclus maintenant ?', it: 'Assegnare i pass inclusi ora?', 'zh-TW': '現在分配包含的通行證？' }, 'yes-no', 'exhibitor', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: 10,
+      categoryFilter: ['legal'],
+    }),
+    fd('exhibitor_member_id', { en: 'SRA Legal Entity Member ID (for discount)', de: 'SRA-Mitgliedsnummer (für Rabatt)', fr: 'Numéro de membre SRA (pour réduction)', it: 'ID membro SRA (per sconto)', 'zh-TW': 'SRA 法人會員編號（折扣用）' }, 'text', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 11,
+      categoryFilter: ['legal'],
+    }),
+
+    // ── Exhibitor Staff Pass Fields ─────────────────────────
+    fd('exhibitor_staff_company', { en: 'Exhibiting Company', de: 'Ausstellende Firma', fr: 'Entreprise exposante', it: 'Azienda espositrice', 'zh-TW': '展出公司' }, 'text', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 12,
+      categoryFilter: ['general'],
+      helpText: { en: 'Pre-filled by the exhibitor admin. Cannot be changed.', de: 'Vom Aussteller-Admin vorausgefüllt. Kann nicht geändert werden.', fr: 'Pré-rempli par l\'administrateur exposant. Ne peut pas être modifié.', it: 'Pre-compilato dall\'amministratore espositore. Non modificabile.', 'zh-TW': '由展商管理員預填。不可更改。' },
+    }),
+    fd('exhibitor_booth_role', { en: 'Booth Role', de: 'Rolle am Stand', fr: 'Rôle au stand', it: 'Ruolo allo stand', 'zh-TW': '展位角色' }, 'select', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 13,
+      categoryFilter: ['general'],
+      options: multiOptI18n([
+        { en: 'Booth Manager', de: 'Standleiter/in', fr: 'Responsable du stand', it: 'Responsabile dello stand', 'zh-TW': '展位經理' },
+        { en: 'Sales', de: 'Vertrieb', fr: 'Ventes', it: 'Vendite', 'zh-TW': '業務' },
+        { en: 'Technical Demo', de: 'Technische Demo', fr: 'Démo technique', it: 'Demo tecnica', 'zh-TW': '技術展示' },
+        { en: 'Logistics', de: 'Logistik', fr: 'Logistique', it: 'Logistica', 'zh-TW': '物流' },
+        { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
+      ]),
+    }),
+    fd('exhibitor_setup_access', { en: 'Setup/teardown access needed', de: 'Zugang für Auf-/Abbau benötigt', fr: 'Accès montage/démontage nécessaire', it: 'Accesso allestimento/smontaggio necessario', 'zh-TW': '需要搭建/拆卸通行權限' }, 'checkbox', 'exhibitor', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 14,
+      categoryFilter: ['general'],
+    }),
   ];
 }
 
@@ -651,4 +1095,113 @@ function swissCantons() {
     value,
     label: { en: name, de: name, fr: name },
   }));
+}
+
+/**
+ * Robotics expertise areas — mirrors SRA Jobs Augmenter `expertise_area` exactly.
+ * 20 options matching the slugs used in resume creation.
+ */
+function roboticsExpertiseAreas() {
+  return [
+    { value: 'mechanical_design', label: { en: 'Robot Mechanics & Mechanical Design', de: 'Robotermechanik & Konstruktion', fr: 'Mécanique robotique & conception', it: 'Meccanica robotica & design', 'zh-TW': '機器人力學與機構設計' } },
+    { value: 'biorobotics', label: { en: 'Biorobotics', de: 'Biorobotik', fr: 'Biorobotique', it: 'Biorobotica', 'zh-TW': '生物機器人學' } },
+    { value: 'soft_robotics', label: { en: 'Soft Robotics', de: 'Soft Robotik', fr: 'Robotique souple', it: 'Soft Robotics', 'zh-TW': '軟性機器人' } },
+    { value: 'robot_perception', label: { en: 'Robot Perception & Vision', de: 'Roboterwahrnehmung & Vision', fr: 'Perception & vision robotique', it: 'Percezione robotica & visione', 'zh-TW': '機器人感知與視覺' } },
+    { value: 'cognitive_ai', label: { en: 'Cognitive Robotics & AI', de: 'Kognitive Robotik & KI', fr: 'Robotique cognitive & IA', it: 'Robotica cognitiva & IA', 'zh-TW': '認知機器人與 AI' } },
+    { value: 'slam', label: { en: 'SLAM & Sensor Fusion', de: 'SLAM & Sensorfusion', fr: 'SLAM & fusion de capteurs', it: 'SLAM & fusione sensori', 'zh-TW': 'SLAM 與感測器融合' } },
+    { value: 'motion_planning', label: { en: 'Motion Planning & Control', de: 'Bewegungsplanung & Regelung', fr: 'Planification de mouvement & contrôle', it: 'Pianificazione del moto & controllo', 'zh-TW': '運動規劃與控制' } },
+    { value: 'grasping', label: { en: 'Grasping & Manipulation', de: 'Greifen & Manipulation', fr: 'Préhension & manipulation', it: 'Presa & manipolazione', 'zh-TW': '抓取與操作' } },
+    { value: 'multi_robot', label: { en: 'Multi-Robot Systems', de: 'Multi-Roboter-Systeme', fr: 'Systèmes multi-robots', it: 'Sistemi multi-robot', 'zh-TW': '多機器人系統' } },
+    { value: 'hri', label: { en: 'Human–Robot Interaction (HRI)', de: 'Mensch-Roboter-Interaktion (MRI)', fr: 'Interaction homme-robot (IHR)', it: 'Interazione uomo-robot (HRI)', 'zh-TW': '人機互動 (HRI)' } },
+    { value: 'teleoperation', label: { en: 'Teleoperation & Shared Autonomy', de: 'Teleoperation & geteilte Autonomie', fr: 'Téléopération & autonomie partagée', it: 'Teleoperazione & autonomia condivisa', 'zh-TW': '遙控操作與共享自主' } },
+    { value: 'aerial_robots', label: { en: 'Aerial & UAV Robotics', de: 'Luft- & UAV-Robotik', fr: 'Robotique aérienne & drones', it: 'Robotica aerea & UAV', 'zh-TW': '空中與無人機機器人' } },
+    { value: 'marine', label: { en: 'Marine / Underwater Robotics', de: 'Marine / Unterwasser-Robotik', fr: 'Robotique marine / sous-marine', it: 'Robotica marina / subacquea', 'zh-TW': '海洋 / 水下機器人' } },
+    { value: 'industrial', label: { en: 'Industrial & Manufacturing Robotics', de: 'Industrie- & Fertigungsrobotik', fr: 'Robotique industrielle & manufacturière', it: 'Robotica industriale & manifatturiera', 'zh-TW': '工業與製造機器人' } },
+    { value: 'rehab', label: { en: 'Rehabilitation & Assistive Robotics', de: 'Rehabilitations- & Assistenzrobotik', fr: 'Robotique de réadaptation & assistive', it: 'Robotica riabilitativa & assistiva', 'zh-TW': '復健與輔助機器人' } },
+    { value: 'surgical', label: { en: 'Surgical Robotics', de: 'Chirurgische Robotik', fr: 'Robotique chirurgicale', it: 'Robotica chirurgica', 'zh-TW': '手術機器人' } },
+    { value: 'autonomous_nav', label: { en: 'Autonomous Navigation', de: 'Autonome Navigation', fr: 'Navigation autonome', it: 'Navigazione autonoma', 'zh-TW': '自主導航' } },
+    { value: 'ros', label: { en: 'ROS / Middleware Systems', de: 'ROS / Middleware-Systeme', fr: 'ROS / systèmes middleware', it: 'ROS / sistemi middleware', 'zh-TW': 'ROS / 中介軟體系統' } },
+    { value: 'simulation', label: { en: 'Simulation & Digital Twins', de: 'Simulation & Digitale Zwillinge', fr: 'Simulation & jumeaux numériques', it: 'Simulazione & gemelli digitali', 'zh-TW': '模擬與數位分身' } },
+    { value: 'bioinspired', label: { en: 'Bio-Inspired Robotics', de: 'Bioinspirierte Robotik', fr: 'Robotique bio-inspirée', it: 'Robotica bio-ispirata', 'zh-TW': '仿生機器人' } },
+  ];
+}
+
+/**
+ * Skills & tools — mirrors SRA Jobs Augmenter `skills_tools` exactly.
+ * 25 options matching the slugs used in resume creation.
+ */
+function roboticsSkillsTools() {
+  return [
+    { value: 'python', label: { en: 'Python', de: 'Python', fr: 'Python', it: 'Python', 'zh-TW': 'Python' } },
+    { value: 'c_cpp', label: { en: 'C / C++', de: 'C / C++', fr: 'C / C++', it: 'C / C++', 'zh-TW': 'C / C++' } },
+    { value: 'java', label: { en: 'Java', de: 'Java', fr: 'Java', it: 'Java', 'zh-TW': 'Java' } },
+    { value: 'ros', label: { en: 'ROS / ROS2', de: 'ROS / ROS2', fr: 'ROS / ROS2', it: 'ROS / ROS2', 'zh-TW': 'ROS / ROS2' } },
+    { value: 'gazebo', label: { en: 'Gazebo', de: 'Gazebo', fr: 'Gazebo', it: 'Gazebo', 'zh-TW': 'Gazebo' } },
+    { value: 'webots', label: { en: 'Webots', de: 'Webots', fr: 'Webots', it: 'Webots', 'zh-TW': 'Webots' } },
+    { value: 'isaacsim', label: { en: 'IsaacSim', de: 'IsaacSim', fr: 'IsaacSim', it: 'IsaacSim', 'zh-TW': 'IsaacSim' } },
+    { value: 'opencv', label: { en: 'OpenCV', de: 'OpenCV', fr: 'OpenCV', it: 'OpenCV', 'zh-TW': 'OpenCV' } },
+    { value: 'moveit', label: { en: 'MoveIt!', de: 'MoveIt!', fr: 'MoveIt!', it: 'MoveIt!', 'zh-TW': 'MoveIt!' } },
+    { value: 'solidworks', label: { en: 'SolidWorks', de: 'SolidWorks', fr: 'SolidWorks', it: 'SolidWorks', 'zh-TW': 'SolidWorks' } },
+    { value: 'fusion360', label: { en: 'Fusion 360', de: 'Fusion 360', fr: 'Fusion 360', it: 'Fusion 360', 'zh-TW': 'Fusion 360' } },
+    { value: 'arduino', label: { en: 'Arduino', de: 'Arduino', fr: 'Arduino', it: 'Arduino', 'zh-TW': 'Arduino' } },
+    { value: 'rpi', label: { en: 'Raspberry Pi', de: 'Raspberry Pi', fr: 'Raspberry Pi', it: 'Raspberry Pi', 'zh-TW': 'Raspberry Pi' } },
+    { value: 'jetson', label: { en: 'NVIDIA Jetson', de: 'NVIDIA Jetson', fr: 'NVIDIA Jetson', it: 'NVIDIA Jetson', 'zh-TW': 'NVIDIA Jetson' } },
+    { value: 'docker', label: { en: 'Docker', de: 'Docker', fr: 'Docker', it: 'Docker', 'zh-TW': 'Docker' } },
+    { value: 'matlab', label: { en: 'MATLAB / Simulink', de: 'MATLAB / Simulink', fr: 'MATLAB / Simulink', it: 'MATLAB / Simulink', 'zh-TW': 'MATLAB / Simulink' } },
+    { value: 'tensorflow', label: { en: 'TensorFlow', de: 'TensorFlow', fr: 'TensorFlow', it: 'TensorFlow', 'zh-TW': 'TensorFlow' } },
+    { value: 'pytorch', label: { en: 'PyTorch', de: 'PyTorch', fr: 'PyTorch', it: 'PyTorch', 'zh-TW': 'PyTorch' } },
+    { value: 'git', label: { en: 'Git / GitHub / GitLab', de: 'Git / GitHub / GitLab', fr: 'Git / GitHub / GitLab', it: 'Git / GitHub / GitLab', 'zh-TW': 'Git / GitHub / GitLab' } },
+    { value: 'linux', label: { en: 'Linux / Ubuntu', de: 'Linux / Ubuntu', fr: 'Linux / Ubuntu', it: 'Linux / Ubuntu', 'zh-TW': 'Linux / Ubuntu' } },
+    { value: 'digitaltwin', label: { en: 'Digital Twin Platforms', de: 'Digital-Twin-Plattformen', fr: 'Plateformes de jumeaux numériques', it: 'Piattaforme digital twin', 'zh-TW': '數位分身平台' } },
+    { value: 'slack_jira', label: { en: 'Slack / Jira / Trello', de: 'Slack / Jira / Trello', fr: 'Slack / Jira / Trello', it: 'Slack / Jira / Trello', 'zh-TW': 'Slack / Jira / Trello' } },
+    { value: 'vr_training', label: { en: 'VR for Training & Simulation', de: 'VR für Training & Simulation', fr: 'RV pour formation & simulation', it: 'VR per formazione & simulazione', 'zh-TW': 'VR 訓練與模擬' } },
+    { value: 'cybersecurity', label: { en: 'Cybersecurity for Robotics', de: 'Cybersicherheit für Robotik', fr: 'Cybersécurité pour la robotique', it: 'Cybersicurezza per la robotica', 'zh-TW': '機器人網路安全' } },
+    { value: 'cloud_infra', label: { en: 'Cloud Platforms (AWS, Azure, GCP)', de: 'Cloud-Plattformen (AWS, Azure, GCP)', fr: 'Plateformes cloud (AWS, Azure, GCP)', it: 'Piattaforme cloud (AWS, Azure, GCP)', 'zh-TW': '雲端平台 (AWS, Azure, GCP)' } },
+  ];
+}
+
+/**
+ * Robotics field options — mirrors SRA MAP `robotics_field` taxonomy exactly.
+ * 4 top-level parent-field categories from the SRA MAP plugin.
+ */
+function roboticsFieldOptions() {
+  return [
+    { value: 'industrial_automation', label: { en: 'Industrial Automation', de: 'Industrieautomation', fr: 'Automatisation industrielle', it: 'Automazione industriale', 'zh-TW': '工業自動化' } },
+    { value: 'healthcare_medical', label: { en: 'Healthcare & Medical Robotics', de: 'Gesundheit & Medizinrobotik', fr: 'Robotique médicale & santé', it: 'Robotica sanitaria & medica', 'zh-TW': '醫療與健康機器人' } },
+    { value: 'agriculture_environmental', label: { en: 'Agriculture & Environmental', de: 'Landwirtschaft & Umwelt', fr: 'Agriculture & environnement', it: 'Agricoltura & ambiente', 'zh-TW': '農業與環境' } },
+    { value: 'transportation_logistics', label: { en: 'Transportation & Logistics', de: 'Transport & Logistik', fr: 'Transport & logistique', it: 'Trasporti & logistica', 'zh-TW': '運輸與物流' } },
+  ];
+}
+
+/**
+ * Robotics subfield options — mirrors SRA MAP `robotics_subfield` taxonomy exactly.
+ * 20 subfields organized under the 4 parent fields.
+ */
+function roboticsSubfieldOptions() {
+  return [
+    // Industrial Automation subfields
+    { value: 'assembly_robotics', label: { en: 'Assembly Robotics', de: 'Montagerobotik', fr: 'Robotique d\'assemblage', it: 'Robotica di assemblaggio', 'zh-TW': '組裝機器人' } },
+    { value: 'motion_control', label: { en: 'Motion Control Systems', de: 'Bewegungssteuerungssysteme', fr: 'Systèmes de contrôle de mouvements', it: 'Sistemi di controllo del moto', 'zh-TW': '運動控制系統' } },
+    { value: 'plc_integration', label: { en: 'PLC Integration', de: 'SPS-Integration', fr: 'Intégration API', it: 'Integrazione PLC', 'zh-TW': 'PLC 整合' } },
+    { value: 'robot_vision', label: { en: 'Robot Vision Systems', de: 'Roboterbildverarbeitungssysteme', fr: 'Systèmes de vision robotique', it: 'Sistemi di visione robotica', 'zh-TW': '機器人視覺系統' } },
+    { value: 'collaborative_robots', label: { en: 'Collaborative Robots (Cobots)', de: 'Kollaborative Roboter (Cobots)', fr: 'Robots collaboratifs (cobots)', it: 'Robot collaborativi (cobot)', 'zh-TW': '協作機器人 (Cobot)' } },
+    // Healthcare & Medical subfields
+    { value: 'surgical_robotics', label: { en: 'Surgical Robotics', de: 'Chirurgische Robotik', fr: 'Robotique chirurgicale', it: 'Robotica chirurgica', 'zh-TW': '手術機器人' } },
+    { value: 'rehabilitation', label: { en: 'Rehabilitation Robotics', de: 'Rehabilitationsrobotik', fr: 'Robotique de réadaptation', it: 'Robotica riabilitativa', 'zh-TW': '復健機器人' } },
+    { value: 'prosthetics', label: { en: 'Prosthetics & Exoskeletons', de: 'Prothetik & Exoskelette', fr: 'Prothèses & exosquelettes', it: 'Protesi & esoscheletri', 'zh-TW': '義肢與外骨骼' } },
+    { value: 'telepresence', label: { en: 'Medical Telepresence', de: 'Medizinische Telepräsenz', fr: 'Téléprésence médicale', it: 'Telepresenza medica', 'zh-TW': '醫療遠端臨場' } },
+    { value: 'laboratory_automation', label: { en: 'Laboratory Automation', de: 'Laborautomation', fr: 'Automatisation de laboratoire', it: 'Automazione di laboratorio', 'zh-TW': '實驗室自動化' } },
+    // Agriculture & Environmental subfields
+    { value: 'precision_farming', label: { en: 'Precision Farming', de: 'Präzisionslandwirtschaft', fr: 'Agriculture de précision', it: 'Agricoltura di precisione', 'zh-TW': '精準農業' } },
+    { value: 'harvest_robotics', label: { en: 'Harvesting Robotics', de: 'Ernterobotik', fr: 'Robotique de récolte', it: 'Robotica per la raccolta', 'zh-TW': '採收機器人' } },
+    { value: 'environmental_monitoring', label: { en: 'Environmental Monitoring', de: 'Umweltüberwachung', fr: 'Surveillance environnementale', it: 'Monitoraggio ambientale', 'zh-TW': '環境監測' } },
+    { value: 'forestry_robotics', label: { en: 'Forestry Robotics', de: 'Forstrobotik', fr: 'Robotique forestière', it: 'Robotica forestale', 'zh-TW': '林業機器人' } },
+    { value: 'irrigation_systems', label: { en: 'Automated Irrigation Systems', de: 'Automatische Bewässerungssysteme', fr: 'Systèmes d\'irrigation automatisés', it: 'Sistemi di irrigazione automatizzati', 'zh-TW': '自動灌溉系統' } },
+    // Transportation & Logistics subfields
+    { value: 'autonomous_vehicles', label: { en: 'Autonomous Vehicles', de: 'Autonome Fahrzeuge', fr: 'Véhicules autonomes', it: 'Veicoli autonomi', 'zh-TW': '自動駕駛車輛' } },
+    { value: 'warehouse_robotics', label: { en: 'Warehouse Robotics', de: 'Lagerrobotik', fr: 'Robotique d\'entrepôt', it: 'Robotica di magazzino', 'zh-TW': '倉儲機器人' } },
+    { value: 'delivery_systems', label: { en: 'Automated Delivery Systems', de: 'Automatische Liefersysteme', fr: 'Systèmes de livraison automatisés', it: 'Sistemi di consegna automatizzati', 'zh-TW': '自動配送系統' } },
+    { value: 'cargo_handling', label: { en: 'Cargo Handling Systems', de: 'Frachthandhabungssysteme', fr: 'Systèmes de manutention du fret', it: 'Sistemi di movimentazione merci', 'zh-TW': '貨物處理系統' } },
+    { value: 'fleet_management', label: { en: 'Fleet Management', de: 'Flottenmanagement', fr: 'Gestion de flotte', it: 'Gestione della flotta', 'zh-TW': '車隊管理' } },
+  ];
 }

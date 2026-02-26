@@ -9,9 +9,9 @@ import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 
 const FIELD_TYPES = [
-  'text', 'email', 'phone', 'number', 'textarea', 'select',
+  'text', 'email', 'phone', 'url', 'number', 'textarea', 'select',
   'multi-select', 'checkbox', 'radio', 'date', 'country',
-  'canton', 'consent', 'file', 'group',
+  'canton', 'consent', 'yes-no', 'file', 'image-upload', 'group',
 ] as const;
 
 const WIDTH_OPTIONS = [
@@ -34,7 +34,18 @@ const GROUP_KEYS: Record<string, string> = {
   privacy: 'forms.group.privacy',
   questions: 'forms.group.questions',
   community: 'forms.group.community',
+  student: 'forms.group.student',
+  startup: 'forms.group.startup',
+  resume: 'forms.group.resume',
+  org_profile: 'forms.group.orgProfile',
+  exhibitor: 'forms.group.exhibitor',
 };
+
+interface ConditionRule {
+  field: string;
+  operator: string;
+  value: unknown;
+}
 
 interface BuilderField {
   id: string;
@@ -43,6 +54,8 @@ interface BuilderField {
   label: Record<string, string>;
   required: boolean;
   width: number;
+  section?: string;
+  conditions?: ConditionRule[];
   options?: Array<{ value: string; label: Record<string, string> }>;
   helpText?: Record<string, string>;
   placeholder?: Record<string, string>;
@@ -72,6 +85,15 @@ function generateId() {
 
 /** Convert a FieldDefinition from the repository into a BuilderField. */
 function repoFieldToBuilder(fd: FieldDefinition): BuilderField {
+  // Convert legacy conditionalOn to conditions array
+  let conditions: ConditionRule[] | undefined;
+  if (fd.conditionalOn && typeof fd.conditionalOn === 'object') {
+    const co = fd.conditionalOn as Record<string, unknown>;
+    if (co.field && co.operator) {
+      conditions = [{ field: co.field as string, operator: co.operator as string, value: co.value }];
+    }
+  }
+
   return {
     id: generateId(),
     slug: fd.slug,
@@ -79,6 +101,8 @@ function repoFieldToBuilder(fd: FieldDefinition): BuilderField {
     label: fd.label,
     required: fd.validationRules ? !!(fd.validationRules as Record<string, unknown>).required : false,
     width: fd.defaultWidthDesktop,
+    section: fd.group,
+    conditions,
     options: fd.options as BuilderField['options'],
     helpText: fd.helpText,
     placeholder: fd.placeholder,
@@ -498,6 +522,20 @@ export default function FormsPage() {
                         {field.slug && (
                           <span className="rounded px-1.5 py-0.5 text-[10px] font-mono" style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-muted)' }}>
                             {field.slug}
+                          </span>
+                        )}
+                        {field.conditions && field.conditions.length > 0 && (
+                          <span
+                            className="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            style={{ background: 'var(--color-warning-light, #fef3c7)', color: 'var(--color-warning, #b45309)' }}
+                            title={`Conditional on: ${field.conditions.map(c => `${c.field} ${c.operator} ${JSON.stringify(c.value)}`).join(', ')}`}
+                          >
+                            ⚡ conditional
+                          </span>
+                        )}
+                        {field.section && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-muted)' }}>
+                            §{field.section}
                           </span>
                         )}
                       </div>

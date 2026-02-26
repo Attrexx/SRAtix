@@ -5,6 +5,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ConditionRule,
+  evaluateConditions,
+} from '../common/conditions';
 
 /**
  * Supported form field types per PRODUCTION-ARCHITECTURE.md §8.
@@ -13,6 +17,7 @@ export type FieldType =
   | 'text'
   | 'email'
   | 'phone'
+  | 'url'
   | 'select'
   | 'multi-select'
   | 'checkbox'
@@ -20,10 +25,12 @@ export type FieldType =
   | 'textarea'
   | 'date'
   | 'file'
+  | 'image-upload'
   | 'number'
   | 'country'
   | 'canton'
   | 'consent'
+  | 'yes-no'
   | 'group';
 
 /**
@@ -350,12 +357,27 @@ export class FormsService {
   /**
    * Validate submission data against schema fields.
    * Checks required fields and basic type coercion.
+   * Respects field conditions: if a field's conditions evaluate to false
+   * (field is hidden), its required check is skipped and its value is stripped.
    */
   private validateSubmission(
     fields: FormField[],
     answers: Record<string, unknown>,
   ) {
     for (const field of fields) {
+      // Evaluate conditions — if field should be hidden, skip validation
+      if (field.conditions && field.conditions.length > 0) {
+        const visible = evaluateConditions(
+          field.conditions as ConditionRule[],
+          answers,
+        );
+        if (!visible) {
+          // Field is conditionally hidden — strip any submitted value and skip
+          delete answers[field.id];
+          continue;
+        }
+      }
+
       const value = answers[field.id];
 
       // Check required fields
