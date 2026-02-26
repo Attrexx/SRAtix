@@ -56,6 +56,12 @@ const sratixI18n = (function () {
       'reg.continueToPayment':   'Continue to Payment →',
       'reg.back':                '← Back',
 
+      // Dynamic form fields
+      'reg.form.selectPlaceholder': 'Select…',
+      'reg.form.yes':              'Yes',
+      'reg.form.no':               'No',
+      'reg.form.fieldRequired':    '{field} is required.',
+
       // Shared / modal
       'modal.close':             'Close',
 
@@ -117,6 +123,11 @@ const sratixI18n = (function () {
       'reg.continueToPayment':   'Continuer vers le paiement →',
       'reg.back':                '← Retour',
 
+      'reg.form.selectPlaceholder': 'Sélectionner…',
+      'reg.form.yes':              'Oui',
+      'reg.form.no':               'Non',
+      'reg.form.fieldRequired':    '{field} est obligatoire.',
+
       'modal.close':             'Fermer',
 
       'success.title':           'Inscription réussie !',
@@ -173,6 +184,11 @@ const sratixI18n = (function () {
       'reg.completeRegistration':'Anmeldung abschliessen',
       'reg.continueToPayment':   'Weiter zur Zahlung →',
       'reg.back':                '← Zurück',
+
+      'reg.form.selectPlaceholder': 'Auswählen…',
+      'reg.form.yes':              'Ja',
+      'reg.form.no':               'Nein',
+      'reg.form.fieldRequired':    '{field} ist erforderlich.',
 
       'modal.close':             'Schliessen',
 
@@ -231,6 +247,11 @@ const sratixI18n = (function () {
       'reg.continueToPayment':   'Continua al pagamento →',
       'reg.back':                '← Indietro',
 
+      'reg.form.selectPlaceholder': 'Seleziona…',
+      'reg.form.yes':              'Sì',
+      'reg.form.no':               'No',
+      'reg.form.fieldRequired':    '{field} è obbligatorio.',
+
       'modal.close':             'Chiudi',
 
       'success.title':           'Registrazione completata!',
@@ -287,6 +308,11 @@ const sratixI18n = (function () {
       'reg.completeRegistration':'完成報名',
       'reg.continueToPayment':   '前往付款 →',
       'reg.back':                '← 返回',
+
+      'reg.form.selectPlaceholder': '請選擇…',
+      'reg.form.yes':              '是',
+      'reg.form.no':               '否',
+      'reg.form.fieldRequired':    '{field} 為必填。',
 
       'modal.close':             '關閉',
 

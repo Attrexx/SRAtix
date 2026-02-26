@@ -218,84 +218,422 @@
     requestAnimationFrame(() => modal.classList.add('sratix-modal--visible'));
   }
 
+  // ─── Conditions engine (client-side — mirrors Server/src/common/conditions.ts) ─
+
+  function evalConditions(conditions, answers) {
+    if (!conditions || conditions.length === 0) return true;
+    return conditions.every(function (rule) {
+      var actual = answers[rule.field];
+      switch (rule.operator) {
+        case 'eq':   return looseEq(actual, rule.value);
+        case 'neq':  return !looseEq(actual, rule.value);
+        case 'not_empty': return !isEmptyVal(actual);
+        case 'empty':     return isEmptyVal(actual);
+        case 'contains':
+          if (Array.isArray(actual)) return actual.indexOf(rule.value) !== -1;
+          if (typeof actual === 'string' && typeof rule.value === 'string')
+            return actual.toLowerCase().indexOf(rule.value.toLowerCase()) !== -1;
+          return false;
+        case 'in':
+          if (!Array.isArray(rule.value)) return false;
+          if (Array.isArray(actual)) return actual.some(function (v) { return rule.value.indexOf(v) !== -1; });
+          return rule.value.indexOf(actual) !== -1;
+        default: return true;
+      }
+    });
+  }
+  function looseEq(a, b) {
+    if (a === b) return true;
+    if (typeof a === 'boolean' && typeof b === 'string') return a === (b === 'true');
+    if (typeof b === 'boolean' && typeof a === 'string') return b === (a === 'true');
+    if (typeof a === 'number' && typeof b === 'string') return a === Number(b);
+    if (typeof b === 'number' && typeof a === 'string') return b === Number(a);
+    return false;
+  }
+  function isEmptyVal(v) {
+    if (v === null || v === undefined || v === '' || v === false) return true;
+    return Array.isArray(v) && v.length === 0;
+  }
+
+  // ─── Dynamic form field rendering ──────────────────────────────────────────────
+
+  /**
+   * Resolve a localised label object to a string.
+   * @param {Object|string} label  e.g. { en: 'Name', de: 'Name' } or plain string
+   * @returns {string}
+   */
+  function resolveLabel(label) {
+    if (!label) return '';
+    if (typeof label === 'string') return label;
+    var locale = (typeof sratixI18n !== 'undefined') ? sratixI18n.getLocale() : 'en';
+    return label[locale] || label.en || label[Object.keys(label)[0]] || '';
+  }
+
+  /**
+   * Render a single form field to an HTML string.
+   * @param {Object} field  A FormField from the schema
+   * @returns {string}
+   */
+  function renderFormField(field) {
+    var label = resolveLabel(field.label);
+    var ph = resolveLabel(field.placeholder) || '';
+    var help = resolveLabel(field.helpText) || '';
+    var req = field.required ? ' <span class="sratix-req">*</span>' : '';
+    var id = 'sratix-df-' + field.id;
+    var html = '';
+
+    switch (field.type) {
+      case 'text':
+      case 'url':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'email':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="email" placeholder="' + escAttr(ph) + '" autocomplete="email" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'phone':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="tel" placeholder="' + escAttr(ph) + '" autocomplete="tel" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'number':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="number" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'date':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="date" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'textarea':
+        html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '"></textarea>';
+        break;
+      case 'select':
+      case 'country':
+      case 'canton':
+        var opts = '<option value="">' + escHtml(ph || t('reg.form.selectPlaceholder')) + '</option>';
+        (field.options || []).forEach(function (o) {
+          opts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
+        });
+        html = '<select class="sratix-input" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
+        break;
+      case 'multi-select':
+        var mOpts = '';
+        (field.options || []).forEach(function (o) {
+          mOpts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
+        });
+        html = '<select class="sratix-input" id="' + escAttr(id) + '" multiple data-field-id="' + escAttr(field.id) + '">' + mOpts + '</select>';
+        break;
+      case 'radio':
+        html = '<div class="sratix-radio-group" data-field-id="' + escAttr(field.id) + '">';
+        (field.options || []).forEach(function (o, idx) {
+          var rid = id + '-' + idx;
+          html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+        });
+        html += '</div>';
+        break;
+      case 'checkbox':
+        html = '<div class="sratix-checkbox-group" data-field-id="' + escAttr(field.id) + '">';
+        if (field.options && field.options.length > 0) {
+          field.options.forEach(function (o, idx) {
+            var cid = id + '-' + idx;
+            html += '<label class="sratix-checkbox-label"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(cid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+          });
+        } else {
+          html += '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + escHtml(label) + '</label>';
+        }
+        html += '</div>';
+        break;
+      case 'yes-no':
+        html = '<div class="sratix-yesno-group" data-field-id="' + escAttr(field.id) + '">';
+        html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="yes" /> ' + escHtml(t('reg.form.yes')) + '</label>';
+        html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="no" /> ' + escHtml(t('reg.form.no')) + '</label>';
+        html += '</div>';
+        break;
+      case 'consent':
+        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + escHtml(label) + req + '</label>';
+        // Consent renders label inline; clear req so it isn't duplicated above
+        req = '';
+        break;
+      case 'image-upload':
+      case 'file':
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
+        break;
+      case 'group':
+        // Section headers rendered as divider
+        html = '<hr class="sratix-section-divider" />';
+        break;
+      default:
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="text" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
+    }
+
+    var helpHtml = help ? '<p class="sratix-field-help">' + escHtml(help) + '</p>' : '';
+
+    // For consent type, label is already inline
+    if (field.type === 'consent') {
+      return '<div class="sratix-field sratix-df" data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
+    }
+
+    return '<div class="sratix-field sratix-df" data-df-id="' + escAttr(field.id) + '">'
+      + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + '</label>'
+      + html + helpHtml
+      + '</div>';
+  }
+
+  /**
+   * Read all dynamic field values from the modal DOM.
+   * @param {HTMLElement} form  The form element
+   * @param {Array} fields      Schema fields
+   * @param {Object} answers    Current answers (for condition evaluation)
+   * @returns {Object} answers map keyed by field.id
+   */
+  function collectDynamicAnswers(form, fields, answers) {
+    var result = {};
+    fields.forEach(function (field) {
+      if (field.type === 'group') return;
+      // Skip conditionally hidden fields
+      if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, answers)) return;
+
+      var id = 'sratix-df-' + field.id;
+      var el;
+
+      switch (field.type) {
+        case 'multi-select':
+          el = form.querySelector('#' + CSS.escape(id));
+          if (el) {
+            result[field.id] = Array.from(el.selectedOptions).map(function (o) { return o.value; });
+          }
+          break;
+        case 'radio':
+        case 'yes-no':
+          el = form.querySelector('input[name="' + CSS.escape(id) + '"]:checked');
+          result[field.id] = el ? el.value : '';
+          break;
+        case 'checkbox':
+          if (field.options && field.options.length > 0) {
+            var checked = form.querySelectorAll('input[name="' + CSS.escape(id) + '"]:checked');
+            result[field.id] = Array.from(checked).map(function (c) { return c.value; });
+          } else {
+            el = form.querySelector('#' + CSS.escape(id));
+            result[field.id] = el ? el.checked : false;
+          }
+          break;
+        case 'consent':
+          el = form.querySelector('#' + CSS.escape(id));
+          result[field.id] = el && el.checked
+            ? { granted: true, timestamp: new Date().toISOString() }
+            : { granted: false, timestamp: new Date().toISOString() };
+          break;
+        case 'number':
+          el = form.querySelector('#' + CSS.escape(id));
+          result[field.id] = el && el.value !== '' ? Number(el.value) : '';
+          break;
+        case 'file':
+        case 'image-upload':
+          // File uploads not supported in public widget — skip
+          break;
+        default:
+          el = form.querySelector('#' + CSS.escape(id));
+          result[field.id] = el ? (el.value || '').trim() : '';
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Apply condition-based visibility to dynamic fields.
+   * @param {HTMLElement} form
+   * @param {Array} fields
+   * @param {Object} answers
+   */
+  function applyConditionVisibility(form, fields, answers) {
+    fields.forEach(function (field) {
+      if (!field.conditions || field.conditions.length === 0) return;
+      var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+      if (!wrap) return;
+      var visible = evalConditions(field.conditions, answers);
+      wrap.style.display = visible ? '' : 'none';
+    });
+  }
+
   // ─── Registration modal (Stage B) ────────────────────────────────────────────
 
-  function openRegistrationModal(eventId, tt, qty, promoCode, discountCents) {
-    const subtotal  = tt.priceCents * qty;
-    const finalPrice = Math.max(0, subtotal - discountCents);
-    const modal = createModalShell('sratix-modal-reg');
+  async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents) {
+    var subtotal  = tt.priceCents * qty;
+    var finalPrice = Math.max(0, subtotal - discountCents);
+    var modal = createModalShell('sratix-modal-reg');
 
-    const submitLabel = tt.priceCents === 0 ? t('reg.completeRegistration') : t('reg.continueToPayment');
+    var submitLabel = tt.priceCents === 0 ? t('reg.completeRegistration') : t('reg.continueToPayment');
 
-    modal.innerHTML = `
-      <div class="sratix-modal-box">
-        <button class="sratix-modal-close" aria-label="${escAttr(t('modal.close'))}">&times;</button>
-        <h2 class="sratix-modal-title">${escHtml(t('reg.title'))}</h2>
-        <p class="sratix-modal-subtitle">
-          ${escHtml(tt.name)} &times; ${qty} —
-          <strong>${tt.priceCents === 0 ? escHtml(t('tickets.free')) : formatPrice(finalPrice, tt.currency)}</strong>
-        </p>
-        <div class="sratix-modal-body">
-          <form id="sratix-reg-form" novalidate>
-            <div class="sratix-field-row">
-              <div class="sratix-field">
-                <label class="sratix-label" for="sratix-first-name">${escHtml(t('reg.firstName'))} <span class="sratix-req">*</span></label>
-                <input class="sratix-input" id="sratix-first-name" type="text" autocomplete="given-name" required />
-              </div>
-              <div class="sratix-field">
-                <label class="sratix-label" for="sratix-last-name">${escHtml(t('reg.lastName'))} <span class="sratix-req">*</span></label>
-                <input class="sratix-input" id="sratix-last-name" type="text" autocomplete="family-name" required />
-              </div>
-            </div>
-            <div class="sratix-field">
-              <label class="sratix-label" for="sratix-email">${escHtml(t('reg.email'))} <span class="sratix-req">*</span></label>
-              <input class="sratix-input" id="sratix-email" type="email" autocomplete="email" required />
-            </div>
-            <div class="sratix-field-row">
-              <div class="sratix-field">
-                <label class="sratix-label" for="sratix-phone">${escHtml(t('reg.phone'))}</label>
-                <input class="sratix-input" id="sratix-phone" type="tel" autocomplete="tel" />
-              </div>
-              <div class="sratix-field">
-                <label class="sratix-label" for="sratix-company">${escHtml(t('reg.organization'))}</label>
-                <input class="sratix-input" id="sratix-company" type="text" autocomplete="organization" />
-              </div>
-            </div>
-            <p class="sratix-error-msg" id="sratix-reg-error" style="display:none"></p>
-          </form>
-        </div>
-        <div class="sratix-modal-footer">
-          <button class="sratix-btn sratix-btn--ghost" id="sratix-reg-back">${escHtml(t('reg.back'))}</button>
-          <button class="sratix-btn sratix-btn--primary" id="sratix-reg-submit">${escHtml(submitLabel)}</button>
-        </div>
-      </div>
-    `;
+    // ── Fetch form schema if ticket type has one ──
+    var schema = null;
+    var schemaFields = null;
+    if (tt.formSchemaId) {
+      try {
+        schema = await apiFetch(
+          'public/forms/ticket-type/' + encodeURIComponent(tt.id)
+          + '/event/' + encodeURIComponent(eventId),
+        );
+        if (schema && schema.fields && schema.fields.fields) {
+          schemaFields = schema.fields.fields;
+        }
+      } catch (err) {
+        console.warn('[SRAtix] Could not load form schema, using default form:', err);
+      }
+    }
+
+    var useCustomForm = !!(schemaFields && schemaFields.length > 0);
+
+    // ── Build form body ──
+    var formBodyHtml;
+    if (useCustomForm) {
+      // Sort by order if present
+      var sorted = schemaFields.slice().sort(function (a, b) {
+        return (a.order || 0) - (b.order || 0);
+      });
+      formBodyHtml = sorted.map(renderFormField).join('');
+    } else {
+      // Default 5-field form (backward compatible)
+      formBodyHtml = ''
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-first-name">' + escHtml(t('reg.firstName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-first-name" type="text" autocomplete="given-name" required />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-last-name">' + escHtml(t('reg.lastName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-last-name" type="text" autocomplete="family-name" required />'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-email">' + escHtml(t('reg.email')) + ' <span class="sratix-req">*</span></label>'
+        +   '<input class="sratix-input" id="sratix-email" type="email" autocomplete="email" required />'
+        + '</div>'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-phone">' + escHtml(t('reg.phone')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-phone" type="tel" autocomplete="tel" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-company">' + escHtml(t('reg.organization')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-company" type="text" autocomplete="organization" />'
+        +   '</div>'
+        + '</div>';
+    }
+
+    modal.innerHTML = ''
+      + '<div class="sratix-modal-box">'
+      +   '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
+      +   '<h2 class="sratix-modal-title">' + escHtml(t('reg.title')) + '</h2>'
+      +   '<p class="sratix-modal-subtitle">'
+      +     escHtml(tt.name) + ' &times; ' + qty + ' — '
+      +     '<strong>' + (tt.priceCents === 0 ? escHtml(t('tickets.free')) : formatPrice(finalPrice, tt.currency)) + '</strong>'
+      +   '</p>'
+      +   '<div class="sratix-modal-body">'
+      +     '<form id="sratix-reg-form" novalidate>'
+      +       formBodyHtml
+      +       '<p class="sratix-error-msg" id="sratix-reg-error" style="display:none"></p>'
+      +     '</form>'
+      +   '</div>'
+      +   '<div class="sratix-modal-footer">'
+      +     '<button class="sratix-btn sratix-btn--ghost" id="sratix-reg-back">' + escHtml(t('reg.back')) + '</button>'
+      +     '<button class="sratix-btn sratix-btn--primary" id="sratix-reg-submit">' + escHtml(submitLabel) + '</button>'
+      +   '</div>'
+      + '</div>';
 
     document.body.appendChild(modal);
 
-    // Pre-fill from WP user context if available
-    if (config.userEmail)     modal.querySelector('#sratix-email').value     = config.userEmail;
-    if (config.userFirstName) modal.querySelector('#sratix-first-name').value = config.userFirstName;
-    if (config.userLastName)  modal.querySelector('#sratix-last-name').value  = config.userLastName;
+    var formEl = modal.querySelector('#sratix-reg-form');
+
+    // ── Pre-fill from WP user context ──
+    if (!useCustomForm) {
+      if (config.userEmail)     modal.querySelector('#sratix-email').value     = config.userEmail;
+      if (config.userFirstName) modal.querySelector('#sratix-first-name').value = config.userFirstName;
+      if (config.userLastName)  modal.querySelector('#sratix-last-name').value  = config.userLastName;
+    } else {
+      // Pre-fill well-known dynamic field IDs if present
+      var prefillMap = {
+        'email': config.userEmail, 'first_name': config.userFirstName,
+        'last_name': config.userLastName, 'firstName': config.userFirstName,
+        'lastName': config.userLastName,
+      };
+      Object.keys(prefillMap).forEach(function (fid) {
+        if (!prefillMap[fid]) return;
+        var el = formEl.querySelector('#sratix-df-' + CSS.escape(fid));
+        if (el) el.value = prefillMap[fid];
+      });
+
+      // Wire up condition-based live visibility
+      if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        // Initial pass
+        var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+        applyConditionVisibility(formEl, schemaFields, initSnap);
+      }
+    }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
-    modal.querySelector('#sratix-reg-back').addEventListener('click', () => {
+    modal.querySelector('#sratix-reg-back').addEventListener('click', function () {
       closeModal();
       openQuantityModal(eventId, tt);
     });
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
-    const submitBtn = modal.querySelector('#sratix-reg-submit');
-    const errorEl   = modal.querySelector('#sratix-reg-error');
+    var submitBtn = modal.querySelector('#sratix-reg-submit');
+    var errorEl   = modal.querySelector('#sratix-reg-error');
 
-    submitBtn.addEventListener('click', async () => {
-      const firstName = modal.querySelector('#sratix-first-name').value.trim();
-      const lastName  = modal.querySelector('#sratix-last-name').value.trim();
-      const email     = modal.querySelector('#sratix-email').value.trim();
-      const phone     = modal.querySelector('#sratix-phone').value.trim();
-      const company   = modal.querySelector('#sratix-company').value.trim();
-
+    submitBtn.addEventListener('click', async function () {
       errorEl.style.display = 'none';
+
+      var firstName, lastName, email, phone, company;
+      var formData = null;
+
+      if (useCustomForm) {
+        // Collect all dynamic answers (first pass without condition context, then with)
+        var rawAnswers = collectDynamicAnswers(formEl, schemaFields, {});
+        var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
+
+        // Extract core attendee data from well-known field IDs
+        firstName = answers.first_name || answers.firstName || '';
+        lastName  = answers.last_name  || answers.lastName  || '';
+        email     = answers.email      || '';
+        phone     = answers.phone      || '';
+        company   = answers.company    || answers.organization || '';
+
+        // Validate required fields from schema
+        for (var i = 0; i < schemaFields.length; i++) {
+          var f = schemaFields[i];
+          if (f.type === 'group') continue;
+          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (f.required) {
+            var val = answers[f.id];
+            if (val === undefined || val === null || val === ''
+              || (Array.isArray(val) && val.length === 0)
+              || (f.type === 'consent' && val && !val.granted)) {
+              errorEl.textContent = t('reg.form.fieldRequired', { field: resolveLabel(f.label) });
+              errorEl.style.display = '';
+              return;
+            }
+          }
+        }
+
+        // Build formData (all answers except the 5 core attendee fields)
+        var coreIds = ['first_name', 'firstName', 'last_name', 'lastName', 'email', 'phone', 'company', 'organization'];
+        formData = {};
+        Object.keys(answers).forEach(function (k) {
+          if (coreIds.indexOf(k) === -1) {
+            formData[k] = answers[k];
+          }
+        });
+      } else {
+        // Default form
+        firstName = modal.querySelector('#sratix-first-name').value.trim();
+        lastName  = modal.querySelector('#sratix-last-name').value.trim();
+        email     = modal.querySelector('#sratix-email').value.trim();
+        phone     = modal.querySelector('#sratix-phone').value.trim();
+        company   = modal.querySelector('#sratix-company').value.trim();
+      }
 
       if (!firstName || !lastName) {
         errorEl.textContent = t('reg.nameRequired');
@@ -312,24 +650,31 @@
       submitBtn.textContent = t('reg.pleaseWait');
 
       try {
-        const successUrl = buildSuccessUrl();
-        const result = await apiFetch('payments/checkout/public', {
+        var successUrl = buildSuccessUrl();
+        var payload = {
+          eventId: eventId,
+          ticketTypeId: tt.id,
+          quantity: qty,
+          attendeeData: {
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            phone: phone || undefined,
+            company: company || undefined,
+          },
+          promoCode: promoCode || undefined,
+          successUrl: successUrl,
+          cancelUrl: window.location.href,
+        };
+        // Include custom form data when using a schema
+        if (useCustomForm && schema && formData && Object.keys(formData).length > 0) {
+          payload.formSchemaId = schema.id;
+          payload.formData = formData;
+        }
+
+        var result = await apiFetch('payments/checkout/public', {
           method: 'POST',
-          body: JSON.stringify({
-            eventId,
-            ticketTypeId: tt.id,
-            quantity: qty,
-            attendeeData: {
-              email,
-              firstName,
-              lastName,
-              phone: phone || undefined,
-              company: company || undefined,
-            },
-            promoCode: promoCode || undefined,
-            successUrl,
-            cancelUrl: window.location.href,
-          }),
+          body: JSON.stringify(payload),
         });
 
         closeModal();

@@ -205,6 +205,7 @@
   "tickets.form.formTemplateNone": "Default registration form",
   "tickets.form.customFormOverride": "Custom Form Override",
   "tickets.form.customFormNone": "None",
+  "tickets.form.templateWillCreate": "A form schema will be created from this template on save.",
   "tickets.tiers.student": "Student",
   "tickets.tiers.individual": "Individual",
   "tickets.tiers.retired": "Retired",

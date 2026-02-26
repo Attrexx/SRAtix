@@ -9,6 +9,7 @@ import {
   IsString,
   IsInt,
   IsOptional,
+  IsObject,
   Min,
   Max,
   IsEmail,
@@ -21,6 +22,7 @@ import { OrdersService } from '../orders/orders.service';
 import { StripeService } from './stripe.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { AttendeesService } from '../attendees/attendees.service';
+import { FormsService } from '../forms/forms.service';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +76,14 @@ class PublicCheckoutDto {
   @IsString()
   @IsNotEmpty()
   cancelUrl!: string;
+
+  @IsString()
+  @IsOptional()
+  formSchemaId?: string;
+
+  @IsObject()
+  @IsOptional()
+  formData?: Record<string, unknown>;
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -103,6 +113,7 @@ export class PublicCheckoutController {
     private readonly stripe: StripeService,
     private readonly promoCodes: PromoCodesService,
     private readonly attendees: AttendeesService,
+    private readonly forms: FormsService,
   ) {}
 
   @Post()
@@ -161,6 +172,21 @@ export class PublicCheckoutController {
         phone: dto.attendeeData.phone,
         company: dto.attendeeData.company,
       });
+    }
+
+    // ── 3b. Save form submission if custom form data provided ─────────
+    if (dto.formSchemaId && dto.formData && Object.keys(dto.formData).length > 0) {
+      try {
+        await this.forms.createSubmission({
+          eventId: dto.eventId,
+          attendeeId: attendee.id,
+          formSchemaId: dto.formSchemaId,
+          answers: dto.formData,
+        });
+      } catch (err) {
+        // Log but don't block checkout — form data is supplementary
+        console.error('[PublicCheckout] Form submission failed:', err);
+      }
     }
 
     // ── 4. Create order ──────────────────────────────────────────────────

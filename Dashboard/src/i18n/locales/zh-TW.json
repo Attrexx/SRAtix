@@ -205,6 +205,7 @@
   "tickets.form.formTemplateNone": "預設報名表單",
   "tickets.form.customFormOverride": "自訂表單",
   "tickets.form.customFormNone": "無",
+  "tickets.form.templateWillCreate": "儲存時將從此範本建立表單架構。",
   "tickets.tiers.student": "學生",
   "tickets.tiers.individual": "個人",
   "tickets.tiers.retired": "退休",

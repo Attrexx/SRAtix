@@ -11,9 +11,10 @@ import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 import { OutgoingWebhooksModule } from '../outgoing-webhooks/outgoing-webhooks.module';
 import { AttendeesModule } from '../attendees/attendees.module';
 import { SettingsModule } from '../settings/settings.module';
+import { FormsModule } from '../forms/forms.module';
 
 @Module({
-  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule, SettingsModule],
+  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule, SettingsModule, FormsModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
   providers: [StripeService],
   exports: [StripeService],

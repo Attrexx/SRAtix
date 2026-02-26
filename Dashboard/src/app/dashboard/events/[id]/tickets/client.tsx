@@ -123,6 +123,18 @@ export default function TicketsPage() {
     setFormSalesEnd(tt.salesEnd ? tt.salesEnd.slice(0, 16) : '');
     setFormTier(tt.membershipTier ?? '');
     setFormSchemaId(tt.formSchemaId ?? '');
+    // Try to reverse-match the form schema to a template by name
+    if (tt.formSchemaId) {
+      const schema = formSchemas.find((s) => s.id === tt.formSchemaId);
+      if (schema) {
+        const tpl = formTemplates.find((t) => t.name === schema.name);
+        setFormTemplateId(tpl ? tpl.id : '');
+      } else {
+        setFormTemplateId('');
+      }
+    } else {
+      setFormTemplateId('');
+    }
 
     // Find early-bird variant
     const ebVariant = tt.pricingVariants?.find((v) => v.variantType === 'early_bird');
@@ -237,6 +249,32 @@ export default function TicketsPage() {
     const capacity = formCapacity ? parseInt(formCapacity, 10) : undefined;
 
     try {
+      // ── Auto-create schema from template if template selected + no override ──
+      let resolvedSchemaId = formSchemaId;
+      if (formTemplateId && !formSchemaId) {
+        const tpl = formTemplates.find((t) => t.id === formTemplateId);
+        if (tpl) {
+          // Check if a schema with the same name already exists for this event
+          const existing = formSchemas.find((s) => s.name === tpl.name);
+          if (existing) {
+            resolvedSchemaId = existing.id;
+          } else {
+            // Create a new schema from the template
+            const created = await api.createFormSchema({
+              eventId,
+              name: tpl.name,
+              fields: tpl.fields as any,
+            });
+            resolvedSchemaId = created.id;
+            // Refresh schemas list for future reference
+            try {
+              const updated = await api.getFormSchemas(eventId);
+              setFormSchemas(updated);
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
       let ticketId = editId;
 
       const ticketData: Record<string, unknown> = {
@@ -250,7 +288,7 @@ export default function TicketsPage() {
         category: formKind === 'membership' ? derivedCategory : 'general',
         membershipTier: formKind === 'membership' ? formTier : null,
         wpProductId: formKind === 'membership' ? derivedWpProductId ?? null : null,
-        formSchemaId: formSchemaId || null,
+        formSchemaId: resolvedSchemaId || null,
       };
 
       if (editId) {
@@ -268,7 +306,7 @@ export default function TicketsPage() {
           category: formKind === 'membership' ? derivedCategory : 'general',
           membershipTier: formKind === 'membership' ? formTier : undefined,
           wpProductId: formKind === 'membership' ? derivedWpProductId : undefined,
-          formSchemaId: formSchemaId || undefined,
+          formSchemaId: resolvedSchemaId || undefined,
         });
         ticketId = created.id;
       }
@@ -874,7 +912,10 @@ export default function TicketsPage() {
                   </label>
                   <select
                     value={formTemplateId}
-                    onChange={(e) => setFormTemplateId(e.target.value)}
+                    onChange={(e) => {
+                      setFormTemplateId(e.target.value);
+                      if (e.target.value) setFormSchemaId('');
+                    }}
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={{
                       background: 'var(--color-bg-subtle)',
@@ -890,6 +931,11 @@ export default function TicketsPage() {
                       </option>
                     ))}
                   </select>
+                  {formTemplateId && !formSchemaId && (
+                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t('tickets.form.templateWillCreate')}
+                    </p>
+                  )}
                 </div>
                 {/* Custom Form Override dropdown */}
                 {formSchemas.length > 0 && (
@@ -902,7 +948,10 @@ export default function TicketsPage() {
                     </label>
                     <select
                       value={formSchemaId}
-                      onChange={(e) => setFormSchemaId(e.target.value)}
+                      onChange={(e) => {
+                        setFormSchemaId(e.target.value);
+                        if (e.target.value) setFormTemplateId('');
+                      }}
                       className="w-full rounded-lg px-3 py-2 text-sm"
                       style={{
                         background: 'var(--color-bg-subtle)',

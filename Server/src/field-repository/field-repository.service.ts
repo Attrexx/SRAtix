@@ -821,7 +821,7 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 50,
       categoryFilter: ['legal'],
       helpText: { en: 'Determines your SRA corporate membership tier.', de: 'Bestimmt Ihre SRA-Firmenmitgliedschaftsstufe.', fr: 'Détermine votre niveau d\'adhésion entreprise SRA.', it: 'Determina il livello di iscrizione aziendale SRA.', 'zh-TW': '決定您的 SRA 企業會員等級。' },
-      options: opt([
+      options: multiOptI18n([
         { en: 'Large (250+ employees)', de: 'Gross (250+ Mitarbeitende)', fr: 'Grande (250+ employés)', it: 'Grande (250+ dipendenti)', 'zh-TW': '大型（250+ 員工）' },
         { en: 'Medium (50–249 employees)', de: 'Mittel (50–249 Mitarbeitende)', fr: 'Moyenne (50–249 employés)', it: 'Media (50–249 dipendenti)', 'zh-TW': '中型（50–249 員工）' },
         { en: 'Small (1–49 employees)', de: 'Klein (1–49 Mitarbeitende)', fr: 'Petite (1–49 employés)', it: 'Piccola (1–49 dipendenti)', 'zh-TW': '小型（1–49 員工）' },

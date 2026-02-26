@@ -205,6 +205,7 @@
   "tickets.form.formTemplateNone": "Standard-Anmeldeformular",
   "tickets.form.customFormOverride": "Benutzerdefiniertes Formular",
   "tickets.form.customFormNone": "Keines",
+  "tickets.form.templateWillCreate": "Beim Speichern wird ein Formularschema aus dieser Vorlage erstellt.",
   "tickets.tiers.student": "Student",
   "tickets.tiers.individual": "Einzelperson",
   "tickets.tiers.retired": "Pensioniert",

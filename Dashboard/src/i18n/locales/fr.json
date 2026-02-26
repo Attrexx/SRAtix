@@ -205,6 +205,7 @@
   "tickets.form.formTemplateNone": "Formulaire d'inscription par défaut",
   "tickets.form.customFormOverride": "Formulaire personnalisé",
   "tickets.form.customFormNone": "Aucun",
+  "tickets.form.templateWillCreate": "Un schéma de formulaire sera créé à partir de ce modèle lors de la sauvegarde.",
   "tickets.tiers.student": "Étudiant",
   "tickets.tiers.individual": "Individuel",
   "tickets.tiers.retired": "Retraité",
