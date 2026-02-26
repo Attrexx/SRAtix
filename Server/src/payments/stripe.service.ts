@@ -1,26 +1,55 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Wraps the Stripe SDK for SRAtix.
  * Phase 1: Stripe Checkout (hosted) — minimal PCI scope (SAQ-A).
+ *
+ * Key resolution priority: DB settings (Dashboard UI) → .env → none.
+ * Re-initializes if the key changes at runtime (no restart required).
  */
 @Injectable()
 export class StripeService implements OnModuleInit {
   private readonly logger = new Logger(StripeService.name);
-  private stripe!: Stripe;
+  private stripe: Stripe | null = null;
+  /** The secret key that was used to create the current Stripe instance. */
+  private activeKey = '';
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly settings: SettingsService,
+  ) {}
 
-  onModuleInit() {
-    const secretKey = this.config.get<string>('STRIPE_SECRET_KEY');
+  async onModuleInit() {
+    await this.initStripe();
+  }
+
+  /**
+   * Resolve the Stripe secret key (DB → .env → none) and (re-)initialize
+   * the SDK if the key changed since last init.
+   */
+  private async initStripe(): Promise<Stripe | null> {
+    const secretKey = await this.settings.resolve(
+      'stripe_secret_key',
+      this.config.get<string>('STRIPE_SECRET_KEY') ?? '',
+    );
+
     if (!secretKey) {
       this.logger.warn(
         'STRIPE_SECRET_KEY not configured — payment features will be unavailable',
       );
-      return;
+      this.stripe = null;
+      this.activeKey = '';
+      return null;
     }
+
+    // Skip re-init if the key hasn't changed.
+    if (this.stripe && secretKey === this.activeKey) {
+      return this.stripe;
+    }
+
     this.stripe = new Stripe(secretKey, {
       apiVersion: '2025-02-24.acacia',
       appInfo: {
@@ -29,16 +58,25 @@ export class StripeService implements OnModuleInit {
         url: 'https://tix.swiss-robotics.org',
       },
     });
-    this.logger.log(
-      `Stripe initialized in ${this.config.get('STRIPE_MODE', 'test')} mode`,
-    );
+    this.activeKey = secretKey;
+
+    const mode = await this.settings.resolve('stripe_mode', 'test');
+    this.logger.log(`Stripe initialized in ${mode} mode`);
+    return this.stripe;
   }
 
-  private ensureStripe(): Stripe {
-    if (!this.stripe) {
-      throw new Error('Stripe is not configured — set STRIPE_SECRET_KEY');
+  /**
+   * Get a live Stripe instance, re-resolving the key from DB/env every time.
+   * Throws if no key is configured at all.
+   */
+  private async ensureStripe(): Promise<Stripe> {
+    const stripe = await this.initStripe();
+    if (!stripe) {
+      throw new Error(
+        'Stripe is not configured — set STRIPE_SECRET_KEY in the Dashboard or .env',
+      );
     }
-    return this.stripe;
+    return stripe;
   }
 
   /**
@@ -65,8 +103,10 @@ export class StripeService implements OnModuleInit {
   }): Promise<{ sessionId: string; url: string }> {
     // If a discount is specified, create a one-time Stripe coupon
     let discounts: Stripe.Checkout.SessionCreateParams['discounts'] | undefined;
+    const stripe = await this.ensureStripe();
+
     if (params.discountAmountCents && params.discountAmountCents > 0) {
-      const coupon = await this.ensureStripe().coupons.create({
+      const coupon = await stripe.coupons.create({
         amount_off: params.discountAmountCents,
         currency: params.currency.toLowerCase(),
         duration: 'once',
@@ -79,7 +119,7 @@ export class StripeService implements OnModuleInit {
       );
     }
 
-    const session = await this.ensureStripe().checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
       customer_email: params.customerEmail,
@@ -120,7 +160,8 @@ export class StripeService implements OnModuleInit {
    * Retrieve a Checkout Session from Stripe (for status checks).
    */
   async getSession(sessionId: string): Promise<Stripe.Checkout.Session> {
-    return this.ensureStripe().checkout.sessions.retrieve(sessionId, {
+    const stripe = await this.ensureStripe();
+    return stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent'],
     });
   }
@@ -132,7 +173,8 @@ export class StripeService implements OnModuleInit {
     paymentIntentId: string,
     amountCents?: number,
   ): Promise<Stripe.Refund> {
-    const refund = await this.ensureStripe().refunds.create({
+    const stripe = await this.ensureStripe();
+    const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
       ...(amountCents ? { amount: amountCents } : {}),
     });
@@ -145,17 +187,18 @@ export class StripeService implements OnModuleInit {
   /**
    * Construct and verify a Stripe webhook event from the raw body + signature.
    */
-  constructWebhookEvent(
+  async constructWebhookEvent(
     rawBody: Buffer,
     signature: string,
-  ): Stripe.Event {
-    const webhookSecret = this.config.get<string>(
-      'STRIPE_WEBHOOK_SECRET',
-    );
+  ): Promise<Stripe.Event> {
+    const [stripe, webhookSecret] = await Promise.all([
+      this.ensureStripe(),
+      this.settings.resolve('stripe_webhook_secret', ''),
+    ]);
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET not configured');
     }
-    return this.ensureStripe().webhooks.constructEvent(
+    return stripe.webhooks.constructEvent(
       rawBody,
       signature,
       webhookSecret,

@@ -181,17 +181,89 @@ function resumeCreationSection(startOrder: number): FormField[] {
   ];
 }
 
+/**
+ * Section: SRA Organization Profile (only for +SRA tickets).
+ * Double-gated: _is_sra_membership_ticket + create_org_profile opt-in.
+ * Used for Industry, Startup, and Academia templates to let the attendee
+ * opt into creating their company/institution profile in the SRA directory.
+ */
+function sraOrgProfileSection(startOrder: number): FormField[] {
+  const sraCondition = [{ field: '_is_sra_membership_ticket', operator: 'eq', value: true }];
+  const orgConditions = [
+    { field: '_is_sra_membership_ticket', operator: 'eq', value: true },
+    { field: 'create_org_profile', operator: 'eq', value: true },
+  ];
+  return [
+    f('create_org_profile', 'yes-no', { en: 'Create organization profile in SRA directory', de: 'Organisationsprofil im SRA-Verzeichnis erstellen', fr: 'Créer profil dans annuaire SRA', it: 'Crea profilo nell\'elenco SRA', 'zh-TW': '在 SRA 目錄建立組織檔案' }, 'sra_org_profile', startOrder, {
+      conditions: sraCondition,
+    }),
+    f('org_display_name', 'text', { en: 'Display Name', de: 'Anzeigename', fr: 'Nom d\'affichage', it: 'Nome visualizzato', 'zh-TW': '顯示名稱' }, 'sra_org_profile', startOrder + 1, { conditions: orgConditions }),
+    f('org_type', 'select', { en: 'Organization Type', de: 'Organisationstyp', fr: 'Type d\'organisation', it: 'Tipo organizzazione', 'zh-TW': '組織類型' }, 'sra_org_profile', startOrder + 2, {
+      conditions: orgConditions,
+      options: [
+        { value: 'industry-large', label: { en: 'Industry — Large', de: 'Industrie — Gross', fr: 'Industrie — Grande', it: 'Industria — Grande', 'zh-TW': '企業 — 大型' } },
+        { value: 'industry-sme', label: { en: 'Industry — SME', de: 'Industrie — KMU', fr: 'Industrie — PME', it: 'Industria — PMI', 'zh-TW': '企業 — 中小型' } },
+        { value: 'research', label: { en: 'Research / University', de: 'Forschung / Universität', fr: 'Recherche / Université', it: 'Ricerca / Università', 'zh-TW': '研究 / 大學' } },
+        { value: 'startup', label: { en: 'Startup / Spin-off', de: 'Startup / Spin-off', fr: 'Startup / Spin-off', it: 'Startup / Spin-off', 'zh-TW': '新創 / 衍生企業' } },
+        { value: 'ngo', label: { en: 'NGO / Non-profit', de: 'NGO / Gemeinnützig', fr: 'ONG / À but non lucratif', it: 'ONG / No-profit', 'zh-TW': 'NGO / 非營利' } },
+      ],
+    }),
+    f('org_contact_email', 'email', { en: 'Public Contact Email', de: 'Öffentliche Kontakt-E-Mail', fr: 'E-mail contact public', it: 'E-mail contatto pubblico', 'zh-TW': '公開信箱' }, 'sra_org_profile', startOrder + 3, { conditions: orgConditions }),
+    f('org_phone', 'phone', { en: 'Public Phone', de: 'Öffentliche Telefonnummer', fr: 'Téléphone public', it: 'Telefono pubblico', 'zh-TW': '公開電話' }, 'sra_org_profile', startOrder + 4, { conditions: orgConditions }),
+    f('org_website', 'url', { en: 'Organization Website', de: 'Website der Organisation', fr: 'Site web', it: 'Sito web', 'zh-TW': '組織網站' }, 'sra_org_profile', startOrder + 5, { conditions: orgConditions }),
+    f('org_description', 'textarea', { en: 'Short Description', de: 'Kurzbeschreibung', fr: 'Description courte', it: 'Descrizione breve', 'zh-TW': '簡短描述' }, 'sra_org_profile', startOrder + 6, { conditions: orgConditions }),
+    f('org_logo', 'image-upload', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo', it: 'Logo', 'zh-TW': '組織標誌' }, 'sra_org_profile', startOrder + 7, { conditions: orgConditions }),
+    f('org_we_offer', 'textarea', { en: 'We offer…', de: 'Wir bieten…', fr: 'Nous offrons…', it: 'Offriamo…', 'zh-TW': '我們提供…' }, 'sra_org_profile', startOrder + 8, { conditions: orgConditions }),
+    f('org_we_seek', 'textarea', { en: 'We are looking for…', de: 'Wir suchen…', fr: 'Nous recherchons…', it: 'Cerchiamo…', 'zh-TW': '我們正在尋找…' }, 'sra_org_profile', startOrder + 9, { conditions: orgConditions }),
+    f('org_tags', 'multi-select', { en: 'Tags / Keywords', de: 'Tags', fr: 'Tags', it: 'Tag', 'zh-TW': '標籤' }, 'sra_org_profile', startOrder + 10, { conditions: orgConditions }),
+    f('org_authorized_rep', 'checkbox', { en: 'I am authorized to represent this organization', de: 'Ich bin berechtigt, diese Organisation zu vertreten', fr: 'Je suis autorisé(e) à représenter cette organisation', it: 'Sono autorizzato a rappresentare questa organizzazione', 'zh-TW': '我有權代表此組織' }, 'sra_org_profile', startOrder + 11, { required: true, conditions: orgConditions }),
+  ];
+}
+
+/**
+ * Section: Swiss Robotics Map Listing (only for +SRA tickets).
+ * Double-gated: _is_sra_membership_ticket + create_map_listing opt-in.
+ */
+function sraMapListingSection(startOrder: number): FormField[] {
+  const sraCondition = [{ field: '_is_sra_membership_ticket', operator: 'eq', value: true }];
+  const mapConditions = [
+    { field: '_is_sra_membership_ticket', operator: 'eq', value: true },
+    { field: 'create_map_listing', operator: 'eq', value: true },
+  ];
+  return [
+    f('create_map_listing', 'yes-no', { en: 'Create Swiss Robotics Map listing', de: 'Swiss Robotics Map Eintrag erstellen', fr: 'Créer entrée Swiss Robotics Map', it: 'Crea inserzione Swiss Robotics Map', 'zh-TW': '建立瑞士機器人地圖據點' }, 'sra_map_listing', startOrder, {
+      conditions: sraCondition,
+    }),
+    f('org_profile_visibility', 'radio', { en: 'Make listing public immediately?', de: 'Eintrag sofort veröffentlichen?', fr: 'Publier immédiatement ?', it: 'Pubblicare subito?', 'zh-TW': '立即公開？' }, 'sra_map_listing', startOrder + 1, {
+      conditions: mapConditions,
+      options: [
+        { value: 'publish', label: { en: 'Yes', de: 'Ja', fr: 'Oui', it: 'Sì', 'zh-TW': '是' } },
+        { value: 'draft', label: { en: 'No — pending review', de: 'Nein — zur Prüfung', fr: 'Non — en attente', it: 'No — in attesa', 'zh-TW': '否 — 待審核' } },
+      ],
+    }),
+    f('org_address', 'text', { en: 'Address', de: 'Adresse', fr: 'Adresse', it: 'Indirizzo', 'zh-TW': '地址' }, 'sra_map_listing', startOrder + 2, { conditions: mapConditions }),
+    f('org_city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'sra_map_listing', startOrder + 3, { conditions: mapConditions }),
+    f('org_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'sra_map_listing', startOrder + 4, { conditions: mapConditions }),
+    f('org_country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'sra_map_listing', startOrder + 5, { conditions: mapConditions }),
+    f('org_robotics_fields', 'multi-select', { en: 'Robotics Fields', de: 'Robotik-Bereiche', fr: 'Domaines robotique', it: 'Campi robotica', 'zh-TW': '機器人領域' }, 'sra_map_listing', startOrder + 6, { conditions: mapConditions }),
+    f('org_robotics_subfields', 'multi-select', { en: 'Sub-fields', de: 'Unterbereiche', fr: 'Sous-domaines', it: 'Sotto-campi', 'zh-TW': '子領域' }, 'sra_map_listing', startOrder + 7, { conditions: mapConditions }),
+  ];
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  TEMPLATE 1 — Industry/Government Participant
 // ═══════════════════════════════════════════════════════════════
 
 function template1_IndustryGovParticipant(): { name: string; description: string; category: string; fields: FormSchemaDefinition } {
+  const sraCondition = [{ field: '_is_sra_membership_ticket', operator: 'eq', value: true }];
   const sections: FormSection[] = [
     section('personal', { en: 'Personal Information', de: 'Persönliche Angaben', fr: 'Informations personnelles', it: 'Informazioni personali', 'zh-TW': '個人資料' }, 0),
     section('professional', { en: 'Professional Information', de: 'Berufliche Angaben', fr: 'Informations professionnelles', it: 'Informazioni professionali', 'zh-TW': '專業資料' }, 1),
     section('legal_consents', { en: 'Legal Consents', de: 'Rechtliche Einwilligungen', fr: 'Consentements légaux', it: 'Consensi legali', 'zh-TW': '法律同意' }, 2),
     section('sra_membership', { en: 'SRA Membership Profile', de: 'SRA-Mitgliedschaftsprofil', fr: 'Profil membre SRA', it: 'Profilo membro SRA', 'zh-TW': 'SRA 會員檔案' }, 3),
     section('resume_creation', { en: 'Resume / Public Profile', de: 'Lebenslauf / Öffentliches Profil', fr: 'CV / Profil public', it: 'CV / Profilo pubblico', 'zh-TW': '履歷 / 公開檔案' }, 4),
+    section('sra_org_profile', { en: 'Organization Profile (SRA Directory)', de: 'Organisationsprofil (SRA-Verzeichnis)', fr: 'Profil organisation (Annuaire SRA)', it: 'Profilo organizzazione (Elenco SRA)', 'zh-TW': '組織檔案（SRA 目錄）' }, 5),
+    section('sra_map_listing', { en: 'Swiss Robotics Map Listing', de: 'Swiss Robotics Map Eintrag', fr: 'Entrée Swiss Robotics Map', it: 'Inserzione Swiss Robotics Map', 'zh-TW': '瑞士機器人地圖據點' }, 6),
   ];
 
   const fields: FormField[] = [
@@ -205,7 +277,20 @@ function template1_IndustryGovParticipant(): { name: string; description: string
     f('company_size', 'select', { en: 'Company Size', de: 'Firmengrösse', fr: 'Taille entreprise', it: 'Dimensione', 'zh-TW': '公司規模' }, 'professional', 5),
     ...legalConsentsSection(0),
     ...sraMembershipOptinsSection(0),
+    // SRA industry size — determines corporate membership tier
+    f('sra_industry_size', 'select', { en: 'Industry Size (for SRA membership tier)', de: 'Industriegrösse (SRA-Mitgliedschaftsstufe)', fr: 'Taille entreprise (niveau adhésion SRA)', it: 'Dimensione azienda (livello iscrizione SRA)', 'zh-TW': '企業規模（SRA 會員等級）' }, 'sra_membership', 10, {
+      required: true,
+      conditions: sraCondition,
+      helpText: { en: 'Determines your SRA corporate membership tier.', de: 'Bestimmt Ihre SRA-Firmenmitgliedschaftsstufe.', fr: 'Détermine votre niveau d\'adhésion entreprise SRA.', it: 'Determina il livello di iscrizione aziendale SRA.', 'zh-TW': '決定您的 SRA 企業會員等級。' },
+      options: [
+        { value: 'large', label: { en: 'Large (250+ employees)', de: 'Gross (250+ Mitarbeitende)', fr: 'Grande (250+ employés)', it: 'Grande (250+ dipendenti)', 'zh-TW': '大型（250+ 員工）' } },
+        { value: 'medium', label: { en: 'Medium (50–249 employees)', de: 'Mittel (50–249 Mitarbeitende)', fr: 'Moyenne (50–249 employés)', it: 'Media (50–249 dipendenti)', 'zh-TW': '中型（50–249 員工）' } },
+        { value: 'small', label: { en: 'Small (1–49 employees)', de: 'Klein (1–49 Mitarbeitende)', fr: 'Petite (1–49 employés)', it: 'Piccola (1–49 dipendenti)', 'zh-TW': '小型（1–49 員工）' } },
+      ],
+    }),
     ...resumeCreationSection(0),
+    ...sraOrgProfileSection(0),
+    ...sraMapListingSection(0),
   ];
 
   return {
@@ -228,6 +313,8 @@ function template2_StartupParticipant(): { name: string; description: string; ca
     section('legal_consents', { en: 'Legal Consents', de: 'Rechtliche Einwilligungen', fr: 'Consentements légaux', it: 'Consensi legali', 'zh-TW': '法律同意' }, 3),
     section('sra_membership', { en: 'SRA Membership Profile', de: 'SRA-Mitgliedschaftsprofil', fr: 'Profil membre SRA', it: 'Profilo membro SRA', 'zh-TW': 'SRA 會員檔案' }, 4),
     section('resume_creation', { en: 'Resume / Public Profile', de: 'Lebenslauf / Öffentliches Profil', fr: 'CV / Profil public', it: 'CV / Profilo pubblico', 'zh-TW': '履歷 / 公開檔案' }, 5),
+    section('sra_org_profile', { en: 'Organization Profile (SRA Directory)', de: 'Organisationsprofil (SRA-Verzeichnis)', fr: 'Profil organisation (Annuaire SRA)', it: 'Profilo organizzazione (Elenco SRA)', 'zh-TW': '組織檔案（SRA 目錄）' }, 6),
+    section('sra_map_listing', { en: 'Swiss Robotics Map Listing', de: 'Swiss Robotics Map Eintrag', fr: 'Entrée Swiss Robotics Map', it: 'Inserzione Swiss Robotics Map', 'zh-TW': '瑞士機器人地圖據點' }, 7),
   ];
 
   const fields: FormField[] = [
@@ -263,11 +350,13 @@ function template2_StartupParticipant(): { name: string; description: string; ca
     ...legalConsentsSection(0),
     ...sraMembershipOptinsSection(0),
     ...resumeCreationSection(0),
+    ...sraOrgProfileSection(0),
+    ...sraMapListingSection(0),
   ];
 
   return {
     name: 'SRD26 — Startup/Spin-off Participant',
-    description: 'Registration form for startup and spin-off attendees. Includes startup eligibility verification and SRA membership onboarding.',
+    description: 'Registration form for startup and spin-off attendees. Includes startup eligibility verification, SRA membership onboarding, and optional org profile / map listing.',
     category: 'general',
     fields: { fields, sections },
   };
@@ -284,6 +373,8 @@ function template3_AcademiaParticipant(): { name: string; description: string; c
     section('legal_consents', { en: 'Legal Consents', de: 'Rechtliche Einwilligungen', fr: 'Consentements légaux', it: 'Consensi legali', 'zh-TW': '法律同意' }, 2),
     section('sra_membership', { en: 'SRA Membership Profile', de: 'SRA-Mitgliedschaftsprofil', fr: 'Profil membre SRA', it: 'Profilo membro SRA', 'zh-TW': 'SRA 會員檔案' }, 3),
     section('resume_creation', { en: 'Resume / Public Profile', de: 'Lebenslauf / Öffentliches Profil', fr: 'CV / Profil public', it: 'CV / Profilo pubblico', 'zh-TW': '履歷 / 公開檔案' }, 4),
+    section('sra_org_profile', { en: 'Organization Profile (SRA Directory)', de: 'Organisationsprofil (SRA-Verzeichnis)', fr: 'Profil organisation (Annuaire SRA)', it: 'Profilo organizzazione (Elenco SRA)', 'zh-TW': '組織檔案（SRA 目錄）' }, 5),
+    section('sra_map_listing', { en: 'Swiss Robotics Map Listing', de: 'Swiss Robotics Map Eintrag', fr: 'Entrée Swiss Robotics Map', it: 'Inserzione Swiss Robotics Map', 'zh-TW': '瑞士機器人地圖據點' }, 6),
   ];
 
   const fields: FormField[] = [
@@ -306,11 +397,13 @@ function template3_AcademiaParticipant(): { name: string; description: string; c
     ...legalConsentsSection(0),
     ...sraMembershipOptinsSection(0),
     ...resumeCreationSection(0),
+    ...sraOrgProfileSection(0),
+    ...sraMapListingSection(0),
   ];
 
   return {
     name: 'SRD26 — Academia/NGO Participant',
-    description: 'Registration form for academia, university, research institution, and NGO attendees. Includes SRA membership onboarding.',
+    description: 'Registration form for academia, university, research institution, and NGO attendees. Includes SRA membership onboarding and optional org profile / map listing.',
     category: 'general',
     fields: { fields, sections },
   };
@@ -408,12 +501,14 @@ function template5_StudentParticipant(): { name: string; description: string; ca
 // ═══════════════════════════════════════════════════════════════
 
 function template6_ExhibitorPackage(): { name: string; description: string; category: string; fields: FormSchemaDefinition } {
+  const sraCondition = [{ field: '_is_sra_membership_ticket', operator: 'eq', value: true }];
   const sections: FormSection[] = [
     section('company_billing', { en: 'Company & Billing', de: 'Firma & Rechnungsstellung', fr: 'Entreprise & Facturation', it: 'Azienda & Fatturazione', 'zh-TW': '公司與帳單' }, 0),
     section('exhibitor_ops', { en: 'Exhibitor Operations', de: 'Aussteller-Details', fr: 'Détails exposant', it: 'Dettagli espositore', 'zh-TW': '展商營運' }, 1),
     section('org_profile', { en: 'Organization Profile (SRA Directory)', de: 'Organisationsprofil (SRA-Verzeichnis)', fr: 'Profil organisation (Annuaire SRA)', it: 'Profilo organizzazione (Elenco SRA)', 'zh-TW': '組織檔案（SRA 目錄）' }, 2),
     section('map_listing', { en: 'Swiss Robotics Map Listing', de: 'Swiss Robotics Map Eintrag', fr: 'Entrée Swiss Robotics Map', it: 'Inserzione Swiss Robotics Map', 'zh-TW': '瑞士機器人地圖據點' }, 3),
-    section('legal_consents', { en: 'Legal Consents', de: 'Rechtliche Einwilligungen', fr: 'Consentements légaux', it: 'Consensi legali', 'zh-TW': '法律同意' }, 4),
+    section('sra_membership_tier', { en: 'SRA Membership Tier', de: 'SRA-Mitgliedschaftsstufe', fr: 'Niveau adhésion SRA', it: 'Livello iscrizione SRA', 'zh-TW': 'SRA 會員等級' }, 4),
+    section('legal_consents', { en: 'Legal Consents', de: 'Rechtliche Einwilligungen', fr: 'Consentements légaux', it: 'Consensi legali', 'zh-TW': '法律同意' }, 5),
   ];
 
   const orgProfileCondition = [{ field: 'create_org_profile', operator: 'eq', value: true }];
@@ -474,6 +569,18 @@ function template6_ExhibitorPackage(): { name: string; description: string; cate
     f('org_country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'map_listing', 5, { conditions: mapListingCondition }),
     f('org_robotics_fields', 'multi-select', { en: 'Robotics Fields', de: 'Robotik-Bereiche', fr: 'Domaines robotique', it: 'Campi robotica', 'zh-TW': '機器人領域' }, 'map_listing', 6, { conditions: mapListingCondition }),
     f('org_robotics_subfields', 'multi-select', { en: 'Sub-fields', de: 'Unterbereiche', fr: 'Sous-domaines', it: 'Sotto-campi', 'zh-TW': '子領域' }, 'map_listing', 7, { conditions: mapListingCondition }),
+
+    // SRA Membership Tier (only for +SRA exhibitor packages)
+    f('sra_industry_size', 'select', { en: 'Industry Size (for SRA membership tier)', de: 'Industriegrösse (SRA-Mitgliedschaftsstufe)', fr: 'Taille entreprise (niveau adhésion SRA)', it: 'Dimensione azienda (livello iscrizione SRA)', 'zh-TW': '企業規模（SRA 會員等級）' }, 'sra_membership_tier', 0, {
+      required: true,
+      conditions: sraCondition,
+      helpText: { en: 'Determines your SRA corporate membership tier.', de: 'Bestimmt Ihre SRA-Firmenmitgliedschaftsstufe.', fr: 'Détermine votre niveau d\'adhésion entreprise SRA.', it: 'Determina il livello di iscrizione aziendale SRA.', 'zh-TW': '決定您的 SRA 企業會員等級。' },
+      options: [
+        { value: 'large', label: { en: 'Large (250+ employees)', de: 'Gross (250+ Mitarbeitende)', fr: 'Grande (250+ employés)', it: 'Grande (250+ dipendenti)', 'zh-TW': '大型（250+ 員工）' } },
+        { value: 'medium', label: { en: 'Medium (50–249 employees)', de: 'Mittel (50–249 Mitarbeitende)', fr: 'Moyenne (50–249 employés)', it: 'Media (50–249 dipendenti)', 'zh-TW': '中型（50–249 員工）' } },
+        { value: 'small', label: { en: 'Small (1–49 employees)', de: 'Klein (1–49 Mitarbeitende)', fr: 'Petite (1–49 employés)', it: 'Piccola (1–49 dipendenti)', 'zh-TW': '小型（1–49 員工）' } },
+      ],
+    }),
 
     // Legal Consents
     ...legalConsentsSection(0),
