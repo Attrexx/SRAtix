@@ -14,10 +14,12 @@ export interface SettingDefinition {
   label: string;
   group: string;
   description: string;
-  type: 'string' | 'number' | 'boolean' | 'secret';
+  type: 'string' | 'number' | 'boolean' | 'secret' | 'select';
   /** If true, the value is masked in API responses (only last 4 chars shown). */
   sensitive: boolean;
   required: boolean;
+  /** For 'select' type: allowed option values. */
+  options?: string[];
 }
 
 export interface SettingValue {
@@ -32,27 +34,59 @@ export interface SettingValue {
   value: string;
   source: 'database' | 'env' | 'default';
   isSet: boolean;
+  options?: string[];
 }
 
 /** All manageable settings definitions. */
 const SETTING_DEFINITIONS: SettingDefinition[] = [
   // ── Stripe ──
   {
-    key: 'stripe_secret_key',
-    envVar: 'STRIPE_SECRET_KEY',
-    label: 'Stripe Secret Key',
+    key: 'stripe_mode',
+    envVar: 'STRIPE_MODE',
+    label: 'Stripe Mode',
     group: 'Stripe',
-    description: 'Stripe secret API key (starts with sk_test_ or sk_live_)',
+    description: 'Payment mode — determines which key pair is used',
+    type: 'select',
+    options: ['test', 'live'],
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'stripe_test_secret_key',
+    envVar: 'STRIPE_TEST_SECRET_KEY',
+    label: 'Test Secret Key',
+    group: 'Stripe',
+    description: 'Stripe TEST secret key (starts with sk_test_)',
     type: 'secret',
     sensitive: true,
     required: false,
   },
   {
-    key: 'stripe_publishable_key',
-    envVar: 'STRIPE_PUBLISHABLE_KEY',
-    label: 'Stripe Publishable Key',
+    key: 'stripe_test_publishable_key',
+    envVar: 'STRIPE_TEST_PUBLISHABLE_KEY',
+    label: 'Test Publishable Key',
     group: 'Stripe',
-    description: 'Stripe publishable API key (starts with pk_test_ or pk_live_)',
+    description: 'Stripe TEST publishable key (starts with pk_test_)',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'stripe_live_secret_key',
+    envVar: 'STRIPE_LIVE_SECRET_KEY',
+    label: 'Live Secret Key',
+    group: 'Stripe',
+    description: 'Stripe LIVE secret key (starts with sk_live_)',
+    type: 'secret',
+    sensitive: true,
+    required: false,
+  },
+  {
+    key: 'stripe_live_publishable_key',
+    envVar: 'STRIPE_LIVE_PUBLISHABLE_KEY',
+    label: 'Live Publishable Key',
+    group: 'Stripe',
+    description: 'Stripe LIVE publishable key (starts with pk_live_)',
     type: 'string',
     sensitive: false,
     required: false,
@@ -65,16 +99,6 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     description: 'Stripe webhook endpoint signing secret (starts with whsec_)',
     type: 'secret',
     sensitive: true,
-    required: false,
-  },
-  {
-    key: 'stripe_mode',
-    envVar: 'STRIPE_MODE',
-    label: 'Stripe Mode',
-    group: 'Stripe',
-    description: 'Payment mode: "test" or "live"',
-    type: 'string',
-    sensitive: false,
     required: false,
   },
 
@@ -334,6 +358,7 @@ export class SettingsService {
         value: displayValue,
         source,
         isSet: !!value,
+        ...(def.options ? { options: def.options } : {}),
       };
     });
   }

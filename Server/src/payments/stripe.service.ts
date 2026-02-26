@@ -27,18 +27,28 @@ export class StripeService implements OnModuleInit {
   }
 
   /**
-   * Resolve the Stripe secret key (DB → .env → none) and (re-)initialize
-   * the SDK if the key changed since last init.
+   * Resolve the Stripe secret key based on the active mode (test/live),
+   * then (re-)initialize the SDK if the key changed since last init.
    */
   private async initStripe(): Promise<Stripe | null> {
-    const secretKey = await this.settings.resolve(
-      'stripe_secret_key',
-      this.config.get<string>('STRIPE_SECRET_KEY') ?? '',
-    );
+    // Resolve mode first (test or live)
+    const mode = await this.settings.resolve('stripe_mode', 'test');
+    const isLive = mode === 'live';
+
+    // Pick the correct key pair based on mode
+    const secretKey = isLive
+      ? await this.settings.resolve(
+          'stripe_live_secret_key',
+          this.config.get<string>('STRIPE_LIVE_SECRET_KEY') ?? '',
+        )
+      : await this.settings.resolve(
+          'stripe_test_secret_key',
+          this.config.get<string>('STRIPE_TEST_SECRET_KEY') ?? '',
+        );
 
     if (!secretKey) {
       this.logger.warn(
-        'STRIPE_SECRET_KEY not configured — payment features will be unavailable',
+        `Stripe ${mode} secret key not configured — payment features unavailable`,
       );
       this.stripe = null;
       this.activeKey = '';
@@ -60,7 +70,6 @@ export class StripeService implements OnModuleInit {
     });
     this.activeKey = secretKey;
 
-    const mode = await this.settings.resolve('stripe_mode', 'test');
     this.logger.log(`Stripe initialized in ${mode} mode`);
     return this.stripe;
   }
@@ -73,7 +82,7 @@ export class StripeService implements OnModuleInit {
     const stripe = await this.initStripe();
     if (!stripe) {
       throw new Error(
-        'Stripe is not configured — set STRIPE_SECRET_KEY in the Dashboard or .env',
+        'Stripe is not configured — set the test/live secret key in the Dashboard or .env',
       );
     }
     return stripe;

@@ -426,6 +426,26 @@ function SettingRow({
                 <option value="true">{t('common.true')}</option>
                 <option value="false">{t('common.false')}</option>
               </select>
+            ) : setting.type === 'select' && setting.options ? (
+              <select
+                value={currentValue}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm"
+                style={{
+                  background: 'var(--color-bg-subtle)',
+                  border: isEdited
+                    ? '2px solid var(--color-primary)'
+                    : '1px solid var(--color-border)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                <option value="">{t('settings.notSet')}</option>
+                {setting.options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  </option>
+                ))}
+              </select>
             ) : (
               <input
                 type={

@@ -436,6 +436,7 @@ export interface SettingValue {
   value: string;
   source: 'database' | 'env' | 'default';
   isSet: boolean;
+  options?: string[];
 }
 
 export interface SettingsResponse {
