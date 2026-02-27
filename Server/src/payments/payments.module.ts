@@ -18,6 +18,6 @@ import { FormsModule } from '../forms/forms.module';
   imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule, SettingsModule, FormsModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
   providers: [StripeService, StripeKeyRotatorService],
-  exports: [StripeService],
+  exports: [StripeService, StripeKeyRotatorService],
 })
 export class PaymentsModule {}

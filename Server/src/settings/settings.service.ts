@@ -411,6 +411,18 @@ export class SettingsService {
         continue;
       }
 
+      // Guard: reject masked placeholder values for sensitive fields.
+      // The API returns '••••••••XXXX' for secrets — saving that back would
+      // destroy the real key. Skip silently (the UI only sends changed fields,
+      // so this is a server-side safety net).
+      const def = SETTING_DEFINITIONS.find((d) => d.key === key);
+      if (def?.sensitive && value && value.includes('••••••••')) {
+        this.logger.warn(
+          `Ignoring masked placeholder value for sensitive setting "${key}"`,
+        );
+        continue;
+      }
+
       if (RESTART_REQUIRED_KEYS.has(key)) {
         requiresRestart = true;
       }
