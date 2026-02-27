@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { StripeService } from './stripe.service';
+import { StripeKeyRotatorService } from './stripe-key-rotator.service';
 import { PaymentsController } from './payments.controller';
 import { PublicCheckoutController } from './public-checkout.controller';
 import { StripeWebhookController } from './stripe-webhook.controller';
@@ -16,7 +17,7 @@ import { FormsModule } from '../forms/forms.module';
 @Module({
   imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, AttendeesModule, SettingsModule, FormsModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
-  providers: [StripeService],
+  providers: [StripeService, StripeKeyRotatorService],
   exports: [StripeService],
 })
 export class PaymentsModule {}

@@ -101,6 +101,36 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     sensitive: true,
     required: false,
   },
+  {
+    key: 'stripe_test_key_created_at',
+    envVar: 'STRIPE_TEST_KEY_CREATED_AT',
+    label: 'Test Key Created At',
+    group: 'Stripe',
+    description: 'ISO timestamp when the active test secret key was provisioned (auto-managed by key rotator)',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'stripe_live_key_created_at',
+    envVar: 'STRIPE_LIVE_KEY_CREATED_AT',
+    label: 'Live Key Created At',
+    group: 'Stripe',
+    description: 'ISO timestamp when the active live secret key was provisioned (auto-managed by key rotator)',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
+  {
+    key: 'stripe_key_rotation_enabled',
+    envVar: 'STRIPE_KEY_ROTATION_ENABLED',
+    label: 'Auto-Rotate Keys',
+    group: 'Stripe',
+    description: 'Enable automatic Stripe API key rotation every 5 days (7-day max policy)',
+    type: 'boolean',
+    sensitive: false,
+    required: false,
+  },
 
   // ── SMTP / Email ──
   {
@@ -443,6 +473,14 @@ export class SettingsService {
 
     // Fall back to .env
     return this.config.get<string>(def.envVar) ?? fallback ?? '';
+  }
+
+  /**
+   * Convenience method: set a single setting value.
+   * Used by automated processes (e.g. key rotation) to persist values.
+   */
+  async set(key: string, value: string): Promise<void> {
+    await this.update([{ key, value }]);
   }
 
   /** Check if a setting requires restart to take effect. */

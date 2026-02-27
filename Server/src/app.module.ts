@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
@@ -38,6 +39,9 @@ import { join } from 'path';
         '.env',                          // fallback: CWD
       ],
     }),
+
+    // Scheduler — cron jobs (Stripe key rotation, etc.)
+    ScheduleModule.forRoot(),
 
     // Database
     PrismaModule,

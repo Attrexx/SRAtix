@@ -24,6 +24,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
     "@nestjs/platform-fastify": "^11.0.0",
+    "@nestjs/schedule": "^6.1.1",
     "@prisma/client": "^6.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/bcrypt": "^6.0.0",
