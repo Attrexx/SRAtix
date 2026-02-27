@@ -34,9 +34,18 @@ export class StripeKeyRotatorService {
   /** Overlap period: old key kept valid for 24 h after rolling. */
   private static readonly OVERLAP_SECONDS = 24 * 60 * 60;
 
+  /** Prefixes that identify a Stripe restricted key. */
+  private static readonly RESTRICTED_KEY_PREFIXES = ['rk_test_', 'rk_live_'];
+
   /**
    * Minimum permissions the rotated restricted key needs.
    * Keeps PCI scope as low as possible (SAQ-A).
+   *
+   * NOTE: `api_keys: 'write'` is required so that a *standard* key
+   * can create its restricted successor during auto-rotation.
+   * If you manually provision a restricted key in the Stripe Dashboard
+   * you do NOT need `api_keys` — the rotator will detect the `rk_` prefix
+   * and skip rotation entirely.
    */
   private static readonly RESTRICTED_KEY_PERMISSIONS: Record<string, 'read' | 'write' | 'none'> = {
     // Checkout Sessions — create + read
@@ -104,6 +113,15 @@ export class StripeKeyRotatorService {
     const currentKey = await this.resolveSecretKey(mode);
     if (!currentKey) {
       this.logger.debug(`No Stripe ${mode} key configured — skipping rotation`);
+      return false;
+    }
+
+    // Restricted keys (rk_test_ / rk_live_) are manually provisioned via the
+    // Stripe Dashboard and do NOT carry a 7-day expiry policy — skip rotation.
+    if (StripeKeyRotatorService.isRestrictedKey(currentKey)) {
+      this.logger.debug(
+        `Stripe ${mode} key is a restricted key (rk_*) — rotation not required`,
+      );
       return false;
     }
 
@@ -223,6 +241,13 @@ export class StripeKeyRotatorService {
   // ─── Helpers ──────────────────────────────────────────────────────
 
   /**
+   * Return true if the key uses a restricted-key prefix (rk_test_ / rk_live_).
+   */
+  private static isRestrictedKey(key: string): boolean {
+    return StripeKeyRotatorService.RESTRICTED_KEY_PREFIXES.some((p) => key.startsWith(p));
+  }
+
+  /**
    * Resolve the current Stripe secret key for a given mode,
    * with the same priority as StripeService (DB → .env → empty).
    */
@@ -242,6 +267,9 @@ export class StripeKeyRotatorService {
     for (const mode of ['test', 'live'] as const) {
       const currentKey = await this.resolveSecretKey(mode);
       if (!currentKey) continue;
+
+      // Restricted keys don't expire — no warning needed
+      if (StripeKeyRotatorService.isRestrictedKey(currentKey)) continue;
 
       const createdAtRaw = await this.settings.resolve(
         `stripe_${mode}_key_created_at`,
