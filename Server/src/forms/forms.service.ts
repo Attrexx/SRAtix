@@ -306,6 +306,9 @@ export class FormsService {
       const opts = optionsBySlug.get(field.id);
       if (Array.isArray(opts) && opts.length > 0) {
         field.options = opts as FormField['options'];
+      } else if (field.type === 'country') {
+        // Built-in fallback: country fields always get the ISO 3166-1 list
+        field.options = COUNTRY_OPTIONS;
       }
     }
   }
@@ -492,3 +495,74 @@ export class FormsService {
     }
   }
 }
+
+// ─── Built-in country list (ISO 3166-1, Switzerland first) ───────────────────
+
+const COUNTRY_OPTIONS: FormField['options'] = [
+  { value: 'ch', label: { en: 'Switzerland', de: 'Schweiz', fr: 'Suisse', it: 'Svizzera', 'zh-TW': '瑞士' } },
+  { value: 'de', label: { en: 'Germany', de: 'Deutschland', fr: 'Allemagne', it: 'Germania', 'zh-TW': '德國' } },
+  { value: 'fr', label: { en: 'France', de: 'Frankreich', fr: 'France', it: 'Francia', 'zh-TW': '法國' } },
+  { value: 'at', label: { en: 'Austria', de: 'Österreich', fr: 'Autriche', it: 'Austria', 'zh-TW': '奧地利' } },
+  { value: 'it', label: { en: 'Italy', de: 'Italien', fr: 'Italie', it: 'Italia', 'zh-TW': '義大利' } },
+  { value: 'li', label: { en: 'Liechtenstein', de: 'Liechtenstein', fr: 'Liechtenstein', it: 'Liechtenstein', 'zh-TW': '列支敦斯登' } },
+  { value: 'gb', label: { en: 'United Kingdom', de: 'Vereinigtes Königreich', fr: 'Royaume-Uni', it: 'Regno Unito', 'zh-TW': '英國' } },
+  { value: 'us', label: { en: 'United States', de: 'Vereinigte Staaten', fr: 'États-Unis', it: 'Stati Uniti', 'zh-TW': '美國' } },
+  { value: 'nl', label: { en: 'Netherlands', de: 'Niederlande', fr: 'Pays-Bas', it: 'Paesi Bassi', 'zh-TW': '荷蘭' } },
+  { value: 'be', label: { en: 'Belgium', de: 'Belgien', fr: 'Belgique', it: 'Belgio', 'zh-TW': '比利時' } },
+  { value: 'lu', label: { en: 'Luxembourg', de: 'Luxemburg', fr: 'Luxembourg', it: 'Lussemburgo', 'zh-TW': '盧森堡' } },
+  { value: 'es', label: { en: 'Spain', de: 'Spanien', fr: 'Espagne', it: 'Spagna', 'zh-TW': '西班牙' } },
+  { value: 'pt', label: { en: 'Portugal', de: 'Portugal', fr: 'Portugal', it: 'Portogallo', 'zh-TW': '葡萄牙' } },
+  { value: 'se', label: { en: 'Sweden', de: 'Schweden', fr: 'Suède', it: 'Svezia', 'zh-TW': '瑞典' } },
+  { value: 'no', label: { en: 'Norway', de: 'Norwegen', fr: 'Norvège', it: 'Norvegia', 'zh-TW': '挪威' } },
+  { value: 'dk', label: { en: 'Denmark', de: 'Dänemark', fr: 'Danemark', it: 'Danimarca', 'zh-TW': '丹麥' } },
+  { value: 'fi', label: { en: 'Finland', de: 'Finnland', fr: 'Finlande', it: 'Finlandia', 'zh-TW': '芬蘭' } },
+  { value: 'pl', label: { en: 'Poland', de: 'Polen', fr: 'Pologne', it: 'Polonia', 'zh-TW': '波蘭' } },
+  { value: 'cz', label: { en: 'Czech Republic', de: 'Tschechien', fr: 'Tchéquie', it: 'Cechia', 'zh-TW': '捷克' } },
+  { value: 'ie', label: { en: 'Ireland', de: 'Irland', fr: 'Irlande', it: 'Irlanda', 'zh-TW': '愛爾蘭' } },
+  { value: 'gr', label: { en: 'Greece', de: 'Griechenland', fr: 'Grèce', it: 'Grecia', 'zh-TW': '希臘' } },
+  { value: 'hu', label: { en: 'Hungary', de: 'Ungarn', fr: 'Hongrie', it: 'Ungheria', 'zh-TW': '匈牙利' } },
+  { value: 'ro', label: { en: 'Romania', de: 'Rumänien', fr: 'Roumanie', it: 'Romania', 'zh-TW': '羅馬尼亞' } },
+  { value: 'bg', label: { en: 'Bulgaria', de: 'Bulgarien', fr: 'Bulgarie', it: 'Bulgaria', 'zh-TW': '保加利亞' } },
+  { value: 'hr', label: { en: 'Croatia', de: 'Kroatien', fr: 'Croatie', it: 'Croazia', 'zh-TW': '克羅埃西亞' } },
+  { value: 'sk', label: { en: 'Slovakia', de: 'Slowakei', fr: 'Slovaquie', it: 'Slovacchia', 'zh-TW': '斯洛伐克' } },
+  { value: 'si', label: { en: 'Slovenia', de: 'Slowenien', fr: 'Slovénie', it: 'Slovenia', 'zh-TW': '斯洛維尼亞' } },
+  { value: 'ee', label: { en: 'Estonia', de: 'Estland', fr: 'Estonie', it: 'Estonia', 'zh-TW': '愛沙尼亞' } },
+  { value: 'lv', label: { en: 'Latvia', de: 'Lettland', fr: 'Lettonie', it: 'Lettonia', 'zh-TW': '拉脫維亞' } },
+  { value: 'lt', label: { en: 'Lithuania', de: 'Litauen', fr: 'Lituanie', it: 'Lituania', 'zh-TW': '立陶宛' } },
+  { value: 'mt', label: { en: 'Malta', de: 'Malta', fr: 'Malte', it: 'Malta', 'zh-TW': '馬爾他' } },
+  { value: 'cy', label: { en: 'Cyprus', de: 'Zypern', fr: 'Chypre', it: 'Cipro', 'zh-TW': '賽普勒斯' } },
+  { value: 'is', label: { en: 'Iceland', de: 'Island', fr: 'Islande', it: 'Islanda', 'zh-TW': '冰島' } },
+  { value: 'jp', label: { en: 'Japan', de: 'Japan', fr: 'Japon', it: 'Giappone', 'zh-TW': '日本' } },
+  { value: 'kr', label: { en: 'South Korea', de: 'Südkorea', fr: 'Corée du Sud', it: 'Corea del Sud', 'zh-TW': '韓國' } },
+  { value: 'cn', label: { en: 'China', de: 'China', fr: 'Chine', it: 'Cina', 'zh-TW': '中國' } },
+  { value: 'tw', label: { en: 'Taiwan', de: 'Taiwan', fr: 'Taïwan', it: 'Taiwan', 'zh-TW': '台灣' } },
+  { value: 'sg', label: { en: 'Singapore', de: 'Singapur', fr: 'Singapour', it: 'Singapore', 'zh-TW': '新加坡' } },
+  { value: 'in', label: { en: 'India', de: 'Indien', fr: 'Inde', it: 'India', 'zh-TW': '印度' } },
+  { value: 'il', label: { en: 'Israel', de: 'Israel', fr: 'Israël', it: 'Israele', 'zh-TW': '以色列' } },
+  { value: 'au', label: { en: 'Australia', de: 'Australien', fr: 'Australie', it: 'Australia', 'zh-TW': '澳洲' } },
+  { value: 'nz', label: { en: 'New Zealand', de: 'Neuseeland', fr: 'Nouvelle-Zélande', it: 'Nuova Zelanda', 'zh-TW': '紐西蘭' } },
+  { value: 'ca', label: { en: 'Canada', de: 'Kanada', fr: 'Canada', it: 'Canada', 'zh-TW': '加拿大' } },
+  { value: 'mx', label: { en: 'Mexico', de: 'Mexiko', fr: 'Mexique', it: 'Messico', 'zh-TW': '墨西哥' } },
+  { value: 'br', label: { en: 'Brazil', de: 'Brasilien', fr: 'Brésil', it: 'Brasile', 'zh-TW': '巴西' } },
+  { value: 'ar', label: { en: 'Argentina', de: 'Argentinien', fr: 'Argentine', it: 'Argentina', 'zh-TW': '阿根廷' } },
+  { value: 'cl', label: { en: 'Chile', de: 'Chile', fr: 'Chili', it: 'Cile', 'zh-TW': '智利' } },
+  { value: 'za', label: { en: 'South Africa', de: 'Südafrika', fr: 'Afrique du Sud', it: 'Sudafrica', 'zh-TW': '南非' } },
+  { value: 'ae', label: { en: 'United Arab Emirates', de: 'Vereinigte Arabische Emirate', fr: 'Émirats arabes unis', it: 'Emirati Arabi Uniti', 'zh-TW': '阿拉伯聯合大公國' } },
+  { value: 'sa', label: { en: 'Saudi Arabia', de: 'Saudi-Arabien', fr: 'Arabie saoudite', it: 'Arabia Saudita', 'zh-TW': '沙烏地阿拉伯' } },
+  { value: 'tr', label: { en: 'Turkey', de: 'Türkei', fr: 'Turquie', it: 'Turchia', 'zh-TW': '土耳其' } },
+  { value: 'ua', label: { en: 'Ukraine', de: 'Ukraine', fr: 'Ukraine', it: 'Ucraina', 'zh-TW': '烏克蘭' } },
+  { value: 'rs', label: { en: 'Serbia', de: 'Serbien', fr: 'Serbie', it: 'Serbia', 'zh-TW': '塞爾維亞' } },
+  { value: 'th', label: { en: 'Thailand', de: 'Thailand', fr: 'Thaïlande', it: 'Thailandia', 'zh-TW': '泰國' } },
+  { value: 'my', label: { en: 'Malaysia', de: 'Malaysia', fr: 'Malaisie', it: 'Malesia', 'zh-TW': '馬來西亞' } },
+  { value: 'id', label: { en: 'Indonesia', de: 'Indonesien', fr: 'Indonésie', it: 'Indonesia', 'zh-TW': '印尼' } },
+  { value: 'ph', label: { en: 'Philippines', de: 'Philippinen', fr: 'Philippines', it: 'Filippine', 'zh-TW': '菲律賓' } },
+  { value: 'eg', label: { en: 'Egypt', de: 'Ägypten', fr: 'Égypte', it: 'Egitto', 'zh-TW': '埃及' } },
+  { value: 'ng', label: { en: 'Nigeria', de: 'Nigeria', fr: 'Nigeria', it: 'Nigeria', 'zh-TW': '奈及利亞' } },
+  { value: 'ke', label: { en: 'Kenya', de: 'Kenia', fr: 'Kenya', it: 'Kenya', 'zh-TW': '肯亞' } },
+  { value: 'co', label: { en: 'Colombia', de: 'Kolumbien', fr: 'Colombie', it: 'Colombia', 'zh-TW': '哥倫比亞' } },
+  { value: 'pe', label: { en: 'Peru', de: 'Peru', fr: 'Pérou', it: 'Perù', 'zh-TW': '秘魯' } },
+  { value: 'pk', label: { en: 'Pakistan', de: 'Pakistan', fr: 'Pakistan', it: 'Pakistan', 'zh-TW': '巴基斯坦' } },
+  { value: 'bd', label: { en: 'Bangladesh', de: 'Bangladesch', fr: 'Bangladesh', it: 'Bangladesh', 'zh-TW': '孟加拉' } },
+  { value: 'vn', label: { en: 'Vietnam', de: 'Vietnam', fr: 'Viêt Nam', it: 'Vietnam', 'zh-TW': '越南' } },
+  { value: 'other', label: { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' } },
+];
