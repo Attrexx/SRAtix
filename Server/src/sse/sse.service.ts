@@ -117,6 +117,7 @@ export class SseService {
       totalCents: number;
       currency: string;
       status: string;
+      testMode?: boolean;
     },
   ) {
     this.emit(eventId, 'orders', data);
