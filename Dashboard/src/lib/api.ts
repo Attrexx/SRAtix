@@ -795,11 +795,6 @@ export const api = {
       body: { settings },
     }),
 
-  rotateStripeKeys: () =>
-    request<{ triggered: boolean; message: string }>('/settings/rotate-stripe-keys', {
-      method: 'POST',
-    }),
-
   // ─── Analytics ─────────────────────────────────────────────────
 
   getTimeSeries: (

@@ -34,8 +34,6 @@ export default function SettingsPage() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   // Track which secret fields are revealed
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
-  // Track rotation in-progress state
-  const [rotating, setRotating] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -144,28 +142,6 @@ export default function SettingsPage() {
   const handleDiscard = () => {
     setEdits({});
     setRevealed(new Set());
-  };
-
-  /** Set a key_created_at field to now and trigger immediate rotation. */
-  const handleSetNowAndRotate = async () => {
-    setRotating(true);
-    setMessage(null);
-    try {
-      const result = await api.rotateStripeKeys();
-      setMessage({
-        type: 'success',
-        text: result.message,
-      });
-      // Reload settings to reflect new timestamps + keys
-      await loadSettings();
-    } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err?.message ?? 'Stripe key rotation failed',
-      });
-    } finally {
-      setRotating(false);
-    }
   };
 
   const toggleReveal = (key: string) => {
@@ -279,8 +255,6 @@ export default function SettingsPage() {
             revealed={revealed}
             onChange={handleChange}
             onToggleReveal={toggleReveal}
-            onSetNowAndRotate={handleSetNowAndRotate}
-            rotating={rotating}
           />
         ))}
       </div>
@@ -332,8 +306,6 @@ function SettingsGroup({
   revealed,
   onChange,
   onToggleReveal,
-  onSetNowAndRotate,
-  rotating,
 }: {
   name: string;
   settings: SettingValue[];
@@ -341,8 +313,6 @@ function SettingsGroup({
   revealed: Set<string>;
   onChange: (key: string, value: string) => void;
   onToggleReveal: (key: string) => void;
-  onSetNowAndRotate: () => void;
-  rotating: boolean;
 }) {
   return (
     <div
@@ -373,8 +343,6 @@ function SettingsGroup({
             isRevealed={revealed.has(setting.key)}
             onChange={(value) => onChange(setting.key, value)}
             onToggleReveal={() => onToggleReveal(setting.key)}
-            onSetNowAndRotate={onSetNowAndRotate}
-            rotating={rotating}
           />
         ))}
       </div>
@@ -390,16 +358,12 @@ function SettingRow({
   isRevealed,
   onChange,
   onToggleReveal,
-  onSetNowAndRotate,
-  rotating,
 }: {
   setting: SettingValue;
   editValue?: string;
   isRevealed: boolean;
   onChange: (value: string) => void;
   onToggleReveal: () => void;
-  onSetNowAndRotate: () => void;
-  rotating: boolean;
 }) {
   const { t } = useI18n();
   const currentValue = editValue ?? setting.value;
@@ -519,29 +483,6 @@ function SettingRow({
             >
               {t('settings.modifiedHint')}
             </p>
-          )}
-          {/* "Set Now & Rotate" button for Stripe key timestamp fields */}
-          {setting.key.endsWith('_key_created_at') && (
-            <button
-              type="button"
-              disabled={rotating}
-              onClick={onSetNowAndRotate}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
-              title="Set timestamp to now and trigger immediate Stripe key rotation"
-            >
-              {rotating ? (
-                <>
-                  <Icons.RefreshCw size={12} className="animate-spin" />
-                  Rotating…
-                </>
-              ) : (
-                <>
-                  <Icons.RefreshCw size={12} />
-                  Set Now &amp; Rotate Keys
-                </>
-              )}
-            </button>
           )}
         </div>
       </div>
