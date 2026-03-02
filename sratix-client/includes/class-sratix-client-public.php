@@ -115,11 +115,15 @@ class SRAtix_Client_Public {
 		), $atts, 'sratix_tickets' );
 
 		if ( empty( $atts['event_id'] ) ) {
-			return '<p class="sratix-error">' . esc_html__( 'No event configured. Please set the Event ID in SRAtix settings.', 'sratix-client' ) . '</p>';
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<p class="sratix-error">' . esc_html__( 'No event configured. Please set the Event ID in SRAtix settings.', 'sratix-client' ) . '</p>'
+				. '</div></div>';
 		}
 
 		return sprintf(
-			'<div id="sratix-tickets-widget" data-event-id="%s" data-layout="%s"></div>',
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-tickets-widget" data-event-id="%s" data-layout="%s"></div>'
+			. '</div></div>',
 			esc_attr( $atts['event_id'] ),
 			esc_attr( $atts['layout'] )
 		);
@@ -145,7 +149,8 @@ class SRAtix_Client_Public {
 				$register_url = wp_registration_url();
 			}
 
-			return '<div class="sratix-auth-prompt">'
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<div class="sratix-auth-prompt">'
 				. '<p class="sratix-auth-prompt__text">'
 				. esc_html__( 'Sign in to view and manage your tickets.', 'sratix-client' )
 				. '</p>'
@@ -155,14 +160,17 @@ class SRAtix_Client_Public {
 				. '<a href="' . esc_url( $register_url ) . '" class="sratix-btn sratix-btn--outline">'
 				. esc_html__( 'Create Account', 'sratix-client' ) . '</a>'
 				. '</div>'
-				. '</div>';
+				. '</div>'
+				. '</div></div>';
 		}
 
 		$user     = wp_get_current_user();
 		$event_id = get_option( 'sratix_client_event_id', '' );
 
 		return sprintf(
-			'<div id="sratix-my-tickets-widget" data-event-id="%s" data-email="%s"></div>',
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-my-tickets-widget" data-event-id="%s" data-email="%s"></div>'
+			. '</div></div>',
 			esc_attr( $event_id ),
 			esc_attr( $user->user_email )
 		);
@@ -177,11 +185,15 @@ class SRAtix_Client_Public {
 		), $atts, 'sratix_schedule' );
 
 		if ( empty( $atts['event_id'] ) ) {
-			return '<p class="sratix-error">' . esc_html__( 'No event configured.', 'sratix-client' ) . '</p>';
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<p class="sratix-error">' . esc_html__( 'No event configured.', 'sratix-client' ) . '</p>'
+				. '</div></div>';
 		}
 
 		return sprintf(
-			'<div id="sratix-schedule-widget" data-event-id="%s"></div>',
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-schedule-widget" data-event-id="%s"></div>'
+			. '</div></div>',
 			esc_attr( $atts['event_id'] )
 		);
 	}

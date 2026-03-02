@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FieldRepositoryService } from '../field-repository/field-repository.service';
 import {
   ConditionRule,
   evaluateConditions,
@@ -83,7 +84,10 @@ export interface FormSchemaDefinition {
 export class FormsService {
   private readonly logger = new Logger(FormsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fieldRepo: FieldRepositoryService,
+  ) {}
 
   // ─── Schema CRUD ──────────────────────────────────────────────
 
@@ -253,10 +257,57 @@ export class FormsService {
       return null; // No custom form — just collect basic info
     }
 
-    return this.prisma.formSchema.findUnique({
+    const schema = await this.prisma.formSchema.findUnique({
       where: { id: ticketType.formSchemaId },
       select: { id: true, name: true, version: true, fields: true },
     });
+
+    if (!schema) return null;
+
+    // Hydrate field options from the Field Repository for any select/multi-select/
+    // country/canton fields that have no inline options in the schema snapshot.
+    await this.hydrateFieldOptions(schema);
+
+    return schema;
+  }
+
+  /**
+   * For each field in the schema that is a select-like type with an empty or
+   * missing `options` array, look up matching FieldDefinition by slug and
+   * copy its options into the schema payload sent to the client.
+   */
+  private async hydrateFieldOptions(
+    schema: { fields: unknown },
+  ): Promise<void> {
+    const def = schema.fields as FormSchemaDefinition | null;
+    if (!def?.fields?.length) return;
+
+    // Collect field IDs that need hydration
+    const selectTypes = new Set(['select', 'multi-select', 'country', 'canton']);
+    const needsHydration = def.fields.filter(
+      (f) => selectTypes.has(f.type) && (!f.options || f.options.length === 0),
+    );
+    if (needsHydration.length === 0) return;
+
+    // Batch-fetch all matching FieldDefinitions by slug
+    const slugs = needsHydration.map((f) => f.id);
+    const fieldDefs = await this.prisma.fieldDefinition.findMany({
+      where: { slug: { in: slugs }, active: true },
+      select: { slug: true, options: true },
+    });
+
+    const optionsBySlug = new Map<string, unknown>();
+    for (const fd of fieldDefs) {
+      if (fd.options) optionsBySlug.set(fd.slug, fd.options);
+    }
+
+    // Merge options into the schema fields
+    for (const field of needsHydration) {
+      const opts = optionsBySlug.get(field.id);
+      if (Array.isArray(opts) && opts.length > 0) {
+        field.options = opts as FormField['options'];
+      }
+    }
   }
 
   // ─── Submissions ──────────────────────────────────────────────
