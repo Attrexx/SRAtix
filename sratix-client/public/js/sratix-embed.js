@@ -702,19 +702,39 @@
   function injectSuccessBanner() {
     const params = new URLSearchParams(window.location.search);
     const orderNumber = params.get('sratix_order');
+    const isTestMode  = params.get('sratix_test') === '1';
 
     const banner = document.createElement('div');
-    banner.className = 'sratix-success-banner';
+    banner.className = 'sratix-success-banner' + (isTestMode ? ' sratix-success-banner--test' : '');
     banner.setAttribute('role', 'status');
-    banner.innerHTML = `
-      <span class="sratix-success-icon">✓</span>
-      <div class="sratix-success-text">
-        <strong>${escHtml(t('success.title'))}</strong>
-        ${orderNumber ? `<span> — ${escHtml(t('success.order', { number: orderNumber }))}</span>` : ''}
-        <br>${escHtml(t('success.checkEmail'))}
-      </div>
-      <button class="sratix-success-close" aria-label="${escAttr(t('success.dismiss'))}">&times;</button>
-    `;
+
+    if (isTestMode) {
+      // Test mode banner — show what happened + simulated actions placeholder
+      banner.innerHTML = `
+        <span class="sratix-success-icon sratix-success-icon--test">⚙</span>
+        <div class="sratix-success-text">
+          <strong>${escHtml(t('success.testTitle'))}</strong>
+          ${orderNumber ? `<span> — ${escHtml(t('success.order', { number: orderNumber }))}</span>` : ''}
+          <br>${escHtml(t('success.testDone'))}
+          <div class="sratix-test-actions" id="sratix-test-actions">
+            <em>${escHtml(t('success.testLoading'))}</em>
+          </div>
+        </div>
+        <button class="sratix-success-close" aria-label="${escAttr(t('success.dismiss'))}">&times;</button>
+      `;
+    } else {
+      // Normal success banner
+      banner.innerHTML = `
+        <span class="sratix-success-icon">✓</span>
+        <div class="sratix-success-text">
+          <strong>${escHtml(t('success.title'))}</strong>
+          ${orderNumber ? `<span> — ${escHtml(t('success.order', { number: orderNumber }))}</span>` : ''}
+          <br>${escHtml(t('success.checkEmail'))}
+        </div>
+        <button class="sratix-success-close" aria-label="${escAttr(t('success.dismiss'))}">&times;</button>
+      `;
+    }
+
     banner.querySelector('.sratix-success-close').addEventListener('click', () => banner.remove());
 
     // Insert just before the first widget found, or at top of body
@@ -728,11 +748,51 @@
       document.body.insertBefore(banner, document.body.firstChild);
     }
 
+    // Fetch and render simulated actions for test mode
+    if (isTestMode && orderNumber) {
+      fetchTestActions(orderNumber);
+    }
+
     // Remove success params from URL without a page reload
     const url = new URL(window.location.href);
     url.searchParams.delete('sratix_success');
     url.searchParams.delete('sratix_order');
+    url.searchParams.delete('sratix_test');
     window.history.replaceState(null, '', url.toString());
+  }
+
+  /**
+   * Fetch simulated actions from the server and render them in the test banner.
+   */
+  async function fetchTestActions(orderNumber) {
+    const container = document.getElementById('sratix-test-actions');
+    if (!container) return;
+
+    try {
+      const data = await apiFetch(`payments/checkout/public/test-actions/${encodeURIComponent(orderNumber)}`);
+      const actions = data.simulatedActions || [];
+
+      if (!actions.length) {
+        container.innerHTML = `<em>${escHtml(t('success.testNoActions'))}</em>`;
+        return;
+      }
+
+      // Group actions by attendee/action for readability
+      let html = `<p class="sratix-test-actions-heading">${escHtml(t('success.testActionsHeading'))}</p>`;
+      html += '<ul class="sratix-test-actions-list">';
+      for (const item of actions) {
+        html += `<li>
+          <strong>${escHtml(item.action)}</strong>
+          <span>${escHtml(item.description)}</span>
+          ${item.detail ? `<code>${escHtml(item.detail)}</code>` : ''}
+        </li>`;
+      }
+      html += '</ul>';
+      container.innerHTML = html;
+    } catch (err) {
+      console.warn('[SRAtix] Failed to load test actions:', err);
+      container.innerHTML = `<em>${escHtml(t('success.testLoadError'))}</em>`;
+    }
   }
 
   // ─── My Tickets widget ────────────────────────────────────────────────────────

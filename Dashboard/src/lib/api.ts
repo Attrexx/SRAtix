@@ -306,6 +306,7 @@ export interface Order {
   paidAt?: string;
   createdAt: string;
   items: OrderItem[];
+  meta?: Record<string, unknown> | null;
 }
 
 export interface OrderItem {
@@ -325,6 +326,7 @@ export interface Ticket {
   status: string;
   qrPayload: string;
   createdAt: string;
+  meta?: Record<string, unknown> | null;
 }
 
 export interface CheckIn {

@@ -106,6 +106,11 @@ export class StripeWebhookController {
   /**
    * checkout.session.completed — payment succeeded.
    * Mark order as paid, issue tickets, fire attendee webhooks.
+   *
+   * In test mode (stripe_mode=test):
+   *  - Real actions: mark paid, issue tickets (tagged), SSE, confirmation email
+   *  - Skipped: outgoing order.paid webhook to WP (no WP user/WC order creation)
+   *  - Instead: simulated actions summary stored in order meta
    */
   private async handleCheckoutComplete(session: Stripe.Checkout.Session) {
     const orderId = session.metadata?.sratix_order_id;
@@ -131,11 +136,23 @@ export class StripeWebhookController {
       customerName: session.customer_details?.name ?? null,
     });
 
+    // ── Detect test mode ─────────────────────────────────────────
+    // Check order meta (set by public-checkout) or Stripe session metadata
+    const orderForMeta = await this.orders.findOne(orderId);
+    const orderMeta = (orderForMeta.meta as Record<string, unknown>) ?? {};
+    const isTestOrder =
+      !!orderMeta.isTestOrder || session.metadata?.sratix_test_mode === '1';
+
+    if (isTestOrder) {
+      this.logger.log(`🧪 Test mode order ${orderId} — real tickets will be issued, WP sync will be skipped`);
+    }
+
     // Issue tickets (one Ticket per OrderItem quantity unit)
+    // In test mode, tickets are tagged with isTestTicket in their meta
     try {
-      const issued = await this.tickets.issueForOrder(orderId);
+      const issued = await this.tickets.issueForOrder(orderId, { isTestTicket: isTestOrder });
       this.logger.log(
-        `Issued ${issued.length} ticket(s) for order ${orderId}`,
+        `Issued ${issued.length} ticket(s) for order ${orderId}${isTestOrder ? ' [TEST]' : ''}`,
       );
     } catch (err) {
       this.logger.error(`Failed to issue tickets for order ${orderId}: ${err}`);
@@ -151,10 +168,11 @@ export class StripeWebhookController {
         totalCents: paidOrder.totalCents,
         currency: paidOrder.currency,
         status: 'paid',
+        testMode: isTestOrder || undefined,
       });
     }
 
-    // Send order confirmation email
+    // Send order confirmation email (real in both modes — user needs their ticket)
     if (paidOrder && paidOrder.customerEmail) {
       try {
         const event = await this.orders.findEventForOrder(orderId);
@@ -178,7 +196,7 @@ export class StripeWebhookController {
       }
     }
 
-    // Send admin notification for new order
+    // Send admin notification for new order (real in both modes)
     try {
       const notifyEnabled = await this.settings.resolve('notify_new_order');
       if (notifyEnabled === 'true') {
@@ -206,18 +224,34 @@ export class StripeWebhookController {
       this.logger.error(`Failed to send admin order notification: ${err}`);
     }
 
-    // Fire outgoing webhook to SRAtix Control / Client plugins
-    // Includes full attendee + ticket type data for WP sync (membership creation, entity creation, etc.)
+    // ── WP Sync: outgoing order.paid webhook ─────────────────────
     const orgId = session.metadata?.sratix_org_id;
     const eventId = session.metadata?.sratix_event_id;
-    if (orgId && eventId && paidOrder) {
-      // Gather enriched payload for WP plugins
-      const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
-      this.outgoingWebhooks
-        .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
-        .catch((err) =>
-          this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
+
+    if (isTestOrder) {
+      // ── TEST MODE: build simulated actions instead of dispatching webhook ──
+      if (orgId && eventId && paidOrder) {
+        const simulatedActions = await this.buildSimulatedActions(paidOrder, eventId);
+        // Persist simulated actions in order meta so the success page can display them
+        await this.orders.updateMeta(orderId, {
+          isTestOrder: true,
+          simulatedActions,
+        });
+        this.logger.log(
+          `🧪 Test mode — skipped order.paid webhook for order ${orderId}. ` +
+          `${simulatedActions.length} action(s) would have been triggered.`,
         );
+      }
+    } else {
+      // ── LIVE MODE: fire outgoing webhook to SRAtix Control / Client plugins ──
+      if (orgId && eventId && paidOrder) {
+        const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
+        this.outgoingWebhooks
+          .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
+          .catch((err) =>
+            this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
+          );
+      }
     }
 
     // Increment promo code usage if this order used one
@@ -433,5 +467,131 @@ export class StripeWebhookController {
     );
 
     return payload;
+  }
+
+  // ─── Test Mode: Simulated Actions Builder ───────────────────
+
+  /**
+   * Build a list of actions that WOULD have been triggered if this were a
+   * live-mode purchase. Used to display on the success page in test mode.
+   *
+   * This mirrors the logic in sratix-control's `on_order_paid` handler
+   * without actually firing the webhook.
+   */
+  private async buildSimulatedActions(
+    paidOrder: any,
+    eventId: string,
+  ): Promise<Array<{ action: string; description: string; detail?: Record<string, unknown> }>> {
+    const actions: Array<{ action: string; description: string; detail?: Record<string, unknown> }> = [];
+
+    // Fetch ticket types for this order
+    const ticketTypeIds = (paidOrder.items ?? []).map(
+      (item: any) => item.ticketTypeId,
+    );
+    const ticketTypes = ticketTypeIds.length > 0
+      ? await this.prisma.ticketType.findMany({
+          where: { id: { in: ticketTypeIds } },
+        })
+      : [];
+
+    // Fetch attendee
+    const attendee = paidOrder.attendeeId
+      ? await this.prisma.attendee.findUnique({ where: { id: paidOrder.attendeeId } })
+      : await this.prisma.attendee.findFirst({
+          where: { eventId, email: paidOrder.customerEmail ?? '' },
+        });
+
+    const email = attendee?.email ?? paidOrder.customerEmail ?? 'unknown';
+    const name = attendee
+      ? `${attendee.firstName} ${attendee.lastName}`.trim()
+      : paidOrder.customerName ?? 'Guest';
+
+    // Find membership ticket type
+    const membershipTicket = ticketTypes.find(
+      (tt) => tt.membershipTier && tt.wpProductId,
+    );
+
+    // 1. WP User creation / lookup
+    actions.push({
+      action: 'wp_user_find_or_create',
+      description: `Find or create WordPress user for "${name}" (${email})`,
+      detail: { email, name },
+    });
+
+    // 2. WP Role assignment (if membership ticket)
+    if (membershipTicket) {
+      const category = membershipTicket.category ?? 'general';
+      const role = category === 'individual' ? 'candidate' : category === 'legal' ? 'employer' : null;
+      if (role) {
+        actions.push({
+          action: 'wp_role_assign',
+          description: `Assign WP role "${role}" based on ticket category "${category}"`,
+          detail: { role, category, wpProductId: membershipTicket.wpProductId },
+        });
+      }
+
+      // 3. ProfileGrid group assignment
+      actions.push({
+        action: 'profilegrid_group_assign',
+        description: `Assign ProfileGrid group for membership tier "${membershipTicket.membershipTier}" (WC Product #${membershipTicket.wpProductId})`,
+        detail: {
+          membershipTier: membershipTicket.membershipTier,
+          wpProductId: membershipTicket.wpProductId,
+        },
+      });
+
+      // 4. WooCommerce order creation
+      actions.push({
+        action: 'wc_order_create',
+        description: `Create & auto-complete WooCommerce order for Product #${membershipTicket.wpProductId} (${membershipTicket.membershipTier})`,
+        detail: {
+          wpProductId: membershipTicket.wpProductId,
+          totalCents: paidOrder.totalCents,
+          currency: paidOrder.currency,
+        },
+      });
+
+      // 5. SRA Company Profiles (for legal entities)
+      if (category === 'legal') {
+        actions.push({
+          action: 'sra_corporate_profile_create',
+          description: `Trigger SRA Company Profiles plugin to create corporate-member CPT`,
+          detail: { category, membershipTier: membershipTicket.membershipTier },
+        });
+      }
+    }
+
+    // 6. Form data → user meta
+    const formSubmissions = await this.prisma.formSubmission.findMany({
+      where: { eventId, attendeeId: attendee?.id ?? '' },
+      orderBy: { submittedAt: 'desc' },
+      take: 1,
+    });
+    if (formSubmissions.length > 0) {
+      const fieldCount = Object.keys((formSubmissions[0].data as Record<string, unknown>) ?? {}).length;
+      actions.push({
+        action: 'form_data_to_user_meta',
+        description: `Map ${fieldCount} form field(s) to WordPress user meta (ProfileGrid, Resume Manager, etc.)`,
+        detail: { fieldCount },
+      });
+
+      // 7. Resume creation (if opted in)
+      const formData = (formSubmissions[0].data as Record<string, unknown>) ?? {};
+      if (formData.publish_resume === 'yes' || formData.publish_resume === true) {
+        actions.push({
+          action: 'resume_create',
+          description: `Create WP Job Manager resume for "${name}" (publish_resume=yes)`,
+          detail: { professionalTitle: formData.professional_title ?? '' },
+        });
+      }
+    }
+
+    // 8. SRAtix ↔ WP mapping storage
+    actions.push({
+      action: 'store_mappings',
+      description: `Store SRAtix attendee ↔ WP user mapping and ticket meta`,
+    });
+
+    return actions;
   }
 }

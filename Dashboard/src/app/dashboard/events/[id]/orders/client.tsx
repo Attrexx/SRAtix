@@ -5,6 +5,7 @@ import { useEventId } from '@/hooks/use-event-id';
 import { api, type Order } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
+import { TestBadge } from '@/components/test-badge';
 import { useSSE } from '@/lib/sse';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -95,7 +96,16 @@ export default function OrdersPage() {
 
       <DataTable<Order & Record<string, unknown>>
         columns={[
-          { key: 'orderNumber', header: t('orders.column.orderNumber') },
+          {
+            key: 'orderNumber',
+            header: t('orders.column.orderNumber'),
+            render: (row) => (
+              <span className="inline-flex items-center">
+                {row.orderNumber}
+                {(row as Order).meta?.isTestOrder && <TestBadge />}
+              </span>
+            ),
+          },
           { key: 'customerName', header: t('orders.column.customer') },
           { key: 'customerEmail', header: t('orders.column.email') },
           {

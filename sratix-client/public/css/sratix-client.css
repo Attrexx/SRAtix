@@ -430,6 +430,76 @@
 	line-height: 1;
 }
 
+/* ── Test-mode success banner ── */
+.sratix-success-banner--test {
+	background: rgba(234, 179, 8, 0.1);
+	border-color: rgba(234, 179, 8, 0.3);
+}
+
+.sratix-success-icon--test {
+	background: #ca8a04;
+}
+
+.sratix-success-banner--test .sratix-success-text { color: #fde68a; }
+.sratix-success-banner--test .sratix-success-close { color: #facc15; }
+
+.sratix-test-actions {
+	margin-top: 12px;
+	padding: 10px 14px;
+	background: rgba(0, 0, 0, 0.15);
+	border-radius: 6px;
+	font-size: 0.88em;
+	max-height: 320px;
+	overflow-y: auto;
+}
+
+.sratix-test-actions-heading {
+	margin: 0 0 8px;
+	font-weight: 600;
+	color: #fbbf24;
+}
+
+.sratix-test-actions-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.sratix-test-actions-list li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: baseline;
+	padding: 4px 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sratix-test-actions-list li:last-child { border-bottom: none; }
+
+.sratix-test-actions-list strong {
+	color: #fbbf24;
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
+
+.sratix-test-actions-list span { flex: 1; }
+
+.sratix-test-actions-list code {
+	display: block;
+	width: 100%;
+	font-size: 0.85em;
+	color: #d4d4d8;
+	background: rgba(0, 0, 0, 0.2);
+	padding: 2px 6px;
+	border-radius: 3px;
+	word-break: break-all;
+}
+
 /* ── My Tickets widget ── */
 .sratix-my-tickets { display: flex; flex-direction: column; gap: 16px; margin: 16px 0; }
 

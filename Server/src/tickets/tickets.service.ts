@@ -174,8 +174,14 @@ export class TicketsService {
    * Issue tickets for a paid order.
    * Creates one Ticket record per OrderItem quantity unit.
    * Returns the array of created tickets.
+   *
+   * @param orderId - The order to issue tickets for
+   * @param options - Optional flags (e.g. isTestTicket to tag test-mode tickets)
    */
-  async issueForOrder(orderId: string): Promise<{ id: string; code: string; qrPayload: string }[]> {
+  async issueForOrder(
+    orderId: string,
+    options?: { isTestTicket?: boolean },
+  ): Promise<{ id: string; code: string; qrPayload: string }[]> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -188,6 +194,9 @@ export class TicketsService {
     for (const item of order.items) {
       for (let i = 0; i < item.quantity; i++) {
         const code = this.generateTicketCode();
+        const ticketMeta = options?.isTestTicket
+          ? { isTestTicket: true }
+          : undefined;
         const ticket = await this.prisma.ticket.create({
           data: {
             eventId: order.eventId,
@@ -197,6 +206,7 @@ export class TicketsService {
             attendeeId: order.attendeeId,
             code,
             status: 'valid',
+            ...(ticketMeta ? { meta: ticketMeta as any } : {}),
           },
         });
 

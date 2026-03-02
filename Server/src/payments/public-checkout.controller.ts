@@ -1,7 +1,10 @@
 import {
   Controller,
   Post,
+  Get,
+  Param,
   Body,
+  Query,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
@@ -23,6 +26,7 @@ import { StripeService } from './stripe.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { AttendeesService } from '../attendees/attendees.service';
 import { FormsService } from '../forms/forms.service';
+import { SettingsService } from '../settings/settings.service';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -114,6 +118,7 @@ export class PublicCheckoutController {
     private readonly promoCodes: PromoCodesService,
     private readonly attendees: AttendeesService,
     private readonly forms: FormsService,
+    private readonly settings: SettingsService,
   ) {}
 
   @Post()
@@ -191,6 +196,7 @@ export class PublicCheckoutController {
 
     // ── 4. Create order ──────────────────────────────────────────────────
     const totalCents = tt.priceCents * dto.quantity;
+    const isTestMode = await this.settings.isTestMode();
     const order = await this.orders.create({
       eventId: dto.eventId,
       orgId: event.orgId,
@@ -205,6 +211,11 @@ export class PublicCheckoutController {
         },
       ],
     });
+
+    // Tag test orders so downstream handlers can gate side-effects
+    if (isTestMode) {
+      await this.orders.updateMeta(order.id, { isTestOrder: true });
+    }
 
     // ── 5. Validate promo code ───────────────────────────────────────────
     let discountCents = 0;
@@ -234,6 +245,7 @@ export class PublicCheckoutController {
       sratix_org_id: event.orgId,
     };
     if (promoCodeId) metadata.sratix_promo_code_id = promoCodeId;
+    if (isTestMode) metadata.sratix_test_mode = '1';
 
     const finalTotal = totalCents - discountCents;
 
@@ -241,11 +253,20 @@ export class PublicCheckoutController {
     if (finalTotal <= 0) {
       // Mark order as paid immediately for free tickets
       await this.orders.updateStatus(order.id, 'paid');
+
+      // Append test mode flag to success URL so the client can display simulated actions
+      let successUrl = dto.successUrl;
+      if (isTestMode) {
+        const sep = successUrl.includes('?') ? '&' : '?';
+        successUrl = `${successUrl}${sep}sratix_test=1`;
+      }
+
       return {
         free: true,
         orderNumber: order.orderNumber,
         orderId: order.id,
-        successUrl: dto.successUrl,
+        successUrl,
+        testMode: isTestMode || undefined,
       };
     }
 
@@ -262,7 +283,9 @@ export class PublicCheckoutController {
           quantity: dto.quantity,
         },
       ],
-      successUrl: dto.successUrl,
+      successUrl: isTestMode
+        ? `${dto.successUrl}${dto.successUrl.includes('?') ? '&' : '?'}sratix_test=1`
+        : dto.successUrl,
       cancelUrl: dto.cancelUrl,
       metadata,
       discountAmountCents: discountCents > 0 ? discountCents : undefined,
@@ -279,6 +302,31 @@ export class PublicCheckoutController {
       sessionId,
       orderNumber: order.orderNumber,
       orderId: order.id,
+      testMode: isTestMode || undefined,
+    };
+  }
+
+  /**
+   * GET /api/payments/checkout/public/test-actions/:orderId
+   *
+   * Public endpoint that returns the simulated actions for a test-mode order.
+   * Only returns data if the order has `isTestOrder: true` in its meta.
+   * Used by the success banner in sratix-embed.js to show what would have happened.
+   */
+  @Get('test-actions/:orderId')
+  async getTestActions(@Param('orderId') orderId: string) {
+    const order = await this.orders.findOne(orderId);
+    const meta = (order.meta as Record<string, unknown>) ?? {};
+
+    if (!meta.isTestOrder) {
+      throw new BadRequestException('Not a test order');
+    }
+
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      testMode: true,
+      simulatedActions: meta.simulatedActions ?? [],
     };
   }
 }

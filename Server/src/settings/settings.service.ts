@@ -470,4 +470,14 @@ export class SettingsService {
   requiresRestart(key: string): boolean {
     return RESTART_REQUIRED_KEYS.has(key);
   }
+
+  /**
+   * Check if Stripe is currently in test mode.
+   * Used to gate side-effects that should not happen during test purchases
+   * (e.g. WP user creation, WC order creation, ProfileGrid assignment).
+   */
+  async isTestMode(): Promise<boolean> {
+    const mode = await this.resolve('stripe_mode', 'test');
+    return mode !== 'live';
+  }
 }
