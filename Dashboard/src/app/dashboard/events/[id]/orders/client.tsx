@@ -102,7 +102,7 @@ export default function OrdersPage() {
             render: (row) => (
               <span className="inline-flex items-center">
                 {row.orderNumber}
-                {(row as Order).meta?.isTestOrder && <TestBadge />}
+                {!!(row as Order).meta?.isTestOrder && <TestBadge />}
               </span>
             ),
           },
