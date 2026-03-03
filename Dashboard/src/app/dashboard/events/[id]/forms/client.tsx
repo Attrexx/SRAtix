@@ -515,7 +515,7 @@ export default function FormsPage() {
                       style={{
                         width: `calc(${field.width}% - ${field.width < 100 ? '0.5rem' : '0px'})`,
                         minWidth: '180px',
-                        background: 'var(--color-bg-card)',
+                        background: 'var(--color-bg-field)',
                         border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                         boxShadow: dropIdx === idx
                           ? '0 0 0 2px rgba(0,115,170,0.15)'

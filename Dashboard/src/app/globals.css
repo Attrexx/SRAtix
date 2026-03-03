@@ -22,6 +22,7 @@
   --color-warning-light: #fef3c7;
   --color-danger: #dc2626;
   --color-danger-light: #fee2e2;
+  --color-bg-field: #f1f5f9;
   --color-sidebar: #0f172a;
   --color-sidebar-text: #e2e8f0;
   --color-sidebar-hover: #1e293b;
@@ -52,6 +53,7 @@
   --color-warning-light: #451a03;
   --color-danger: #ef4444;
   --color-danger-light: #450a0a;
+  --color-bg-field: #16171a;
   --color-sidebar: #16171a;
   --color-sidebar-text: #cbd5e1;
   --color-sidebar-hover: #1c1d21;
