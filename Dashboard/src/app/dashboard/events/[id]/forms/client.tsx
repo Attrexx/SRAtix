@@ -513,7 +513,8 @@ export default function FormsPage() {
                       onDragEnd={handleDragEnd}
                       className="group rounded-lg transition-all"
                       style={{
-                        width: `calc(${field.width}% - ${field.width < 100 ? '0.5rem' : '0px'})`,
+                        flex: 'none',
+                        width: `calc(${field.width}% - ${((1 - field.width / 100) * 0.75).toFixed(4)}rem)`,
                         minWidth: '180px',
                         background: 'var(--color-bg-field)',
                         border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
