@@ -202,7 +202,7 @@ export class FormsService {
         where: { id },
         data: { active: false },
       });
-      return this.prisma.formSchema.create({
+      const newSchema = await this.prisma.formSchema.create({
         data: {
           eventId,
           name: data.name ?? existing.name,
@@ -211,6 +211,14 @@ export class FormsService {
           active: true,
         },
       });
+
+      // Cascade: update any ticket types still referencing the old schema
+      await this.prisma.ticketType.updateMany({
+        where: { formSchemaId: id },
+        data: { formSchemaId: newSchema.id },
+      });
+
+      return newSchema;
     }
 
     // No submissions — safe to update in place
