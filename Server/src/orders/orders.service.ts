@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
@@ -176,6 +176,101 @@ export class OrdersService {
       },
     });
     return order?.event ?? null;
+  }
+
+  /**
+   * Update an order's editable fields (notes, customerName, customerEmail, billing address, status).
+   */
+  async update(
+    id: string,
+    data: Partial<{
+      customerName: string;
+      customerEmail: string;
+      notes: string;
+      status: string;
+      billingAddress: Record<string, unknown>;
+    }>,
+  ) {
+    const order = await this.findOne(id);
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: {
+        ...(data.customerName !== undefined && { customerName: data.customerName }),
+        ...(data.customerEmail !== undefined && { customerEmail: data.customerEmail }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.status !== undefined && { status: data.status }),
+        ...(data.billingAddress !== undefined && { billingAddress: data.billingAddress as any }),
+      },
+      include: { items: true },
+    });
+
+    this.audit.log({
+      eventId: order.eventId,
+      action: AuditAction.ORDER_UPDATED,
+      entity: 'order',
+      entityId: id,
+      detail: data as Record<string, unknown>,
+    });
+
+    return updated;
+  }
+
+  /**
+   * Cancel an order (soft delete — sets status to 'cancelled').
+   */
+  async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: { status: 'cancelled', cancelledAt: new Date() },
+    });
+
+    // Void associated tickets
+    await this.prisma.ticket.updateMany({
+      where: { orderId: id, status: 'valid' },
+      data: { status: 'cancelled' },
+    });
+
+    this.audit.log({
+      eventId: order.eventId,
+      action: AuditAction.ORDER_CANCELLED,
+      entity: 'order',
+      entityId: id,
+      detail: { orderNumber: order.orderNumber },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Hard-delete an order. Only allowed for pending/cancelled orders with no paid transactions.
+   */
+  async delete(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'paid') {
+      throw new BadRequestException(
+        'Cannot delete a paid order. Cancel or refund it instead.',
+      );
+    }
+
+    // Delete associated tickets first (cascade might handle this, but be explicit)
+    await this.prisma.ticket.deleteMany({ where: { orderId: id } });
+
+    // Delete order items + order (items cascade via onDelete: Cascade)
+    await this.prisma.order.delete({ where: { id } });
+
+    this.audit.log({
+      eventId: order.eventId,
+      action: AuditAction.ORDER_CANCELLED,
+      entity: 'order',
+      entityId: id,
+      detail: { orderNumber: order.orderNumber, hardDelete: true },
+    });
+
+    return { success: true };
   }
 
   /**

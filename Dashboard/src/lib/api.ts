@@ -303,7 +303,9 @@ export interface Order {
   totalCents: number;
   currency: string;
   status: string;
+  notes?: string;
   paidAt?: string;
+  cancelledAt?: string;
   createdAt: string;
   items: OrderItem[];
   meta?: Record<string, unknown> | null;
@@ -315,6 +317,23 @@ export interface OrderItem {
   quantity: number;
   unitPriceCents: number;
   subtotalCents: number;
+}
+
+export interface OrderDetails extends Order {
+  event?: { name: string; startDate: string; venue?: string; orgId: string };
+  attendee?: { firstName: string; lastName: string; email: string; company?: string };
+  tickets?: Array<{ id: string; code: string; status: string }>;
+  items: Array<OrderItem & { ticketType?: { name: string; priceCents: number } }>;
+}
+
+export interface FormSubmission {
+  id: string;
+  eventId: string;
+  attendeeId: string;
+  formSchemaId: string;
+  data: Record<string, unknown>;
+  submittedAt: string;
+  formSchema?: { name: string; version: number };
 }
 
 export interface Ticket {
@@ -572,12 +591,32 @@ export const api = {
   }) =>
     request<Attendee>(`/attendees/${id}`, { method: 'PATCH', body: data }),
 
+  getAttendeeSubmissions: (attendeeId: string, eventId: string, signal?: AbortSignal) =>
+    request<FormSubmission[]>(`/attendees/${attendeeId}/submissions/${eventId}`, { signal }),
+
   // Orders
   getOrders: (eventId: string, signal?: AbortSignal) =>
     request<Order[]>(`/orders/event/${eventId}`, { signal }),
 
   getOrder: (id: string, signal?: AbortSignal) =>
     request<Order>(`/orders/${id}`, { signal }),
+
+  getOrderDetails: (id: string, signal?: AbortSignal) =>
+    request<OrderDetails>(`/orders/${id}/details`, { signal }),
+
+  updateOrder: (id: string, data: {
+    customerName?: string;
+    customerEmail?: string;
+    notes?: string;
+    status?: string;
+  }) =>
+    request<Order>(`/orders/${id}`, { method: 'PATCH', body: data }),
+
+  cancelOrder: (id: string) =>
+    request<Order>(`/orders/${id}/cancel`, { method: 'PATCH' }),
+
+  deleteOrder: (id: string) =>
+    request<{ success: boolean }>(`/orders/${id}`, { method: 'DELETE' }),
 
   // Check-Ins
   // Server returns { totalTickets, checkedIn, totalCheckIns, percentCheckedIn }

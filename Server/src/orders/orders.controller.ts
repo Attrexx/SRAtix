@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -12,7 +13,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OrdersService } from './orders.service';
-import { IsString, IsNumber, IsArray, ValidateNested, Min } from 'class-validator';
+import { IsString, IsNumber, IsArray, IsOptional, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -53,6 +54,13 @@ class UpdateOrderStatusDto {
   status: string;
 }
 
+class UpdateOrderDto {
+  @IsOptional() @IsString() customerName?: string;
+  @IsOptional() @IsString() customerEmail?: string;
+  @IsOptional() @IsString() notes?: string;
+  @IsOptional() @IsString() status?: string;
+}
+
 @Controller('orders')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class OrdersController {
@@ -70,6 +78,12 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
+  @Get(':id/details')
+  @Roles('event_admin', 'super_admin')
+  findOneWithDetails(@Param('id') id: string) {
+    return this.ordersService.findOneWithDetails(id);
+  }
+
   @Post()
   @Roles('event_admin', 'super_admin', 'box_office')
   create(
@@ -82,6 +96,15 @@ export class OrdersController {
     });
   }
 
+  @Patch(':id')
+  @Roles('event_admin', 'super_admin')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderDto,
+  ) {
+    return this.ordersService.update(id, dto);
+  }
+
   @Patch(':id/status')
   @Roles('event_admin', 'super_admin')
   updateStatus(
@@ -89,5 +112,17 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(id, dto.status);
+  }
+
+  @Patch(':id/cancel')
+  @Roles('event_admin', 'super_admin')
+  cancel(@Param('id') id: string) {
+    return this.ordersService.cancel(id);
+  }
+
+  @Delete(':id')
+  @Roles('super_admin')
+  delete(@Param('id') id: string) {
+    return this.ordersService.delete(id);
   }
 }

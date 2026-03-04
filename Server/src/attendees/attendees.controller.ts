@@ -15,6 +15,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/auth.service';
 import { AttendeesService } from './attendees.service';
 import { EventsService } from '../events/events.service';
+import { FormsService } from '../forms/forms.service';
 import { IsString, IsEmail, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 class CreateAttendeeDto {
@@ -79,6 +80,7 @@ export class AttendeesController {
   constructor(
     private readonly attendeesService: AttendeesService,
     private readonly eventsService: EventsService,
+    private readonly formsService: FormsService,
   ) {}
 
   @Get('event/:eventId')
@@ -116,6 +118,15 @@ export class AttendeesController {
       ...dto,
       orgId,
     });
+  }
+
+  @Get(':id/submissions/:eventId')
+  @Roles('event_admin', 'super_admin')
+  findSubmissions(
+    @Param('id') attendeeId: string,
+    @Param('eventId') eventId: string,
+  ) {
+    return this.formsService.findSubmissionsByAttendee(eventId, attendeeId);
   }
 
   @Patch(':id')

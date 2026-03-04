@@ -18,6 +18,7 @@ export const AuditAction = {
   // Orders
   ORDER_CREATED: 'order.created',
   ORDER_PAID: 'order.paid',
+  ORDER_UPDATED: 'order.updated',
   ORDER_CANCELLED: 'order.cancelled',
   ORDER_REFUNDED: 'order.refunded',
   ORDER_EXPIRED: 'order.expired',

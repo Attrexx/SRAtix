@@ -168,7 +168,14 @@ export default function PromoCodesPage() {
             key: 'code',
             header: t('promo.column.code'),
             render: (row) => (
-              <span className="font-mono text-sm font-bold">{row.code}</span>
+              <div>
+                <span className="font-mono text-sm font-bold">{row.code}</span>
+                {(row as PromoCode).description && (
+                  <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)', fontFamily: 'inherit', fontWeight: 'normal' }}>
+                    {(row as PromoCode).description}
+                  </p>
+                )}
+              </div>
             ),
           },
           {

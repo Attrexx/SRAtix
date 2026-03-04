@@ -2,10 +2,24 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Attendee } from '@/lib/api';
+import { api, type Attendee, type FormSubmission, type FormSchema } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+
+interface FormField {
+  id: string;
+  type: string;
+  label: Record<string, string>;
+  required?: boolean;
+  options?: Array<{ value: string; label: Record<string, string> }>;
+  placeholder?: Record<string, string>;
+  helpText?: Record<string, string>;
+}
+
+interface FormSchemaDefinition {
+  fields: FormField[];
+}
 
 export default function AttendeesPage() {
   const { t } = useI18n();
@@ -23,6 +37,11 @@ export default function AttendeesPage() {
   const [fEmail, setFEmail] = useState('');
   const [fPhone, setFPhone] = useState('');
   const [fCompany, setFCompany] = useState('');
+
+  // Form submissions state (loaded when editing)
+  const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
+  const [formSchemas, setFormSchemas] = useState<Record<string, FormSchema>>({});
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!eventId) return;
@@ -48,6 +67,8 @@ export default function AttendeesPage() {
     setFCompany('');
     setEditAttendee(null);
     setError(null);
+    setSubmissions([]);
+    setFormSchemas({});
   };
 
   const openCreate = () => {
@@ -55,7 +76,7 @@ export default function AttendeesPage() {
     setShowModal(true);
   };
 
-  const openEdit = (a: Attendee) => {
+  const openEdit = async (a: Attendee) => {
     setFFirst(a.firstName);
     setFLast(a.lastName);
     setFEmail(a.email);
@@ -63,7 +84,33 @@ export default function AttendeesPage() {
     setFCompany(a.company ?? '');
     setEditAttendee(a);
     setError(null);
+    setSubmissions([]);
+    setFormSchemas({});
     setShowModal(true);
+
+    // Load form submissions for this attendee
+    setSubmissionsLoading(true);
+    try {
+      const subs = await api.getAttendeeSubmissions(a.id, eventId);
+      setSubmissions(subs);
+
+      // Load all unique form schemas referenced by submissions
+      if (subs.length > 0) {
+        const schemaIds = [...new Set(subs.map((s) => s.formSchemaId))];
+        const allSchemas = await api.getFormSchemas(eventId);
+        const schemaMap: Record<string, FormSchema> = {};
+        for (const schema of allSchemas) {
+          if (schemaIds.includes(schema.id)) {
+            schemaMap[schema.id] = schema;
+          }
+        }
+        setFormSchemas(schemaMap);
+      }
+    } catch {
+      // Non-critical — submissions just won't show
+    } finally {
+      setSubmissionsLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -94,6 +141,45 @@ export default function AttendeesPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  /** Resolve a field label from i18n record, falling back to 'en' then first available */
+  const resolveLabel = (labelMap: Record<string, string> | undefined): string => {
+    if (!labelMap) return '';
+    return labelMap['en'] ?? labelMap['de'] ?? Object.values(labelMap)[0] ?? '';
+  };
+
+  /** Render the display value for a form submission answer */
+  const renderAnswerValue = (field: FormField, value: unknown): string => {
+    if (value === null || value === undefined || value === '') return '—';
+
+    if (field.type === 'checkbox' || field.type === 'consent' || field.type === 'yes-no') {
+      return value === true || value === 'true' || value === 'yes' ? 'Yes' : 'No';
+    }
+
+    if ((field.type === 'select' || field.type === 'radio') && field.options) {
+      const opt = field.options.find((o) => o.value === value);
+      if (opt) return resolveLabel(opt.label);
+    }
+
+    if (field.type === 'multi-select' && Array.isArray(value) && field.options) {
+      return value
+        .map((v) => {
+          const opt = field.options!.find((o) => o.value === v);
+          return opt ? resolveLabel(opt.label) : String(v);
+        })
+        .join(', ');
+    }
+
+    if (field.type === 'date' && typeof value === 'string') {
+      try {
+        return new Date(value).toLocaleDateString('en-CH');
+      } catch {
+        return String(value);
+      }
+    }
+
+    return String(value);
   };
 
   if (loading) {
@@ -201,8 +287,9 @@ export default function AttendeesPage() {
           }}
         >
           <div
-            className="w-full max-w-md overflow-hidden rounded-2xl"
+            className="w-full overflow-hidden rounded-2xl"
             style={{
+              maxWidth: editAttendee && (submissions.length > 0 || submissionsLoading) ? '48rem' : '28rem',
               background: 'var(--color-bg-card)',
               border: '1px solid var(--color-border)',
               boxShadow: 'var(--shadow-lg, 0 25px 50px -12px rgba(0,0,0,0.25))',
@@ -224,7 +311,7 @@ export default function AttendeesPage() {
               </button>
             </div>
 
-            <div className="px-6 py-4">
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
               {error && (
                 <div
                   className="mb-4 rounded-lg px-4 py-2 text-sm"
@@ -243,6 +330,90 @@ export default function AttendeesPage() {
                 <FieldInput label={t('attendees.form.phone')} value={fPhone} onChange={setFPhone} placeholder={t('attendees.form.phonePlaceholder')} type="tel" />
                 <FieldInput label={t('attendees.form.company')} value={fCompany} onChange={setFCompany} placeholder={t('attendees.form.companyPlaceholder')} />
               </div>
+
+              {/* ── Registration Form Submissions ── */}
+              {editAttendee && (
+                <div className="mt-6">
+                  <h3 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                    {t('attendees.submissionsTitle')}
+                  </h3>
+
+                  {submissionsLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2].map((i) => (
+                        <div key={i} className="h-8 animate-pulse rounded-lg" style={{ background: 'var(--color-bg-muted)' }} />
+                      ))}
+                    </div>
+                  ) : submissions.length === 0 ? (
+                    <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('attendees.noSubmissions')}
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {submissions.map((sub) => {
+                        const schema = formSchemas[sub.formSchemaId];
+                        const schemaDef = schema?.fields as unknown as FormSchemaDefinition | null;
+                        const fields = schemaDef?.fields ?? [];
+
+                        return (
+                          <div
+                            key={sub.id}
+                            className="rounded-lg p-4"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+                          >
+                            {/* Schema name + submission date */}
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                                {sub.formSchema?.name ?? schema?.name ?? 'Form'}
+                                {' '}
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                  {t('attendees.formVersion').replace('{version}', String(sub.formSchema?.version ?? schema?.version ?? 1))}
+                                </span>
+                              </span>
+                              <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                {t('attendees.submittedAt')}: {new Date(sub.submittedAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+
+                            {/* Render each field with its submitted value */}
+                            {fields.length > 0 ? (
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {fields.map((field) => {
+                                  const submittedValue = sub.data[field.id];
+                                  return (
+                                    <div key={field.id}>
+                                      <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                                        {resolveLabel(field.label)}
+                                      </p>
+                                      <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                                        {renderAnswerValue(field, submittedValue)}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* Fallback: render raw key-value pairs if schema fields not available */
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {Object.entries(sub.data).map(([key, value]) => (
+                                  <div key={key}>
+                                    <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                                      {key}
+                                    </p>
+                                    <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                                      {value === null || value === undefined ? '—' : String(value)}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div
