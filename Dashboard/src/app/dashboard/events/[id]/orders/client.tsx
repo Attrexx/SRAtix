@@ -249,7 +249,7 @@ export default function OrdersPage() {
                     value={new Date(selectedOrder.paidAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   />
                 )}
-                {(selectedOrder.meta as Record<string, unknown> | null)?.stripePaymentId && (
+                {!!(selectedOrder.meta as Record<string, unknown> | null)?.stripePaymentId && (
                   <InfoField label={t('orders.detail.stripeRef')} value={String((selectedOrder.meta as Record<string, unknown>).stripePaymentId)} />
                 )}
               </div>
