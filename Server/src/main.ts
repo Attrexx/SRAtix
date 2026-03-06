@@ -71,6 +71,15 @@ async function bootstrap() {
     const reflector = app.get(Reflector);
     app.useGlobalGuards(new RateLimitGuard(reflector));
 
+    // Disable Cloudflare response buffering for SSE streams
+    const fastifyInstance = app.getHttpAdapter().getInstance();
+    fastifyInstance.addHook('onSend', async (request, reply, payload) => {
+      if (reply.getHeader('content-type')?.toString().includes('text/event-stream')) {
+        reply.header('X-Accel-Buffering', 'no');
+      }
+      return payload;
+    });
+
     const port = configService.get<number>('PORT', 3000);
 
     // ── Dashboard Static Files ───────────────────────────────────
