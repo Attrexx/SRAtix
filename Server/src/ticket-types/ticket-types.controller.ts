@@ -4,6 +4,7 @@ import {
   Post,
   Patch,
   Delete,
+  Put,
   Param,
   Body,
   UseGuards,
@@ -181,5 +182,30 @@ export class TicketTypesController {
       ticketTypeId,
       eventId,
     );
+  }
+
+  // ─── SRA Discount CRUD ─────────────────────────────────────────
+
+  @Get(':id/sra-discounts')
+  @Roles('event_admin', 'super_admin')
+  getSraDiscounts(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+  ) {
+    return this.ticketTypesService.getSraDiscounts(ticketTypeId);
+  }
+
+  @Put(':id/sra-discounts')
+  @Roles('event_admin', 'super_admin')
+  setSraDiscounts(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+    @Body() discounts: Array<{
+      membershipTier: string;
+      discountType: string;
+      discountValue: number;
+    }>,
+  ) {
+    return this.ticketTypesService.setSraDiscounts(ticketTypeId, eventId, discounts);
   }
 }

@@ -430,4 +430,179 @@ export class AuthService {
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
   }
+
+  // ─── Member verification (SRA + RobotX) ────────────────────────
+
+  /**
+   * Proxy SRA credential verification through to sratix-control on swiss-robotics.org.
+   * Returns a short-lived session token encoding the member context.
+   */
+  async verifySraMember(
+    email: string,
+    password: string,
+    eventId: string,
+  ): Promise<{
+    authenticated: boolean;
+    firstName?: string;
+    lastName?: string;
+    membershipTier?: string;
+    sessionToken?: string;
+    error?: string;
+  }> {
+    // Resolve the SRA WP API URL from settings, then env
+    const wpApiUrl = await this.resolveWpApiUrl();
+    if (!wpApiUrl) {
+      this.logger.error('SRA WP API URL not configured');
+      throw new UnauthorizedException('Member verification unavailable');
+    }
+
+    const body = JSON.stringify({ email, password });
+    const secret = this.config.getOrThrow<string>('WEBHOOK_SIGNING_SECRET');
+    const signature = createHmac('sha256', body, { encoding: 'utf8' })
+      .update('')
+      .digest('hex');
+    // Re-compute: signature = HMAC-SHA256(body, secret)
+    const hmac = createHmac('sha256', secret).update(body).digest('hex');
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    try {
+      const url = `${wpApiUrl.replace(/\/+$/, '')}/wp-json/sratix-control/v1/auth/sra-verify`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-SRAtix-Signature': hmac,
+        },
+        body,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok && response.status !== 200) {
+        const text = await response.text().catch(() => '');
+        this.logger.warn(`SRA verify failed with HTTP ${response.status}: ${text}`);
+        return { authenticated: false, error: 'verification_failed' };
+      }
+
+      const result = (await response.json()) as {
+        valid: boolean;
+        wpUserId?: number;
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+        membershipTier?: string | null;
+        roles?: string[];
+        error?: string;
+      };
+
+      if (!result.valid) {
+        return { authenticated: false, error: result.error ?? 'invalid_credentials' };
+      }
+
+      // Issue a short-lived session token (2hr TTL)
+      const sessionToken = this.jwt.sign(
+        {
+          memberGroup: 'sra',
+          tier: result.membershipTier ?? null,
+          eventId,
+          email: result.email,
+          wpUserId: result.wpUserId,
+        },
+        { expiresIn: '2h' },
+      );
+
+      return {
+        authenticated: true,
+        firstName: result.firstName,
+        lastName: result.lastName,
+        membershipTier: result.membershipTier ?? undefined,
+        sessionToken,
+      };
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') {
+        this.logger.error('SRA verify request timed out');
+      } else {
+        this.logger.error(`SRA verify request failed: ${err.message}`);
+      }
+      return { authenticated: false, error: 'verification_failed' };
+    }
+  }
+
+  /**
+   * Verify a RobotX access code against the Event's meta.robotxAccessCode.
+   * Returns a short-lived session token on success.
+   */
+  async verifyRobotxCode(
+    eventId: string,
+    code: string,
+  ): Promise<{ valid: boolean; sessionToken?: string }> {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { meta: true },
+    });
+
+    if (!event) {
+      return { valid: false };
+    }
+
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+    const storedCode = meta.robotxAccessCode as string | undefined;
+
+    if (!storedCode || !code || storedCode !== code) {
+      return { valid: false };
+    }
+
+    const sessionToken = this.jwt.sign(
+      {
+        memberGroup: 'robotx',
+        eventId,
+      },
+      { expiresIn: '2h' },
+    );
+
+    return { valid: true, sessionToken };
+  }
+
+  /**
+   * Decode and validate a member session token.
+   * Returns the decoded payload or null if invalid/expired.
+   */
+  decodeMemberSession(
+    token: string,
+  ): { memberGroup: string; tier?: string; eventId: string } | null {
+    try {
+      const payload = this.jwt.verify(token) as {
+        memberGroup: string;
+        tier?: string;
+        eventId: string;
+      };
+      if (!payload.memberGroup || !payload.eventId) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Resolve the SRA WordPress site URL for API calls.
+   */
+  private async resolveWpApiUrl(): Promise<string | null> {
+    // Try env first, then DB setting
+    const envUrl = this.config.get<string>('SRA_WP_URL');
+    if (envUrl) return envUrl;
+
+    // Fallback: check DB settings
+    try {
+      const setting = await this.prisma.setting.findFirst({
+        where: { key: 'sra_wp_url', scope: 'global' },
+      });
+      if (setting) return setting.value as string;
+    } catch { /* ignore */ }
+
+    return null;
+  }
 }

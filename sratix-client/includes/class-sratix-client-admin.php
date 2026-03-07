@@ -43,6 +43,24 @@ class SRAtix_Client_Admin {
 			'sanitize_callback' => 'sanitize_text_field',
 		) );
 
+		register_setting( self::OPTION_GROUP, 'sratix_client_member_gate_enabled', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+
+		register_setting( self::OPTION_GROUP, 'sratix_client_sra_logo_url', array(
+			'type'              => 'string',
+			'sanitize_callback' => 'esc_url_raw',
+			'default'           => '',
+		) );
+
+		register_setting( self::OPTION_GROUP, 'sratix_client_robotx_logo_url', array(
+			'type'              => 'string',
+			'sanitize_callback' => 'esc_url_raw',
+			'default'           => '',
+		) );
+
 		// Section
 		add_settings_section(
 			'sratix_client_connection',
@@ -83,6 +101,34 @@ class SRAtix_Client_Admin {
 			echo '<input type="text" name="sratix_client_event_id" value="' . esc_attr( $val ) . '" class="regular-text" />';
 			echo '<p class="description">' . esc_html__( 'UUID of the event from the SRAtix Server.', 'sratix-client' ) . '</p>';
 		}, self::PAGE_SLUG, 'sratix_client_event' );
+
+		// Member gate section
+		add_settings_section(
+			'sratix_client_member_gate',
+			__( 'Member Type Gate', 'sratix-client' ),
+			function () {
+				echo '<p>' . esc_html__( 'Show a member-type selection screen before ticket listing. Members can authenticate for discounted pricing.', 'sratix-client' ) . '</p>';
+			},
+			self::PAGE_SLUG
+		);
+
+		add_settings_field( 'sratix_client_member_gate_enabled', __( 'Enable Member Gate', 'sratix-client' ), function () {
+			$val = get_option( 'sratix_client_member_gate_enabled', false );
+			echo '<label><input type="checkbox" name="sratix_client_member_gate_enabled" value="1" ' . checked( $val, true, false ) . ' /> ';
+			echo esc_html__( 'Show member-type selection before ticket purchase', 'sratix-client' ) . '</label>';
+		}, self::PAGE_SLUG, 'sratix_client_member_gate' );
+
+		add_settings_field( 'sratix_client_sra_logo_url', __( 'SRA Logo URL', 'sratix-client' ), function () {
+			$val = get_option( 'sratix_client_sra_logo_url', '' );
+			echo '<input type="url" name="sratix_client_sra_logo_url" value="' . esc_attr( $val ) . '" class="regular-text" />';
+			echo '<p class="description">' . esc_html__( 'Optional. URL to SRA logo image for the member gate button.', 'sratix-client' ) . '</p>';
+		}, self::PAGE_SLUG, 'sratix_client_member_gate' );
+
+		add_settings_field( 'sratix_client_robotx_logo_url', __( 'RobotX Logo URL', 'sratix-client' ), function () {
+			$val = get_option( 'sratix_client_robotx_logo_url', '' );
+			echo '<input type="url" name="sratix_client_robotx_logo_url" value="' . esc_attr( $val ) . '" class="regular-text" />';
+			echo '<p class="description">' . esc_html__( 'Optional. URL to RobotX logo image for the member gate button.', 'sratix-client' ) . '</p>';
+		}, self::PAGE_SLUG, 'sratix_client_member_gate' );
 	}
 
 	public function render_settings_page() {

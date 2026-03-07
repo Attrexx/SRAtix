@@ -7,6 +7,7 @@ import {
   Query,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   IsString,
@@ -27,6 +28,8 @@ import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { AttendeesService } from '../attendees/attendees.service';
 import { FormsService } from '../forms/forms.service';
 import { SettingsService } from '../settings/settings.service';
+import { AuthService } from '../auth/auth.service';
+import { TicketTypesService } from '../ticket-types/ticket-types.service';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +91,18 @@ class PublicCheckoutDto {
   @IsObject()
   @IsOptional()
   formData?: Record<string, unknown>;
+
+  @IsString()
+  @IsOptional()
+  memberGroup?: string;
+
+  @IsString()
+  @IsOptional()
+  memberTier?: string;
+
+  @IsString()
+  @IsOptional()
+  memberSessionToken?: string;
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -119,6 +134,8 @@ export class PublicCheckoutController {
     private readonly attendees: AttendeesService,
     private readonly forms: FormsService,
     private readonly settings: SettingsService,
+    private readonly authService: AuthService,
+    private readonly ticketTypesService: TicketTypesService,
   ) {}
 
   @Post()
@@ -218,7 +235,7 @@ export class PublicCheckoutController {
     }
 
     // ── 5. Validate promo code ───────────────────────────────────────────
-    let discountCents = 0;
+    let promoDiscountCents = 0;
     let promoCodeId: string | null = null;
     if (dto.promoCode) {
       const validation = await this.promoCodes.validateCode(
@@ -235,8 +252,63 @@ export class PublicCheckoutController {
         await this.prisma.order.delete({ where: { id: order.id } });
         throw new BadRequestException(validation.message || 'Invalid promo code');
       }
-      discountCents = validation.discountCents;
+      promoDiscountCents = validation.discountCents;
       promoCodeId = validation.promoCodeId;
+    }
+
+    // ── 5b. Validate member discount ─────────────────────────────────────
+    let memberDiscountCents = 0;
+    let memberDiscountLabel = '';
+    let validatedMemberGroup: string | undefined;
+    let validatedMemberTier: string | undefined;
+
+    if (dto.memberSessionToken && dto.memberGroup) {
+      const session = this.authService.decodeMemberSession(dto.memberSessionToken);
+      if (!session || session.eventId !== dto.eventId || session.memberGroup !== dto.memberGroup) {
+        await this.prisma.order.delete({ where: { id: order.id } });
+        throw new UnauthorizedException('Invalid or expired member session. Please re-authenticate.');
+      }
+
+      validatedMemberGroup = session.memberGroup;
+      validatedMemberTier = session.tier;
+
+      // Load ticket type with SRA discounts for calculation
+      const ttWithDiscounts = await this.prisma.ticketType.findUnique({
+        where: { id: dto.ticketTypeId },
+        include: { sraDiscounts: true },
+      });
+
+      if (ttWithDiscounts) {
+        const discount = this.ticketTypesService.calculateMemberDiscount(
+          ttWithDiscounts,
+          tt.priceCents, // use resolved base price
+          validatedMemberGroup,
+          validatedMemberTier,
+        );
+        if (discount) {
+          memberDiscountCents = discount.discountCents * dto.quantity;
+          memberDiscountLabel = discount.discountLabel;
+        }
+      }
+    }
+
+    // ── 5c. Apply whichever discount is higher ───────────────────────────
+    let discountCents: number;
+    let appliedDiscountLabel: string;
+    let appliedPromoCodeId: string | null = null;
+
+    if (memberDiscountCents > 0 && memberDiscountCents >= promoDiscountCents) {
+      // Member discount wins
+      discountCents = memberDiscountCents;
+      appliedDiscountLabel = memberDiscountLabel;
+    } else if (promoDiscountCents > 0) {
+      // Promo code wins
+      discountCents = promoDiscountCents;
+      appliedDiscountLabel = `Promo code ${dto.promoCode}`;
+      appliedPromoCodeId = promoCodeId;
+    } else {
+      discountCents = 0;
+      appliedDiscountLabel = '';
     }
 
     // ── 6. Create Stripe Checkout Session ───────────────────────────────
@@ -244,7 +316,9 @@ export class PublicCheckoutController {
       sratix_event_id: dto.eventId,
       sratix_org_id: event.orgId,
     };
-    if (promoCodeId) metadata.sratix_promo_code_id = promoCodeId;
+    if (appliedPromoCodeId) metadata.sratix_promo_code_id = appliedPromoCodeId;
+    if (validatedMemberGroup) metadata.sratix_member_group = validatedMemberGroup;
+    if (validatedMemberTier) metadata.sratix_member_tier = validatedMemberTier;
     if (isTestMode) metadata.sratix_test_mode = '1';
 
     const finalTotal = totalCents - discountCents;
@@ -277,7 +351,9 @@ export class PublicCheckoutController {
       currency: event.currency,
       lineItems: [
         {
-          name: tt.name,
+          name: appliedDiscountLabel
+            ? `${tt.name} (${appliedDiscountLabel})`
+            : tt.name,
           description: tt.description ?? undefined,
           unitAmountCents: tt.priceCents,
           quantity: dto.quantity,
@@ -292,8 +368,13 @@ export class PublicCheckoutController {
     });
 
     await this.orders.updateStripeSession(order.id, sessionId);
-    if (promoCodeId) {
-      await this.orders.updateMeta(order.id, { promoCodeId, discountCents });
+    if (appliedPromoCodeId || discountCents > 0 || validatedMemberGroup) {
+      await this.orders.updateMeta(order.id, {
+        ...(appliedPromoCodeId ? { promoCodeId: appliedPromoCodeId } : {}),
+        ...(discountCents > 0 ? { discountCents, discountLabel: appliedDiscountLabel } : {}),
+        ...(validatedMemberGroup ? { memberGroup: validatedMemberGroup } : {}),
+        ...(validatedMemberTier ? { memberTier: validatedMemberTier } : {}),
+      });
     }
 
     return {

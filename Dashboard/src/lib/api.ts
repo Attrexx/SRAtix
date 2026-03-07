@@ -245,10 +245,21 @@ export interface TicketType {
   category?: string;
   membershipTier?: string | null;
   wpProductId?: number | null;
+  robotxDiscountType?: string | null;
+  robotxDiscountValue?: number | null;
   meta?: Record<string, unknown> | null;
   pricingVariants?: PricingVariant[];
+  sraDiscounts?: SraDiscount[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SraDiscount {
+  id: string;
+  ticketTypeId: string;
+  membershipTier: string;
+  discountType: string;
+  discountValue: number;
 }
 
 export interface TicketTypeMeta {
@@ -568,6 +579,17 @@ export const api = {
 
   deleteVariant: (eventId: string, ticketTypeId: string, variantId: string) =>
     request<void>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants/${variantId}`, { method: 'DELETE' }),
+
+  // SRA Member Discounts
+  getSraDiscounts: (eventId: string, ticketTypeId: string, signal?: AbortSignal) =>
+    request<SraDiscount[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/sra-discounts`, { signal }),
+
+  setSraDiscounts: (eventId: string, ticketTypeId: string, discounts: Array<{
+    membershipTier: string;
+    discountType: string;
+    discountValue: number;
+  }>) =>
+    request<SraDiscount[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/sra-discounts`, { method: 'PUT', body: discounts }),
 
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>

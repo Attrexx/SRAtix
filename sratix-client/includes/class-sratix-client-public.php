@@ -64,13 +64,16 @@ class SRAtix_Client_Public {
 		$config   = json_decode( get_option( 'sratix_client_embed_config', '{}' ), true );
 
 		$localize_data = array(
-			'apiUrl'       => esc_url( $api_url ),
-			'eventId'      => sanitize_text_field( $event_id ),
-			'theme'        => $config['theme'] ?? 'light',
-			'primaryColor' => $config['primaryColor'] ?? '#0073aa',
-			'nonce'        => wp_create_nonce( 'sratix_client_nonce' ),
-			'isLoggedIn'   => is_user_logged_in(),
-			'locale'       => $this->detect_locale(),
+			'apiUrl'           => esc_url( $api_url ),
+			'eventId'          => sanitize_text_field( $event_id ),
+			'theme'            => $config['theme'] ?? 'light',
+			'primaryColor'     => $config['primaryColor'] ?? '#0073aa',
+			'nonce'            => wp_create_nonce( 'sratix_client_nonce' ),
+			'isLoggedIn'       => is_user_logged_in(),
+			'locale'           => $this->detect_locale(),
+			'memberGateEnabled' => (bool) get_option( 'sratix_client_member_gate_enabled', false ),
+			'sraLogoUrl'       => esc_url( get_option( 'sratix_client_sra_logo_url', '' ) ),
+			'robotxLogoUrl'    => esc_url( get_option( 'sratix_client_robotx_logo_url', '' ) ),
 		);
 
 		// For logged-in users, provide identity + HMAC token so the JS widget

@@ -457,4 +457,198 @@ export class TicketTypesService {
       orderBy: { sortOrder: 'asc' },
     });
   }
+
+  // ─── SRA Discount CRUD ─────────────────────────────────────────
+
+  /**
+   * Batch upsert SRA tier discounts for a ticket type.
+   * Replaces all existing discounts with the provided set.
+   */
+  async setSraDiscounts(
+    ticketTypeId: string,
+    eventId: string,
+    discounts: Array<{
+      membershipTier: string;
+      discountType: string;
+      discountValue: number;
+    }>,
+  ) {
+    await this.findOne(ticketTypeId, eventId); // ownership check
+
+    // Validate tiers and values
+    for (const d of discounts) {
+      if (!MEMBERSHIP_TIERS.includes(d.membershipTier as MembershipTier)) {
+        throw new BadRequestException(`Invalid membership tier: ${d.membershipTier}`);
+      }
+      if (!['percentage', 'fixed_amount'].includes(d.discountType)) {
+        throw new BadRequestException(`Invalid discount type: ${d.discountType}`);
+      }
+      if (d.discountValue < 0) {
+        throw new BadRequestException('Discount value must be non-negative');
+      }
+      if (d.discountType === 'percentage' && d.discountValue > 100) {
+        throw new BadRequestException('Percentage discount cannot exceed 100');
+      }
+    }
+
+    // Delete existing, then create new
+    await this.prisma.ticketTypeSraDiscount.deleteMany({
+      where: { ticketTypeId },
+    });
+
+    if (discounts.length === 0) return [];
+
+    await this.prisma.ticketTypeSraDiscount.createMany({
+      data: discounts.map((d) => ({
+        ticketTypeId,
+        membershipTier: d.membershipTier,
+        discountType: d.discountType,
+        discountValue: d.discountValue,
+      })),
+    });
+
+    return this.getSraDiscounts(ticketTypeId);
+  }
+
+  /**
+   * Get all SRA tier discounts for a ticket type.
+   */
+  async getSraDiscounts(ticketTypeId: string) {
+    return this.prisma.ticketTypeSraDiscount.findMany({
+      where: { ticketTypeId },
+      orderBy: { membershipTier: 'asc' },
+    });
+  }
+
+  /**
+   * Calculate the discounted price in cents for a given member context.
+   * Returns { discountCents, discountLabel } or null if no discount applies.
+   */
+  calculateMemberDiscount(
+    ticketType: {
+      priceCents: number;
+      robotxDiscountType?: string | null;
+      robotxDiscountValue?: number | null;
+      sraDiscounts?: Array<{
+        membershipTier: string;
+        discountType: string;
+        discountValue: number;
+      }>;
+    },
+    resolvedPriceCents: number,
+    memberGroup: string,
+    memberTier?: string,
+  ): { discountCents: number; discountLabel: string } | null {
+    if (memberGroup === 'sra' && memberTier) {
+      const discount = ticketType.sraDiscounts?.find(
+        (d) => d.membershipTier === memberTier,
+      );
+      if (!discount) return null;
+
+      const discountCents =
+        discount.discountType === 'percentage'
+          ? Math.round((resolvedPriceCents * discount.discountValue) / 100)
+          : Math.min(discount.discountValue, resolvedPriceCents);
+
+      const discountLabel =
+        discount.discountType === 'percentage'
+          ? `SRA ${TIER_LABELS[memberTier as MembershipTier] ?? memberTier} -${discount.discountValue}%`
+          : `SRA ${TIER_LABELS[memberTier as MembershipTier] ?? memberTier} -${(discount.discountValue / 100).toFixed(2)} CHF`;
+
+      return { discountCents, discountLabel };
+    }
+
+    if (memberGroup === 'robotx') {
+      if (!ticketType.robotxDiscountType || ticketType.robotxDiscountValue == null) {
+        return null;
+      }
+
+      const discountCents =
+        ticketType.robotxDiscountType === 'percentage'
+          ? Math.round((resolvedPriceCents * ticketType.robotxDiscountValue) / 100)
+          : Math.min(ticketType.robotxDiscountValue, resolvedPriceCents);
+
+      const discountLabel =
+        ticketType.robotxDiscountType === 'percentage'
+          ? `RobotX Member -${ticketType.robotxDiscountValue}%`
+          : `RobotX Member -${(ticketType.robotxDiscountValue / 100).toFixed(2)} CHF`;
+
+      return { discountCents, discountLabel };
+    }
+
+    return null;
+  }
+
+  /**
+   * Find all active ticket types for public view, with optional member discount info.
+   */
+  async findPublicByEventWithDiscounts(
+    eventId: string,
+    memberGroup?: string,
+    memberTier?: string,
+  ) {
+    const now = new Date();
+    const ticketTypes = await this.prisma.ticketType.findMany({
+      where: {
+        eventId,
+        status: 'active',
+        OR: [{ salesStart: null }, { salesStart: { lte: now } }],
+      },
+      include: {
+        pricingVariants: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
+        sraDiscounts: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    return ticketTypes.map((tt) => {
+      const resolvedPrice = this.resolvePrice(tt.pricingVariants, tt.priceCents);
+      const remaining = tt.quantity != null ? Math.max(0, tt.quantity - tt.sold) : null;
+
+      // Calculate member discount if applicable
+      let memberDiscount: { discountCents: number; discountLabel: string; discountedPriceCents: number } | undefined;
+      if (memberGroup) {
+        const discount = this.calculateMemberDiscount(tt, resolvedPrice.priceCents, memberGroup, memberTier);
+        if (discount) {
+          memberDiscount = {
+            ...discount,
+            discountedPriceCents: resolvedPrice.priceCents - discount.discountCents,
+          };
+        }
+      }
+
+      // Build SRA discounts summary for display (only if member)
+      const sraDiscounts = memberGroup === 'sra' ? tt.sraDiscounts.map((d) => ({
+        tier: d.membershipTier,
+        discountType: d.discountType,
+        discountValue: d.discountValue,
+      })) : undefined;
+
+      // Build RobotX discount summary
+      const robotxDiscount = memberGroup === 'robotx' && tt.robotxDiscountType ? {
+        discountType: tt.robotxDiscountType,
+        discountValue: tt.robotxDiscountValue!,
+      } : undefined;
+
+      return {
+        id: tt.id,
+        name: tt.name,
+        description: tt.description,
+        priceCents: resolvedPrice.priceCents,
+        priceLabel: resolvedPrice.label,
+        currency: tt.currency,
+        remaining,
+        maxPerOrder: tt.maxPerOrder,
+        category: tt.category,
+        membershipTier: tt.membershipTier,
+        formSchemaId: tt.formSchemaId,
+        sortOrder: tt.sortOrder,
+        salesEnd: tt.salesEnd,
+        // Member pricing
+        memberDiscount,
+        sraDiscounts,
+        robotxDiscount,
+      };
+    });
+  }
 }

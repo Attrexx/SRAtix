@@ -10,6 +10,7 @@ import {
   type FormTemplate,
   type FormSchema,
   type Event,
+  type SraDiscount,
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
@@ -49,6 +50,13 @@ export default function TicketsPage() {
   const [formTier, setFormTier] = useState('');
   const [formTemplateId, setFormTemplateId] = useState('');
   const [formSchemaId, setFormSchemaId] = useState('');
+
+  // ── SRA/RobotX Discount state ──
+  const [sraDiscountsEnabled, setSraDiscountsEnabled] = useState(false);
+  const [sraDiscounts, setSraDiscounts] = useState<Record<string, { type: string; value: string }>>({});
+  const [robotxDiscountEnabled, setRobotxDiscountEnabled] = useState(false);
+  const [robotxDiscountType, setRobotxDiscountType] = useState('percentage');
+  const [robotxDiscountValue, setRobotxDiscountValue] = useState('');
 
   // Track existing early-bird variant id for edits
   const [existingEbVariantId, setExistingEbVariantId] = useState<string | null>(null);
@@ -107,6 +115,11 @@ export default function TicketsPage() {
     setFormTemplateId('');
     setFormSchemaId('');
     setExistingEbVariantId(null);
+    setSraDiscountsEnabled(false);
+    setSraDiscounts({});
+    setRobotxDiscountEnabled(false);
+    setRobotxDiscountType('percentage');
+    setRobotxDiscountValue('');
     setError(null);
     setEditId(null);
   };
@@ -153,6 +166,45 @@ export default function TicketsPage() {
     setEditId(tt.id);
     setShowModal(true);
     setError(null);
+
+    // Load SRA discounts for this ticket type
+    if (tt.id) {
+      api.getSraDiscounts(eventId, tt.id)
+        .then((discounts) => {
+          if (discounts.length > 0) {
+            setSraDiscountsEnabled(true);
+            const map: Record<string, { type: string; value: string }> = {};
+            for (const d of discounts) {
+              map[d.membershipTier] = {
+                type: d.discountType,
+                value: d.discountType === 'percentage'
+                  ? String(d.discountValue)
+                  : (d.discountValue / 100).toFixed(2),
+              };
+            }
+            setSraDiscounts(map);
+          } else {
+            setSraDiscountsEnabled(false);
+            setSraDiscounts({});
+          }
+        })
+        .catch(() => { /* no discounts yet */ });
+    }
+
+    // Load RobotX discount from ticket type fields
+    if (tt.robotxDiscountType && tt.robotxDiscountValue != null) {
+      setRobotxDiscountEnabled(true);
+      setRobotxDiscountType(tt.robotxDiscountType);
+      setRobotxDiscountValue(
+        tt.robotxDiscountType === 'percentage'
+          ? String(tt.robotxDiscountValue)
+          : (tt.robotxDiscountValue / 100).toFixed(2),
+      );
+    } else {
+      setRobotxDiscountEnabled(false);
+      setRobotxDiscountType('percentage');
+      setRobotxDiscountValue('');
+    }
   };
 
   /** Open create modal pre-populated with a ticket's data (no editId → new record). */
@@ -289,6 +341,13 @@ export default function TicketsPage() {
         membershipTier: formKind === 'membership' ? formTier : null,
         wpProductId: formKind === 'membership' ? derivedWpProductId ?? null : null,
         formSchemaId: resolvedSchemaId || null,
+        // RobotX discount fields
+        robotxDiscountType: robotxDiscountEnabled ? robotxDiscountType : null,
+        robotxDiscountValue: robotxDiscountEnabled && robotxDiscountValue
+          ? (robotxDiscountType === 'percentage'
+            ? parseInt(robotxDiscountValue, 10)
+            : Math.round(parseFloat(robotxDiscountValue) * 100))
+          : null,
       };
 
       if (editId) {
@@ -346,6 +405,25 @@ export default function TicketsPage() {
         } else if (existingEbVariantId) {
           // Early bird was cleared — delete the variant
           await api.deleteVariant(eventId, ticketId, existingEbVariantId);
+        }
+      }
+
+      // ── Save SRA discounts ──
+      if (ticketId) {
+        if (sraDiscountsEnabled) {
+          const discountPayload = Object.entries(sraDiscounts)
+            .filter(([, v]) => v.value && parseFloat(v.value) > 0)
+            .map(([tier, v]) => ({
+              membershipTier: tier,
+              discountType: v.type,
+              discountValue: v.type === 'percentage'
+                ? parseInt(v.value, 10)
+                : Math.round(parseFloat(v.value) * 100),
+            }));
+          await api.setSraDiscounts(eventId, ticketId, discountPayload);
+        } else if (editId) {
+          // Discounts were disabled — clear them
+          await api.setSraDiscounts(eventId, ticketId, []);
         }
       }
 
@@ -898,6 +976,105 @@ export default function TicketsPage() {
                       </div>
                     )}
                   </>
+                )}
+
+                {/* ── Section: SRA Member Discounts ── */}
+                <SectionHeader label="SRA Member Discounts" />
+                <div>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    <input
+                      type="checkbox"
+                      checked={sraDiscountsEnabled}
+                      onChange={(e) => {
+                        setSraDiscountsEnabled(e.target.checked);
+                        if (e.target.checked && meta && Object.keys(sraDiscounts).length === 0) {
+                          const initial: Record<string, { type: string; value: string }> = {};
+                          for (const tier of meta.tiers as unknown as string[]) {
+                            initial[tier] = { type: 'percentage', value: '' };
+                          }
+                          setSraDiscounts(initial);
+                        }
+                      }}
+                      className="accent-[var(--color-primary)]"
+                    />
+                    Enable SRA member discounts for this ticket
+                  </label>
+                </div>
+                {sraDiscountsEnabled && meta && (
+                  <div className="space-y-2">
+                    {(meta.tiers as unknown as string[]).map((tier) => {
+                      const d = sraDiscounts[tier] ?? { type: 'percentage', value: '' };
+                      return (
+                        <div key={tier} className="grid grid-cols-[1fr_120px_100px] items-center gap-2">
+                          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                            {t(`tickets.tiers.${tier}`) || meta.tierLabels[tier] || tier}
+                          </span>
+                          <select
+                            value={d.type}
+                            onChange={(e) => setSraDiscounts((prev) => ({
+                              ...prev,
+                              [tier]: { ...prev[tier], type: e.target.value },
+                            }))}
+                            className="rounded-lg px-2 py-1.5 text-sm"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          >
+                            <option value="percentage">%</option>
+                            <option value="fixed_amount">CHF</option>
+                          </select>
+                          <input
+                            type="number"
+                            value={d.value}
+                            onChange={(e) => setSraDiscounts((prev) => ({
+                              ...prev,
+                              [tier]: { ...prev[tier], value: e.target.value },
+                            }))}
+                            placeholder={d.type === 'percentage' ? '0' : '0.00'}
+                            className="rounded-lg px-2 py-1.5 text-sm"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ── Section: RobotX Member Discount ── */}
+                <SectionHeader label="RobotX Member Discount" />
+                <div>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    <input
+                      type="checkbox"
+                      checked={robotxDiscountEnabled}
+                      onChange={(e) => setRobotxDiscountEnabled(e.target.checked)}
+                      className="accent-[var(--color-primary)]"
+                    />
+                    Enable RobotX member discount for this ticket
+                  </label>
+                </div>
+                {robotxDiscountEnabled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        Discount Type
+                      </label>
+                      <select
+                        value={robotxDiscountType}
+                        onChange={(e) => setRobotxDiscountType(e.target.value)}
+                        className="w-full rounded-lg px-3 py-2 text-sm"
+                        style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                      >
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed_amount">Fixed Amount (CHF)</option>
+                      </select>
+                    </div>
+                    <Field
+                      label={robotxDiscountType === 'percentage' ? 'Discount (%)' : 'Discount (CHF)'}
+                      value={robotxDiscountValue}
+                      onChange={setRobotxDiscountValue}
+                      placeholder={robotxDiscountType === 'percentage' ? '10' : '15.00'}
+                      type="number"
+                    />
+                  </div>
                 )}
 
                 {/* ── Section: Registration Form ── */}

@@ -25,6 +25,28 @@
   const API_BASE = config.apiUrl.replace(/\/$/, '');
   const EVENT_ID = config.eventId;
 
+  // ─── Member session helpers ──────────────────────────────────────────────────
+
+  const MEMBER_SESSION_KEY = 'sratix_member_session';
+
+  function getMemberSession() {
+    try {
+      const raw = sessionStorage.getItem(MEMBER_SESSION_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data.eventId !== EVENT_ID) { sessionStorage.removeItem(MEMBER_SESSION_KEY); return null; }
+      return data;
+    } catch { return null; }
+  }
+
+  function setMemberSession(data) {
+    sessionStorage.setItem(MEMBER_SESSION_KEY, JSON.stringify({ ...data, eventId: EVENT_ID }));
+  }
+
+  function clearMemberSession() {
+    sessionStorage.removeItem(MEMBER_SESSION_KEY);
+  }
+
   // ─── API helpers ─────────────────────────────────────────────────────────────
 
   async function apiFetch(endpoint, options = {}) {
@@ -49,30 +71,298 @@
     const eventId = container.dataset.eventId || EVENT_ID;
     const layout = container.dataset.layout || 'cards';
 
+    // Check for existing member session
+    const session = getMemberSession();
+    if (session && session.memberGroup) {
+      // Already authenticated — show tickets with member pricing
+      return loadAndRenderTickets(container, eventId, layout, session);
+    }
+
+    // Show member gate if enabled and no session yet
+    if (config.memberGateEnabled) {
+      renderMemberGate(container, eventId, layout);
+      return;
+    }
+
+    // No gate — regular flow
+    loadAndRenderTickets(container, eventId, layout, null);
+  }
+
+  async function loadAndRenderTickets(container, eventId, layout, memberSession) {
     try {
-      const ticketTypes = await apiFetch(`events/${eventId}/ticket-types/public`);
+      let endpoint = `events/${eventId}/ticket-types/public`;
+      const headers = {};
+      if (memberSession && memberSession.sessionToken) {
+        const params = new URLSearchParams();
+        params.set('memberGroup', memberSession.memberGroup);
+        if (memberSession.tier) params.set('memberTier', memberSession.tier);
+        endpoint += '?' + params.toString();
+        headers['Authorization'] = 'Bearer ' + memberSession.sessionToken;
+      }
+      const ticketTypes = await apiFetch(endpoint, { headers });
       if (!ticketTypes || ticketTypes.length === 0) {
         container.innerHTML = `<p class="sratix-info">${escHtml(t('tickets.noTickets'))}</p>`;
         return;
       }
-      container.innerHTML = renderTicketCards(ticketTypes, layout);
+      let html = '';
+      if (memberSession && memberSession.memberGroup === 'sra' && memberSession.firstName) {
+        html += renderWelcomeBanner(memberSession);
+      } else if (memberSession && memberSession.memberGroup) {
+        html += renderWelcomeBanner(memberSession);
+      }
+      html += renderTicketCards(ticketTypes, layout, memberSession);
+      container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
+      // Bind "change member type" link
+      const changeBtn = container.querySelector('[data-action="change-member"]');
+      if (changeBtn) {
+        changeBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          clearMemberSession();
+          initTicketsWidget();
+        });
+      }
     } catch (err) {
       console.error('[SRAtix] Failed to load tickets:', err);
+      // If member session expired, clear and retry without it
+      if (memberSession && err.message && err.message.includes('401')) {
+        clearMemberSession();
+        loadAndRenderTickets(container, eventId, layout, null);
+        return;
+      }
       container.innerHTML = `<p class="sratix-error">${escHtml(t('tickets.loadError'))}</p>`;
     }
   }
 
-  function renderTicketCards(types, layout) {
-    const cls = layout === 'list' ? 'sratix-list' : 'sratix-cards';
-    return `<div class="${cls}">${types.map(renderCard).join('')}</div>`;
+  function renderWelcomeBanner(session) {
+    let msg = '';
+    if (session.memberGroup === 'sra' && session.firstName) {
+      const tierLabel = session.tier ? session.tier.replace(/_/g, ' ') : '';
+      msg = escHtml(t('memberGate.welcomeSra', {
+        name: session.firstName,
+        tier: tierLabel,
+      }));
+    } else if (session.memberGroup === 'robotx') {
+      msg = escHtml(t('memberGate.welcomeRobotx'));
+    }
+    return `<div class="sratix-welcome-banner">
+      <span class="sratix-welcome-text">${msg}</span>
+      <a href="#" data-action="change-member" class="sratix-welcome-change">${escHtml(t('memberGate.changeType'))}</a>
+    </div>`;
   }
 
-  function renderCard(tt) {
+  // ─── Member gate screen ──────────────────────────────────────────────────────
+
+  function renderMemberGate(container, eventId, layout) {
+    const sraLogo = config.sraLogoUrl
+      ? `<img src="${escAttr(config.sraLogoUrl)}" alt="SRA" class="sratix-member-btn__logo" />`
+      : '<span class="sratix-member-btn__icon">🔵</span>';
+    const robotxLogo = config.robotxLogoUrl
+      ? `<img src="${escAttr(config.robotxLogoUrl)}" alt="RobotX" class="sratix-member-btn__logo" />`
+      : '<span class="sratix-member-btn__icon">🔴</span>';
+
+    container.innerHTML = `
+      <div class="sratix-member-gate">
+        <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
+        <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
+        <div class="sratix-member-gate__buttons">
+          <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
+            ${sraLogo}
+            <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
+          </button>
+          <button class="sratix-member-btn sratix-member-btn--robotx" data-member="robotx">
+            ${robotxLogo}
+            <span class="sratix-member-btn__label">${escHtml(t('memberGate.robotxLabel'))}</span>
+          </button>
+        </div>
+        <button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
+          ${escHtml(t('memberGate.regularLabel'))}
+        </button>
+      </div>
+    `;
+
+    container.querySelector('[data-member="sra"]').addEventListener('click', function () {
+      renderSraLoginForm(container, eventId, layout);
+    });
+    container.querySelector('[data-member="robotx"]').addEventListener('click', function () {
+      renderRobotxCodeForm(container, eventId, layout);
+    });
+    container.querySelector('[data-member="none"]').addEventListener('click', function () {
+      setMemberSession({ memberGroup: 'none' });
+      loadAndRenderTickets(container, eventId, layout, null);
+    });
+  }
+
+  // ─── SRA login form ──────────────────────────────────────────────────────────
+
+  function renderSraLoginForm(container, eventId, layout) {
+    container.innerHTML = `
+      <div class="sratix-login-form">
+        <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
+        <h2 class="sratix-login-form__title">${escHtml(t('memberGate.sraLoginTitle'))}</h2>
+        <p class="sratix-login-form__hint">${escHtml(t('memberGate.sraLoginHint'))}</p>
+        <div class="sratix-field">
+          <label class="sratix-label" for="sratix-sra-email">${escHtml(t('reg.email'))}</label>
+          <input class="sratix-input" id="sratix-sra-email" type="email" autocomplete="email" />
+        </div>
+        <div class="sratix-field">
+          <label class="sratix-label" for="sratix-sra-password">${escHtml(t('memberGate.password'))}</label>
+          <input class="sratix-input" id="sratix-sra-password" type="password" autocomplete="current-password" />
+        </div>
+        <p class="sratix-error-msg" id="sratix-sra-error" style="display:none"></p>
+        <button class="sratix-btn sratix-btn--primary sratix-login-form__submit" id="sratix-sra-submit">
+          ${escHtml(t('memberGate.sraSubmit'))}
+        </button>
+      </div>
+    `;
+
+    container.querySelector('#sratix-gate-back').addEventListener('click', function (e) {
+      e.preventDefault();
+      renderMemberGate(container, eventId, layout);
+    });
+
+    const submitBtn = container.querySelector('#sratix-sra-submit');
+    const errorEl = container.querySelector('#sratix-sra-error');
+
+    submitBtn.addEventListener('click', async function () {
+      errorEl.style.display = 'none';
+      const email = container.querySelector('#sratix-sra-email').value.trim();
+      const password = container.querySelector('#sratix-sra-password').value;
+
+      if (!email || !password) {
+        errorEl.textContent = t('memberGate.sraFieldsRequired');
+        errorEl.style.display = '';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('reg.pleaseWait');
+
+      try {
+        const res = await apiFetch('auth/sra-verify', {
+          method: 'POST',
+          body: JSON.stringify({ email, password, eventId }),
+        });
+
+        if (res.authenticated) {
+          setMemberSession({
+            memberGroup: 'sra',
+            tier: res.membershipTier || null,
+            firstName: res.firstName || '',
+            lastName: res.lastName || '',
+            sessionToken: res.sessionToken,
+          });
+          loadAndRenderTickets(container, eventId, layout, getMemberSession());
+        } else {
+          errorEl.textContent = t('memberGate.sraInvalid');
+          errorEl.style.display = '';
+        }
+      } catch (err) {
+        errorEl.textContent = err.message || t('memberGate.sraError');
+        errorEl.style.display = '';
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('memberGate.sraSubmit');
+    });
+
+    // Allow Enter key to submit
+    container.querySelector('#sratix-sra-password').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); }
+    });
+  }
+
+  // ─── RobotX code entry form ──────────────────────────────────────────────────
+
+  function renderRobotxCodeForm(container, eventId, layout) {
+    container.innerHTML = `
+      <div class="sratix-login-form">
+        <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
+        <h2 class="sratix-login-form__title">${escHtml(t('memberGate.robotxTitle'))}</h2>
+        <p class="sratix-login-form__hint">${escHtml(t('memberGate.robotxHint'))}</p>
+        <div class="sratix-field">
+          <label class="sratix-label" for="sratix-robotx-code">${escHtml(t('memberGate.robotxCodeLabel'))}</label>
+          <input class="sratix-input" id="sratix-robotx-code" type="text" autocomplete="off" />
+        </div>
+        <p class="sratix-error-msg" id="sratix-robotx-error" style="display:none"></p>
+        <button class="sratix-btn sratix-btn--primary sratix-login-form__submit" id="sratix-robotx-submit">
+          ${escHtml(t('memberGate.robotxSubmit'))}
+        </button>
+      </div>
+    `;
+
+    container.querySelector('#sratix-gate-back').addEventListener('click', function (e) {
+      e.preventDefault();
+      renderMemberGate(container, eventId, layout);
+    });
+
+    const submitBtn = container.querySelector('#sratix-robotx-submit');
+    const errorEl = container.querySelector('#sratix-robotx-error');
+
+    submitBtn.addEventListener('click', async function () {
+      errorEl.style.display = 'none';
+      const code = container.querySelector('#sratix-robotx-code').value.trim();
+
+      if (!code) {
+        errorEl.textContent = t('memberGate.robotxFieldRequired');
+        errorEl.style.display = '';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('reg.pleaseWait');
+
+      try {
+        const res = await apiFetch('auth/robotx-verify', {
+          method: 'POST',
+          body: JSON.stringify({ eventId, code }),
+        });
+
+        if (res.valid) {
+          setMemberSession({
+            memberGroup: 'robotx',
+            sessionToken: res.sessionToken,
+          });
+          loadAndRenderTickets(container, eventId, layout, getMemberSession());
+        } else {
+          errorEl.textContent = t('memberGate.robotxInvalid');
+          errorEl.style.display = '';
+        }
+      } catch (err) {
+        errorEl.textContent = err.message || t('memberGate.robotxError');
+        errorEl.style.display = '';
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('memberGate.robotxSubmit');
+    });
+
+    container.querySelector('#sratix-robotx-code').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); }
+    });
+  }
+
+  function renderTicketCards(types, layout, memberSession) {
+    const cls = layout === 'list' ? 'sratix-list' : 'sratix-cards';
+    return `<div class="${cls}">${types.map(function (tt) { return renderCard(tt, memberSession); }).join('')}</div>`;
+  }
+
+  function renderCard(tt, memberSession) {
     const soldOut = tt.soldOut || (tt.available !== null && tt.available <= 0);
-    const priceHtml = tt.priceCents === 0
-      ? `<span class="sratix-price-free">${escHtml(t('tickets.free'))}</span>`
-      : `<div class="sratix-price">${formatPrice(tt.priceCents, tt.currency)}</div>`;
+
+    let priceHtml;
+    if (tt.priceCents === 0) {
+      priceHtml = `<span class="sratix-price-free">${escHtml(t('tickets.free'))}</span>`;
+    } else if (memberSession && tt.memberDiscount && tt.memberDiscount.discountCents > 0) {
+      const memberPriceCents = Math.max(0, tt.priceCents - tt.memberDiscount.discountCents);
+      priceHtml = `<div class="sratix-price-wrap">
+        <span class="sratix-price-original">${formatPrice(tt.priceCents, tt.currency)}</span>
+        <span class="sratix-price-member">${formatPrice(memberPriceCents, tt.currency)}</span>
+        <span class="sratix-savings-badge">${escHtml(tt.memberDiscount.discountLabel)}</span>
+      </div>`;
+    } else {
+      priceHtml = `<div class="sratix-price">${formatPrice(tt.priceCents, tt.currency)}</div>`;
+    }
     const availHtml = tt.available !== null && !soldOut
       ? `<span class="sratix-avail">${escHtml(t('tickets.remaining', { n: tt.available }))}</span>`
       : '';
@@ -670,6 +960,14 @@
         if (useCustomForm && schema && formData && Object.keys(formData).length > 0) {
           payload.formSchemaId = schema.id;
           payload.formData = formData;
+        }
+
+        // Include member context for discount validation
+        var memberSess = getMemberSession();
+        if (memberSess && memberSess.memberGroup && memberSess.memberGroup !== 'none') {
+          payload.memberGroup = memberSess.memberGroup;
+          if (memberSess.tier) payload.memberTier = memberSess.tier;
+          if (memberSess.sessionToken) payload.memberSessionToken = memberSess.sessionToken;
         }
 
         var result = await apiFetch('payments/checkout/public', {

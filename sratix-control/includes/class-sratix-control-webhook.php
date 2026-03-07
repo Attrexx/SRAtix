@@ -19,6 +19,12 @@ class SRAtix_Control_Webhook {
 			'callback'            => array( $this, 'handle_webhook' ),
 			'permission_callback' => array( $this, 'verify_signature' ),
 		) );
+
+		register_rest_route( 'sratix-control/v1', '/auth/sra-verify', array(
+			'methods'             => 'POST',
+			'callback'            => array( $this, 'handle_sra_verify' ),
+			'permission_callback' => '__return_true',
+		) );
 	}
 
 	/**
@@ -51,6 +57,139 @@ class SRAtix_Control_Webhook {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Handle SRA credential verification from SRAtix Server.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function handle_sra_verify( $request ) {
+		// Rate limiting via transients.
+		$ip            = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0' ) );
+		$transient_key = 'sratix_verify_attempt_' . md5( $ip );
+		$attempts      = (int) get_transient( $transient_key );
+
+		if ( $attempts >= 10 ) {
+			return new \WP_REST_Response( array(
+				'valid' => false,
+				'error' => 'rate_limited',
+			), 429 );
+		}
+
+		set_transient( $transient_key, $attempts + 1, 5 * MINUTE_IN_SECONDS );
+
+		// HMAC signature verification (Server→WP direction uses webhook secret).
+		$secret    = get_option( 'sratix_webhook_secret', '' );
+		$signature = $request->get_header( 'X-SRAtix-Signature' );
+		$body      = $request->get_body();
+		$expected  = hash_hmac( 'sha256', $body, $secret );
+
+		if ( ! $signature || ! hash_equals( $expected, $signature ) ) {
+			return new \WP_REST_Response( array(
+				'valid' => false,
+				'error' => 'unauthorized',
+			), 403 );
+		}
+
+		// Extract credentials.
+		$params   = $request->get_json_params();
+		$email    = sanitize_email( $params['email'] ?? '' );
+		$password = $params['password'] ?? '';
+
+		if ( ! $email || ! $password ) {
+			return new \WP_REST_Response( array(
+				'valid' => false,
+				'error' => 'invalid_credentials',
+			), 200 );
+		}
+
+		// Authenticate.
+		$user = wp_authenticate( $email, $password );
+
+		if ( is_wp_error( $user ) ) {
+			return new \WP_REST_Response( array(
+				'valid' => false,
+				'error' => 'invalid_credentials',
+			), 200 );
+		}
+
+		// Resolve membership tier.
+		$tier = $this->resolve_membership_tier( $user->ID );
+
+		return new \WP_REST_Response( array(
+			'valid'          => true,
+			'wpUserId'       => $user->ID,
+			'email'          => $user->user_email,
+			'firstName'      => $user->first_name,
+			'lastName'       => $user->last_name,
+			'membershipTier' => $tier,
+			'roles'          => $user->roles,
+		), 200 );
+	}
+
+	/**
+	 * Resolve the SRA membership tier for a given user.
+	 *
+	 * Tries: (1) user meta, (2) ProfileGrid group, (3) WP roles.
+	 *
+	 * @param int $user_id
+	 * @return string|null
+	 */
+	private function resolve_membership_tier( $user_id ) {
+		// Approach 1: Direct user meta.
+		$tier = get_user_meta( $user_id, 'sratix_membership_tier', true );
+		if ( $tier ) {
+			return $tier;
+		}
+
+		// Approach 2: Reverse-map from ProfileGrid group ID.
+		$group_tier_map = array(
+			18 => 'academic',
+			17 => 'startup',
+			16 => 'industry_large',
+			15 => 'industry_medium',
+			14 => 'industry_small',
+			13 => 'student',
+			12 => 'retired',
+			11 => 'individual',
+		);
+
+		if ( function_exists( 'pm_user_group_ids' ) ) {
+			$groups = pm_user_group_ids( $user_id );
+			foreach ( $group_tier_map as $gid => $t ) {
+				if ( in_array( (string) $gid, array_map( 'strval', (array) $groups ), true ) ) {
+					return $t;
+				}
+			}
+		}
+
+		// Approach 3: WP role fallback.
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			return null;
+		}
+
+		$roles        = $user->roles;
+		$role_tier_map = array(
+			'student'           => 'student',
+			'individual_member' => 'individual',
+			'retired_member'    => 'retired',
+			'academic_member'   => 'academic',
+			'startup_member'    => 'startup',
+			'industry_small'    => 'industry_small',
+			'industry_medium'   => 'industry_medium',
+			'industry_large'    => 'industry_large',
+		);
+
+		foreach ( $role_tier_map as $role => $t ) {
+			if ( in_array( $role, $roles, true ) ) {
+				return $t;
+			}
+		}
+
+		return null;
 	}
 
 	/**

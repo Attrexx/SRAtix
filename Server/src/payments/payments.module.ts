@@ -12,9 +12,11 @@ import { OutgoingWebhooksModule } from '../outgoing-webhooks/outgoing-webhooks.m
 import { AttendeesModule } from '../attendees/attendees.module';
 import { SettingsModule } from '../settings/settings.module';
 import { FormsModule } from '../forms/forms.module';
+import { AuthModule } from '../auth/auth.module';
+import { TicketTypesModule } from '../ticket-types/ticket-types.module';
 
 @Module({
-  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule],
+  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
   providers: [StripeService],
   exports: [StripeService],

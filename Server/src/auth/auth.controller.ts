@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthService, TokenPair } from './auth.service';
-import { IsNumber, IsArray, IsString, IsOptional, IsEmail, MinLength } from 'class-validator';
+import { IsNumber, IsArray, IsString, IsOptional, IsEmail, MinLength, IsNotEmpty } from 'class-validator';
 import { RateLimit } from '../common/guards/rate-limit.guard';
 import { FastifyRequest, FastifyReply } from 'fastify';
 
@@ -72,6 +72,29 @@ class LoginDto {
   @IsString()
   @MinLength(1)
   password!: string;
+}
+
+class SraVerifyDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  eventId!: string;
+}
+
+class RobotxVerifyDto {
+  @IsString()
+  @IsNotEmpty()
+  eventId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
 }
 
 @Controller('auth')
@@ -229,5 +252,28 @@ export class AuthController {
   @Get('confirm/:token')
   async confirmEmail(@Param('token') token: string) {
     return this.authService.confirmEmail(token);
+  }
+
+  /**
+   * POST /api/auth/sra-verify
+   * Proxy SRA credential verification through to swiss-robotics.org.
+   * Returns a short-lived session token encoding the member's tier.
+   */
+  @Post('sra-verify')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 10, windowSec: 60 })
+  async sraVerify(@Body() dto: SraVerifyDto) {
+    return this.authService.verifySraMember(dto.email, dto.password, dto.eventId);
+  }
+
+  /**
+   * POST /api/auth/robotx-verify
+   * Verify a RobotX shared access code for a given event.
+   */
+  @Post('robotx-verify')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 20, windowSec: 60 })
+  async robotxVerify(@Body() dto: RobotxVerifyDto) {
+    return this.authService.verifyRobotxCode(dto.eventId, dto.code);
   }
 }

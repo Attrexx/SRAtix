@@ -7,6 +7,7 @@ import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+import { toast } from 'sonner';
 
 export default function EventOverviewPage() {
   const { t } = useI18n();
@@ -235,6 +236,91 @@ export default function EventOverviewPage() {
             })
           )}
         </div>
+      </div>
+
+      {/* RobotX Access Code */}
+      <RobotxAccessCodeCard event={event} />
+    </div>
+  );
+}
+
+function RobotxAccessCodeCard({ event }: { event: Event }) {
+  const meta = (event.meta ?? {}) as Record<string, unknown>;
+  const [code, setCode] = useState((meta.robotxAccessCode as string) ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.updateEvent(event.id, {
+        meta: { ...meta, robotxAccessCode: code },
+      } as Partial<Event>);
+      toast.success('RobotX access code saved');
+    } catch {
+      toast.error('Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generate = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)];
+    setCode(result);
+  };
+
+  return (
+    <div
+      className="mt-6 rounded-xl p-5"
+      style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <h2 className="mb-3 text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+        RobotX Access Code
+      </h2>
+      <p className="mb-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+        Shared code for ETH RobotX members to unlock member discounts on tickets.
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="e.g. ROBOTX2026"
+          className="flex-1 rounded-lg px-3 py-2 text-sm font-mono"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text)',
+          }}
+        />
+        <button
+          onClick={generate}
+          className="rounded-lg px-3 py-2 text-xs font-medium"
+          style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+        >
+          Generate
+        </button>
+        <button
+          onClick={() => { navigator.clipboard.writeText(code); toast.success('Copied!'); }}
+          className="rounded-lg px-3 py-2 text-xs font-medium"
+          style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+          disabled={!code}
+        >
+          Copy
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          style={{ background: 'var(--color-primary)' }}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
       </div>
     </div>
   );

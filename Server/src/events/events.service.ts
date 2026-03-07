@@ -63,6 +63,7 @@ export class EventsService {
       venue: string;
       description: string;
       status: string;
+      meta: Record<string, unknown>;
     }>,
   ) {
     await this.findOne(id, orgId); // Ensure it exists (+ ownership if orgId set)

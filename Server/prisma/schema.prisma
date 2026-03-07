@@ -107,8 +107,9 @@ model TicketType {
   // ── Ticket category & membership linkage ──────────────────
   category      String   @default("general") @db.VarChar(30) // general | individual | legal
   membershipTier String? @db.VarChar(50) // student | individual | retired | industry_small | industry_medium | industry_large | academic | startup
-  wpProductId   Int?     // WooCommerce product ID to create on SRA for membership-inclusive tickets
-  // ──────────────────────────────────────────────────────────
+  wpProductId   Int?     // WooCommerce product ID to create on SRA for membership-inclusive tickets  // ── RobotX flat discount ──────────────────────────────────────
+  robotxDiscountType   String? @db.VarChar(20) // percentage | fixed_amount
+  robotxDiscountValue  Int?    // 1–100 for percentage, or cents for fixed_amount  // ──────────────────────────────────────────────────────────
   meta          Json?    // badge template ref, visibility rules, etc.
   createdAt     DateTime @default(now()) @db.DateTime(3)
   updatedAt     DateTime @updatedAt @db.DateTime(3)
@@ -118,11 +119,32 @@ model TicketType {
   orderItems      OrderItem[]
   tickets         Ticket[]
   pricingVariants PricingVariant[]
+  sraDiscounts    TicketTypeSraDiscount[]
 
   @@index([eventId])
   @@index([status])
   @@index([category])
   @@map("ticket_types")
+}
+
+// ============================================================================
+// SRA MEMBER DISCOUNTS (per ticket type × membership tier)
+// ============================================================================
+
+model TicketTypeSraDiscount {
+  id              String @id @default(uuid()) @db.Char(36)
+  ticketTypeId    String @db.Char(36)
+  membershipTier  String @db.VarChar(50) // student | individual | retired | industry_small | industry_medium | industry_large | academic | startup
+  discountType    String @db.VarChar(20) // percentage | fixed_amount
+  discountValue   Int    // 1–100 for percentage, or cents for fixed_amount
+  createdAt       DateTime @default(now()) @db.DateTime(3)
+  updatedAt       DateTime @updatedAt @db.DateTime(3)
+
+  ticketType TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketTypeId, membershipTier])
+  @@index([ticketTypeId])
+  @@map("ticket_type_sra_discounts")
 }
 
 // ============================================================================
