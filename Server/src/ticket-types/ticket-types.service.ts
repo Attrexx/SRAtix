@@ -602,17 +602,17 @@ export class TicketTypesService {
     });
 
     return ticketTypes.map((tt) => {
-      const resolvedPrice = this.resolvePrice(tt.pricingVariants, tt.priceCents);
+      const resolvedPrice = this.resolvePrice(tt, tt.pricingVariants);
       const remaining = tt.quantity != null ? Math.max(0, tt.quantity - tt.sold) : null;
 
       // Calculate member discount if applicable
       let memberDiscount: { discountCents: number; discountLabel: string; discountedPriceCents: number } | undefined;
       if (memberGroup) {
-        const discount = this.calculateMemberDiscount(tt, resolvedPrice.priceCents, memberGroup, memberTier);
+        const discount = this.calculateMemberDiscount(tt, resolvedPrice.activePriceCents, memberGroup, memberTier);
         if (discount) {
           memberDiscount = {
             ...discount,
-            discountedPriceCents: resolvedPrice.priceCents - discount.discountCents,
+            discountedPriceCents: resolvedPrice.activePriceCents - discount.discountCents,
           };
         }
       }
@@ -634,8 +634,8 @@ export class TicketTypesService {
         id: tt.id,
         name: tt.name,
         description: tt.description,
-        priceCents: resolvedPrice.priceCents,
-        priceLabel: resolvedPrice.label,
+        priceCents: resolvedPrice.activePriceCents,
+        priceLabel: resolvedPrice.activeVariant,
         currency: tt.currency,
         remaining,
         maxPerOrder: tt.maxPerOrder,

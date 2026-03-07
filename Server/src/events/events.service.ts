@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** Slug for the auto-created default organization. */
@@ -63,7 +64,7 @@ export class EventsService {
       venue: string;
       description: string;
       status: string;
-      meta: Record<string, unknown>;
+      meta: Prisma.InputJsonValue;
     }>,
   ) {
     await this.findOne(id, orgId); // Ensure it exists (+ ownership if orgId set)
