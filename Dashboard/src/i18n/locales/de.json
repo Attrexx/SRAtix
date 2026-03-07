@@ -191,6 +191,11 @@
   "events.settings.deleteEvent": "Veranstaltung löschen",
   "events.settings.deleteEventHint": "Diese Veranstaltung und alle zugehörigen Daten dauerhaft löschen. Dies kann nicht rückgängig gemacht werden.",
   "events.settings.deleteNotAvailable": "Kontaktieren Sie einen Super-Admin, um Veranstaltungen zu löschen.",
+  "events.settings.robotxAccessCode": "RobotX-Zugangscode",
+  "events.settings.robotxAccessCodeHint": "Gemeinsamer Code für ETH RobotX-Mitglieder zur Freischaltung von Mitgliederrabatten.",
+  "events.settings.robotxGenerate": "Generieren",
+  "events.settings.robotxCopy": "Kopieren",
+  "events.settings.robotxSaveNote": "Klicken Sie oben auf Änderungen speichern, um den Code zu sichern.",
 
   "tickets.title": "Tickets",
   "tickets.subtitle": "{count} Ticket(s) konfiguriert",

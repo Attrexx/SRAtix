@@ -191,6 +191,11 @@
   "events.settings.deleteEvent": "Supprimer l'événement",
   "events.settings.deleteEventHint": "Supprimer définitivement cet événement et toutes les données associées. Cette action est irréversible.",
   "events.settings.deleteNotAvailable": "Contactez un super administrateur pour supprimer des événements.",
+  "events.settings.robotxAccessCode": "Code d'accès RobotX",
+  "events.settings.robotxAccessCodeHint": "Code partagé pour les membres ETH RobotX afin de débloquer les tarifs réduits.",
+  "events.settings.robotxGenerate": "Générer",
+  "events.settings.robotxCopy": "Copier",
+  "events.settings.robotxSaveNote": "Cliquez sur Enregistrer ci-dessus pour valider le code.",
 
   "tickets.title": "Billets",
   "tickets.subtitle": "{count} billet(s) configuré(s)",

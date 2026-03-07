@@ -56,6 +56,7 @@ export default function EventSettingsPage() {
   const [maxCapacity, setMaxCapacity] = useState('');
   const [currency, setCurrency] = useState('CHF');
   const [status, setStatus] = useState('draft');
+  const [robotxCode, setRobotxCode] = useState('');
 
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
@@ -70,6 +71,8 @@ export default function EventSettingsPage() {
     setMaxCapacity(ev.maxCapacity != null ? String(ev.maxCapacity) : '');
     setCurrency(ev.currency);
     setStatus(ev.status);
+    const meta = (ev.meta ?? {}) as Record<string, unknown>;
+    setRobotxCode((meta.robotxAccessCode as string) ?? '');
   }, []);
 
   useEffect(() => {
@@ -104,6 +107,10 @@ export default function EventSettingsPage() {
         maxCapacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
         currency,
         status,
+        meta: {
+          ...((event.meta ?? {}) as Record<string, unknown>),
+          robotxAccessCode: robotxCode.trim() || undefined,
+        },
       };
       const updated = await api.updateEvent(id, payload);
       setEvent(updated);
@@ -224,6 +231,52 @@ export default function EventSettingsPage() {
             onChange={setStatus}
             options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: t(s.label) }))}
           />
+        </Section>
+
+        {/* ── RobotX Access Code ── */}
+        <Section title={t('events.settings.robotxAccessCode')}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.robotxAccessCodeHint')}
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={robotxCode}
+              onChange={(e) => setRobotxCode(e.target.value.toUpperCase())}
+              placeholder="e.g. ROBOTX2026"
+              className="flex-1 rounded-lg px-3 py-2 text-sm font-mono"
+              style={{
+                background: 'var(--color-bg-subtle)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text)',
+              }}
+            />
+            <button
+              onClick={() => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let result = '';
+                const rnd = new Uint8Array(8);
+                crypto.getRandomValues(rnd);
+                for (let i = 0; i < 8; i++) result += chars[rnd[i] % chars.length];
+                setRobotxCode(result);
+              }}
+              className="rounded-lg px-3 py-2 text-xs font-medium"
+              style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+            >
+              {t('events.settings.robotxGenerate')}
+            </button>
+            <button
+              onClick={() => { navigator.clipboard.writeText(robotxCode); toast.success('Copied!'); }}
+              className="rounded-lg px-3 py-2 text-xs font-medium"
+              style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+              disabled={!robotxCode}
+            >
+              {t('events.settings.robotxCopy')}
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.robotxSaveNote')}
+          </p>
         </Section>
 
         {/* ── Danger Zone ── */}

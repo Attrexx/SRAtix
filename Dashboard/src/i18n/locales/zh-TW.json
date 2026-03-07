@@ -191,6 +191,11 @@
   "events.settings.deleteEvent": "刪除活動",
   "events.settings.deleteEventHint": "永久刪除此活動及所有相關資料，此操作無法復原。",
   "events.settings.deleteNotAvailable": "請聯繫超級管理員以刪除活動。",
+  "events.settings.robotxAccessCode": "RobotX 存取碼",
+  "events.settings.robotxAccessCodeHint": "ETH RobotX 會員共用代碼，用於解鎖會員折扣。",
+  "events.settings.robotxGenerate": "產生",
+  "events.settings.robotxCopy": "複製",
+  "events.settings.robotxSaveNote": "點擊上方的儲存以保存代碼。",
 
   "tickets.title": "票券管理",
   "tickets.subtitle": "已設定 {count} 張票券",

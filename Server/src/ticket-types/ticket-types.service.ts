@@ -603,7 +603,8 @@ export class TicketTypesService {
 
     return ticketTypes.map((tt) => {
       const resolvedPrice = this.resolvePrice(tt, tt.pricingVariants);
-      const remaining = tt.quantity != null ? Math.max(0, tt.quantity - tt.sold) : null;
+      const available = tt.quantity != null ? Math.max(0, tt.quantity - tt.sold) : null;
+      const soldOut = tt.quantity != null && tt.sold >= tt.quantity;
 
       // Calculate member discount if applicable
       let memberDiscount: { discountCents: number; discountLabel: string; discountedPriceCents: number } | undefined;
@@ -637,7 +638,8 @@ export class TicketTypesService {
         priceCents: resolvedPrice.activePriceCents,
         priceLabel: resolvedPrice.activeVariant,
         currency: tt.currency,
-        remaining,
+        available,
+        soldOut,
         maxPerOrder: tt.maxPerOrder,
         category: tt.category,
         membershipTier: tt.membershipTier,

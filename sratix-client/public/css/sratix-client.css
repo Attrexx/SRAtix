@@ -61,6 +61,8 @@
 	border: 1px solid var(--sratix-border);
 	border-radius: 8px;
 	padding: 18px;
+	display: flex;
+	flex-direction: column;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -87,6 +89,18 @@
 	font-weight: 700;
 	margin: 0 0 12px;
 	color: var(--sratix-text);
+}
+
+.sratix-ticket-card .sratix-btn,
+.sratix-ticket-card .sratix-badge--sold-out {
+	margin-top: auto;
+}
+
+/* ── Login Form Logo ── */
+.sratix-login-form__logo {
+	max-height: 48px;
+	object-fit: contain;
+	margin-bottom: 8px;
 }
 
 /* ── Buttons ── */
@@ -618,7 +632,8 @@
 }
 
 .sratix-member-btn:hover {
-	border-color: var(--sratix-border-h);
+	border-color: #fff;
+	background: rgba(255,255,255,0.05);
 	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 	transform: translateY(-2px);
 }
@@ -632,13 +647,17 @@
 }
 
 .sratix-member-btn--regular {
-	width: auto;
+	width: 100%;
+	max-width: 420px;
 	min-height: auto;
 	flex-direction: row;
-	padding: 12px 28px;
+	justify-content: center;
+	padding: 14px 28px;
+	margin: 4px auto 0;
 	border-style: dashed;
 	font-weight: 400;
-	opacity: 0.8;
+	opacity: 0.75;
+	font-size: 0.9em;
 }
 
 .sratix-member-btn--regular:hover {
@@ -646,8 +665,8 @@
 }
 
 .sratix-member-btn__logo {
-	max-width: 80px;
-	max-height: 48px;
+	max-width: 100px;
+	max-height: 56px;
 	object-fit: contain;
 }
 
@@ -718,12 +737,17 @@
 .sratix-welcome-change {
 	color: var(--sratix-text-muted);
 	text-decoration: none;
-	font-size: 0.85em;
+	font-size: 0.8em;
 	white-space: nowrap;
+	padding: 4px 10px;
+	border: 1px solid var(--sratix-border);
+	border-radius: 4px;
+	transition: border-color 0.2s ease, color 0.2s ease;
 }
 
 .sratix-welcome-change:hover {
 	color: var(--sratix-text);
+	border-color: var(--sratix-border-h);
 }
 
 /* ── Member Pricing Display ── */

@@ -138,10 +138,10 @@
     let msg = '';
     if (session.memberGroup === 'sra' && session.firstName) {
       const tierLabel = session.tier ? session.tier.replace(/_/g, ' ') : '';
-      msg = escHtml(t('memberGate.welcomeSra', {
-        name: session.firstName,
-        tier: tierLabel,
-      }));
+      msg = t('memberGate.welcomeSra', {
+        name: '<strong>' + escHtml(session.firstName) + '</strong>',
+        tier: escHtml(tierLabel),
+      });
     } else if (session.memberGroup === 'robotx') {
       msg = escHtml(t('memberGate.welcomeRobotx'));
     }
@@ -275,9 +275,14 @@
   // ─── RobotX code entry form ──────────────────────────────────────────────────
 
   function renderRobotxCodeForm(container, eventId, layout) {
+    const robotxLogo = config.robotxLogoUrl
+      ? `<img src="${escAttr(config.robotxLogoUrl)}" alt="RobotX" class="sratix-login-form__logo" />`
+      : '';
+
     container.innerHTML = `
       <div class="sratix-login-form">
         <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
+        ${robotxLogo}
         <h2 class="sratix-login-form__title">${escHtml(t('memberGate.robotxTitle'))}</h2>
         <p class="sratix-login-form__hint">${escHtml(t('memberGate.robotxHint'))}</p>
         <div class="sratix-field">

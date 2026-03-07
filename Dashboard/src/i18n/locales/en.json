@@ -191,6 +191,11 @@
   "events.settings.deleteEvent": "Delete Event",
   "events.settings.deleteEventHint": "Permanently delete this event and all associated data. This cannot be undone.",
   "events.settings.deleteNotAvailable": "Contact a super admin to delete events.",
+  "events.settings.robotxAccessCode": "RobotX Access Code",
+  "events.settings.robotxAccessCodeHint": "Shared code for ETH RobotX members to unlock member discounts on tickets.",
+  "events.settings.robotxGenerate": "Generate",
+  "events.settings.robotxCopy": "Copy",
+  "events.settings.robotxSaveNote": "Click Save Changes above to persist the code.",
 
   "tickets.title": "Tickets",
   "tickets.subtitle": "{count} ticket(s) configured",

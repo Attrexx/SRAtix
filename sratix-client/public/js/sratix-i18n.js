@@ -89,7 +89,7 @@ const sratixI18n = (function () {
 
       // Member gate
       'memberGate.title':          'Are you a member?',
-      'memberGate.subtitle':       'Members may be eligible for discounted tickets.',
+      'memberGate.subtitle':       'Members may be eligible for discounted tickets and exclusive perks.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.robotxLabel':    'ETH RobotX',
       'memberGate.regularLabel':   'Continue without membership →',
@@ -110,7 +110,7 @@ const sratixI18n = (function () {
       'memberGate.robotxError':    'Verification failed. Please try again.',
       'memberGate.welcomeSra':     'Welcome, {name}! Your {tier} membership discount has been applied.',
       'memberGate.welcomeRobotx':  'RobotX member discount applied.',
-      'memberGate.changeType':     'Change',
+      'memberGate.changeType':     'Switch membership ↻',
     },
 
     fr: {
@@ -181,7 +181,7 @@ const sratixI18n = (function () {
       'schedule.comingSoon':     'Le programme sera publié prochainement.',
 
       'memberGate.title':          'Êtes-vous membre ?',
-      'memberGate.subtitle':       'Les membres peuvent bénéficier de tarifs réduits.',
+      'memberGate.subtitle':       'Les membres peuvent bénéficier de tarifs réduits et d’avantages exclusifs.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.robotxLabel':    'ETH RobotX',
       'memberGate.regularLabel':   'Continuer sans adhésion →',
@@ -202,7 +202,7 @@ const sratixI18n = (function () {
       'memberGate.robotxError':    'Échec de la vérification. Veuillez réessayer.',
       'memberGate.welcomeSra':     'Bienvenue, {name} ! Votre réduction membre {tier} a été appliquée.',
       'memberGate.welcomeRobotx':  'Réduction membre RobotX appliquée.',
-      'memberGate.changeType':     'Changer',
+      'memberGate.changeType':     'Changer d\u2019adh\u00e9sion \u21bb',
     },
 
     de: {
@@ -273,7 +273,7 @@ const sratixI18n = (function () {
       'schedule.comingSoon':     'Das Veranstaltungsprogramm wird in Kürze veröffentlicht.',
 
       'memberGate.title':          'Sind Sie Mitglied?',
-      'memberGate.subtitle':       'Mitglieder können von ermässigten Tickets profitieren.',
+      'memberGate.subtitle':       'Mitglieder können von ermässigten Tickets und exklusiven Vorteilen profitieren.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.robotxLabel':    'ETH RobotX',
       'memberGate.regularLabel':   'Ohne Mitgliedschaft fortfahren →',
@@ -294,7 +294,7 @@ const sratixI18n = (function () {
       'memberGate.robotxError':    'Überprüfung fehlgeschlagen. Bitte versuchen Sie es erneut.',
       'memberGate.welcomeSra':     'Willkommen, {name}! Ihr {tier}-Mitgliederrabatt wurde angewendet.',
       'memberGate.welcomeRobotx':  'RobotX-Mitgliederrabatt angewendet.',
-      'memberGate.changeType':     'Ändern',
+      'memberGate.changeType':     'Mitgliedschaft wechseln \u21bb',
     },
 
     it: {
@@ -365,7 +365,7 @@ const sratixI18n = (function () {
       'schedule.comingSoon':     'Il programma dell\'evento sarà pubblicato a breve.',
 
       'memberGate.title':          'Sei un membro?',
-      'memberGate.subtitle':       'I membri possono beneficiare di biglietti scontati.',
+      'memberGate.subtitle':       'I membri possono beneficiare di biglietti scontati e vantaggi esclusivi.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.robotxLabel':    'ETH RobotX',
       'memberGate.regularLabel':   'Continua senza iscrizione →',
@@ -386,7 +386,7 @@ const sratixI18n = (function () {
       'memberGate.robotxError':    'Verifica fallita. Riprova.',
       'memberGate.welcomeSra':     'Benvenuto, {name}! Lo sconto membro {tier} è stato applicato.',
       'memberGate.welcomeRobotx':  'Sconto membro RobotX applicato.',
-      'memberGate.changeType':     'Cambia',
+      'memberGate.changeType':     'Cambia iscrizione \u21bb',
     },
 
     'zh-TW': {
@@ -457,7 +457,7 @@ const sratixI18n = (function () {
       'schedule.comingSoon':     '活動議程即將公布。',
 
       'memberGate.title':          '您是會員嗎？',
-      'memberGate.subtitle':       '會員可享有折扣票價。',
+      'memberGate.subtitle':       '會員可享有折扣票價及專屬福利。',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.robotxLabel':    'ETH RobotX',
       'memberGate.regularLabel':   '以非會員身份繼續 →',
@@ -478,7 +478,7 @@ const sratixI18n = (function () {
       'memberGate.robotxError':    '驗證失敗，請重試。',
       'memberGate.welcomeSra':     '歡迎，{name}！您的 {tier} 會員折扣已套用。',
       'memberGate.welcomeRobotx':  'RobotX 會員折扣已套用。',
-      'memberGate.changeType':     '變更',
+      'memberGate.changeType':     '切換會員 ↻',
     },
   };
 
