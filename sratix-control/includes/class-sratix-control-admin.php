@@ -69,8 +69,54 @@ class SRAtix_Control_Admin {
 
 		add_settings_field( 'sratix_webhook_secret', __( 'Webhook Secret', 'sratix-control' ), function () {
 			$val = get_option( 'sratix_webhook_secret', '' );
-			echo '<input type="password" name="sratix_webhook_secret" value="' . esc_attr( $val ) . '" class="regular-text" />';
-			echo '<p class="description">' . esc_html__( 'Secret for verifying incoming webhooks from the Server.', 'sratix-control' ) . '</p>';
+			$has_val = ! empty( $val );
+			?>
+			<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+				<input type="password" id="sratix-webhook-secret" name="sratix_webhook_secret"
+				       value="<?php echo esc_attr( $val ); ?>" class="regular-text" />
+				<button type="button" id="sratix-whs-toggle" class="button"><?php esc_html_e( 'Show', 'sratix-control' ); ?></button>
+				<?php if ( $has_val ) : ?>
+				<button type="button" id="sratix-whs-copy" class="button"><?php esc_html_e( 'Copy', 'sratix-control' ); ?></button>
+				<?php endif; ?>
+				<button type="button" id="sratix-whs-roll" class="button"><?php esc_html_e( 'Generate New', 'sratix-control' ); ?></button>
+			</div>
+			<p class="description">
+				<?php esc_html_e( 'Secret for Server → WP HMAC verification. Must match WEBHOOK_SIGNING_SECRET on the SRAtix Server.', 'sratix-control' ); ?>
+			</p>
+			<script>
+			(function(){
+				var inp = document.getElementById('sratix-webhook-secret');
+				var toggleBtn = document.getElementById('sratix-whs-toggle');
+				var copyBtn = document.getElementById('sratix-whs-copy');
+				var rollBtn = document.getElementById('sratix-whs-roll');
+
+				toggleBtn.addEventListener('click', function(){
+					var show = inp.type === 'password';
+					inp.type = show ? 'text' : 'password';
+					toggleBtn.textContent = show ? '<?php echo esc_js( __( 'Hide', 'sratix-control' ) ); ?>' : '<?php echo esc_js( __( 'Show', 'sratix-control' ) ); ?>';
+				});
+
+				if (copyBtn) {
+					copyBtn.addEventListener('click', function(){
+						navigator.clipboard.writeText(inp.value).then(function(){
+							copyBtn.textContent = '<?php echo esc_js( __( 'Copied!', 'sratix-control' ) ); ?>';
+							setTimeout(function(){ copyBtn.textContent = '<?php echo esc_js( __( 'Copy', 'sratix-control' ) ); ?>'; }, 2000);
+						});
+					});
+				}
+
+				rollBtn.addEventListener('click', function(){
+					if (!confirm('<?php echo esc_js( __( 'Generate a new secret? You will need to update WEBHOOK_SIGNING_SECRET on the SRAtix Server .env and restart.', 'sratix-control' ) ); ?>')) return;
+					var arr = new Uint8Array(32);
+					crypto.getRandomValues(arr);
+					var hex = Array.from(arr).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+					inp.value = hex;
+					inp.type = 'text';
+					toggleBtn.textContent = '<?php echo esc_js( __( 'Hide', 'sratix-control' ) ); ?>';
+				});
+			})();
+			</script>
+			<?php
 		}, self::PAGE_SLUG, 'sratix_api_section' );
 	}
 

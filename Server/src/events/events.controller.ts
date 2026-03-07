@@ -91,6 +91,8 @@ export class EventsController {
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
+    if (dto.doorsOpen) data.doorsOpen = new Date(dto.doorsOpen);
+    if (dto.doorsOpen === null) data.doorsOpen = null;
     // Super admins can update any event
     const updated = this.isSuperAdmin(user)
       ? await this.eventsService.update(id, undefined, data)

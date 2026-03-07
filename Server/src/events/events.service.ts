@@ -61,8 +61,13 @@ export class EventsService {
       slug: string;
       startDate: Date;
       endDate: Date;
+      doorsOpen: Date | null;
       venue: string;
+      venueAddress: string;
       description: string;
+      timezone: string;
+      currency: string;
+      maxCapacity: number | null;
       status: string;
       meta: Prisma.InputJsonValue;
     }>,

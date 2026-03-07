@@ -204,12 +204,15 @@ export interface Event {
   orgId: string;
   description?: string;
   venue?: string;
+  venueAddress?: string;
   startDate: string;
   endDate?: string;
+  doorsOpen?: string | null;
   timezone: string;
   currency: string;
   status: string;
-  maxCapacity?: number;
+  maxCapacity?: number | null;
+  meta?: Record<string, unknown> | null;
   createdAt: string;
 }
 

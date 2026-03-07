@@ -1,0 +1,367 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useEventId } from '@/hooks/use-event-id';
+import { api, type Event } from '@/lib/api';
+import { Icons } from '@/components/icons';
+import { useI18n } from '@/i18n/i18n-provider';
+import { toast } from 'sonner';
+
+const TIMEZONES = [
+  { value: 'Europe/Zurich', label: 'events.form.tz.zurich' },
+  { value: 'Europe/Berlin', label: 'events.form.tz.berlin' },
+  { value: 'Europe/Paris', label: 'events.form.tz.paris' },
+  { value: 'Europe/London', label: 'events.form.tz.london' },
+  { value: 'UTC', label: 'events.form.tz.utc' },
+];
+
+const CURRENCIES = [
+  { value: 'CHF', label: 'events.form.cur.chf' },
+  { value: 'EUR', label: 'events.form.cur.eur' },
+  { value: 'USD', label: 'events.form.cur.usd' },
+  { value: 'GBP', label: 'events.form.cur.gbp' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'events.settings.statusDraft' },
+  { value: 'published', label: 'events.settings.statusPublished' },
+  { value: 'cancelled', label: 'events.settings.statusCancelled' },
+  { value: 'completed', label: 'events.settings.statusCompleted' },
+  { value: 'archived', label: 'events.settings.statusArchived' },
+];
+
+/** Convert ISO string to datetime-local value */
+function toLocal(iso?: string | null): string {
+  if (!iso) return '';
+  return iso.slice(0, 16);
+}
+
+export default function EventSettingsPage() {
+  const { t } = useI18n();
+  const id = useEventId();
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [doorsOpen, setDoorsOpen] = useState('');
+  const [timezone, setTimezone] = useState('Europe/Zurich');
+  const [venue, setVenue] = useState('');
+  const [venueAddress, setVenueAddress] = useState('');
+  const [maxCapacity, setMaxCapacity] = useState('');
+  const [currency, setCurrency] = useState('CHF');
+  const [status, setStatus] = useState('draft');
+
+  const populateForm = useCallback((ev: Event) => {
+    setName(ev.name);
+    setSlug(ev.slug);
+    setDescription(ev.description ?? '');
+    setStartDate(toLocal(ev.startDate));
+    setEndDate(toLocal(ev.endDate));
+    setDoorsOpen(toLocal(ev.doorsOpen));
+    setTimezone(ev.timezone);
+    setVenue(ev.venue ?? '');
+    setVenueAddress(ev.venueAddress ?? '');
+    setMaxCapacity(ev.maxCapacity != null ? String(ev.maxCapacity) : '');
+    setCurrency(ev.currency);
+    setStatus(ev.status);
+  }, []);
+
+  useEffect(() => {
+    if (!id || id === '_') return;
+    const ac = new AbortController();
+    api.getEvent(id, ac.signal)
+      .then((ev) => {
+        setEvent(ev);
+        populateForm(ev);
+      })
+      .catch(() => {
+        toast.error(t('events.settings.failedToLoad'));
+      })
+      .finally(() => setLoading(false));
+    return () => ac.abort();
+  }, [id, populateForm, t]);
+
+  const handleSave = async () => {
+    if (!event) return;
+    setSaving(true);
+    try {
+      const payload: Partial<Event> = {
+        name: name.trim(),
+        slug: slug.trim(),
+        description: description.trim() || undefined,
+        startDate: startDate ? new Date(startDate).toISOString() : event.startDate,
+        endDate: endDate ? new Date(endDate).toISOString() : event.endDate,
+        doorsOpen: doorsOpen ? new Date(doorsOpen).toISOString() : null,
+        timezone,
+        venue: venue.trim() || undefined,
+        venueAddress: venueAddress.trim() || undefined,
+        maxCapacity: maxCapacity ? parseInt(maxCapacity, 10) : null,
+        currency,
+        status,
+      };
+      const updated = await api.updateEvent(id, payload);
+      setEvent(updated);
+      populateForm(updated);
+      toast.success(t('events.settings.saved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('events.settings.failedToSave'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-xl" style={{ background: 'var(--color-bg-muted)' }} />
+        ))}
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="rounded-xl p-8 text-center" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>{t('events.settings.failedToLoad')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
+            {t('events.settings.title')}
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('events.settings.subtitle')}
+          </p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+          style={{ background: 'var(--color-primary)' }}
+        >
+          {saving ? t('common.saving') : t('common.saveChanges')}
+        </button>
+      </div>
+
+      <div className="space-y-6">
+        {/* ── General ── */}
+        <Section title={t('events.settings.general')}>
+          <FieldInput label={t('events.settings.eventName')} value={name} onChange={setName} />
+          <FieldInput label={t('events.settings.urlSlug')} value={slug} onChange={setSlug} />
+          <div>
+            <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+              {t('events.settings.description')}
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: 'var(--color-bg-subtle)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text)',
+                resize: 'vertical',
+              }}
+            />
+          </div>
+        </Section>
+
+        {/* ── Date & Time ── */}
+        <Section title={t('events.settings.dateTime')}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FieldInput label={t('events.settings.startDate')} value={startDate} onChange={setStartDate} type="datetime-local" />
+            <FieldInput label={t('events.settings.endDate')} value={endDate} onChange={setEndDate} type="datetime-local" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <FieldInput label={t('events.settings.doorsOpen')} value={doorsOpen} onChange={setDoorsOpen} type="datetime-local" />
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t('events.settings.doorsOpenHint')}
+              </p>
+            </div>
+            <FieldSelect label={t('events.settings.timezone')} value={timezone} onChange={setTimezone} options={TIMEZONES.map((tz) => ({ value: tz.value, label: t(tz.label) }))} />
+          </div>
+        </Section>
+
+        {/* ── Venue ── */}
+        <Section title={t('events.settings.venue')}>
+          <FieldInput label={t('events.settings.venueName')} value={venue} onChange={setVenue} placeholder="e.g. Bern Expo" />
+          <FieldInput label={t('events.settings.venueAddress')} value={venueAddress} onChange={setVenueAddress} placeholder="e.g. Mingerstrasse 6, 3014 Bern" />
+        </Section>
+
+        {/* ── Capacity & Currency ── */}
+        <Section title={t('events.settings.capacityCurrency')}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <FieldInput label={t('events.settings.maxCapacity')} value={maxCapacity} onChange={setMaxCapacity} type="number" />
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t('events.settings.maxCapacityHint')}
+              </p>
+            </div>
+            <FieldSelect label={t('events.settings.currency')} value={currency} onChange={setCurrency} options={CURRENCIES.map((c) => ({ value: c.value, label: t(c.label) }))} />
+          </div>
+        </Section>
+
+        {/* ── Status ── */}
+        <Section title={t('events.settings.status')}>
+          <FieldSelect
+            label={t('events.settings.eventStatus')}
+            value={status}
+            onChange={setStatus}
+            options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: t(s.label) }))}
+          />
+        </Section>
+
+        {/* ── Danger Zone ── */}
+        <div
+          className="rounded-xl p-5"
+          style={{
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-danger, #ef4444)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <h2
+            className="mb-2 flex items-center gap-2 text-base font-semibold"
+            style={{ color: 'var(--color-danger, #ef4444)' }}
+          >
+            <Icons.AlertTriangle size={18} />
+            {t('events.settings.dangerZone')}
+          </h2>
+          <p className="mb-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.deleteEventHint')}
+          </p>
+          <button
+            disabled
+            className="rounded-lg px-4 py-2 text-sm font-medium opacity-50"
+            style={{
+              border: '1px solid var(--color-danger, #ef4444)',
+              color: 'var(--color-danger, #ef4444)',
+            }}
+          >
+            {t('events.settings.deleteEvent')}
+          </button>
+          <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.deleteNotAvailable')}
+          </p>
+        </div>
+      </div>
+
+      {/* Floating save button (mobile) */}
+      <div className="fixed bottom-4 right-4 sm:hidden">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="rounded-full p-3 text-white shadow-lg transition-opacity disabled:opacity-50"
+          style={{ background: 'var(--color-primary)' }}
+        >
+          {saving ? <Icons.RefreshCw size={20} className="animate-spin" /> : <Icons.CheckCircle size={20} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Reusable Components ── */
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+        {title}
+      </h2>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+}
+
+function FieldInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg px-3 py-2 text-sm"
+        style={{
+          background: 'var(--color-bg-subtle)',
+          border: '1px solid var(--color-border)',
+          color: 'var(--color-text)',
+        }}
+      />
+    </div>
+  );
+}
+
+function FieldSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg px-3 py-2 text-sm"
+        style={{
+          background: 'var(--color-bg-subtle)',
+          border: '1px solid var(--color-border)',
+          color: 'var(--color-text)',
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
