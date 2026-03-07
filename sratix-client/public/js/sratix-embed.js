@@ -355,6 +355,8 @@
   function renderCard(tt, memberSession) {
     const soldOut = tt.soldOut || (tt.available !== null && tt.available <= 0);
 
+    const hasEarlyBird = tt.priceLabel && tt.basePriceCents != null && tt.basePriceCents > tt.priceCents;
+
     let priceHtml;
     if (tt.priceCents === 0) {
       priceHtml = `<span class="sratix-price-free">${escHtml(t('tickets.free'))}</span>`;
@@ -364,6 +366,12 @@
         <span class="sratix-price-original">${formatPrice(tt.priceCents, tt.currency)}</span>
         <span class="sratix-price-member">${formatPrice(memberPriceCents, tt.currency)}</span>
         <span class="sratix-savings-badge">${escHtml(tt.memberDiscount.discountLabel)}</span>
+      </div>`;
+    } else if (hasEarlyBird) {
+      priceHtml = `<div class="sratix-price-wrap">
+        <span class="sratix-price-original">${formatPrice(tt.basePriceCents, tt.currency)}</span>
+        <span class="sratix-price-early">${formatPrice(tt.priceCents, tt.currency)}</span>
+        <span class="sratix-early-badge">${escHtml(t('tickets.earlyBird'))}</span>
       </div>`;
     } else {
       priceHtml = `<div class="sratix-price">${formatPrice(tt.priceCents, tt.currency)}</div>`;

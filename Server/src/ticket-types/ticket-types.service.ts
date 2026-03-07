@@ -636,6 +636,7 @@ export class TicketTypesService {
         name: tt.name,
         description: tt.description,
         priceCents: resolvedPrice.activePriceCents,
+        basePriceCents: tt.priceCents,
         priceLabel: resolvedPrice.activeVariant,
         currency: tt.currency,
         available,

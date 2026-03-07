@@ -18,6 +18,7 @@ const sratixI18n = (function () {
       'tickets.free':            'Free',
       'tickets.remaining':       '{n} remaining',
       'tickets.soldOut':         'Sold Out',
+      'tickets.earlyBird':       'Early Bird',
       'tickets.select':          'Select',
 
       // Quantity modal
@@ -119,6 +120,7 @@ const sratixI18n = (function () {
       'tickets.free':            'Gratuit',
       'tickets.remaining':       '{n} restant(s)',
       'tickets.soldOut':         'Épuisé',
+      'tickets.earlyBird':       'Tarif réduit',
       'tickets.select':          'Sélectionner',
 
       'qty.quantity':            'Quantité',
@@ -211,6 +213,7 @@ const sratixI18n = (function () {
       'tickets.free':            'Kostenlos',
       'tickets.remaining':       '{n} verfügbar',
       'tickets.soldOut':         'Ausverkauft',
+      'tickets.earlyBird':       'Frühbucher',
       'tickets.select':          'Auswählen',
 
       'qty.quantity':            'Anzahl',
@@ -303,6 +306,7 @@ const sratixI18n = (function () {
       'tickets.free':            'Gratuito',
       'tickets.remaining':       '{n} disponibili',
       'tickets.soldOut':         'Esaurito',
+      'tickets.earlyBird':       'Tariffa anticipata',
       'tickets.select':          'Seleziona',
 
       'qty.quantity':            'Quantità',
@@ -395,6 +399,7 @@ const sratixI18n = (function () {
       'tickets.free':            '免費',
       'tickets.remaining':       '剩餘 {n} 張',
       'tickets.soldOut':         '已售罄',
+      'tickets.earlyBird':       '早鳥優惠',
       'tickets.select':          '選擇',
 
       'qty.quantity':            '數量',

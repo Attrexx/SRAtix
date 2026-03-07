@@ -771,6 +771,23 @@
 	color: var(--sratix-red);
 }
 
+.sratix-price-early {
+	font-size: 1.25em;
+	font-weight: 700;
+	color: #34d399;
+}
+
+.sratix-early-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 0.75em;
+	font-weight: 600;
+	background: rgba(52, 211, 153, 0.15);
+	color: #34d399;
+	white-space: nowrap;
+}
+
 .sratix-savings-badge {
 	display: inline-block;
 	padding: 2px 8px;
