@@ -105,10 +105,8 @@
         return;
       }
       let html = '';
-      if (memberSession && memberSession.memberGroup === 'sra' && memberSession.firstName) {
-        html += renderWelcomeBanner(memberSession);
-      } else if (memberSession && memberSession.memberGroup) {
-        html += renderWelcomeBanner(memberSession);
+      if (memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') {
+        html += renderWelcomeBanner(memberSession, ticketTypes);
       }
       html += renderTicketCards(ticketTypes, layout, memberSession);
       container.innerHTML = html;
@@ -134,19 +132,54 @@
     }
   }
 
-  function renderWelcomeBanner(session) {
-    let msg = '';
-    if (session.memberGroup === 'sra' && session.firstName) {
-      const tierLabel = session.tier ? session.tier.replace(/_/g, ' ') : '';
-      msg = t('memberGate.welcomeSra', {
-        name: '<strong>' + escHtml(session.firstName) + '</strong>',
-        tier: escHtml(tierLabel),
-      });
-    } else if (session.memberGroup === 'robotx') {
-      msg = escHtml(t('memberGate.welcomeRobotx'));
+  function renderWelcomeBanner(session, ticketTypes) {
+    const isSra = session.memberGroup === 'sra';
+    const isRobotx = session.memberGroup === 'robotx';
+
+    // Logo
+    const logoUrl = isSra ? config.sraLogoUrl : (isRobotx ? config.robotxLogoUrl : null);
+    const logoHtml = logoUrl
+      ? `<img src="${escAttr(logoUrl)}" alt="" class="sratix-welcome-logo" />`
+      : '';
+
+    // Greeting line
+    let greeting = '';
+    if (isSra && session.firstName) {
+      greeting = t('memberGate.welcomeGreeting', { name: '<strong>' + escHtml(session.firstName) + '</strong>' });
+    } else if (isRobotx) {
+      greeting = escHtml(t('memberGate.welcomeRobotxGreeting'));
     }
+
+    // Tier label (SRA only)
+    let tierHtml = '';
+    if (isSra && session.tier) {
+      const tierLabel = session.tier.replace(/_/g, ' ');
+      tierHtml = `<span class="sratix-welcome-tier">${escHtml(t('memberGate.welcomeTier', { tier: tierLabel }))}</span>`;
+    }
+
+    // Discount info — find the first ticket with a memberDiscount to show the entitled discount
+    let discountHtml = '';
+    if (ticketTypes && ticketTypes.length > 0) {
+      const withDiscount = ticketTypes.find(function (tt) { return tt.memberDiscount && tt.memberDiscount.discountCents > 0; });
+      if (withDiscount) {
+        discountHtml = `<span class="sratix-welcome-discount">${escHtml(withDiscount.memberDiscount.discountLabel)}</span>`;
+      }
+    }
+
+    // Disclaimer (only if there is a discount entitlement)
+    const disclaimerHtml = discountHtml
+      ? `<p class="sratix-welcome-disclaimer">${escHtml(t('memberGate.welcomeDisclaimer'))}</p>`
+      : '';
+
     return `<div class="sratix-welcome-banner">
-      <span class="sratix-welcome-text">${msg}</span>
+      <div class="sratix-welcome-left">
+        ${logoHtml}
+        <div class="sratix-welcome-info">
+          <span class="sratix-welcome-text">${greeting}</span>
+          <div class="sratix-welcome-meta">${tierHtml}${discountHtml}</div>
+          ${disclaimerHtml}
+        </div>
+      </div>
       <a href="#" data-action="change-member" class="sratix-welcome-change">${escHtml(t('memberGate.changeType'))}</a>
     </div>`;
   }
