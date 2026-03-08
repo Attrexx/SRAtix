@@ -324,11 +324,20 @@
   // ─── SRA login form ──────────────────────────────────────────────────────────
 
   function renderSraLoginForm(container, eventId, layout) {
+    const sraLogo = config.sraLogoUrl
+      ? `<img src="${escAttr(config.sraLogoUrl)}" alt="SRA" class="sratix-login-form__logo" />`
+      : '';
+
     container.innerHTML = `
       <div class="sratix-login-form">
         <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
-        <h2 class="sratix-login-form__title">${escHtml(t('memberGate.sraLoginTitle'))}</h2>
-        <p class="sratix-login-form__hint">${escHtml(t('memberGate.sraLoginHint'))}</p>
+        <div class="sratix-login-form__header">
+          ${sraLogo}
+          <div>
+            <h2 class="sratix-login-form__title">${escHtml(t('memberGate.sraLoginTitle'))}</h2>
+            <p class="sratix-login-form__hint">${escHtml(t('memberGate.sraLoginHint'))}</p>
+          </div>
+        </div>
         <div class="sratix-field">
           <label class="sratix-label" for="sratix-sra-email">${escHtml(t('reg.email'))}</label>
           <input class="sratix-input" id="sratix-sra-email" type="email" autocomplete="email" />
@@ -410,9 +419,13 @@
     container.innerHTML = `
       <div class="sratix-login-form">
         <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
-        ${robotxLogo}
-        <h2 class="sratix-login-form__title">${escHtml(t('memberGate.robotxTitle'))}</h2>
-        <p class="sratix-login-form__hint">${escHtml(t('memberGate.robotxHint'))}</p>
+        <div class="sratix-login-form__header">
+          ${robotxLogo}
+          <div>
+            <h2 class="sratix-login-form__title">${escHtml(t('memberGate.robotxTitle'))}</h2>
+            <p class="sratix-login-form__hint">${escHtml(t('memberGate.robotxHint'))}</p>
+          </div>
+        </div>
         <div class="sratix-field">
           <label class="sratix-label" for="sratix-robotx-code">${escHtml(t('memberGate.robotxCodeLabel'))}</label>
           <input class="sratix-input" id="sratix-robotx-code" type="text" autocomplete="off" />
