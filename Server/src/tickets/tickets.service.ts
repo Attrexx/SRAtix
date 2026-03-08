@@ -133,7 +133,7 @@ export class TicketsService {
    *     wallets), revisit this with a full HMAC or ECDSA approach.
    */
   private computeHmac(code: string, eventId: string): string {
-    const baseKey = this.config.get<string>('JWT_SECRET', 'sratix-dev-key');
+    const baseKey = this.config.getOrThrow<string>('JWT_SECRET');
     const scopedKey = `${baseKey}:event:${eventId}`;
     return createHmac('sha256', scopedKey)
       .update(code)

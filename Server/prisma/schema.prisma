@@ -461,6 +461,7 @@ model User {
   wpUserId        Int?      @unique // linked WP user (legacy bridge)
   avatarUrl       String?   @db.VarChar(500)
   lastLoginAt     DateTime? @db.DateTime(3)
+  tokenVersion    Int       @default(0)     // Incremented on logout/revocation; stale refresh tokens are rejected
   active          Boolean   @default(true)
   createdAt       DateTime  @default(now()) @db.DateTime(3)
   updatedAt       DateTime  @updatedAt @db.DateTime(3)

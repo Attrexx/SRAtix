@@ -11,9 +11,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
 import { existsSync, readFileSync } from 'fs';
@@ -37,7 +35,7 @@ async function bootstrap() {
     // Cookie support — required for httpOnly refresh token storage
     const configService = app.get(ConfigService);
     await app.register(fastifyCookie as any, {
-      secret: configService.get<string>('COOKIE_SECRET', configService.get<string>('JWT_SECRET', 'sratix-dev-key')),
+      secret: configService.get<string>('COOKIE_SECRET') || configService.getOrThrow<string>('JWT_SECRET'),
     });
 
     // Global validation pipe — DTOs auto-validated
@@ -66,10 +64,6 @@ async function bootstrap() {
       ],
       credentials: true,
     });
-
-    // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
-    const reflector = app.get(Reflector);
-    app.useGlobalGuards(new RateLimitGuard(reflector));
 
     // Disable Cloudflare response buffering for SSE streams
     const fastifyInstance = app.getHttpAdapter().getInstance();

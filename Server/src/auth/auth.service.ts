@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, OnModuleDestroy } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VALID_ROLES } from '../users/users.service';
 
@@ -31,14 +31,32 @@ export interface TokenPair {
 }
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleDestroy {
   private readonly logger = new Logger(AuthService.name);
+
+  /** In-memory nonce cache for replay protection (key → timestamp). */
+  private readonly usedNonces = new Map<string, number>();
+
+  /** Cleanup interval for expired nonces (every 5 minutes). */
+  private readonly nonceCleanupInterval: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) {
+    // Purge nonces older than 10 minutes every 5 minutes
+    this.nonceCleanupInterval = setInterval(() => {
+      const cutoff = Math.floor(Date.now() / 1000) - 600;
+      for (const [key, ts] of this.usedNonces) {
+        if (ts < cutoff) this.usedNonces.delete(key);
+      }
+    }, 300_000);
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.nonceCleanupInterval);
+  }
 
   /**
    * Exchange WP plugin credentials for a JWT token pair.
@@ -51,15 +69,41 @@ export class AuthService {
     sourceSite: string,
     wpEmail?: string,
     wpDisplayName?: string,
+    timestamp?: string,
+    nonce?: string,
   ): Promise<TokenPair> {
+    // ── Replay protection: validate timestamp & nonce ──────────────────
+    if (timestamp && nonce) {
+      const now = Math.floor(Date.now() / 1000);
+      const ts = parseInt(timestamp, 10);
+      if (isNaN(ts) || Math.abs(now - ts) > 300) {
+        this.logger.warn(`Token exchange rejected: stale timestamp (${timestamp}) from ${sourceSite}`);
+        throw new UnauthorizedException('Request expired');
+      }
+
+      // Nonce dedup — store in-memory (or Redis if available) for 10 minutes
+      const nonceKey = `exchange:${nonce}`;
+      if (this.usedNonces.has(nonceKey)) {
+        this.logger.warn(`Token exchange rejected: replayed nonce from ${sourceSite}`);
+        throw new UnauthorizedException('Duplicate request');
+      }
+      this.usedNonces.set(nonceKey, now);
+    }
+
     // Verify the HMAC signature from the WP plugin
     const secret = this.config.getOrThrow<string>('WP_API_SECRET');
-    const payload = `${wpUserId}:${wpRoles.sort().join(',')}:${sourceSite}`;
+    // Include timestamp + nonce in HMAC if present (backward-compatible)
+    let payload = `${wpUserId}:${wpRoles.sort().join(',')}:${sourceSite}`;
+    if (timestamp && nonce) {
+      payload += `:${timestamp}:${nonce}`;
+    }
     const expectedSig = createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
 
-    if (signature !== expectedSig) {
+    const sigBuf = Buffer.from(signature, 'utf8');
+    const expectedBuf = Buffer.from(expectedSig, 'utf8');
+    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
       this.logger.warn(
         `Invalid signature for WP user ${wpUserId} from ${sourceSite}`,
       );
@@ -89,7 +133,7 @@ export class AuthService {
       // Fetch display info from User record
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, displayName: true },
+        select: { email: true, displayName: true, tokenVersion: true },
       });
       if (user) {
         email = user.email;
@@ -150,13 +194,23 @@ export class AuthService {
       ),
     ]);
 
+    // Resolve tokenVersion — 0 for newly created users
+    let tokenVersion = 0;
+    if (mapping) {
+      const u = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { tokenVersion: true },
+      });
+      tokenVersion = u?.tokenVersion ?? 0;
+    }
+
     return this.generateTokenPair({
       sub: userId,
       email,
       displayName: displayName || email.split('@')[0],
       roles: sratixRoles,
       orgId,
-    });
+    }, tokenVersion);
   }
 
   /**
@@ -166,10 +220,11 @@ export class AuthService {
    */
   async generateTokenPair(
     payload: Omit<JwtPayload, 'iat' | 'exp'> & { displayName?: string },
+    tokenVersion = 0,
   ): Promise<TokenPair> {
     const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwt.sign(
-      { sub: payload.sub, type: 'refresh' },
+      { sub: payload.sub, type: 'refresh', ver: tokenVersion },
       { expiresIn: '7d' },
     );
 
@@ -191,7 +246,7 @@ export class AuthService {
    * Looks up the user from DB to get current email/roles.
    */
   async refreshAccessToken(refreshToken: string): Promise<TokenPair> {
-    let decoded: { sub: string; type?: string };
+    let decoded: { sub: string; type?: string; ver?: number };
     try {
       decoded = this.jwt.verify(refreshToken);
     } catch {
@@ -205,11 +260,16 @@ export class AuthService {
     // Look up user from DB to get current data
     const user = await this.prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, displayName: true, wpUserId: true },
+      select: { id: true, email: true, displayName: true, wpUserId: true, tokenVersion: true },
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    // Reject refresh tokens issued before the latest revocation
+    if ((decoded.ver ?? 0) < user.tokenVersion) {
+      throw new UnauthorizedException('Token has been revoked');
     }
 
     // Look up WP mapping to resolve orgId
@@ -249,7 +309,7 @@ export class AuthService {
       displayName: user.displayName,
       roles: effectiveRoles,
       orgId,
-    });
+    }, user.tokenVersion);
   }
 
   /**
@@ -260,6 +320,18 @@ export class AuthService {
       return this.jwt.verify<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  /**
+   * Decode a JWT without throwing. Returns null on any failure.
+   * Used for best-effort operations like logout revocation.
+   */
+  validateTokenSync(token: string): { sub: string; type?: string } | null {
+    try {
+      return this.jwt.verify(token);
+    } catch {
+      return null;
     }
   }
 
@@ -334,6 +406,17 @@ export class AuthService {
       displayName: user.displayName,
       roles: effectiveRoles,
       orgId,
+    }, user.tokenVersion);
+  }
+
+  /**
+   * Revoke all refresh tokens for a user by incrementing tokenVersion.
+   * Called on logout to invalidate all existing sessions.
+   */
+  async revokeUserTokens(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
     });
   }
 
@@ -482,8 +565,7 @@ export class AuthService {
       clearTimeout(timeout);
 
       if (!response.ok && response.status !== 200) {
-        const text = await response.text().catch(() => '');
-        this.logger.warn(`SRA verify failed with HTTP ${response.status}: ${text}`);
+        this.logger.warn(`SRA verify failed with HTTP ${response.status} for ${email}`);
         return { authenticated: false, error: 'verification_failed' };
       }
 
@@ -552,7 +634,14 @@ export class AuthService {
     const meta = (event.meta as Record<string, unknown>) ?? {};
     const storedCode = meta.robotxAccessCode as string | undefined;
 
-    if (!storedCode || !code || storedCode.toLowerCase() !== code.toLowerCase()) {
+    if (!storedCode || !code) {
+      return { valid: false };
+    }
+
+    // Timing-safe comparison (case-insensitive)
+    const a = Buffer.from(storedCode.toLowerCase(), 'utf8');
+    const b = Buffer.from(code.toLowerCase(), 'utf8');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
       return { valid: false };
     }
 

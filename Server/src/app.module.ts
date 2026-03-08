@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
@@ -27,6 +28,7 @@ import { SettingsModule } from './settings/settings.module';
 import { FieldRepositoryModule } from './field-repository/field-repository.module';
 import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
 @Module({
@@ -110,6 +112,10 @@ import { join } from 'path';
 
     // Analytics — time-series aggregation for line graphs
     AnalyticsModule,
+  ],
+  providers: [
+    // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
+    { provide: APP_GUARD, useClass: RateLimitGuard },
   ],
 })
 export class AppModule {}

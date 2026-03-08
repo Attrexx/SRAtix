@@ -38,7 +38,12 @@ class SRAtix_Control_API {
 
 		// Sort roles for deterministic HMAC
 		sort( $wp_roles );
-		$payload   = $wp_user_id . ':' . implode( ',', $wp_roles ) . ':' . $source_site;
+
+		// Include timestamp + nonce for replay protection
+		$timestamp = (string) time();
+		$nonce     = wp_generate_password( 16, false );
+
+		$payload   = $wp_user_id . ':' . implode( ',', $wp_roles ) . ':' . $source_site . ':' . $timestamp . ':' . $nonce;
 		$signature = hash_hmac( 'sha256', $payload, $secret );
 
 		$response = wp_remote_post( $this->api_url() . '/auth/token', array(
@@ -49,6 +54,8 @@ class SRAtix_Control_API {
 				'wpRoles'    => $wp_roles,
 				'signature'  => $signature,
 				'sourceSite' => $source_site,
+				'timestamp'  => $timestamp,
+				'nonce'      => $nonce,
 			) ),
 		) );
 

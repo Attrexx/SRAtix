@@ -45,6 +45,14 @@ class ExchangeTokenDto {
 
   @IsOptional()
   @IsString()
+  timestamp?: string;
+
+  @IsOptional()
+  @IsString()
+  nonce?: string;
+
+  @IsOptional()
+  @IsString()
   email?: string;
 
   @IsOptional()
@@ -167,6 +175,8 @@ export class AuthController {
       dto.sourceSite,
       dto.email,
       dto.displayName,
+      dto.timestamp,
+      dto.nonce,
     );
     this.setRefreshCookie(reply, tokens.refreshToken);
     return this.buildClientResponse(tokens);
@@ -212,13 +222,27 @@ export class AuthController {
 
   /**
    * POST /api/auth/logout
-   * Clears the httpOnly refresh token cookie.  The SPA discards the in-memory
-   * access token itself — no server state needs to be invalidated because
-   * access tokens are short-lived (15 min).
+   * Clears the httpOnly refresh token cookie and revokes all outstanding
+   * refresh tokens for the user by incrementing tokenVersion in the DB.
    */
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Res({ passthrough: true }) reply: FastifyReply): Promise<void> {
+  async logout(
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<void> {
+    // Best-effort revocation — extract user ID from cookie
+    const rt = (req.cookies as Record<string, string>)?.sratix_rt;
+    if (rt) {
+      try {
+        const decoded = this.auth.validateTokenSync(rt);
+        if (decoded?.sub) {
+          await this.auth.revokeUserTokens(decoded.sub);
+        }
+      } catch {
+        // Token may already be expired / invalid — still clear the cookie
+      }
+    }
     this.clearRefreshCookie(reply);
   }
 

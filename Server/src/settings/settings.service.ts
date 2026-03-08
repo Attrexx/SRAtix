@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+
+/** Prefix prepended to encrypted values so we can distinguish them in the DB. */
+const ENC_PREFIX = 'enc:v1:';
 
 /**
  * Settings that can be managed via the Dashboard UI.
@@ -302,10 +306,39 @@ const RESTART_REQUIRED_KEYS = new Set([
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
 
+  /** AES-256-GCM key derived from JWT_SECRET. Null if JWT_SECRET is not set. */
+  private readonly encKey: Buffer | null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    const secret = this.config.get<string>('JWT_SECRET');
+    this.encKey = secret
+      ? createHash('sha256').update(secret).digest() // 32 bytes = AES-256
+      : null;
+  }
+
+  /** Encrypt a plaintext value with AES-256-GCM. Returns `enc:v1:<iv>:<authTag>:<ciphertext>`. */
+  private encrypt(plaintext: string): string {
+    if (!this.encKey) return plaintext;
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', this.encKey, iv);
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return ENC_PREFIX + [iv.toString('hex'), authTag.toString('hex'), encrypted.toString('hex')].join(':');
+  }
+
+  /** Decrypt a value produced by `encrypt()`. Returns plaintext. */
+  private decrypt(ciphertext: string): string {
+    if (!this.encKey || !ciphertext.startsWith(ENC_PREFIX)) return ciphertext;
+    const parts = ciphertext.slice(ENC_PREFIX.length).split(':');
+    if (parts.length !== 3) return ciphertext;
+    const [ivHex, tagHex, dataHex] = parts;
+    const decipher = createDecipheriv('aes-256-gcm', this.encKey, Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+    return decipher.update(Buffer.from(dataHex, 'hex'), undefined, 'utf8') + decipher.final('utf8');
+  }
 
   /** Get all setting definitions. */
   getDefinitions(): SettingDefinition[] {
@@ -327,8 +360,17 @@ export class SettingsService {
     }
 
     return SETTING_DEFINITIONS.map((def) => {
-      const dbValue = dbMap.get(def.key);
+      let dbValue = dbMap.get(def.key);
       const envValue = this.config.get<string>(def.envVar);
+
+      // Decrypt sensitive DB values
+      if (def.sensitive && dbValue) {
+        try {
+          dbValue = this.decrypt(dbValue);
+        } catch {
+          this.logger.warn(`Failed to decrypt setting "${def.key}" — value may be plaintext`);
+        }
+      }
 
       let value = '';
       let source: 'database' | 'env' | 'default' = 'default';
@@ -406,6 +448,9 @@ export class SettingsService {
         updatedKeys.push(key);
         this.logger.log(`Setting "${key}" cleared from DB (will fall back to .env)`);
       } else {
+        // Encrypt sensitive values before persisting
+        const storeValue = def?.sensitive ? this.encrypt(value) : value;
+
         // Upsert into DB
         const existing = await this.prisma.setting.findFirst({
           where: { scope: 'global', orgId: null, eventId: null, key },
@@ -414,7 +459,7 @@ export class SettingsService {
         if (existing) {
           await this.prisma.setting.update({
             where: { id: existing.id },
-            data: { value: value as any },
+            data: { value: storeValue as any },
           });
         } else {
           await this.prisma.setting.create({
@@ -423,7 +468,7 @@ export class SettingsService {
               orgId: null,
               eventId: null,
               key,
-              value: value as any,
+              value: storeValue as any,
             },
           });
         }
@@ -450,8 +495,11 @@ export class SettingsService {
     });
 
     if (dbSetting) {
-      const val = dbSetting.value;
-      return typeof val === 'string' ? val : JSON.stringify(val);
+      let val = typeof dbSetting.value === 'string' ? dbSetting.value : JSON.stringify(dbSetting.value);
+      if (def.sensitive) {
+        try { val = this.decrypt(val); } catch { /* plaintext fallback */ }
+      }
+      return val;
     }
 
     // Fall back to .env
