@@ -108,10 +108,81 @@ class SRAtix_Client_Public {
 	 *────────────────────────────────────────────────────────*/
 
 	/**
+	 * Check if maintenance mode is active (set by webhook).
+	 * Falls back to a server check if the option has never been set.
+	 *
+	 * @return array{active: bool, message: string}
+	 */
+	private function get_maintenance_status() {
+		$active  = get_option( 'sratix_client_maintenance_active', '' );
+		$message = get_option( 'sratix_client_maintenance_message', '' );
+
+		// If the option was never set, try a one-time server check.
+		if ( '' === $active ) {
+			$event_id = get_option( 'sratix_client_event_id', '' );
+			$api_url  = get_option( 'sratix_client_api_url', '' );
+			if ( $event_id && $api_url ) {
+				$resp = wp_remote_get(
+					trailingslashit( $api_url ) . 'events/' . urlencode( $event_id ) . '/maintenance-status',
+					array( 'timeout' => 5 )
+				);
+				if ( ! is_wp_error( $resp ) && 200 === wp_remote_retrieve_response_code( $resp ) ) {
+					$body = json_decode( wp_remote_retrieve_body( $resp ), true );
+					if ( is_array( $body ) ) {
+						$active  = ! empty( $body['active'] ) ? '1' : '0';
+						$message = sanitize_text_field( $body['message'] ?? '' );
+						update_option( 'sratix_client_maintenance_active', $active );
+						update_option( 'sratix_client_maintenance_message', $message );
+					}
+				}
+			}
+		}
+
+		return array(
+			'active'  => '1' === $active,
+			'message' => $message,
+		);
+	}
+
+	/**
+	 * Render the maintenance screen HTML.
+	 *
+	 * @param string $message Custom message from the admin.
+	 * @return string
+	 */
+	private function render_maintenance_screen( $message ) {
+		$default = __( 'We are performing scheduled maintenance. Please check back soon.', 'sratix-client' );
+		$text    = $message ? $message : $default;
+
+		return '<div class="sratix-page-wrap">'
+			. '<div class="sratix-page-inner">'
+			. '<div class="sratix-maintenance">'
+			. '<div class="sratix-maintenance__icon">'
+			. '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+			. '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'
+			. '</svg>'
+			. '</div>'
+			. '<h2 class="sratix-maintenance__title">'
+			. esc_html__( 'Under Maintenance', 'sratix-client' )
+			. '</h2>'
+			. '<p class="sratix-maintenance__text">'
+			. esc_html( $text )
+			. '</p>'
+			. '</div>'
+			. '</div>'
+			. '</div>';
+	}
+
+	/**
 	 * [sratix_tickets] — Ticket selection & registration form.
 	 * The actual form is rendered by the Server and injected via JS.
 	 */
 	public function render_tickets( $atts ) {
+		$maint = $this->get_maintenance_status();
+		if ( $maint['active'] ) {
+			return $this->render_maintenance_screen( $maint['message'] );
+		}
+
 		$atts = shortcode_atts( array(
 			'event_id' => get_option( 'sratix_client_event_id', '' ),
 			'layout'   => 'cards', // cards | list | compact
@@ -139,6 +210,11 @@ class SRAtix_Client_Public {
 	 * links instead of a bare "please log in" message.
 	 */
 	public function render_my_tickets( $atts ) {
+		$maint = $this->get_maintenance_status();
+		if ( $maint['active'] ) {
+			return $this->render_maintenance_screen( $maint['message'] );
+		}
+
 		if ( ! is_user_logged_in() ) {
 			// Build a redirect URL back to this page after login.
 			$current_url = ( is_ssl() ? 'https' : 'http' ) . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
@@ -183,6 +259,11 @@ class SRAtix_Client_Public {
 	 * [sratix_schedule] — Event schedule / sessions grid.
 	 */
 	public function render_schedule( $atts ) {
+		$maint = $this->get_maintenance_status();
+		if ( $maint['active'] ) {
+			return $this->render_maintenance_screen( $maint['message'] );
+		}
+
 		$atts = shortcode_atts( array(
 			'event_id' => get_option( 'sratix_client_event_id', '' ),
 		), $atts, 'sratix_schedule' );

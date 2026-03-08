@@ -98,4 +98,60 @@ export class EventsService {
     });
     return org.id;
   }
+
+  // ─── Maintenance Mode ────────────────────────────────────────
+
+  /**
+   * Get maintenance status for an event.
+   * Reads from Event.meta.maintenance JSON field.
+   */
+  async getMaintenanceStatus(eventId: string): Promise<{
+    active: boolean;
+    message: string;
+    since: string | null;
+  }> {
+    const event = await this.prisma.event.findFirst({ where: { id: eventId } });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+    const maint = (meta.maintenance as Record<string, unknown>) ?? {};
+
+    return {
+      active: !!maint.active,
+      message: (maint.message as string) ?? '',
+      since: (maint.since as string) ?? null,
+    };
+  }
+
+  /**
+   * Set maintenance mode on an event.
+   * Stores state in Event.meta.maintenance.
+   */
+  async setMaintenance(
+    eventId: string,
+    active: boolean,
+    message?: string,
+  ): Promise<{ active: boolean; message: string; since: string | null }> {
+    const event = await this.prisma.event.findFirst({ where: { id: eventId } });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    const existingMeta = (event.meta as Record<string, unknown>) ?? {};
+    const since = active ? new Date().toISOString() : null;
+
+    const updatedMeta = {
+      ...existingMeta,
+      maintenance: {
+        active,
+        message: message ?? '',
+        since,
+      },
+    };
+
+    await this.prisma.event.update({
+      where: { id: eventId },
+      data: { meta: updatedMeta as any },
+    });
+
+    return { active, message: message ?? '', since };
+  }
 }

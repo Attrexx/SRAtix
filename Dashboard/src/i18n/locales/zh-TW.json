@@ -602,5 +602,6 @@
   "users.form.newPasswordPlaceholder": "輸入新密碼",
   "users.form.roles": "角色",
   "users.form.savePasswordHint": "請儲存此密碼 — 之後將不再顯示",
-  "users.badge.wp": "WP"
+  "users.badge.wp": "WP",
+  "maintenance.bannerTitle": "維護模式已啟用"
 }

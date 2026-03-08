@@ -862,6 +862,20 @@ export const api = {
       body: { settings },
     }),
 
+  // ─── Maintenance Mode ──────────────────────────────────────
+
+  getMaintenanceStatus: (eventId: string, signal?: AbortSignal) =>
+    request<{ active: boolean; message: string; since: string | null }>(
+      `/events/${eventId}/maintenance-status`,
+      { signal },
+    ),
+
+  toggleMaintenance: (eventId: string, active: boolean, message?: string) =>
+    request<{ active: boolean; message: string; since: string | null }>(
+      `/events/${eventId}/maintenance`,
+      { method: 'PATCH', body: { active, message } },
+    ),
+
   // ─── Analytics ─────────────────────────────────────────────────
 
   getTimeSeries: (

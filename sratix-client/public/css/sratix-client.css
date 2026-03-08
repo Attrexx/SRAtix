@@ -916,3 +916,41 @@
 		max-width: 280px;
 	}
 }
+
+/* ── Maintenance Screen ── */
+.sratix-maintenance {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	min-height: 50vh;
+	padding: 60px 24px;
+}
+
+.sratix-maintenance__icon {
+	color: var(--sratix-text-muted);
+	margin-bottom: 24px;
+	opacity: 0.6;
+	animation: sratix-maint-pulse 3s ease-in-out infinite;
+}
+
+@keyframes sratix-maint-pulse {
+	0%, 100% { opacity: 0.4; transform: scale(1); }
+	50%      { opacity: 0.7; transform: scale(1.05); }
+}
+
+.sratix-maintenance__title {
+	font-size: 1.8em;
+	font-weight: 700;
+	margin: 0 0 16px;
+	color: var(--sratix-text);
+}
+
+.sratix-maintenance__text {
+	font-size: 1.1em;
+	line-height: 1.6;
+	color: var(--sratix-text-muted);
+	max-width: 520px;
+	margin: 0;
+}

@@ -43,9 +43,18 @@ class SRAtix_Client_Webhook {
 	public function handle_webhook( $request ) {
 		$payload = $request->get_json_params();
 		$event   = $payload['event'] ?? '';
+		$data    = $payload['data'] ?? array();
 
 		switch ( $event ) {
 			case 'event.updated':
+				// Handle maintenance toggle sub-type.
+				if ( isset( $data['type'] ) && 'maintenance.toggled' === $data['type'] && isset( $data['maintenance'] ) ) {
+					$maint  = $data['maintenance'];
+					$active = ! empty( $maint['active'] );
+					update_option( 'sratix_client_maintenance_active', $active ? '1' : '0' );
+					update_option( 'sratix_client_maintenance_message', sanitize_text_field( $maint['message'] ?? '' ) );
+				}
+
 				// Clear any cached event data
 				delete_transient( 'sratix_event_data' );
 				break;

@@ -607,14 +607,20 @@ export class TicketTypesService {
       const soldOut = tt.quantity != null && tt.sold >= tt.quantity;
 
       // Calculate member discount if applicable
+      // Member discount is calculated against the BASE price (not the early bird price).
+      // It only applies if the resulting price is lower than the early bird price.
       let memberDiscount: { discountCents: number; discountLabel: string; discountedPriceCents: number } | undefined;
       if (memberGroup) {
-        const discount = this.calculateMemberDiscount(tt, resolvedPrice.activePriceCents, memberGroup, memberTier);
+        const discount = this.calculateMemberDiscount(tt, tt.priceCents, memberGroup, memberTier);
         if (discount) {
-          memberDiscount = {
-            ...discount,
-            discountedPriceCents: resolvedPrice.activePriceCents - discount.discountCents,
-          };
+          const memberPrice = tt.priceCents - discount.discountCents;
+          // Only show member discount if it beats the resolved (early bird) price
+          if (memberPrice < resolvedPrice.activePriceCents) {
+            memberDiscount = {
+              ...discount,
+              discountedPriceCents: memberPrice,
+            };
+          }
         }
       }
 

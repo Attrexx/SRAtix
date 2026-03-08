@@ -602,5 +602,6 @@
   "users.form.newPasswordPlaceholder": "Enter new password",
   "users.form.roles": "Roles",
   "users.form.savePasswordHint": "Save this password — it won't be shown again",
-  "users.badge.wp": "WP"
+  "users.badge.wp": "WP",
+  "maintenance.bannerTitle": "Maintenance Mode Active"
 }

@@ -199,7 +199,7 @@
       if (memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') {
         html += renderWelcomeBanner(memberSession, ticketTypes);
       } else if (config.memberGateEnabled) {
-        html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">&larr; ${escHtml(t('memberGate.backToMembership'))}</a>`;
+        html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">${escHtml(t('memberGate.backToMembership'))}</a>`;
       }
       html += renderTicketCards(ticketTypes, layout, memberSession);
       container.innerHTML = html;
@@ -504,11 +504,9 @@
     if (tt.priceCents === 0) {
       priceHtml = `<span class="sratix-price-free">${escHtml(t('tickets.free'))}</span>`;
     } else if (memberSession && tt.memberDiscount && tt.memberDiscount.discountCents > 0) {
-      const memberPriceCents = Math.max(0, tt.priceCents - tt.memberDiscount.discountCents);
-      const strikePrice = hasEarlyBird ? tt.basePriceCents : tt.priceCents;
       priceHtml = `<div class="sratix-price-wrap">
-        <span class="sratix-price-member">${formatPrice(memberPriceCents, tt.currency)}</span>
-        <span class="sratix-price-original">${formatPrice(strikePrice, tt.currency)}</span>
+        <span class="sratix-price-member">${formatPrice(tt.memberDiscount.discountedPriceCents, tt.currency)}</span>
+        <span class="sratix-price-original">${formatPrice(tt.basePriceCents, tt.currency)}</span>
         <span class="sratix-savings-badge">${escHtml(tt.memberDiscount.discountLabel)}</span>
       </div>`;
     } else if (hasEarlyBird) {

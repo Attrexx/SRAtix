@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsOptional,
   IsInt,
+  IsBoolean,
   Min,
   MaxLength,
   MinLength,
@@ -107,4 +108,14 @@ export class UpdateEventDto {
   @Allow()
   @IsOptional()
   meta?: Record<string, unknown>;
+}
+
+export class ToggleMaintenanceDto {
+  @IsBoolean()
+  active!: boolean;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000)
+  message?: string;
 }

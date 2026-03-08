@@ -197,6 +197,70 @@ class SRAtix_Control_Admin {
 	}
 
 	/**
+	 * AJAX: fetch events list from SRAtix Server.
+	 */
+	public function handle_fetch_events() {
+		check_ajax_referer( 'sratix_maintenance_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		$api    = new SRAtix_Control_API();
+		$events = $api->get( '/events' );
+
+		if ( is_wp_error( $events ) ) {
+			wp_send_json_error( $events->get_error_message() );
+		}
+
+		// Also fetch maintenance status for each event (public endpoint, no auth needed)
+		$api_url = get_option( 'sratix_api_url', '' );
+		foreach ( $events as &$event ) {
+			$status_url = rtrim( $api_url, '/' ) . '/events/' . $event['id'] . '/maintenance-status';
+			$response   = wp_remote_get( $status_url, array( 'timeout' => 5 ) );
+			if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
+				$event['maintenance'] = json_decode( wp_remote_retrieve_body( $response ), true );
+			} else {
+				$event['maintenance'] = array( 'active' => false, 'message' => '' );
+			}
+		}
+		unset( $event );
+
+		wp_send_json_success( $events );
+	}
+
+	/**
+	 * AJAX: toggle maintenance mode on an event.
+	 */
+	public function handle_toggle_maintenance() {
+		check_ajax_referer( 'sratix_maintenance_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		$event_id = isset( $_POST['event_id'] ) ? sanitize_text_field( wp_unslash( $_POST['event_id'] ) ) : '';
+		$active   = isset( $_POST['active'] ) && $_POST['active'] === '1';
+		$message  = isset( $_POST['message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) : '';
+
+		if ( ! $event_id || ! preg_match( '/^[0-9a-f\-]{36}$/i', $event_id ) ) {
+			wp_send_json_error( 'Invalid event ID' );
+		}
+
+		$api    = new SRAtix_Control_API();
+		$result = $api->patch( "/events/{$event_id}/maintenance", array(
+			'active'  => $active,
+			'message' => $message,
+		) );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( $result->get_error_message() );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
 	 * Enqueue admin assets (only on our page).
 	 */
 	public function enqueue_assets( $hook ) {
@@ -278,7 +342,143 @@ class SRAtix_Control_Admin {
 					</p>
 
 					<hr style="margin:16px 0">
+				<?php // ── Maintenance Mode Panel ── ?>
+				<h3 style="margin-top:0"><?php esc_html_e( 'Maintenance Mode', 'sratix-control' ); ?></h3>
+				<p class="description" style="margin-bottom:12px">
+					<?php esc_html_e( 'Enable maintenance mode to show a "temporarily unavailable" screen on event websites. The SRAtix Server and Dashboard remain accessible.', 'sratix-control' ); ?>
+				</p>
 
+				<div id="sratix-maintenance-panel">
+					<p><button type="button" id="sratix-maint-load" class="button"><?php esc_html_e( 'Load Events', 'sratix-control' ); ?></button></p>
+					<div id="sratix-maint-events" style="display:none"></div>
+				</div>
+
+				<script>
+				(function(){
+					var loadBtn = document.getElementById('sratix-maint-load');
+					var container = document.getElementById('sratix-maint-events');
+					var nonce = <?php echo wp_json_encode( wp_create_nonce( 'sratix_maintenance_nonce' ) ); ?>;
+
+					loadBtn.addEventListener('click', function(){
+						loadBtn.disabled = true;
+						loadBtn.textContent = <?php echo wp_json_encode( __( 'Loading…', 'sratix-control' ) ); ?>;
+
+						var fd = new FormData();
+						fd.append('action', 'sratix_fetch_events');
+						fd.append('_wpnonce', nonce);
+
+						fetch(ajaxurl, { method: 'POST', body: fd })
+							.then(function(r){ return r.json(); })
+							.then(function(res){
+								if (!res.success) {
+									alert(res.data || 'Failed to load events');
+									loadBtn.disabled = false;
+									loadBtn.textContent = <?php echo wp_json_encode( __( 'Load Events', 'sratix-control' ) ); ?>;
+									return;
+								}
+								loadBtn.style.display = 'none';
+								renderEvents(res.data);
+							})
+							.catch(function(){
+								alert('Request failed');
+								loadBtn.disabled = false;
+								loadBtn.textContent = <?php echo wp_json_encode( __( 'Load Events', 'sratix-control' ) ); ?>;
+							});
+					});
+
+					function renderEvents(events) {
+						if (!events.length) {
+							container.innerHTML = '<p style="color:#666">' + <?php echo wp_json_encode( __( 'No events found.', 'sratix-control' ) ); ?> + '</p>';
+							container.style.display = 'block';
+							return;
+						}
+
+						var html = '';
+						events.forEach(function(ev){
+							var isActive = ev.maintenance && ev.maintenance.active;
+							var msg = (ev.maintenance && ev.maintenance.message) || '';
+							html += '<div class="sratix-maint-event" data-event-id="' + ev.id + '" style="border:1px solid ' + (isActive ? '#dc3232' : '#c3c4c7') + ';padding:14px;border-radius:6px;margin-bottom:12px;background:' + (isActive ? '#fff5f5' : '#fff') + '">';
+							html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">';
+							html += '<div><strong>' + escHtml(ev.name) + '</strong>';
+							html += ' <span class="sratix-status sratix-status--' + (isActive ? 'error' : 'ok') + '" style="margin-left:8px">' + (isActive ? <?php echo wp_json_encode( __( 'Maintenance ON', 'sratix-control' ) ); ?> : <?php echo wp_json_encode( __( 'Live', 'sratix-control' ) ); ?>) + '</span>';
+							html += '</div>';
+							html += '<button type="button" class="button sratix-maint-toggle' + (isActive ? '' : ' button-primary') + '" data-event-id="' + ev.id + '" data-active="' + (isActive ? '0' : '1') + '">';
+							html += isActive ? <?php echo wp_json_encode( __( 'Disable Maintenance', 'sratix-control' ) ); ?> : <?php echo wp_json_encode( __( 'Enable Maintenance', 'sratix-control' ) ); ?>;
+							html += '</button>';
+							html += '</div>';
+							html += '<div class="sratix-maint-msg-row" style="margin-top:10px' + (isActive ? '' : ';display:none') + '">';
+							html += '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">' + <?php echo wp_json_encode( __( 'Message to visitors', 'sratix-control' ) ); ?> + '</label>';
+							html += '<input type="text" class="regular-text sratix-maint-msg" value="' + escAttr(msg) + '" placeholder="' + <?php echo wp_json_encode( __( 'We are performing scheduled maintenance. Please check back soon.', 'sratix-control' ) ); ?> + '" style="width:100%" />';
+							html += '</div>';
+							html += '</div>';
+						});
+						container.innerHTML = html;
+						container.style.display = 'block';
+
+						// Bind toggle buttons
+						container.querySelectorAll('.sratix-maint-toggle').forEach(function(btn){
+							btn.addEventListener('click', function(){
+								var eventId = this.dataset.eventId;
+								var active  = this.dataset.active;
+								var row     = this.closest('.sratix-maint-event');
+								var msgInput = row.querySelector('.sratix-maint-msg');
+								var message  = msgInput ? msgInput.value : '';
+
+								if (active === '1' && !confirm(<?php echo wp_json_encode( __( 'Enable maintenance mode? Visitors will see a maintenance screen instead of ticket forms.', 'sratix-control' ) ); ?>)) return;
+
+								this.disabled = true;
+								this.textContent = <?php echo wp_json_encode( __( 'Saving…', 'sratix-control' ) ); ?>;
+
+								var fd = new FormData();
+								fd.append('action', 'sratix_toggle_maintenance');
+								fd.append('_wpnonce', nonce);
+								fd.append('event_id', eventId);
+								fd.append('active', active);
+								fd.append('message', message);
+
+								var self = this;
+								fetch(ajaxurl, { method: 'POST', body: fd })
+									.then(function(r){ return r.json(); })
+									.then(function(res){
+										if (!res.success) {
+											alert(res.data || 'Failed');
+											self.disabled = false;
+											return;
+										}
+										// Reload the events list for fresh state
+										loadBtn.style.display = 'inline-block';
+										loadBtn.disabled = false;
+										loadBtn.textContent = <?php echo wp_json_encode( __( 'Load Events', 'sratix-control' ) ); ?>;
+										loadBtn.click();
+									})
+									.catch(function(){
+										alert('Request failed');
+										self.disabled = false;
+									});
+							});
+						});
+
+						// Show/hide message field based on toggle direction
+						container.querySelectorAll('.sratix-maint-toggle').forEach(function(btn){
+							btn.addEventListener('mouseenter', function(){
+								var row = this.closest('.sratix-maint-event').querySelector('.sratix-maint-msg-row');
+								if (this.dataset.active === '1') row.style.display = 'block';
+							});
+						});
+					}
+
+					function escHtml(s) {
+						var d = document.createElement('div');
+						d.textContent = s;
+						return d.innerHTML;
+					}
+					function escAttr(s) {
+						return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+					}
+				})();
+				</script>
+
+				<hr style="margin:16px 0">
 					<h3 style="margin-top:0"><?php esc_html_e( 'Shareable Login Token', 'sratix-control' ); ?></h3>
 					<p class="description" style="margin-bottom:8px">
 						<?php esc_html_e( 'Generate a token you can give to someone without WordPress access so they can sign into the Dashboard.', 'sratix-control' ); ?>

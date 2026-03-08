@@ -602,5 +602,6 @@
   "users.form.newPasswordPlaceholder": "Neues Passwort eingeben",
   "users.form.roles": "Rollen",
   "users.form.savePasswordHint": "Dieses Passwort speichern — es wird nicht erneut angezeigt",
-  "users.badge.wp": "WP"
+  "users.badge.wp": "WP",
+  "maintenance.bannerTitle": "Wartungsmodus aktiv"
 }

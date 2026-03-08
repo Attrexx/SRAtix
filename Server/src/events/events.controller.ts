@@ -16,7 +16,9 @@ import { JwtPayload } from '../auth/auth.service';
 import { EventsService } from './events.service';
 import { EmailService } from '../email/email.service';
 import { SettingsService } from '../settings/settings.service';
-import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
+import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { SseService } from '../sse/sse.service';
+import { CreateEventDto, UpdateEventDto, ToggleMaintenanceDto } from './dto/event.dto';
 
 @Controller('events')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -27,6 +29,8 @@ export class EventsController {
     private readonly eventsService: EventsService,
     private readonly email: EmailService,
     private readonly settings: SettingsService,
+    private readonly webhooks: OutgoingWebhooksService,
+    private readonly sse: SseService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -154,5 +158,61 @@ export class EventsController {
     }
 
     this.logger.log(`Admin ${type} notification sent for event ${event.id}`);
+  }
+
+  // ─── Maintenance Mode ────────────────────────────────────────
+
+  /**
+   * GET /api/events/:id/maintenance-status
+   * Public — no auth required. Returns maintenance state for client sites.
+   */
+  @Get(':id/maintenance-status')
+  async getMaintenanceStatus(@Param('id') id: string) {
+    return this.eventsService.getMaintenanceStatus(id);
+  }
+
+  /**
+   * PATCH /api/events/:id/maintenance
+   * Toggle maintenance mode on/off. Dispatches webhook + SSE alert.
+   */
+  @Patch(':id/maintenance')
+  @Roles('event_admin', 'super_admin')
+  async toggleMaintenance(
+    @Param('id') id: string,
+    @Body() dto: ToggleMaintenanceDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const event = this.isSuperAdmin(user)
+      ? await this.eventsService.findOne(id)
+      : await this.eventsService.findOne(id, user.orgId);
+
+    const result = await this.eventsService.setMaintenance(id, dto.active, dto.message);
+
+    // Dispatch webhook to all client sites
+    this.webhooks
+      .dispatch(event.orgId, id, 'event.updated', {
+        eventId: id,
+        type: 'maintenance.toggled',
+        maintenance: { active: dto.active, message: dto.message ?? '' },
+      })
+      .catch((err) =>
+        this.logger.error(`Maintenance webhook dispatch failed: ${err}`),
+      );
+
+    // Emit SSE alert for Dashboard
+    this.sse.emit(id, 'alerts', {
+      type: 'maintenance',
+      active: dto.active,
+      message: dto.active
+        ? (dto.message || 'Maintenance mode enabled')
+        : 'Maintenance mode disabled',
+      actor: user.email ?? user.displayName,
+    });
+
+    this.logger.log(
+      `Maintenance mode ${dto.active ? 'ENABLED' : 'DISABLED'} on event ${id} by ${user.email}`,
+    );
+
+    return result;
   }
 }
