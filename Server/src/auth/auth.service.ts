@@ -552,7 +552,7 @@ export class AuthService {
     const meta = (event.meta as Record<string, unknown>) ?? {};
     const storedCode = meta.robotxAccessCode as string | undefined;
 
-    if (!storedCode || !code || storedCode !== code) {
+    if (!storedCode || !code || storedCode.toLowerCase() !== code.toLowerCase()) {
       return { valid: false };
     }
 

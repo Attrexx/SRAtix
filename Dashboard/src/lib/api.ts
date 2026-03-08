@@ -552,6 +552,7 @@ export const api = {
     membershipTier?: string;
     wpProductId?: number;
     formSchemaId?: string;
+    meta?: Record<string, unknown>;
   }) =>
     request<TicketType>(`/events/${eventId}/ticket-types`, { method: 'POST', body: data }),
 

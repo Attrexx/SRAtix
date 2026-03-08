@@ -57,6 +57,7 @@ export default function TicketsPage() {
   const [robotxDiscountEnabled, setRobotxDiscountEnabled] = useState(false);
   const [robotxDiscountType, setRobotxDiscountType] = useState('percentage');
   const [robotxDiscountValue, setRobotxDiscountValue] = useState('');
+  const [formIcon, setFormIcon] = useState('');
 
   // Track existing early-bird variant id for edits
   const [existingEbVariantId, setExistingEbVariantId] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export default function TicketsPage() {
     setRobotxDiscountEnabled(false);
     setRobotxDiscountType('percentage');
     setRobotxDiscountValue('');
+    setFormIcon('');
     setError(null);
     setEditId(null);
   };
@@ -205,6 +207,7 @@ export default function TicketsPage() {
       setRobotxDiscountType('percentage');
       setRobotxDiscountValue('');
     }
+    setFormIcon(((tt.meta ?? {}) as Record<string, unknown>).icon as string ?? '');
   };
 
   /** Open create modal pre-populated with a ticket's data (no editId → new record). */
@@ -348,6 +351,11 @@ export default function TicketsPage() {
             ? parseInt(robotxDiscountValue, 10)
             : Math.round(parseFloat(robotxDiscountValue) * 100))
           : null,
+        // Icon (stored in meta)
+        meta: {
+          ...((editId ? (tickets.find((t) => t.id === editId)?.meta as Record<string, unknown> ?? {}) : {}) as Record<string, unknown>),
+          icon: formIcon || null,
+        },
       };
 
       if (editId) {
@@ -366,6 +374,7 @@ export default function TicketsPage() {
           membershipTier: formKind === 'membership' ? formTier : undefined,
           wpProductId: formKind === 'membership' ? derivedWpProductId : undefined,
           formSchemaId: resolvedSchemaId || undefined,
+          meta: formIcon ? { icon: formIcon } : undefined,
         });
         ticketId = created.id;
       }
@@ -856,6 +865,30 @@ export default function TicketsPage() {
                   onChange={setFormDescription}
                   placeholder={t('tickets.form.descriptionPlaceholder')}
                 />
+
+                {/* ── Icon ── */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Ticket Icon
+                  </label>
+                  <select
+                    value={formIcon}
+                    onChange={(e) => setFormIcon(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    <option value="">— No Icon —</option>
+                    <option value="industry_small">⚙️ Robotic Arm (Small Industry)</option>
+                    <option value="industry_medium">⚙️ Dual Arms (Medium Industry)</option>
+                    <option value="industry_large">🏭 Factory (Large Industry)</option>
+                    <option value="academic">🏛️ Institution (Academic)</option>
+                    <option value="startup">🚀 Rocket (Startup)</option>
+                    <option value="general">🤝 Handshake (General)</option>
+                    <option value="student">🎓 Graduation Cap (Student)</option>
+                    <option value="retired">☕ Coffee Cup (Retired)</option>
+                    <option value="individual">🤖 Robot Head (Individual)</option>
+                  </select>
+                </div>
 
                 {/* ── Section: Pricing ── */}
                 <SectionHeader label={t('tickets.form.pricingSection')} />

@@ -25,6 +25,97 @@
   const API_BASE = config.apiUrl.replace(/\/$/, '');
   const EVENT_ID = config.eventId;
 
+  // ─── Ticket card icons (consistent line-art, 24×24 viewBox) ──────────────────
+
+  const TICKET_ICONS = {
+    // Single industrial robotic arm
+    industry_small:
+      '<path d="M8 22h8M12 22v-6"/>' +
+      '<circle cx="12" cy="15.5" r="1"/>' +
+      '<path d="M13 14.5 17 10.5"/>' +
+      '<circle cx="17.2" cy="10.3" r=".8"/>' +
+      '<path d="M17.8 9.5 19.5 7M19.5 7l1.3 1M19.5 7l1-.8"/>',
+
+    // Two robotic arms from shared base
+    industry_medium:
+      '<path d="M4 22h16M12 22v-4"/>' +
+      '<circle cx="12" cy="17.5" r="1"/>' +
+      '<path d="M11 16.8 6 12.5"/>' +
+      '<circle cx="6" cy="12.5" r=".7"/>' +
+      '<path d="M5.5 12 3 9.5M3 9.5l-.5 1.8M3 9.5l-1.5-.2"/>' +
+      '<path d="M13 16.8 18 12.5"/>' +
+      '<circle cx="18" cy="12.5" r=".7"/>' +
+      '<path d="M18.5 12 21 9.5M21 9.5l.5 1.8M21 9.5l1.5-.2"/>',
+
+    // Factory building with chimney and smoke
+    industry_large:
+      '<path d="M2 22h20"/>' +
+      '<rect x="3" y="14" width="6" height="8" rx=".5"/>' +
+      '<path d="M9 18l4-4v8"/>' +
+      '<rect x="13" y="9" width="8" height="13" rx=".5"/>' +
+      '<rect x="16" y="5" width="2.5" height="4"/>' +
+      '<path d="M17 5c0-1 .4-2 .7-3M18 5c0-1 .4-2 .7-3"/>',
+
+    // Institutional building with pediment and columns
+    academic:
+      '<path d="M12 4l9 6H3z"/>' +
+      '<path d="M4 10v12M8 10v12M12 10v12M16 10v12M20 10v12"/>' +
+      '<path d="M2 22h20"/>',
+
+    // Upward-flying rocket
+    startup:
+      '<path d="M12 3c-2 3-3 7-3 11h6c0-4-1-8-3-11z"/>' +
+      '<circle cx="12" cy="11" r="1"/>' +
+      '<path d="M9 16l-2 5h2M15 16l2 5h-2"/>' +
+      '<path d="M10.5 21l1.5 1.5 1.5-1.5"/>',
+
+    // Two hands in a handshake with cuffs
+    general:
+      '<path d="M2 11.5v6M22 11.5v6"/>' +
+      '<path d="M2 14.5h5M22 14.5h-5"/>' +
+      '<path d="M7 14.5c1.5-2 3-3 5-3s3.5 1 5 3"/>' +
+      '<path d="M7 16c1.5-1 3-2 5-2s3.5 1 5 2"/>',
+
+    // Graduation cap with tassel
+    student:
+      '<path d="M2 10l10-5 10 5-10 5z"/>' +
+      '<path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>' +
+      '<path d="M20 10v6.5"/>' +
+      '<circle cx="20" cy="17" r=".8"/>',
+
+    // Steaming coffee cup
+    retired:
+      '<path d="M5 21h12"/>' +
+      '<path d="M7 21v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v6"/>' +
+      '<path d="M15 16.5h1.5a1.5 1.5 0 0 1 0 3H15"/>' +
+      '<path d="M9 14c0-1.5.7-1.5.7-3"/>' +
+      '<path d="M11 13.5c0-1.5.7-1.5.7-3"/>' +
+      '<path d="M13 14c0-1.5.7-1.5.7-3"/>',
+
+    // Cute robot head with antenna
+    individual:
+      '<rect x="5" y="8" width="14" height="11" rx="3"/>' +
+      '<circle cx="9" cy="13" r="1.5" fill="currentColor"/>' +
+      '<circle cx="15" cy="13" r="1.5" fill="currentColor"/>' +
+      '<path d="M10 17h4"/>' +
+      '<path d="M12 8v-3"/>' +
+      '<circle cx="12" cy="4" r="1.2"/>',
+  };
+
+  function ticketIconSvg(key) {
+    var inner = TICKET_ICONS[key];
+    if (!inner) return '';
+    return '<svg class="sratix-ticket-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+  }
+
+  function getTicketIcon(tt) {
+    // Explicit icon field takes priority (for future icon picker)
+    if (tt.icon && TICKET_ICONS[tt.icon]) return ticketIconSvg(tt.icon);
+    // Auto-map from membershipTier
+    if (tt.membershipTier && TICKET_ICONS[tt.membershipTier]) return ticketIconSvg(tt.membershipTier);
+    return '';
+  }
+
   // ─── Member session helpers ──────────────────────────────────────────────────
 
   const MEMBER_SESSION_KEY = 'sratix_member_session';
@@ -171,12 +262,16 @@
       ? `<p class="sratix-welcome-disclaimer">${escHtml(t('memberGate.welcomeDisclaimer'))}</p>`
       : '';
 
+    // For RobotX: discount pill goes inline with greeting; for SRA: in meta row
+    const metaHtml = isSra ? `<div class="sratix-welcome-meta">${tierHtml}${discountHtml}</div>` : '';
+    const inlineDiscount = isRobotx && discountHtml ? ' ' + discountHtml : '';
+
     return `<div class="sratix-welcome-banner">
       <div class="sratix-welcome-left">
         ${logoHtml}
         <div class="sratix-welcome-info">
-          <span class="sratix-welcome-text">${greeting}</span>
-          <div class="sratix-welcome-meta">${tierHtml}${discountHtml}</div>
+          <span class="sratix-welcome-text">${greeting}${inlineDiscount}</span>
+          ${metaHtml}
           ${disclaimerHtml}
         </div>
       </div>
@@ -395,15 +490,16 @@
       priceHtml = `<span class="sratix-price-free">${escHtml(t('tickets.free'))}</span>`;
     } else if (memberSession && tt.memberDiscount && tt.memberDiscount.discountCents > 0) {
       const memberPriceCents = Math.max(0, tt.priceCents - tt.memberDiscount.discountCents);
+      const strikePrice = hasEarlyBird ? tt.basePriceCents : tt.priceCents;
       priceHtml = `<div class="sratix-price-wrap">
-        <span class="sratix-price-original">${formatPrice(tt.priceCents, tt.currency)}</span>
         <span class="sratix-price-member">${formatPrice(memberPriceCents, tt.currency)}</span>
+        <span class="sratix-price-original">${formatPrice(strikePrice, tt.currency)}</span>
         <span class="sratix-savings-badge">${escHtml(tt.memberDiscount.discountLabel)}</span>
       </div>`;
     } else if (hasEarlyBird) {
       priceHtml = `<div class="sratix-price-wrap">
-        <span class="sratix-price-original">${formatPrice(tt.basePriceCents, tt.currency)}</span>
         <span class="sratix-price-early">${formatPrice(tt.priceCents, tt.currency)}</span>
+        <span class="sratix-price-original">${formatPrice(tt.basePriceCents, tt.currency)}</span>
         <span class="sratix-early-badge">${escHtml(t('tickets.earlyBird'))}</span>
       </div>`;
     } else {
@@ -416,7 +512,10 @@
       ? `<span class="sratix-badge sratix-badge--sold-out">${escHtml(t('tickets.soldOut'))}</span>`
       : `<button class="sratix-btn sratix-btn--primary" data-action="select" data-ticket-type-id="${escAttr(tt.id)}">${escHtml(t('tickets.select'))}</button>`;
 
+    const iconHtml = getTicketIcon(tt);
+
     return `<div class="sratix-ticket-card" data-ticket-type-id="${escAttr(tt.id)}">
+      ${iconHtml}
       <h3>${escHtml(tt.name)}</h3>
       ${tt.description ? `<p class="sratix-desc">${escHtml(tt.description)}</p>` : ''}
       ${priceHtml}${availHtml}

@@ -644,6 +644,7 @@ export class TicketTypesService {
         maxPerOrder: tt.maxPerOrder,
         category: tt.category,
         membershipTier: tt.membershipTier,
+        icon: (tt.meta as Record<string, unknown>)?.icon as string ?? null,
         formSchemaId: tt.formSchemaId,
         sortOrder: tt.sortOrder,
         salesEnd: tt.salesEnd,

@@ -63,12 +63,29 @@
 	padding: 18px;
 	display: flex;
 	flex-direction: column;
+	position: relative;
+	overflow: hidden;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sratix-ticket-card:hover {
 	border-color: var(--sratix-border-h);
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.sratix-ticket-icon {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	width: 32px;
+	height: 32px;
+	opacity: 0.18;
+	color: var(--sratix-text);
+	pointer-events: none;
+}
+
+.sratix-ticket-card:hover .sratix-ticket-icon {
+	opacity: 0.3;
 }
 
 .sratix-ticket-card h3 {
@@ -616,7 +633,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 12px;
+	gap: 18px;
 	width: 200px;
 	min-height: 150px;
 	padding: 24px 16px;
@@ -658,6 +675,7 @@
 	font-weight: 400;
 	opacity: 0.75;
 	font-size: 0.9em;
+	color: #fff;
 }
 
 .sratix-member-btn--regular:hover {
@@ -739,8 +757,8 @@
 }
 
 .sratix-welcome-logo {
-	width: 36px;
-	height: 36px;
+	width: 48px;
+	height: 48px;
 	object-fit: contain;
 	flex-shrink: 0;
 	margin-top: 1px;
