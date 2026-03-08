@@ -116,6 +116,7 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    'Membership: {tier}',
       'memberGate.welcomeDisclaimer': 'If a larger discount (e.g. early bird) is active, it will be applied instead.',
       'memberGate.changeType':     'Switch membership ↻',
+      'memberGate.backToMembership': '← Are you a member? Sign in for discounts',
     },
 
     fr: {
@@ -213,6 +214,7 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    'Adhésion : {tier}',
       'memberGate.welcomeDisclaimer': 'Si une réduction plus importante (ex. tarif anticipé) est active, elle sera appliquée.',
       'memberGate.changeType':     'Changer d\u2019adh\u00e9sion \u21bb',
+      'memberGate.backToMembership': '← Vous êtes membre ? Connectez-vous pour bénéficier de réductions',
     },
 
     de: {
@@ -310,6 +312,7 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    'Mitgliedschaft: {tier}',
       'memberGate.welcomeDisclaimer': 'Falls ein grösserer Rabatt (z.B. Frühbucher) aktiv ist, wird dieser stattdessen angewendet.',
       'memberGate.changeType':     'Mitgliedschaft wechseln \u21bb',
+      'memberGate.backToMembership': '← Mitglied? Anmelden für Rabatte',
     },
 
     it: {
@@ -504,6 +507,7 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    '會員類型：{tier}',
       'memberGate.welcomeDisclaimer': '若有更大的折扣（如早鳥優惠）正在進行，則會套用較大的折扣。',
       'memberGate.changeType':     '切換會員 ↻',
+      'memberGate.backToMembership': '← 是會員嗎？登入享折扣',
     },
   };
 

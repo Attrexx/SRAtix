@@ -198,6 +198,8 @@
       let html = '';
       if (memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') {
         html += renderWelcomeBanner(memberSession, ticketTypes);
+      } else if (config.memberGateEnabled) {
+        html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">&larr; ${escHtml(t('memberGate.backToMembership'))}</a>`;
       }
       html += renderTicketCards(ticketTypes, layout, memberSession);
       container.innerHTML = html;

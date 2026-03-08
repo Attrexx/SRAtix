@@ -751,6 +751,20 @@
 	padding: 10px 20px;
 }
 
+/* ── Back to Gate Link ── */
+.sratix-back-to-gate {
+	display: inline-block;
+	color: var(--sratix-text-muted);
+	text-decoration: none;
+	font-size: 0.88em;
+	margin-bottom: 16px;
+	transition: color 0.2s ease;
+}
+
+.sratix-back-to-gate:hover {
+	color: var(--sratix-text);
+}
+
 /* ── Welcome Banner ── */
 .sratix-welcome-banner {
 	display: flex;
