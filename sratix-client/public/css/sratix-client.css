@@ -40,6 +40,40 @@
 	background-color: var(--sratix-navy) !important;
 }
 
+/* ── Ticket Display Header ── */
+.sratix-ticket-header {
+	margin-bottom: 24px;
+	text-align: center;
+}
+
+.sratix-ticket-title {
+	font-weight: 700;
+	color: var(--sratix-text);
+	margin: 0 0 8px;
+	line-height: 1.3;
+}
+
+.sratix-ticket-intro {
+	color: var(--sratix-text-muted);
+	font-size: 0.95rem;
+	line-height: 1.6;
+	max-width: 720px;
+	margin: 0 auto;
+}
+
+.sratix-ticket-intro a {
+	color: var(--sratix-primary);
+	text-decoration: underline;
+}
+
+.sratix-ticket-intro ul,
+.sratix-ticket-intro ol {
+	text-align: left;
+	padding-left: 1.5em;
+	margin: 8px auto;
+	max-width: 600px;
+}
+
 /* ── Layout ── */
 .sratix-cards {
 	display: grid;

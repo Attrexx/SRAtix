@@ -124,6 +124,27 @@ export class EventsService {
   }
 
   /**
+   * Public display info for the ticket widget.
+   * Returns customizable title / intro stored in Event.meta.
+   */
+  async getPublicInfo(eventId: string): Promise<{
+    ticketTitle: string;
+    ticketTitleSize: string;
+    ticketIntro: string;
+  }> {
+    const event = await this.prisma.event.findFirst({ where: { id: eventId } });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+
+    return {
+      ticketTitle: (meta.ticketTitle as string) ?? '',
+      ticketTitleSize: (meta.ticketTitleSize as string) ?? '1.75',
+      ticketIntro: (meta.ticketIntro as string) ?? '',
+    };
+  }
+
+  /**
    * Set maintenance mode on an event.
    * Stores state in Event.meta.maintenance.
    */

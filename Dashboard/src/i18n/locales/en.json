@@ -196,6 +196,13 @@
   "events.settings.robotxGenerate": "Generate",
   "events.settings.robotxCopy": "Copy",
   "events.settings.robotxSaveNote": "Click Save Changes above to persist the code.",
+  "events.settings.ticketDisplay": "Ticket Display",
+  "events.settings.ticketDisplayHint": "Customize the title and introductory text shown above tickets on the registration page.",
+  "events.settings.ticketTitle": "Title",
+  "events.settings.ticketTitlePlaceholder": "e.g. Get Your Tickets",
+  "events.settings.ticketTitleSize": "Title Size",
+  "events.settings.ticketIntro": "Intro Text",
+  "events.settings.ticketIntroPlaceholder": "Optional introductory text shown below the title…",
 
   "tickets.title": "Tickets",
   "tickets.subtitle": "{count} ticket(s) configured",

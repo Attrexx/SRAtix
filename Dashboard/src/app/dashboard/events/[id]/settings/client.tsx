@@ -5,7 +5,18 @@ import { useEventId } from '@/hooks/use-event-id';
 import { api, type Event } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import { toast } from 'sonner';
+
+const TITLE_SIZE_OPTIONS = [
+  { value: '1.25', label: '1.25 rem' },
+  { value: '1.5', label: '1.5 rem' },
+  { value: '1.75', label: '1.75 rem' },
+  { value: '2', label: '2 rem' },
+  { value: '2.25', label: '2.25 rem' },
+  { value: '2.5', label: '2.5 rem' },
+  { value: '3', label: '3 rem' },
+];
 
 const TIMEZONES = [
   { value: 'Europe/Zurich', label: 'events.form.tz.zurich' },
@@ -57,6 +68,9 @@ export default function EventSettingsPage() {
   const [currency, setCurrency] = useState('CHF');
   const [status, setStatus] = useState('draft');
   const [robotxCode, setRobotxCode] = useState('');
+  const [ticketTitle, setTicketTitle] = useState('');
+  const [ticketTitleSize, setTicketTitleSize] = useState('1.75');
+  const [ticketIntro, setTicketIntro] = useState('');
 
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
@@ -73,6 +87,9 @@ export default function EventSettingsPage() {
     setStatus(ev.status);
     const meta = (ev.meta ?? {}) as Record<string, unknown>;
     setRobotxCode((meta.robotxAccessCode as string) ?? '');
+    setTicketTitle((meta.ticketTitle as string) ?? '');
+    setTicketTitleSize((meta.ticketTitleSize as string) ?? '1.75');
+    setTicketIntro((meta.ticketIntro as string) ?? '');
   }, []);
 
   useEffect(() => {
@@ -110,6 +127,9 @@ export default function EventSettingsPage() {
         meta: {
           ...((event.meta ?? {}) as Record<string, unknown>),
           robotxAccessCode: robotxCode.trim() || undefined,
+          ticketTitle: ticketTitle.trim() || undefined,
+          ticketTitleSize,
+          ticketIntro: ticketIntro.trim() || undefined,
         },
       };
       const updated = await api.updateEvent(id, payload);
@@ -231,6 +251,37 @@ export default function EventSettingsPage() {
             onChange={setStatus}
             options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: t(s.label) }))}
           />
+        </Section>
+
+        {/* ── Ticket Display ── */}
+        <Section title={t('events.settings.ticketDisplay')}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.ticketDisplayHint')}
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+            <FieldInput
+              label={t('events.settings.ticketTitle')}
+              value={ticketTitle}
+              onChange={setTicketTitle}
+              placeholder={t('events.settings.ticketTitlePlaceholder')}
+            />
+            <FieldSelect
+              label={t('events.settings.ticketTitleSize')}
+              value={ticketTitleSize}
+              onChange={setTicketTitleSize}
+              options={TITLE_SIZE_OPTIONS}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+              {t('events.settings.ticketIntro')}
+            </label>
+            <RichTextEditor
+              value={ticketIntro}
+              onChange={setTicketIntro}
+              placeholder={t('events.settings.ticketIntroPlaceholder')}
+            />
+          </div>
         </Section>
 
         {/* ── RobotX Access Code ── */}

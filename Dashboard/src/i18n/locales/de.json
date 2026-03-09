@@ -196,6 +196,13 @@
   "events.settings.robotxGenerate": "Generieren",
   "events.settings.robotxCopy": "Kopieren",
   "events.settings.robotxSaveNote": "Klicken Sie oben auf Änderungen speichern, um den Code zu sichern.",
+  "events.settings.ticketDisplay": "Ticket-Anzeige",
+  "events.settings.ticketDisplayHint": "Passen Sie den Titel und Einleitungstext an, der über den Tickets auf der Registrierungsseite angezeigt wird.",
+  "events.settings.ticketTitle": "Titel",
+  "events.settings.ticketTitlePlaceholder": "z.B. Holen Sie sich Ihre Tickets",
+  "events.settings.ticketTitleSize": "Titelgrösse",
+  "events.settings.ticketIntro": "Einleitungstext",
+  "events.settings.ticketIntroPlaceholder": "Optionaler Einleitungstext unter dem Titel…",
 
   "tickets.title": "Tickets",
   "tickets.subtitle": "{count} Ticket(s) konfiguriert",

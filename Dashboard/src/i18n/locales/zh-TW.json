@@ -196,6 +196,13 @@
   "events.settings.robotxGenerate": "產生",
   "events.settings.robotxCopy": "複製",
   "events.settings.robotxSaveNote": "點擊上方的儲存以保存代碼。",
+  "events.settings.ticketDisplay": "票券顯示",
+  "events.settings.ticketDisplayHint": "自訂註冊頁面票券上方顯示的標題和介紹文字。",
+  "events.settings.ticketTitle": "標題",
+  "events.settings.ticketTitlePlaceholder": "例如：立即購票",
+  "events.settings.ticketTitleSize": "標題大小",
+  "events.settings.ticketIntro": "介紹文字",
+  "events.settings.ticketIntroPlaceholder": "顯示在標題下方的選填介紹文字…",
 
   "tickets.title": "票券管理",
   "tickets.subtitle": "已設定 {count} 張票券",

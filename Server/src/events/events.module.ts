@@ -1,6 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
+import { EventsMaintenanceController } from './events-maintenance.controller';
+import { EventsPublicInfoController } from './events-public-info.controller';
 import { EmailModule } from '../email/email.module';
 import { SettingsModule } from '../settings/settings.module';
 import { OutgoingWebhooksModule } from '../outgoing-webhooks/outgoing-webhooks.module';
@@ -13,7 +15,7 @@ import { SseModule } from '../sse/sse.module';
     forwardRef(() => OutgoingWebhooksModule),
     SseModule,
   ],
-  controllers: [EventsController],
+  controllers: [EventsController, EventsMaintenanceController, EventsPublicInfoController],
   providers: [EventsService],
   exports: [EventsService],
 })

@@ -196,6 +196,13 @@
   "events.settings.robotxGenerate": "Genera",
   "events.settings.robotxCopy": "Copia",
   "events.settings.robotxSaveNote": "Clicca su Salva in alto per salvare il codice.",
+  "events.settings.ticketDisplay": "Visualizzazione biglietti",
+  "events.settings.ticketDisplayHint": "Personalizza il titolo e il testo introduttivo mostrato sopra i biglietti nella pagina di registrazione.",
+  "events.settings.ticketTitle": "Titolo",
+  "events.settings.ticketTitlePlaceholder": "es. Acquista i tuoi biglietti",
+  "events.settings.ticketTitleSize": "Dimensione titolo",
+  "events.settings.ticketIntro": "Testo introduttivo",
+  "events.settings.ticketIntroPlaceholder": "Testo introduttivo opzionale sotto il titolo…",
 
   "tickets.title": "Biglietti",
   "tickets.subtitle": "{count} biglietto/i configurato/i",

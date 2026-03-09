@@ -195,12 +195,27 @@
         endpoint += '?' + params.toString();
         headers['Authorization'] = 'Bearer ' + memberSession.sessionToken;
       }
-      const ticketTypes = await apiFetch(endpoint, { headers });
+      const [ticketTypes, publicInfo] = await Promise.all([
+        apiFetch(endpoint, { headers }),
+        apiFetch(`events/${eventId}/public-info`).catch(function () { return {}; }),
+      ]);
       if (!ticketTypes || ticketTypes.length === 0) {
         container.innerHTML = `<p class="sratix-info">${escHtml(t('tickets.noTickets'))}</p>`;
         return;
       }
       let html = '';
+      // Ticket display header (title + intro from event settings)
+      if (publicInfo.ticketTitle || publicInfo.ticketIntro) {
+        html += '<div class="sratix-ticket-header">';
+        if (publicInfo.ticketTitle) {
+          var size = publicInfo.ticketTitleSize || '1.75';
+          html += '<h2 class="sratix-ticket-title" style="font-size:' + escAttr(size) + 'rem">' + escHtml(publicInfo.ticketTitle) + '</h2>';
+        }
+        if (publicInfo.ticketIntro) {
+          html += '<div class="sratix-ticket-intro">' + publicInfo.ticketIntro + '</div>';
+        }
+        html += '</div>';
+      }
       if (memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') {
         html += renderWelcomeBanner(memberSession, ticketTypes);
       } else if (config.memberGateEnabled) {
