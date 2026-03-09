@@ -329,7 +329,7 @@ export class AuthService implements OnModuleDestroy {
    */
   validateTokenSync(token: string): { sub: string; type?: string } | null {
     try {
-      return this.jwt.verify(token);
+      return this.jwt.verify(token) as { sub: string; type?: string };
     } catch {
       return null;
     }

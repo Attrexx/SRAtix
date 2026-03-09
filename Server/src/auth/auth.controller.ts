@@ -235,9 +235,9 @@ export class AuthController {
     const rt = (req.cookies as Record<string, string>)?.sratix_rt;
     if (rt) {
       try {
-        const decoded = this.auth.validateTokenSync(rt);
+        const decoded = this.authService.validateTokenSync(rt);
         if (decoded?.sub) {
-          await this.auth.revokeUserTokens(decoded.sub);
+          await this.authService.revokeUserTokens(decoded.sub);
         }
       } catch {
         // Token may already be expired / invalid — still clear the cookie
