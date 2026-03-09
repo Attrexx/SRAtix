@@ -77,7 +77,7 @@ function personalSection(startOrder: number): FormField[] {
     f('city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'personal', startOrder + 4),
     f('state_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'personal', startOrder + 5),
     f('country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'personal', startOrder + 6, { required: true }),
-    f('personal_linkedin', 'url', { en: 'LinkedIn / Website', de: 'LinkedIn / Webseite', fr: 'LinkedIn / Site web', it: 'LinkedIn / Sito web', 'zh-TW': 'LinkedIn / 網站' }, 'personal', startOrder + 7),
+    f('personal_linkedin', 'url', { en: 'Website / LinkedIn', de: 'Webseite / LinkedIn', fr: 'Site web / LinkedIn', it: 'Sito web / LinkedIn', 'zh-TW': '網站 / LinkedIn' }, 'personal', startOrder + 7),
   ];
 }
 
