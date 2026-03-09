@@ -18,6 +18,8 @@
 
 /* ── Full-bleed page wrapper ── */
 .sratix-page-wrap {
+	position: relative;
+	z-index: 999;
 	background: var(--sratix-navy);
 	color: var(--sratix-text);
 	font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
