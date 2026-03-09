@@ -35,7 +35,8 @@ export type JobName =
   | 'badge.batch'
   | 'export.csv'
   | 'sync.wp'
-  | 'webhook.deliver';
+  | 'webhook.deliver'
+  | 'reminder.registration';
 
 export interface JobPayload {
   'email.send': {
@@ -83,6 +84,11 @@ export interface JobPayload {
     payload: Record<string, unknown>;
     retryCount?: number;
   };
+  'reminder.registration': {
+    attendeeId: string;
+    eventId: string;
+    isSecondReminder: boolean;
+  };
 }
 
 @Injectable()
@@ -121,7 +127,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     // Create queues
     const { Queue } = await import('bullmq');
 
-    const queueNames = ['email', 'pdf', 'badge', 'export', 'sync', 'webhook'];
+    const queueNames = ['email', 'pdf', 'badge', 'export', 'sync', 'webhook', 'reminder'];
     for (const name of queueNames) {
       const queue = new Queue(`sratix-${name}`, {
         connection: this.connectionConfig as Record<string, unknown>,

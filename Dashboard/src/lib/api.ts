@@ -305,6 +305,8 @@ export interface Attendee {
   email: string;
   phone?: string;
   company?: string;
+  status?: string;
+  purchasedByAttendeeId?: string;
   createdAt: string;
 }
 

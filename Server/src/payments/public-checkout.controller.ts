@@ -14,6 +14,8 @@ import {
   IsInt,
   IsOptional,
   IsObject,
+  IsBoolean,
+  IsArray,
   Min,
   Max,
   IsEmail,
@@ -21,6 +23,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersService } from '../orders/orders.service';
 import { StripeService } from './stripe.service';
@@ -30,6 +33,9 @@ import { FormsService } from '../forms/forms.service';
 import { SettingsService } from '../settings/settings.service';
 import { AuthService } from '../auth/auth.service';
 import { TicketTypesService } from '../ticket-types/ticket-types.service';
+import { TicketsService } from '../tickets/tickets.service';
+import { EmailService } from '../email/email.service';
+import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +58,19 @@ class PublicAttendeeDto {
   @IsString()
   @IsOptional()
   company?: string;
+}
+
+class AdditionalAttendeeDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  firstName!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName!: string;
 }
 
 class PublicCheckoutDto {
@@ -103,6 +122,26 @@ class PublicCheckoutDto {
   @IsString()
   @IsOptional()
   memberSessionToken?: string;
+
+  // ── Multi-ticket recipient fields ──────────────────────────────────
+
+  @IsBoolean()
+  @IsOptional()
+  includeTicketForSelf?: boolean; // default true
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AdditionalAttendeeDto)
+  @IsOptional()
+  additionalAttendees?: AdditionalAttendeeDto[];
+
+  @IsEmail()
+  @IsOptional()
+  billingEmail?: string; // required when includeTicketForSelf is false
+
+  @IsString()
+  @IsOptional()
+  billingName?: string; // required when includeTicketForSelf is false
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -136,6 +175,9 @@ export class PublicCheckoutController {
     private readonly settings: SettingsService,
     private readonly authService: AuthService,
     private readonly ticketTypesService: TicketTypesService,
+    private readonly ticketsService: TicketsService,
+    private readonly emailService: EmailService,
+    private readonly registrationReminder: RegistrationReminderWorker,
   ) {}
 
   @Post()
@@ -143,7 +185,7 @@ export class PublicCheckoutController {
     // ── 1. Find event ────────────────────────────────────────────────────
     const event = await this.prisma.event.findUnique({
       where: { id: dto.eventId },
-      select: { id: true, orgId: true, currency: true, status: true, name: true },
+      select: { id: true, orgId: true, currency: true, status: true, name: true, endDate: true, startDate: true, venue: true },
     });
     if (!event) throw new NotFoundException('Event not found');
     if (event.status !== 'published') {
@@ -210,7 +252,50 @@ export class PublicCheckoutController {
         console.error('[PublicCheckout] Form submission failed:', err);
       }
     }
+    // ── 3c. Create recipient attendees for multi-ticket purchases ────
+    const recipientAttendees: Array<{
+      attendeeId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      registrationToken: string;
+    }> = [];
+    const includeTicketForSelf = dto.includeTicketForSelf !== false;
 
+    if (dto.additionalAttendees && dto.additionalAttendees.length > 0) {
+      const expectedRecipients = dto.quantity - (includeTicketForSelf ? 1 : 0);
+      if (dto.additionalAttendees.length !== expectedRecipients) {
+        throw new BadRequestException(
+          `Expected ${expectedRecipients} recipient(s) but received ${dto.additionalAttendees.length}`,
+        );
+      }
+
+      // Token expires at end of event day (23:59:59)
+      const tokenExpiry = new Date(event.endDate);
+      tokenExpiry.setHours(23, 59, 59, 999);
+
+      for (const recipient of dto.additionalAttendees) {
+        const token = randomBytes(32).toString('hex');
+        const recipientAttendee = await this.attendees.upsertRecipient({
+          eventId: dto.eventId,
+          orgId: event.orgId,
+          email: recipient.email,
+          firstName: recipient.firstName,
+          lastName: recipient.lastName,
+          registrationToken: token,
+          registrationTokenExpiresAt: tokenExpiry,
+          purchasedByAttendeeId: attendee.id,
+        });
+
+        recipientAttendees.push({
+          attendeeId: recipientAttendee.id,
+          email: recipient.email,
+          firstName: recipient.firstName,
+          lastName: recipient.lastName,
+          registrationToken: token,
+        });
+      }
+    }
     // ── 4. Create order ──────────────────────────────────────────────────
     const totalCents = tt.priceCents * dto.quantity;
     const isTestMode = await this.settings.isTestMode();
@@ -229,9 +314,18 @@ export class PublicCheckoutController {
       ],
     });
 
-    // Tag test orders so downstream handlers can gate side-effects
-    if (isTestMode) {
-      await this.orders.updateMeta(order.id, { isTestOrder: true });
+    // Tag test orders and store recipient data in order meta
+    {
+      const orderMeta: Record<string, unknown> = {};
+      if (isTestMode) orderMeta.isTestOrder = true;
+      if (recipientAttendees.length > 0) {
+        orderMeta.recipientAttendees = recipientAttendees;
+        orderMeta.includeTicketForSelf = includeTicketForSelf;
+        orderMeta.registrationBaseUrl = new URL(dto.successUrl).origin + '/register';
+      }
+      if (Object.keys(orderMeta).length > 0) {
+        await this.orders.updateMeta(order.id, orderMeta);
+      }
     }
 
     // ── 5. Validate promo code ───────────────────────────────────────────
@@ -327,6 +421,55 @@ export class PublicCheckoutController {
     if (finalTotal <= 0) {
       // Mark order as paid immediately for free tickets
       await this.orders.updateStatus(order.id, 'paid');
+
+      // Issue tickets for free orders
+      try {
+        const issued = await this.ticketsService.issueForOrder(order.id, {
+          isTestTicket: isTestMode,
+        });
+
+        // Reassign tickets to recipients if multi-ticket purchase
+        if (recipientAttendees.length > 0 && issued.length > 0) {
+          const startIdx = includeTicketForSelf ? 1 : 0;
+          for (let i = 0; i < recipientAttendees.length; i++) {
+            const ticketIdx = startIdx + i;
+            if (ticketIdx < issued.length) {
+              await this.prisma.ticket.update({
+                where: { id: issued[ticketIdx].id },
+                data: { attendeeId: recipientAttendees[i].attendeeId },
+              });
+            }
+          }
+
+          // Send gift notification emails to recipients
+          const registrationBaseUrl = new URL(dto.successUrl).origin + '/register';
+          const purchaserName = `${dto.attendeeData.firstName} ${dto.attendeeData.lastName}`;
+          for (const recipient of recipientAttendees) {
+            this.emailService
+              .sendTicketGiftNotification(recipient.email, {
+                recipientName: recipient.firstName,
+                purchaserName,
+                eventName: event.name,
+                eventDate: event.startDate.toISOString().split('T')[0],
+                eventVenue: event.venue ?? '',
+                ticketTypeName: tt.name,
+                registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
+              })
+              .catch((err) =>
+                console.error('[PublicCheckout] Gift notification failed:', err),
+              );
+
+            // Schedule 7-day and 30-day registration reminders
+            this.registrationReminder
+              .scheduleReminders(recipient.attendeeId, dto.eventId)
+              .catch((err) =>
+                console.error('[PublicCheckout] Reminder scheduling failed:', err),
+              );
+          }
+        }
+      } catch (err) {
+        console.error('[PublicCheckout] Failed to issue tickets for free order:', err);
+      }
 
       // Append test mode flag to success URL so the client can display simulated actions
       let successUrl = dto.successUrl;

@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { EmailQueueWorker } from './email-queue.worker';
 import { WebhookQueueWorker } from './webhook-queue.worker';
+import { RegistrationReminderWorker } from './registration-reminder.worker';
 import { EmailModule } from '../email/email.module';
 
 /**
@@ -17,6 +18,7 @@ import { EmailModule } from '../email/email.module';
  *   - Data export CSV generation
  *   - WP plugin sync
  *   - Outgoing webhook delivery
+ *   - Registration reminders (7-day + 30-day)
  *
  * Requires REDIS_URL env var. If not set, gracefully degrades
  * and all jobs are processed inline (Phase 1 behavior).
@@ -24,7 +26,7 @@ import { EmailModule } from '../email/email.module';
 @Global()
 @Module({
   imports: [EmailModule],
-  providers: [QueueService, EmailQueueWorker, WebhookQueueWorker],
-  exports: [QueueService],
+  providers: [QueueService, EmailQueueWorker, WebhookQueueWorker, RegistrationReminderWorker],
+  exports: [QueueService, RegistrationReminderWorker],
 })
 export class QueueModule {}

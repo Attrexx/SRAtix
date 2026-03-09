@@ -636,6 +636,12 @@
             </div>
             <p class="sratix-promo-msg" id="sratix-promo-msg"></p>
           </div>
+          <div class="sratix-self-ticket-row" id="sratix-self-ticket-row" style="display:none;margin-top:12px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+              <input type="checkbox" id="sratix-include-self" checked style="width:16px;height:16px" />
+              <span>Include a ticket for myself</span>
+            </label>
+          </div>
           <p class="sratix-error" id="sratix-qty-error" style="display:none"></p>
         </div>
         <div class="sratix-modal-footer">
@@ -659,11 +665,14 @@
     const promoApply  = modal.querySelector('#sratix-promo-apply');
     const promoMsg    = modal.querySelector('#sratix-promo-msg');
     const errorEl     = modal.querySelector('#sratix-qty-error');
+    const selfTicketRow = modal.querySelector('#sratix-self-ticket-row');
+    const selfTicketCheckbox = modal.querySelector('#sratix-include-self');
 
     function updateDisplay() {
       valEl.textContent = qty;
       decBtn.disabled = qty <= 1;
       incBtn.disabled = qty >= maxQty;
+      if (selfTicketRow) selfTicketRow.style.display = qty > 1 ? '' : 'none';
       const subtotal = tt.priceCents * qty;
       const final = Math.max(0, subtotal - discountCents);
       if (tt.priceCents === 0) {
@@ -717,8 +726,13 @@
         errorEl.style.display = '';
         return;
       }
+      var includeForSelf = selfTicketCheckbox ? selfTicketCheckbox.checked : true;
       closeModal();
-      openRegistrationModal(eventId, tt, qty, promoCode, discountCents);
+      if (qty > 1) {
+        openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf);
+      } else {
+        openRegistrationModal(eventId, tt, qty, promoCode, discountCents, true, []);
+      }
     });
 
     updateDisplay();
@@ -1198,6 +1212,12 @@
           if (memberSess.sessionToken) payload.memberSessionToken = memberSess.sessionToken;
         }
 
+        // Include multi-ticket recipient data
+        if (additionalAttendees && additionalAttendees.length > 0) {
+          payload.includeTicketForSelf = includeTicketForSelf;
+          payload.additionalAttendees = additionalAttendees;
+        }
+
         var result = await apiFetch('payments/checkout/public', {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -1477,6 +1497,7 @@
     initTicketsWidget();
     initMyTicketsWidget();
     initScheduleWidget();
+    initRegisterWidget();
   }
 
   if (document.readyState === 'loading') {

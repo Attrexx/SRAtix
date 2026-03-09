@@ -21,6 +21,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
+import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 
 /**
  * Stripe Webhook Controller.
@@ -48,6 +49,7 @@ export class StripeWebhookController {
     private readonly outgoingWebhooks: OutgoingWebhooksService,
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly registrationReminder: RegistrationReminderWorker,
   ) {}
 
   @Post()
@@ -150,14 +152,82 @@ export class StripeWebhookController {
 
     // Issue tickets (one Ticket per OrderItem quantity unit)
     // In test mode, tickets are tagged with isTestTicket in their meta
+    let issued: { id: string; code: string; qrPayload: string }[] = [];
     try {
-      const issued = await this.tickets.issueForOrder(orderId, { isTestTicket: isTestOrder });
+      issued = await this.tickets.issueForOrder(orderId, { isTestTicket: isTestOrder });
       this.logger.log(
         `Issued ${issued.length} ticket(s) for order ${orderId}${isTestOrder ? ' [TEST]' : ''}`,
       );
     } catch (err) {
       this.logger.error(`Failed to issue tickets for order ${orderId}: ${err}`);
       // Order is already marked paid — tickets can be re-issued manually
+    }
+
+    // ── Reassign tickets to recipients (multi-ticket purchase) ─────
+    const recipientAttendees = (orderMeta.recipientAttendees ?? []) as Array<{
+      attendeeId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      registrationToken: string;
+    }>;
+
+    if (recipientAttendees.length > 0 && issued.length > 0) {
+      const includeTicketForSelf = orderMeta.includeTicketForSelf !== false;
+      const startIdx = includeTicketForSelf ? 1 : 0;
+      for (let i = 0; i < recipientAttendees.length; i++) {
+        const ticketIdx = startIdx + i;
+        if (ticketIdx < issued.length) {
+          await this.prisma.ticket.update({
+            where: { id: issued[ticketIdx].id },
+            data: { attendeeId: recipientAttendees[i].attendeeId },
+          });
+        }
+      }
+      this.logger.log(
+        `Reassigned ${recipientAttendees.length} ticket(s) to recipients for order ${orderId}`,
+      );
+
+      // Send gift notification emails to recipients
+      const registrationBaseUrl = orderMeta.registrationBaseUrl as string;
+      if (registrationBaseUrl) {
+        const eventForGift = await this.orders.findEventForOrder(orderId);
+        const purchaserName = orderForMeta.customerName ?? 'Someone';
+
+        // Get ticket type name
+        const ttIds = (orderForMeta.items ?? []).map((item: any) => item.ticketTypeId);
+        const ttForGift = ttIds.length > 0
+          ? await this.prisma.ticketType.findFirst({ where: { id: { in: ttIds } } })
+          : null;
+
+        for (const recipient of recipientAttendees) {
+          this.email
+            .sendTicketGiftNotification(recipient.email, {
+              recipientName: recipient.firstName,
+              purchaserName,
+              eventName: eventForGift?.name ?? 'Event',
+              eventDate: eventForGift?.startDate?.toISOString().split('T')[0] ?? '',
+              eventVenue: eventForGift?.venue ?? '',
+              ticketTypeName: ttForGift?.name ?? 'Ticket',
+              registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
+            })
+            .catch((err) =>
+              this.logger.error(`Gift notification failed for ${recipient.email}: ${err}`),
+            );
+        }
+        this.logger.log(
+          `Sent ${recipientAttendees.length} gift notification(s) for order ${orderId}${isTestOrder ? ' [TEST]' : ''}`,
+        );
+
+        // Schedule 7-day and 30-day registration reminders
+        for (const recipient of recipientAttendees) {
+          this.registrationReminder
+            .scheduleReminders(recipient.attendeeId, eventId!)
+            .catch((err) =>
+              this.logger.error(`Reminder scheduling failed for ${recipient.email}: ${err}`),
+            );
+        }
+      }
     }
 
     // Fetch the order to get details for SSE broadcast

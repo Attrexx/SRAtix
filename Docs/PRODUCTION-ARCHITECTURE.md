@@ -682,6 +682,72 @@ CREATE TABLE invoice_ledger (
 - Credit note generation for refunds
 - PDF rendering via satori + @resvg/resvg-js + pdf-lib (Swiss formatting via template JSON)
 
+### Multi-Ticket Recipient Flow
+
+When a purchaser buys multiple tickets, they can assign each ticket to a different recipient (e.g., buying tickets for colleagues). The system collects recipient details at checkout and handles registration via tokenized email links.
+
+#### Purchase Flow
+
+```
+Purchaser selects quantity > 1
+  → Optional: "Include a ticket for myself" checkbox
+  → Recipient details modal: firstName, lastName, email for each extra ticket
+  → Duplicate email warning (non-blocking)
+  → Server: create Attendee records for each recipient (status='invited')
+  → Server: generate unique registrationToken (64-char hex, randomBytes(32))
+  → Server: set registrationTokenExpiresAt = event endDate 23:59:59
+  → Server: store recipientAttendees in order meta
+  → On payment confirmation (webhook or free path):
+      → Issue tickets via TicketsService
+      → Reassign tickets to correct recipient attendees
+      → Send gift notification emails with registration link
+      → Schedule registration reminders (7-day + 30-day via BullMQ)
+```
+
+#### Registration Flow
+
+```
+Recipient clicks registration link → /register/?token=<64-char-hex>
+  → GET /api/public/register/:token — validates token, returns form schema + attendee data
+  → Recipient completes registration form (phone, company, custom fields)
+  → POST /api/public/register/:token — saves data, marks status='registered', clears token
+  → Sends confirmation email to recipient
+  → Sends notification email to purchaser ("X has registered for event Y")
+```
+
+#### Attendee Status Lifecycle
+
+| Status | Meaning | Trigger |
+|--------|---------|---------|
+| `registered` | Self-registered attendee (default) | Normal checkout |
+| `invited` | Recipient awaiting registration | Purchaser bought ticket for them |
+| `registered` | Recipient completed registration | Token registration form submitted |
+| `confirmed` | Checked in at event | Check-in scan |
+
+#### Reminder System
+
+- **7-day reminder**: Sent 7 days after gift notification if status still `invited`
+- **30-day reminder**: Sent 30 days after gift notification with increased urgency
+- Reminders are BullMQ delayed jobs on the dedicated `reminder` queue
+- Reminders check attendee status and token validity before sending
+- Graceful degradation if Redis is unavailable
+
+#### Schema Extensions
+
+```sql
+ALTER TABLE attendee
+  ADD COLUMN status VARCHAR(20) DEFAULT 'registered',
+  ADD COLUMN registrationToken VARCHAR(64) UNIQUE,
+  ADD COLUMN registrationTokenExpiresAt DATETIME,
+  ADD COLUMN purchasedByAttendeeId CHAR(36),
+  ADD CONSTRAINT fk_attendee_purchaser
+    FOREIGN KEY (purchasedByAttendeeId) REFERENCES attendee(id);
+```
+
+#### Test Mode Compatibility
+
+All recipient features (attendee creation, token generation, ticket reassignment, gift emails, registration, reminders) work identically in Stripe Test Mode. Only the existing WP sync webhook dispatch is gated by test mode — the multi-ticket flow requires no special test-mode handling.
+
 ---
 
 ## 10. Badge Generation System
@@ -825,6 +891,16 @@ class TwilioTransport implements SmsTransport { ... }
 - **Delivery logging**: every send logged with status, timestamps, message ID
 - **Unsubscribe handling**: respect consent flags from form submissions
 - **Rate limiting**: prevent accidental mass-send; require confirmation for large audiences
+- **Gift notifications**: sent to ticket recipients with tokenized registration link + spam note
+- **Registration confirmations**: sent to recipients after completing registration form
+- **Purchaser notifications**: sent to ticket buyer when a recipient registers
+- **Registration reminders**: delayed 7-day and 30-day reminders via `reminder` BullMQ queue
+
+#### Public vs Admin Email Wrappers
+
+Two HTML wrapper templates exist:
+- `adminWrapper()`: Used for admin/purchaser-facing emails with admin footer branding
+- `publicWrapper()`: Used for recipient-facing emails with public footer ("SRAtix Ticketing Platform")
 
 ---
 

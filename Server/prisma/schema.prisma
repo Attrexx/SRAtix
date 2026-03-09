@@ -242,6 +242,11 @@ model Attendee {
   wpUserId  Int?     // linked WP user, if any
   phone     String?  @db.VarChar(50)
   company   String?  @db.VarChar(255)
+  // ── Status & registration token ───────────────────────────────────────
+  status                     String    @default("registered") @db.VarChar(30) // invited | registered | confirmed | cancelled
+  registrationToken          String?   @unique @db.VarChar(64) // 64-char hex token for tokenized registration link
+  registrationTokenExpiresAt DateTime? @db.DateTime(3) // event end date at 23:59:59 — allows same-day registration
+  purchasedByAttendeeId      String?   @db.Char(36)    // self-ref FK to purchasing attendee (null if self-purchased)
   // ── Extended profile fields (Section 3.1) ─────────────────────────────
   badgeName          String?  @db.VarChar(100)    // preferred display name for badge
   jobTitle           String?  @db.VarChar(150)
@@ -259,6 +264,8 @@ model Attendee {
 
   event           Event            @relation(fields: [eventId], references: [id])
   org             Organization     @relation(fields: [orgId], references: [id])
+  purchasedBy     Attendee?        @relation("PurchasedForBy", fields: [purchasedByAttendeeId], references: [id])
+  purchasedFor    Attendee[]       @relation("PurchasedForBy")
   orders          Order[]
   tickets         Ticket[]
   formSubmissions FormSubmission[]
@@ -269,6 +276,8 @@ model Attendee {
   @@index([orgId])
   @@index([email])
   @@index([wpUserId])
+  @@index([status])
+  @@index([purchasedByAttendeeId])
   @@map("attendees")
 }
 

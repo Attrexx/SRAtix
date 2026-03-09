@@ -215,6 +215,166 @@ export class EmailService {
     }
   }
 
+  // ─── Ticket Gift & Registration Emails ────────────────────────
+
+  /**
+   * Notify a ticket recipient that someone has gifted them a ticket.
+   * Includes a registration link with their unique token.
+   */
+  async sendTicketGiftNotification(
+    to: string,
+    data: {
+      recipientName: string;
+      purchaserName: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      ticketTypeName: string;
+      registrationUrl: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.publicWrapper("You've Been Gifted a Ticket!", `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        Great news! <strong>${data.purchaserName}</strong> has gifted you a ticket to
+        <strong>${data.eventName}</strong>.
+      </p>
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Ticket', data.ticketTypeName)}
+          ${this.adminInfoRow('Event', data.eventName)}
+          ${this.adminInfoRow('Date', data.eventDate)}
+          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+        </table>
+      </div>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        To claim your ticket, please complete a short registration form:
+      </p>
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${data.registrationUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Complete Registration</a>
+      </div>
+      <p style="font-size: 13px; color: #999; margin: 20px 0 0;">
+        💡 If you don't see this email in your inbox, please check your spam or junk folder.
+      </p>
+    `);
+    const text = `You've been gifted a ticket!\n\nHi ${data.recipientName},\n\n${data.purchaserName} has gifted you a ticket to ${data.eventName}.\n\nTicket: ${data.ticketTypeName}\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue}\n\nTo complete your registration, visit:\n${data.registrationUrl}\n\nNote: If you don't see this email in your inbox, please check your spam/junk folder.\n\n— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `🎟️ ${data.purchaserName} gifted you a ticket to ${data.eventName}!`,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Confirm to a recipient after they complete their registration form.
+   */
+  async sendRecipientRegistrationConfirmation(
+    to: string,
+    data: {
+      recipientName: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      ticketTypeName: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.publicWrapper('Registration Confirmed', `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        Your registration for <strong>${data.eventName}</strong> is confirmed!
+      </p>
+      <div style="background: #d4edda; border-left: 4px solid #28a745; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Ticket', data.ticketTypeName)}
+          ${this.adminInfoRow('Event', data.eventName)}
+          ${this.adminInfoRow('Date', data.eventDate)}
+          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+        </table>
+      </div>
+      <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
+        Your ticket QR code will be available for check-in at the event entrance.
+      </p>
+    `);
+    const text = `Registration Confirmed\n\nHi ${data.recipientName},\n\nYour registration for ${data.eventName} is confirmed!\n\nTicket: ${data.ticketTypeName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue}\n\nYour ticket QR code will be available for check-in at the event.\n\n— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `✅ Registration confirmed — ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Notify the purchaser when a recipient completes their registration.
+   */
+  async sendRecipientRegisteredNotification(
+    to: string,
+    data: {
+      purchaserName: string;
+      recipientName: string;
+      recipientEmail: string;
+      eventName: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.adminWrapper('Recipient Registered', `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.purchaserName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        <strong>${data.recipientName}</strong> (${data.recipientEmail}) has completed their registration
+        for <strong>${data.eventName}</strong>.
+      </p>
+      <div style="background: #d4edda; border-left: 4px solid #28a745; border-radius: 6px; padding: 14px 20px;">
+        <p style="margin: 0; font-size: 14px; color: #155724;">All set! Their ticket is confirmed.</p>
+      </div>
+    `);
+    const text = `Recipient Registered\n\nHi ${data.purchaserName},\n\n${data.recipientName} (${data.recipientEmail}) has completed their registration for ${data.eventName}.\n\n— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `✅ ${data.recipientName} registered for ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send a registration reminder to a ticket recipient who hasn't registered yet.
+   */
+  async sendRegistrationReminder(
+    to: string,
+    data: {
+      recipientName: string;
+      purchaserName: string;
+      eventName: string;
+      eventDate: string;
+      registrationUrl: string;
+      isSecondReminder: boolean;
+    },
+  ): Promise<DeliveryResult> {
+    const urgency = data.isSecondReminder ? 'Final reminder' : 'Reminder';
+    const html = this.publicWrapper(`${urgency}: Complete Your Registration`, `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        ${data.purchaserName} gifted you a ticket to <strong>${data.eventName}</strong>
+        on ${data.eventDate}. You haven't completed your registration yet.
+      </p>
+      <div style="margin: 24px 0; text-align: center;">
+        <a href="${data.registrationUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Complete Registration</a>
+      </div>
+      ${data.isSecondReminder ? '<p style="font-size: 14px; color: #dc2626; margin: 20px 0 0;">This is your final reminder. Your registration link expires on the day of the event.</p>' : ''}
+    `);
+    const text = `${urgency}: Complete Your Registration\n\nHi ${data.recipientName},\n\n${data.purchaserName} gifted you a ticket to ${data.eventName} on ${data.eventDate}. Please complete your registration:\n\n${data.registrationUrl}\n\n— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `${data.isSecondReminder ? '⚠️' : '🔔'} ${urgency} — Complete your registration for ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
   /**
    * Low-level send — delegates to transport.
    */
@@ -580,5 +740,39 @@ Your ticket QR codes will be available in your account.
         <a href="${data.dashboardUrl}" style="display: inline-block; background: #22c55e; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">View Event</a>
       </div>
     `);
+  }
+
+  // ─── Public-Facing Email Wrapper ──────────────────────────────
+
+  private publicWrapper(subtitle: string, body: string): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <tr>
+          <td style="padding: 30px 40px; background: #1a1a2e; color: white;">
+            <h1 style="margin: 0; font-size: 24px;">🎫 SRAtix</h1>
+            <p style="margin: 8px 0 0; opacity: 0.8;">${subtitle}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 30px 40px;">
+            ${body}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 20px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+            <p style="margin: 0;">Swiss Robotics Association — SRAtix Ticketing Platform</p>
+            <p style="margin: 4px 0 0;">This is an automated message. Please do not reply to this email.</p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>`;
   }
 }

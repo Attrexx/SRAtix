@@ -148,4 +148,71 @@ export class AttendeesService {
 
     return updated;
   }
+
+  // ─── Recipient Management ─────────────────────────────────────
+
+  /**
+   * Create or update an attendee as a ticket recipient (invited status).
+   * Unlike create(), this does NOT throw on duplicate email and does NOT
+   * fire the attendee.registered webhook (they haven't registered yet).
+   */
+  async upsertRecipient(data: {
+    eventId: string;
+    orgId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    registrationToken: string;
+    registrationTokenExpiresAt: Date;
+    purchasedByAttendeeId: string;
+  }) {
+    const existing = await this.prisma.attendee.findFirst({
+      where: { eventId: data.eventId, email: data.email },
+    });
+
+    if (existing) {
+      return this.prisma.attendee.update({
+        where: { id: existing.id },
+        data: {
+          status: 'invited',
+          registrationToken: data.registrationToken,
+          registrationTokenExpiresAt: data.registrationTokenExpiresAt,
+          purchasedByAttendeeId: data.purchasedByAttendeeId,
+        },
+      });
+    }
+
+    const attendee = await this.prisma.attendee.create({
+      data: {
+        eventId: data.eventId,
+        orgId: data.orgId,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        status: 'invited',
+        registrationToken: data.registrationToken,
+        registrationTokenExpiresAt: data.registrationTokenExpiresAt,
+        purchasedByAttendeeId: data.purchasedByAttendeeId,
+      },
+    });
+
+    this.audit.log({
+      eventId: data.eventId,
+      action: AuditAction.ATTENDEE_CREATED,
+      entity: 'attendee',
+      entityId: attendee.id,
+      detail: { email: data.email, firstName: data.firstName, lastName: data.lastName, status: 'invited' },
+    });
+
+    return attendee;
+  }
+
+  /**
+   * Find an attendee by their unique registration token.
+   */
+  async findByRegistrationToken(token: string) {
+    return this.prisma.attendee.findUnique({
+      where: { registrationToken: token },
+    });
+  }
 }

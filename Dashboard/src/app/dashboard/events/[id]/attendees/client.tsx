@@ -246,6 +246,27 @@ export default function AttendeesPage() {
             ),
           },
           { key: 'email', header: t('attendees.column.email') },
+          {
+            key: 'status',
+            header: 'Status',
+            render: (row) => {
+              const status = (row.status as string) || 'registered';
+              const colors: Record<string, { bg: string; text: string }> = {
+                registered: { bg: '#d4edda', text: '#155724' },
+                invited: { bg: '#fff3cd', text: '#856404' },
+                confirmed: { bg: '#cce5ff', text: '#004085' },
+              };
+              const c = colors[status] || { bg: '#f8f9fa', text: '#6c757d' };
+              return (
+                <span
+                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ background: c.bg, color: c.text }}
+                >
+                  {status}
+                </span>
+              );
+            },
+          },
           { key: 'phone', header: t('attendees.column.phone') },
           { key: 'company', header: t('attendees.column.company') },
           {

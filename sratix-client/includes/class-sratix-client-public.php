@@ -16,6 +16,7 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_tickets',    array( $this, 'render_tickets' ) );
 		add_shortcode( 'sratix_my_tickets', array( $this, 'render_my_tickets' ) );
 		add_shortcode( 'sratix_schedule',   array( $this, 'render_schedule' ) );
+		add_shortcode( 'sratix_register',   array( $this, 'render_register' ) );
 	}
 
 	/**
@@ -29,7 +30,8 @@ class SRAtix_Client_Public {
 
 		$has_shortcode = has_shortcode( $post->post_content, 'sratix_tickets' )
 			|| has_shortcode( $post->post_content, 'sratix_my_tickets' )
-			|| has_shortcode( $post->post_content, 'sratix_schedule' );
+			|| has_shortcode( $post->post_content, 'sratix_schedule' )
+			|| has_shortcode( $post->post_content, 'sratix_register' );
 
 		if ( ! $has_shortcode ) {
 			return;
@@ -310,6 +312,29 @@ class SRAtix_Client_Public {
 			. '<div id="sratix-schedule-widget" data-event-id="%s"></div>'
 			. '</div></div>',
 			esc_attr( $atts['event_id'] )
+		);
+	}
+
+	/**
+	 * [sratix_register] — Token-based registration page for ticket recipients.
+	 *
+	 * Reads ?token= from the URL and renders a registration form via the
+	 * SRAtix Server's public registration API. Works identically in test
+	 * and live modes (no Stripe dependency).
+	 */
+	public function render_register( $atts ) {
+		$api_url = get_option( 'sratix_client_api_url', '' );
+		if ( empty( $api_url ) ) {
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<p class="sratix-error">' . esc_html__( 'SRAtix API not configured.', 'sratix-client' ) . '</p>'
+				. '</div></div>';
+		}
+
+		return sprintf(
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-register-widget" data-api-url="%s"></div>'
+			. '</div></div>',
+			esc_attr( rtrim( $api_url, '/' ) )
 		);
 	}
 
