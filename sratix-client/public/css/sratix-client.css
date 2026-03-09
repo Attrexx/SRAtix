@@ -372,6 +372,15 @@
 
 .sratix-field { margin-bottom: 14px; flex: 1; }
 
+/* ── Radio / checkbox / yes-no groups ── */
+.sratix-yesno-group,
+.sratix-radio-group,
+.sratix-checkbox-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+}
+
 /* ── Custom form field grid (flex-wrap) ── */
 .sratix-form-fields {
 	display: flex;
