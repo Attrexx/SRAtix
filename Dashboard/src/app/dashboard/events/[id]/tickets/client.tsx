@@ -688,7 +688,7 @@ export default function TicketsPage() {
                   >
                     {/* Price display */}
                     <span className="inline-flex items-center gap-1">
-                      <Icons.DollarSign size={14} />
+                      <Icons.Tag size={14} />
                       {priceInfo.activePriceCents === 0
                         ? t('common.free')
                         : `${(priceInfo.activePriceCents / 100).toFixed(2)} ${currency}`}
