@@ -774,13 +774,26 @@ export const api = {
     `${API_BASE}/api/export/submissions/event/${eventId}/xlsx${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
 
   // Audit Log
-  getAuditLog: (eventId: string, options?: { take?: number; skip?: number; action?: string }, signal?: AbortSignal) => {
+  getAuditLog: (eventId: string, options?: { take?: number; skip?: number; action?: string; search?: string; from?: string; to?: string }, signal?: AbortSignal) => {
     const params = new URLSearchParams();
     if (options?.take) params.set('take', String(options.take));
     if (options?.skip) params.set('skip', String(options.skip));
     if (options?.action) params.set('action', String(options.action));
+    if (options?.search) params.set('search', String(options.search));
+    if (options?.from) params.set('from', String(options.from));
+    if (options?.to) params.set('to', String(options.to));
     const qs = params.toString();
     return request<AuditLogEntry[]>(`/audit-log/event/${eventId}${qs ? `?${qs}` : ''}`, { signal });
+  },
+
+  exportAuditLogCsvUrl: (eventId: string, options?: { action?: string; search?: string; from?: string; to?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.action) params.set('action', String(options.action));
+    if (options?.search) params.set('search', String(options.search));
+    if (options?.from) params.set('from', String(options.from));
+    if (options?.to) params.set('to', String(options.to));
+    const qs = params.toString();
+    return `${API_BASE}/api/audit-log/event/${eventId}/export${qs ? `?${qs}` : ''}`;
   },
 
   // Webhooks

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 /** Prefix prepended to encrypted values so we can distinguish them in the DB. */
 const ENC_PREFIX = 'enc:v1:';
@@ -312,6 +313,7 @@ export class SettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly audit: AuditLogService,
   ) {
     const secret = this.config.get<string>('JWT_SECRET');
     this.encKey = secret
@@ -475,6 +477,15 @@ export class SettingsService {
         updatedKeys.push(key);
         this.logger.log(`Setting "${key}" saved to DB`);
       }
+    }
+
+    // Log all changed settings in a single audit entry
+    if (updatedKeys.length > 0) {
+      this.audit.log({
+        action: AuditAction.SETTING_UPDATED,
+        entity: 'setting',
+        detail: { keys: updatedKeys, requiresRestart },
+      });
     }
 
     return { updated: updatedKeys, requiresRestart };

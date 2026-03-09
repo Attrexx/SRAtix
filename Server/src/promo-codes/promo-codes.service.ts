@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 /**
  * Promo Codes Service — manages discount/promo codes per event.
@@ -17,7 +18,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PromoCodesService {
   private readonly logger = new Logger(PromoCodesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
 
@@ -69,7 +73,7 @@ export class PromoCodesService {
       throw new ConflictException(`Promo code '${code}' already exists for this event`);
     }
 
-    return this.prisma.promoCode.create({
+    const promo = await this.prisma.promoCode.create({
       data: {
         eventId: data.eventId,
         code,
@@ -87,6 +91,16 @@ export class PromoCodesService {
         minOrderCents: data.minOrderCents,
       },
     });
+
+    this.audit.log({
+      eventId: data.eventId,
+      action: AuditAction.PROMO_CODE_CREATED,
+      entity: 'promo_code',
+      entityId: promo.id,
+      detail: { code, discountType: data.discountType, discountValue: data.discountValue },
+    });
+
+    return promo;
   }
 
   async update(
@@ -105,7 +119,7 @@ export class PromoCodesService {
   ) {
     await this.findOne(id, eventId);
     const { applicableTicketIds, ...rest } = data;
-    return this.prisma.promoCode.update({
+    const updated = await this.prisma.promoCode.update({
       where: { id },
       data: {
         ...rest,
@@ -114,14 +128,33 @@ export class PromoCodesService {
           : undefined,
       },
     });
+
+    this.audit.log({
+      eventId,
+      action: AuditAction.PROMO_CODE_UPDATED,
+      entity: 'promo_code',
+      entityId: id,
+      detail: rest as Record<string, unknown>,
+    });
+
+    return updated;
   }
 
   async deactivate(id: string, eventId: string) {
     await this.findOne(id, eventId);
-    return this.prisma.promoCode.update({
+    const result = await this.prisma.promoCode.update({
       where: { id },
       data: { active: false },
     });
+
+    this.audit.log({
+      eventId,
+      action: AuditAction.PROMO_CODE_DEACTIVATED,
+      entity: 'promo_code',
+      entityId: id,
+    });
+
+    return result;
   }
 
   // ─── Validation & Application ─────────────────────────────────

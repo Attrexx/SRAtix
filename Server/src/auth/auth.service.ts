@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VALID_ROLES } from '../users/users.service';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 export interface JwtPayload {
   sub: string; // user ID
@@ -44,6 +45,7 @@ export class AuthService implements OnModuleDestroy {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
   ) {
     // Purge nonces older than 10 minutes every 5 minutes
     this.nonceCleanupInterval = setInterval(() => {
@@ -107,6 +109,11 @@ export class AuthService implements OnModuleDestroy {
       this.logger.warn(
         `Invalid signature for WP user ${wpUserId} from ${sourceSite}`,
       );
+      this.audit.log({
+        action: AuditAction.AUTH_FAILED,
+        entity: 'auth',
+        detail: { reason: 'invalid_signature', wpUserId, sourceSite },
+      });
       throw new UnauthorizedException('Invalid signature');
     }
 
@@ -203,6 +210,13 @@ export class AuthService implements OnModuleDestroy {
       });
       tokenVersion = u?.tokenVersion ?? 0;
     }
+
+    this.audit.log({
+      userId,
+      action: AuditAction.AUTH_TOKEN_EXCHANGE,
+      entity: 'auth',
+      detail: { wpUserId, sourceSite, roles: sratixRoles },
+    });
 
     return this.generateTokenPair({
       sub: userId,

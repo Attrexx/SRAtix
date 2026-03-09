@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 @Injectable()
 export class AttendeesService {
@@ -9,6 +10,7 @@ export class AttendeesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outgoingWebhooks: OutgoingWebhooksService,
+    private readonly audit: AuditLogService,
   ) {}
 
   async findByEvent(eventId: string) {
@@ -98,6 +100,14 @@ export class AttendeesService {
         this.logger.error(`Webhook dispatch failed for attendee.registered: ${err}`),
       );
 
+    this.audit.log({
+      eventId: data.eventId,
+      action: AuditAction.ATTENDEE_CREATED,
+      entity: 'attendee',
+      entityId: attendee.id,
+      detail: { email: data.email, firstName: data.firstName, lastName: data.lastName },
+    });
+
     return attendee;
   }
 
@@ -117,9 +127,9 @@ export class AttendeesService {
     tags: unknown;
     meta: Record<string, unknown>;
   }>) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
     const { meta, tags, ...rest } = data;
-    return this.prisma.attendee.update({
+    const updated = await this.prisma.attendee.update({
       where: { id },
       data: {
         ...rest,
@@ -127,5 +137,15 @@ export class AttendeesService {
         ...(meta !== undefined && { meta: JSON.stringify(meta) }),
       },
     });
+
+    this.audit.log({
+      eventId: existing.eventId,
+      action: AuditAction.ATTENDEE_UPDATED,
+      entity: 'attendee',
+      entityId: id,
+      detail: rest as Record<string, unknown>,
+    });
+
+    return updated;
   }
 }

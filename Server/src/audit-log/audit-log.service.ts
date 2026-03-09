@@ -44,6 +44,17 @@ export const AuditAction = {
 
   // Settings
   SETTING_UPDATED: 'setting.updated',
+
+  // Promo Codes
+  PROMO_CODE_CREATED: 'promo_code.created',
+  PROMO_CODE_UPDATED: 'promo_code.updated',
+  PROMO_CODE_DEACTIVATED: 'promo_code.deactivated',
+
+  // Webhooks
+  WEBHOOK_ENDPOINT_CREATED: 'webhook.endpoint_created',
+  WEBHOOK_ENDPOINT_DELETED: 'webhook.endpoint_deleted',
+  WEBHOOK_DELIVERED: 'webhook.delivered',
+  WEBHOOK_FAILED: 'webhook.failed',
 } as const;
 
 export type AuditActionType = typeof AuditAction[keyof typeof AuditAction];
@@ -133,21 +144,57 @@ export class AuditLogService {
 
   /**
    * Retrieve audit log entries for an event, paginated.
+   * Supports filtering by action, free-text search, and date range.
    */
   async findByEvent(
     eventId: string,
-    options: { take?: number; skip?: number; action?: string } = {},
+    options: { take?: number; skip?: number; action?: string; search?: string; from?: string; to?: string } = {},
   ) {
-    const { take = 50, skip = 0, action } = options;
+    const { take = 50, skip = 0, action, search, from, to } = options;
+
+    const where: Record<string, unknown> = { eventId };
+    if (action) where.action = action;
+
+    // Date range filter
+    if (from || to) {
+      const timestamp: Record<string, Date> = {};
+      if (from) timestamp.gte = new Date(from);
+      if (to) {
+        // Include the entire "to" day
+        const end = new Date(to);
+        end.setHours(23, 59, 59, 999);
+        timestamp.lte = end;
+      }
+      where.timestamp = timestamp;
+    }
+
+    // Free-text search — matches action, entity, or entityId
+    if (search) {
+      where.OR = [
+        { action: { contains: search } },
+        { entity: { contains: search } },
+        { entityId: { contains: search } },
+        { ip: { contains: search } },
+      ];
+    }
+
     return this.prisma.auditLog.findMany({
-      where: {
-        eventId,
-        ...(action ? { action } : {}),
-      },
+      where: where as any,
       orderBy: { timestamp: 'desc' },
       take,
       skip,
     });
+  }
+
+  /**
+   * Export all matching audit log entries as flat objects (for CSV).
+   */
+  async exportByEvent(
+    eventId: string,
+    options: { action?: string; search?: string; from?: string; to?: string } = {},
+  ) {
+    // Re-use findByEvent with a high limit and no pagination
+    return this.findByEvent(eventId, { ...options, take: 10_000, skip: 0 });
   }
 
   /**

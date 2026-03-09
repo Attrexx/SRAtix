@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 /** Slug for the auto-created default organization. */
 const DEFAULT_ORG_SLUG = 'sra-default';
@@ -9,7 +10,10 @@ const DEFAULT_ORG_SLUG = 'sra-default';
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
 
   /**
    * Find all events, optionally filtered by orgId.
@@ -46,7 +50,17 @@ export class EventsService {
     description?: string;
     currency: string;
   }) {
-    return this.prisma.event.create({ data });
+    const event = await this.prisma.event.create({ data });
+
+    this.audit.log({
+      eventId: event.id,
+      action: AuditAction.EVENT_CREATED,
+      entity: 'event',
+      entityId: event.id,
+      detail: { name: data.name, slug: data.slug },
+    });
+
+    return event;
   }
 
   /**
@@ -73,7 +87,17 @@ export class EventsService {
     }>,
   ) {
     await this.findOne(id, orgId); // Ensure it exists (+ ownership if orgId set)
-    return this.prisma.event.update({ where: { id }, data });
+    const updated = await this.prisma.event.update({ where: { id }, data });
+
+    this.audit.log({
+      eventId: id,
+      action: AuditAction.EVENT_UPDATED,
+      entity: 'event',
+      entityId: id,
+      detail: data as Record<string, unknown>,
+    });
+
+    return updated;
   }
 
   /**
@@ -171,6 +195,14 @@ export class EventsService {
     await this.prisma.event.update({
       where: { id: eventId },
       data: { meta: updatedMeta as any },
+    });
+
+    this.audit.log({
+      eventId,
+      action: AuditAction.EVENT_UPDATED,
+      entity: 'event',
+      entityId: eventId,
+      detail: { maintenance: { active, message: message ?? '' } },
     });
 
     return { active, message: message ?? '', since };

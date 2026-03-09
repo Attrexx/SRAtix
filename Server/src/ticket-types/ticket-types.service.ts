@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 // ─── TicketType Status Transition Matrix ──────────────────────────────────
 //
@@ -123,7 +124,10 @@ export interface ResolvedPrice {
 export class TicketTypesService {
   private readonly logger = new Logger(TicketTypesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditLogService,
+  ) {}
 
   // ─── Transition Guard ─────────────────────────────────────────
 
@@ -310,7 +314,7 @@ export class TicketTypesService {
       );
     }
 
-    return this.prisma.ticketType.create({
+    const ticketType = await this.prisma.ticketType.create({
       data: {
         eventId: data.eventId,
         name: data.name,
@@ -330,6 +334,16 @@ export class TicketTypesService {
       },
       include: { pricingVariants: true },
     });
+
+    this.audit.log({
+      eventId: data.eventId,
+      action: AuditAction.TICKET_TYPE_CREATED,
+      entity: 'ticket_type',
+      entityId: ticketType.id,
+      detail: { name: data.name, priceCents: data.priceCents ?? 0, category: data.category ?? 'general' },
+    });
+
+    return ticketType;
   }
 
   async update(
@@ -363,11 +377,21 @@ export class TicketTypesService {
       throw new BadRequestException(`Invalid category: ${data.category}`);
     }
 
-    return this.prisma.ticketType.update({
+    const updated = await this.prisma.ticketType.update({
       where: { id },
       data: data as any,
       include: { pricingVariants: { orderBy: { sortOrder: 'asc' } } },
     });
+
+    this.audit.log({
+      eventId,
+      action: AuditAction.TICKET_TYPE_UPDATED,
+      entity: 'ticket_type',
+      entityId: id,
+      detail: data as Record<string, unknown>,
+    });
+
+    return updated;
   }
 
   // ─── Pricing Variant CRUD ─────────────────────────────────────

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
 import { randomBytes } from 'crypto';
+import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 /**
  * Outgoing Webhooks Service — manages webhook endpoints and dispatches events.
@@ -38,6 +39,7 @@ export class OutgoingWebhooksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueService,
+    private readonly audit: AuditLogService,
   ) {}
 
   // ─── Endpoint CRUD ───────────────────────────────────────────
@@ -247,6 +249,13 @@ export class OutgoingWebhooksService {
           error: response.ok ? undefined : `HTTP ${response.status}`,
         },
       });
+
+      this.audit.log({
+        action: response.ok ? AuditAction.WEBHOOK_DELIVERED : AuditAction.WEBHOOK_FAILED,
+        entity: 'webhook',
+        entityId: deliveryId,
+        detail: { eventType, url, httpStatus: response.status },
+      });
     } catch (err) {
       await this.prisma.webhookDelivery.update({
         where: { id: deliveryId },
@@ -255,6 +264,12 @@ export class OutgoingWebhooksService {
           attempts: 1,
           error: String(err),
         },
+      });
+      this.audit.log({
+        action: AuditAction.WEBHOOK_FAILED,
+        entity: 'webhook',
+        entityId: deliveryId,
+        detail: { eventType, url, error: String(err) },
       });
       this.logger.error(`Inline webhook delivery failed: ${err}`);
     } finally {
