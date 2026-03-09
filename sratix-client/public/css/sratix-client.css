@@ -235,8 +235,16 @@
 	color: #fff;
 }
 
-.sratix-btn--primary:hover {
+.sratix-btn--primary:hover,
+.sratix-btn--primary:focus {
 	background: var(--sratix-red-hover);
+	color: #fff;
+}
+
+.sratix-btn--ghost:hover,
+.sratix-btn--ghost:focus {
+	background: var(--sratix-navy-mid);
+	color: var(--sratix-text);
 }
 
 /* ── Badges ── */
