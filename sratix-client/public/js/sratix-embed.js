@@ -751,27 +751,29 @@
     var modal = createModalShell('sratix-modal-recipients');
     var rows = '';
     for (var i = 0; i < recipientCount; i++) {
-      rows += '<div class="sratix-recipient-row" style="margin-bottom:12px;padding:12px;border:1px solid #e0e0e0;border-radius:8px;">'
-        + '<strong>' + escHtml(t('recipients.recipientLabel', { n: i + 1 }) || ('Recipient ' + (i + 1))) + '</strong>'
-        + '<div style="display:flex;gap:8px;margin-top:6px;">'
-        + '<input type="text" class="sratix-rcpt-first" data-idx="' + i + '" placeholder="' + escAttr(t('reg.firstName') || 'First name') + '" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;" />'
-        + '<input type="text" class="sratix-rcpt-last" data-idx="' + i + '" placeholder="' + escAttr(t('reg.lastName') || 'Last name') + '" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;" />'
+      rows += '<div class="sratix-recipient-row">'
+        + '<span class="sratix-label">Recipient ' + (i + 1) + '</span>'
+        + '<div class="sratix-rcpt-name-row">'
+        + '<input type="text" class="sratix-input sratix-rcpt-first" data-idx="' + i + '" placeholder="First name" />'
+        + '<input type="text" class="sratix-input sratix-rcpt-last" data-idx="' + i + '" placeholder="Last name" />'
         + '</div>'
-        + '<input type="email" class="sratix-rcpt-email" data-idx="' + i + '" placeholder="' + escAttr(t('reg.email') || 'Email') + '" style="width:100%;margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+        + '<input type="email" class="sratix-input sratix-rcpt-email" data-idx="' + i + '" placeholder="Email address" />'
         + '</div>';
     }
 
     modal.innerHTML =
       '<div class="sratix-modal-box">'
       + '<button class="sratix-modal-close" aria-label="Close">&times;</button>'
-      + '<h3>' + escHtml(t('recipients.title') || 'Recipient Details') + '</h3>'
-      + '<p style="margin-bottom:12px;color:#666;">' + escHtml(t('recipients.subtitle') || 'Enter details for each ticket recipient. They will receive an email to complete their registration.') + '</p>'
+      + '<h2 class="sratix-modal-title">Recipient Details</h2>'
+      + '<div class="sratix-modal-body">'
+      + '<p class="sratix-info" style="margin-bottom:16px">Enter details for each ticket recipient. They\u2019ll receive an email to complete their registration.</p>'
       + '<div id="sratix-recipient-list">' + rows + '</div>'
-      + '<div id="sratix-rcpt-warn" style="display:none;padding:8px 12px;background:#fff3cd;border-radius:4px;margin-bottom:8px;font-size:0.9em;"></div>'
-      + '<div id="sratix-rcpt-error" style="display:none;padding:8px 12px;background:#f8d7da;color:#721c24;border-radius:4px;margin-bottom:8px;"></div>'
-      + '<div style="display:flex;gap:8px;margin-top:16px;">'
-      + '<button id="sratix-rcpt-back" class="sratix-btn" style="flex:1;background:#eee;color:#333;">' + escHtml(t('reg.back') || 'Back') + '</button>'
-      + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn-primary" style="flex:1;">' + escHtml(t('reg.continue') || 'Continue') + '</button>'
+      + '<div id="sratix-rcpt-warn" class="sratix-promo-msg" style="display:none;color:#856d0a;"></div>'
+      + '<p class="sratix-error" id="sratix-rcpt-error" style="display:none"></p>'
+      + '</div>'
+      + '<div class="sratix-modal-footer">'
+      + '<button id="sratix-rcpt-back" class="sratix-btn sratix-btn--ghost">\u2190 Back</button>'
+      + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn--primary">Continue</button>'
       + '</div>'
       + '</div>';
 
@@ -803,12 +805,12 @@
         var ln = lasts[j].value.trim();
         var em = emails[j].value.trim().toLowerCase();
         if (!fn || !ln || !em) {
-          errorEl.textContent = t('recipients.allFieldsRequired') || 'Please fill in all fields for every recipient.';
+          errorEl.textContent = 'Please fill in all fields for every recipient.';
           errorEl.style.display = '';
           return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
-          errorEl.textContent = (t('recipients.invalidEmail') || 'Invalid email for recipient') + ' ' + (j + 1) + '.';
+          errorEl.textContent = 'Invalid email for recipient ' + (j + 1) + '.';
           errorEl.style.display = '';
           return;
         }
@@ -820,7 +822,7 @@
       }
 
       if (hasDupes) {
-        warnEl.textContent = t('recipients.duplicateWarning') || 'Warning: some recipients share the same email address.';
+        warnEl.textContent = 'Warning: some recipients share the same email address.';
         warnEl.style.display = '';
       }
 

@@ -515,6 +515,27 @@
 	margin-top: 4px;
 }
 
+/* ── Recipient details rows ── */
+.sratix-recipient-row {
+	margin-bottom: 12px;
+	padding: 14px;
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	background: var(--sratix-navy);
+}
+.sratix-recipient-row .sratix-label {
+	display: block;
+	margin-bottom: 8px;
+}
+.sratix-rcpt-name-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+@media (max-width: 480px) {
+	.sratix-rcpt-name-row { flex-direction: column; gap: 8px; }
+}
+
 /* ── Button variants ── */
 .sratix-btn--outline {
 	background: transparent;
