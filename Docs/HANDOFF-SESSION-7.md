@@ -144,8 +144,9 @@ npx prisma generate
 ```
 
 ### WordPress Setup
-1. Create a page with `[sratix_register]` shortcode for the registration landing page
-2. Set `REGISTRATION_BASE_URL` in server environment (e.g., `https://swiss-robotics.org/register`)
+1. Create a WordPress page at slug `/register/` with the `[sratix_register]` shortcode
+   - The server auto-derives the registration URL from the checkout request origin + `/register`
+   - No server env var needed — the URL is stored in each order's meta at checkout time
 
 ### Verification Checklist
 - [ ] POST checkout with 3 qty (1 self + 2 recipients) → 3 attendees created, 2 with `status:invited` + tokens

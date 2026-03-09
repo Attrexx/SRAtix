@@ -761,8 +761,10 @@
         + '</div>';
     }
 
-    modal.querySelector('.sratix-modal-inner').innerHTML =
-      '<h3>' + escHtml(t('recipients.title') || 'Recipient Details') + '</h3>'
+    modal.innerHTML =
+      '<div class="sratix-modal-box">'
+      + '<button class="sratix-modal-close" aria-label="Close">&times;</button>'
+      + '<h3>' + escHtml(t('recipients.title') || 'Recipient Details') + '</h3>'
       + '<p style="margin-bottom:12px;color:#666;">' + escHtml(t('recipients.subtitle') || 'Enter details for each ticket recipient. They will receive an email to complete their registration.') + '</p>'
       + '<div id="sratix-recipient-list">' + rows + '</div>'
       + '<div id="sratix-rcpt-warn" style="display:none;padding:8px 12px;background:#fff3cd;border-radius:4px;margin-bottom:8px;font-size:0.9em;"></div>'
@@ -770,9 +772,13 @@
       + '<div style="display:flex;gap:8px;margin-top:16px;">'
       + '<button id="sratix-rcpt-back" class="sratix-btn" style="flex:1;background:#eee;color:#333;">' + escHtml(t('reg.back') || 'Back') + '</button>'
       + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn-primary" style="flex:1;">' + escHtml(t('reg.continue') || 'Continue') + '</button>'
+      + '</div>'
       + '</div>';
 
+    document.body.appendChild(modal);
+
     modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
 
     modal.querySelector('#sratix-rcpt-back').addEventListener('click', function() {
       closeModal();
