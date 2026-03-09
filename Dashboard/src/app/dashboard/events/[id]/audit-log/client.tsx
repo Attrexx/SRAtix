@@ -38,6 +38,9 @@ const ACTION_ICONS: Record<string, ReactNode> = {
   'ticket.voided':          <Icons.Ban size={16} />,
   'gdpr.data_access':       <Icons.Eye size={16} />,
   'gdpr.erasure':           <Icons.Trash size={16} />,
+  'app.started':            <Icons.Zap size={16} />,
+  'app.shutdown':           <Icons.X size={16} />,
+  'app.crashed':            <Icons.AlertTriangle size={16} />,
 };
 
 const ACTION_FILTER_OPTIONS = Object.keys(ACTION_ICONS);
@@ -76,6 +79,9 @@ export default function AuditLogPage() {
       'ticket.voided':          t('audit.action.ticketVoided'),
       'gdpr.data_access':       t('audit.action.gdprDataAccess'),
       'gdpr.erasure':           t('audit.action.gdprErasure'),
+      'app.started':            t('audit.action.appStarted'),
+      'app.shutdown':           t('audit.action.appShutdown'),
+      'app.crashed':            t('audit.action.appCrashed'),
     };
     return {
       icon: ACTION_ICONS[action] ?? <Icons.Clipboard size={16} />,

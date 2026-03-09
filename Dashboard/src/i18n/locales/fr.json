@@ -530,6 +530,9 @@
   "audit.action.ticketVoided": "Billet annulé",
   "audit.action.gdprDataAccess": "Accès aux données RGPD",
   "audit.action.gdprErasure": "Effacement RGPD",
+  "audit.action.appStarted": "App démarrée",
+  "audit.action.appShutdown": "App arrêtée",
+  "audit.action.appCrashed": "App plantée",
 
   "export.title": "Exportation de données",
   "export.subtitle": "Téléchargez les données au format CSV ou Excel",

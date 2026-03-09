@@ -530,6 +530,9 @@
   "audit.action.ticketVoided": "票券已作廢",
   "audit.action.gdprDataAccess": "GDPR 資料存取",
   "audit.action.gdprErasure": "GDPR 資料刪除",
+  "audit.action.appStarted": "應用程式已啟動",
+  "audit.action.appShutdown": "應用程式已關閉",
+  "audit.action.appCrashed": "應用程式崩潰",
 
   "export.title": "資料匯出",
   "export.subtitle": "將活動資料下載為 CSV 或 Excel 檔案",

@@ -55,6 +55,11 @@ export const AuditAction = {
   WEBHOOK_ENDPOINT_DELETED: 'webhook.endpoint_deleted',
   WEBHOOK_DELIVERED: 'webhook.delivered',
   WEBHOOK_FAILED: 'webhook.failed',
+
+  // App Lifecycle
+  APP_STARTED: 'app.started',
+  APP_SHUTDOWN: 'app.shutdown',
+  APP_CRASHED: 'app.crashed',
 } as const;
 
 export type AuditActionType = typeof AuditAction[keyof typeof AuditAction];

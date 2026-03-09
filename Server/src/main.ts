@@ -15,6 +15,7 @@ import { AppModule } from './app.module';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
 import { existsSync, readFileSync } from 'fs';
+import { AuditLogService, AuditAction } from './audit-log/audit-log.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -205,6 +206,49 @@ async function bootstrap() {
 
     logger.log(`SRAtix Server v0.1.0 listening on port ${port}`);
     logger.log(`Node ${process.version}, PID ${process.pid}`);
+
+    // ── App Lifecycle Audit ────────────────────────────────────
+    const audit = app.get(AuditLogService);
+
+    audit.log({
+      action: AuditAction.APP_STARTED,
+      entity: 'app',
+      detail: { version: '0.1.0', node: process.version, pid: process.pid, port },
+    });
+
+    // Graceful shutdown logging
+    app.enableShutdownHooks();
+    const shutdownHandler = async () => {
+      await audit.log({
+        action: AuditAction.APP_SHUTDOWN,
+        entity: 'app',
+        detail: { pid: process.pid, uptime: Math.round(process.uptime()) },
+      });
+    };
+    process.on('SIGTERM', shutdownHandler);
+    process.on('SIGINT', shutdownHandler);
+
+    // Crash logging (best-effort — DB may be unavailable)
+    const crashHandler = async (err: Error) => {
+      try {
+        await audit.log({
+          action: AuditAction.APP_CRASHED,
+          entity: 'app',
+          detail: { error: err.message, stack: err.stack?.slice(0, 2000), pid: process.pid },
+        });
+      } catch { /* DB may already be gone */ }
+    };
+    process.on('uncaughtException', async (err) => {
+      logger.error('Uncaught exception', err);
+      await crashHandler(err);
+      process.exit(1);
+    });
+    process.on('unhandledRejection', async (reason) => {
+      const err = reason instanceof Error ? reason : new Error(String(reason));
+      logger.error('Unhandled rejection', err);
+      await crashHandler(err);
+      process.exit(1);
+    });
   } catch (error) {
     console.error('[SRAtix] FATAL: Failed to start:', error);
     process.exit(1);

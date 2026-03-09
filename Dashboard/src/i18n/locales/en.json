@@ -530,6 +530,9 @@
   "audit.action.ticketVoided": "Ticket voided",
   "audit.action.gdprDataAccess": "GDPR data access",
   "audit.action.gdprErasure": "GDPR erasure",
+  "audit.action.appStarted": "App started",
+  "audit.action.appShutdown": "App shutdown",
+  "audit.action.appCrashed": "App crashed",
 
   "export.title": "Data Export",
   "export.subtitle": "Download event data as CSV or Excel files",

@@ -530,6 +530,9 @@
   "audit.action.ticketVoided": "Biglietto annullato",
   "audit.action.gdprDataAccess": "Accesso dati GDPR",
   "audit.action.gdprErasure": "Cancellazione GDPR",
+  "audit.action.appStarted": "App avviata",
+  "audit.action.appShutdown": "App arrestata",
+  "audit.action.appCrashed": "App crashata",
 
   "export.title": "Esportazione dati",
   "export.subtitle": "Scarica i dati dell'evento in formato CSV o Excel",

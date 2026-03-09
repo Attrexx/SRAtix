@@ -530,6 +530,9 @@
   "audit.action.ticketVoided": "Ticket storniert",
   "audit.action.gdprDataAccess": "DSGVO-Datenzugriff",
   "audit.action.gdprErasure": "DSGVO-Datenlöschung",
+  "audit.action.appStarted": "App gestartet",
+  "audit.action.appShutdown": "App heruntergefahren",
+  "audit.action.appCrashed": "App abgestürzt",
 
   "export.title": "Datenexport",
   "export.subtitle": "Veranstaltungsdaten als CSV- oder Excel-Dateien herunterladen",
