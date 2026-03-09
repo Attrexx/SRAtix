@@ -105,7 +105,9 @@ export default function PromoCodesPage() {
 
     try {
       if (editCode) {
-        await api.updatePromoCode(editCode.id, eventId, payload);
+        // Only send fields allowed by UpdatePromoCodeDto
+        const { code: _c, discountType: _dt, discountValue: _dv, currency: _cu, ...editPayload } = payload;
+        await api.updatePromoCode(editCode.id, eventId, editPayload);
       } else {
         await api.createPromoCode({ ...payload, eventId });
       }
@@ -281,7 +283,7 @@ export default function PromoCodesPage() {
               )}
 
               <div className="space-y-4">
-                <FieldInput label={t('promo.form.code')} value={fCode} onChange={setFCode} placeholder={t('promo.form.codePlaceholder')} />
+                <FieldInput label={t('promo.form.code')} value={fCode} onChange={setFCode} placeholder={t('promo.form.codePlaceholder')} disabled={!!editCode} />
                 <FieldInput label={t('promo.form.description')} value={fDescription} onChange={setFDescription} placeholder={t('promo.form.descriptionPlaceholder')} />
 
                 <div className="grid grid-cols-2 gap-3">
@@ -292,11 +294,14 @@ export default function PromoCodesPage() {
                     <select
                       value={fDiscountType}
                       onChange={(e) => setFDiscountType(e.target.value as 'percentage' | 'fixed_amount')}
+                      disabled={!!editCode}
                       className="w-full rounded-lg px-3 py-2 text-sm"
                       style={{
                         background: 'var(--color-bg-subtle)',
                         border: '1px solid var(--color-border)',
                         color: 'var(--color-text)',
+                        opacity: editCode ? 0.6 : 1,
+                        cursor: editCode ? 'not-allowed' : undefined,
                       }}
                     >
                       <option value="percentage">{t('promo.form.percentage')}</option>
@@ -309,6 +314,7 @@ export default function PromoCodesPage() {
                     onChange={setFDiscountValue}
                     placeholder={fDiscountType === 'percentage' ? t('promo.form.valuePlaceholderPercent') : t('promo.form.valuePlaceholderFixed')}
                     type="number"
+                    disabled={!!editCode}
                   />
                 </div>
 
@@ -357,12 +363,14 @@ function FieldInput({
   onChange,
   placeholder,
   type = 'text',
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -374,11 +382,14 @@ function FieldInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         className="w-full rounded-lg px-3 py-2 text-sm"
         style={{
           background: 'var(--color-bg-subtle)',
           border: '1px solid var(--color-border)',
           color: 'var(--color-text)',
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : undefined,
         }}
       />
     </div>
