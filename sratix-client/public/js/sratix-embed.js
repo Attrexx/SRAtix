@@ -1622,49 +1622,88 @@
 
       var attendee = data.attendee || {};
       var event = data.event || {};
-      var formFields = data.formFields || null;
+      var ticketTypeName = data.ticketTypeName || '';
 
-      // Build form
-      var formHtml = '<h3>' + escHtml(event.name || 'Event Registration') + '</h3>'
-        + '<p style="margin-bottom:16px;color:#666;">Complete your registration below.</p>'
-        + '<form id="sratix-register-form" style="max-width:500px;">'
-        + '<div style="margin-bottom:12px;">'
-        + '<label style="display:block;margin-bottom:4px;font-weight:600;">First name</label>'
-        + '<input type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+      // Extract form schema fields (same structure as ticket page)
+      var schemaFields = null;
+      if (data.formSchema && data.formSchema.fields && data.formSchema.fields.fields) {
+        schemaFields = data.formSchema.fields.fields;
+      }
+      var useCustomForm = !!(schemaFields && schemaFields.length > 0);
+
+      // ── Build form body ──
+      var formBodyHtml = '';
+
+      // Read-only identity fields
+      formBodyHtml += '<div class="sratix-field-row">'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-reg-first-name">First name</label>'
+        +   '<input class="sratix-input" id="sratix-reg-first-name" type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" readonly />'
         + '</div>'
-        + '<div style="margin-bottom:12px;">'
-        + '<label style="display:block;margin-bottom:4px;font-weight:600;">Last name</label>'
-        + '<input type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-reg-last-name">Last name</label>'
+        +   '<input class="sratix-input" id="sratix-reg-last-name" type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" readonly />'
         + '</div>'
-        + '<div style="margin-bottom:12px;">'
-        + '<label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>'
-        + '<input type="email" name="email" value="' + escAttr(attendee.email || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-reg-email">Email</label>'
+        +   '<input class="sratix-input" id="sratix-reg-email" type="email" name="email" value="' + escAttr(attendee.email || '') + '" readonly />'
         + '</div>';
 
-      // Custom form fields from schema
-      if (formFields && formFields.length > 0) {
-        formFields.forEach(function(field) {
-          formHtml += renderFormField(field);
+      // Custom form fields from schema, or default phone + company
+      if (useCustomForm) {
+        var sorted = schemaFields.slice();
+        sorted.sort(function (a, b) {
+          var oa = typeof a.order === 'number' ? a.order : Infinity;
+          var ob = typeof b.order === 'number' ? b.order : Infinity;
+          if (oa !== Infinity || ob !== Infinity) return oa - ob;
+          return 0;
         });
+        formBodyHtml += '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
       } else {
-        // Default fields: phone + company
-        formHtml += '<div style="margin-bottom:12px;">'
-          + '<label style="display:block;margin-bottom:4px;font-weight:600;">Phone</label>'
-          + '<input type="tel" name="phone" placeholder="+41 ..." style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+        formBodyHtml += '<div class="sratix-field-row">'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-reg-phone">Phone</label>'
+          +   '<input class="sratix-input" id="sratix-reg-phone" type="tel" name="phone" placeholder="+41 ..." autocomplete="tel" />'
           + '</div>'
-          + '<div style="margin-bottom:12px;">'
-          + '<label style="display:block;margin-bottom:4px;font-weight:600;">Company / Organization</label>'
-          + '<input type="text" name="company" placeholder="" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-reg-company">Company / Organization</label>'
+          +   '<input class="sratix-input" id="sratix-reg-company" type="text" name="company" autocomplete="organization" />'
+          + '</div>'
           + '</div>';
       }
 
-      formHtml += '<div id="sratix-reg-error" style="display:none;padding:8px 12px;background:#f8d7da;color:#721c24;border-radius:4px;margin-bottom:12px;"></div>'
-        + '<button type="submit" class="sratix-btn sratix-btn-primary" style="width:100%;">Complete Registration</button>'
+      var formHtml = ''
+        + '<h2 class="sratix-modal-title">' + escHtml(event.name || 'Event Registration') + '</h2>'
+        + (ticketTypeName ? '<p class="sratix-modal-subtitle">' + escHtml(ticketTypeName) + '</p>' : '')
+        + '<p style="margin-bottom:20px;opacity:0.7;">Complete your registration details below.</p>'
+        + '<form id="sratix-register-form" novalidate>'
+        +   formBodyHtml
+        +   '<p class="sratix-error-msg" id="sratix-reg-error" style="display:none"></p>'
+        +   '<div style="margin-top:20px;">'
+        +     '<button type="submit" class="sratix-btn sratix-btn--primary" style="width:100%;">Complete Registration</button>'
+        +   '</div>'
         + '</form>';
 
       container.innerHTML = formHtml;
 
-      container.querySelector('#sratix-register-form').addEventListener('submit', async function(e) {
+      var formEl = container.querySelector('#sratix-register-form');
+
+      // Wire up condition-based visibility if using custom form
+      if (useCustomForm && schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+        applyConditionVisibility(formEl, schemaFields, initSnap);
+      }
+
+      formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
         var errorEl = container.querySelector('#sratix-reg-error');
         errorEl.style.display = 'none';
@@ -1673,12 +1712,16 @@
         submitBtn.textContent = 'Submitting…';
 
         var formDataObj = {};
-        var inputs = e.target.querySelectorAll('input, select, textarea');
-        inputs.forEach(function(inp) {
-          if (inp.name && !inp.readOnly) {
-            formDataObj[inp.name] = inp.value;
-          }
-        });
+        if (useCustomForm) {
+          formDataObj = collectDynamicAnswers(formEl, schemaFields, {});
+        } else {
+          var inputs = e.target.querySelectorAll('input, select, textarea');
+          inputs.forEach(function(inp) {
+            if (inp.name && !inp.readOnly) {
+              formDataObj[inp.name] = inp.value;
+            }
+          });
+        }
 
         try {
           var postRes = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token), {
@@ -1693,8 +1736,8 @@
           container.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
             + '<div style="font-size:48px;margin-bottom:16px;">✅</div>'
             + '<h3>Registration Complete!</h3>'
-            + '<p style="color:#666;">You are now registered for <strong>' + escHtml(event.name || 'the event') + '</strong>.</p>'
-            + '<p style="color:#666;">A confirmation email has been sent to <strong>' + escHtml(attendee.email || '') + '</strong>.</p>'
+            + '<p style="opacity:0.7;">You are now registered for <strong>' + escHtml(event.name || 'the event') + '</strong>.</p>'
+            + '<p style="opacity:0.7;">A confirmation email has been sent to <strong>' + escHtml(attendee.email || '') + '</strong>.</p>'
             + '</div>';
         } catch (err) {
           errorEl.textContent = err.message || 'Something went wrong. Please try again.';
