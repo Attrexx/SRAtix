@@ -39,6 +39,12 @@ export const MEMBERSHIP_TIERS = [
 export type MembershipTier = (typeof MEMBERSHIP_TIERS)[number];
 
 /**
+ * The 3 tiers available for hybrid (bundle) tickets.
+ * Legal-entity tiers are no longer offered as standalone bundle options.
+ */
+export const HYBRID_TIERS: MembershipTier[] = ['student', 'individual', 'retired'];
+
+/**
  * WooCommerce product ID ↔ membership tier mapping.
  */
 export const WP_PRODUCT_TIER_MAP: Record<number, MembershipTier> = {

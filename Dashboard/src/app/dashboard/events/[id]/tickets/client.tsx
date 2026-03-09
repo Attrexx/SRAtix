@@ -1095,7 +1095,7 @@ export default function TicketsPage() {
                         }}
                       >
                         <option value="">{t('tickets.form.membershipTierPlaceholder')}</option>
-                        {(meta.tiers as unknown as string[]).map((tier) => (
+                        {((meta.hybridTiers ?? meta.tiers) as unknown as string[]).map((tier) => (
                           <option key={tier} value={tier}>
                             {t(`tickets.tiers.${tier}`) || meta.tierLabels[tier] || tier}
                           </option>

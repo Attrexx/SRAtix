@@ -130,9 +130,7 @@
 	font-weight: 600;
 	background: rgba(224, 32, 32, 0.18);
 	color: var(--sratix-red);
-	white-space: nowrap;
 	letter-spacing: 0.02em;
-	text-transform: uppercase;
 }
 
 .sratix-card-badges {

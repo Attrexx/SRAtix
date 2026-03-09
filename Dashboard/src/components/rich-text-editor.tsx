@@ -55,6 +55,19 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     }
   }, [handleInput]);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData('text/html');
+    if (html) {
+      const clean = html.replace(/font-family\s*:[^;"']*(;|(?=[;"']))/gi, '');
+      document.execCommand('insertHTML', false, clean);
+    } else {
+      const text = e.clipboardData.getData('text/plain');
+      document.execCommand('insertText', false, text);
+    }
+    handleInput();
+  }, [handleInput]);
+
   return (
     <div
       className="rounded-lg overflow-hidden"
@@ -109,6 +122,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         ref={editorRef}
         contentEditable
         onInput={handleInput}
+        onPaste={handlePaste}
         data-placeholder={placeholder}
         className="min-h-[100px] px-3 py-2 text-sm outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:pointer-events-none"
         style={{

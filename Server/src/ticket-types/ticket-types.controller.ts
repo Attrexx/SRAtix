@@ -19,6 +19,7 @@ import {
   VariantType,
   TICKET_CATEGORIES,
   MEMBERSHIP_TIERS,
+  HYBRID_TIERS,
   TIER_CATEGORY_MAP,
   TIER_WP_PRODUCT_MAP,
   TIER_LABELS,
@@ -38,6 +39,7 @@ export class TicketTypesController {
     return {
       categories: TICKET_CATEGORIES,
       tiers: MEMBERSHIP_TIERS,
+      hybridTiers: HYBRID_TIERS,
       tierLabels: TIER_LABELS,
       tierCategoryMap: TIER_CATEGORY_MAP,
       tierWpProductMap: TIER_WP_PRODUCT_MAP,

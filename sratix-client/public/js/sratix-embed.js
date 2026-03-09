@@ -523,24 +523,6 @@
     startup: 'Individual',
   };
 
-  // ─── Membership value helper ─────────────────────────────────────────────────
-
-  /**
-   * Build the "Includes CHF X 1-year membership" line for bundle tickets.
-   * Uses the WC product price map provided by the WP plugin.
-   */
-  function getMembershipValueHtml(tt) {
-    if (!tt.sraMembershipTier || !tt.sraWpProductId) return '';
-    var prices = config.membershipPrices || {};
-    var priceCents = prices[tt.sraWpProductId];
-    if (!priceCents) return '';
-    var tierLabel = HYBRID_TIER_LABELS[tt.membershipTier] || tt.sraMembershipTier;
-    return `<span class="sratix-membership-value">${escHtml(t('tickets.includesMembership', {
-      price: formatPrice(priceCents, tt.currency),
-      tier: tierLabel,
-    }))}</span>`;
-  }
-
   function renderTicketCards(types, layout, memberSession) {
     const cls = layout === 'list' ? 'sratix-list' : 'sratix-cards';
     return `<div class="${cls}">${types.map(function (tt) { return renderCard(tt, memberSession); }).join('')}</div>`;
@@ -555,7 +537,11 @@
     // ── Badge area (bundle + early bird / member discount) ──
     let badgesHtml = '';
     if (isBundled) {
-      badgesHtml += `<span class="sratix-bundle-badge">${escHtml(t('tickets.sraMembership'))}</span>`;
+      var tierLabel = HYBRID_TIER_LABELS[tt.membershipTier] || tt.sraMembershipTier || '';
+      var prices = config.membershipPrices || {};
+      var priceCents = prices[tt.sraWpProductId];
+      var valuedStr = priceCents ? ' valued ' + formatPrice(priceCents, tt.currency) : '';
+      badgesHtml += `<span class="sratix-bundle-badge">SRD+1yr SRA ${escHtml(tierLabel)} Membership${escHtml(valuedStr)}</span>`;
     }
 
     // ── Price area ──
@@ -578,9 +564,6 @@
       priceHtml = `<div class="sratix-price">${formatPrice(tt.priceCents, tt.currency)}</div>`;
     }
 
-    // ── Membership value line (for bundle tickets) ──
-    const membershipValueHtml = getMembershipValueHtml(tt);
-
     // ── Availability + action ──
     const availHtml = tt.available !== null && !soldOut
       ? `<span class="sratix-avail">${escHtml(t('tickets.remaining', { n: tt.available }))}</span>`
@@ -593,7 +576,7 @@
 
     // Card uses 3 flex zones for consistent alignment:
     //  1. Top zone: icon + name + badges + description
-    //  2. Middle zone (auto-pushed down): price + membership value
+    //  2. Middle zone (auto-pushed down): price
     //  3. Bottom zone: availability + button
     return `<div class="sratix-ticket-card" data-ticket-type-id="${escAttr(tt.id)}">
       <div class="sratix-card-top">
@@ -604,7 +587,6 @@
       </div>
       <div class="sratix-card-mid">
         ${priceHtml}
-        ${membershipValueHtml}
       </div>
       <div class="sratix-card-bot">
         ${availHtml}
