@@ -145,6 +145,8 @@ export class StripeWebhookController {
     const orderMeta = (orderForMeta.meta as Record<string, unknown>) ?? {};
     const isTestOrder =
       !!orderMeta.isTestOrder || session.metadata?.sratix_test_mode === '1';
+    const orgId = session.metadata?.sratix_org_id;
+    const eventId = session.metadata?.sratix_event_id;
 
     if (isTestOrder) {
       this.logger.log(`🧪 Test mode order ${orderId} — real tickets will be issued, WP sync will be skipped`);
@@ -296,9 +298,6 @@ export class StripeWebhookController {
     }
 
     // ── WP Sync: outgoing order.paid webhook ─────────────────────
-    const orgId = session.metadata?.sratix_org_id;
-    const eventId = session.metadata?.sratix_event_id;
-
     if (isTestOrder) {
       // ── TEST MODE: build simulated actions instead of dispatching webhook ──
       if (orgId && eventId && paidOrder) {
