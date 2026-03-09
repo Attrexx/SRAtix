@@ -74,6 +74,7 @@ class SRAtix_Client_Public {
 			'memberGateEnabled' => (bool) get_option( 'sratix_client_member_gate_enabled', false ),
 			'sraLogoUrl'       => esc_url( get_option( 'sratix_client_sra_logo_url', '' ) ),
 			'robotxLogoUrl'    => esc_url( get_option( 'sratix_client_robotx_logo_url', '' ) ),
+			'membershipPrices' => $this->get_membership_product_prices(),
 		);
 
 		// For logged-in users, provide identity + HMAC token so the JS widget
@@ -101,6 +102,36 @@ class SRAtix_Client_Public {
 		}
 
 		wp_localize_script( 'sratix-client-embed', 'sratixConfig', $localize_data );
+	}
+
+	/*──────────────────────────────────────────────────────────
+	 * Membership product prices (for hybrid ticket display)
+	 *────────────────────────────────────────────────────────*/
+
+	/**
+	 * Get prices for SRA membership WooCommerce products.
+	 *
+	 * Returns productId → priceCents map for the 3 individual-type
+	 * membership products used in hybrid ticket bundles.
+	 *
+	 * @return array<int, int>
+	 */
+	private function get_membership_product_prices() {
+		$product_ids = array( 4601, 4603, 4605 ); // individual, student, retired
+		$prices      = array();
+
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			return $prices;
+		}
+
+		foreach ( $product_ids as $pid ) {
+			$product = wc_get_product( $pid );
+			if ( $product ) {
+				$prices[ $pid ] = intval( round( floatval( $product->get_price() ) * 100 ) );
+			}
+		}
+
+		return $prices;
 	}
 
 	/*──────────────────────────────────────────────────────────

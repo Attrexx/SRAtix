@@ -81,6 +81,24 @@ export const TIER_WP_PRODUCT_MAP: Record<MembershipTier, number> = {
 };
 
 /**
+ * Hybrid ticket mapping — maps the ticket's advertised membership tier
+ * to the ACTUAL SRA membership tier used for WC order + user creation.
+ *
+ * Legal-entity tiers are too expensive to bundle 1:1 with event tickets,
+ * so they all map to the 'individual' SRA membership instead.
+ */
+export const HYBRID_TIER_MAP: Record<MembershipTier, MembershipTier> = {
+  student: 'student',
+  individual: 'individual',
+  retired: 'retired',
+  industry_small: 'individual',
+  industry_medium: 'individual',
+  industry_large: 'individual',
+  academic: 'individual',
+  startup: 'individual',
+};
+
+/**
  * Human-readable labels for membership tiers (English defaults).
  */
 export const TIER_LABELS: Record<MembershipTier, string> = {
@@ -674,6 +692,13 @@ export class TicketTypesService {
         maxPerOrder: tt.maxPerOrder,
         category: tt.category,
         membershipTier: tt.membershipTier,
+        // Mapped SRA membership tier + product for hybrid ticket display
+        sraMembershipTier: tt.membershipTier
+          ? HYBRID_TIER_MAP[tt.membershipTier as MembershipTier] ?? tt.membershipTier
+          : null,
+        sraWpProductId: tt.membershipTier
+          ? TIER_WP_PRODUCT_MAP[HYBRID_TIER_MAP[tt.membershipTier as MembershipTier] ?? tt.membershipTier as MembershipTier]
+          : null,
         icon: (tt.meta as Record<string, unknown>)?.icon as string ?? null,
         formSchemaId: tt.formSchemaId,
         sortOrder: tt.sortOrder,

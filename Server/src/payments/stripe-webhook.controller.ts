@@ -19,6 +19,7 @@ import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
+import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 
 /**
@@ -393,10 +394,17 @@ export class StripeWebhookController {
         (tt) => tt.membershipTier && tt.wpProductId,
       );
       if (membershipTicket) {
+        const mappedTier = HYBRID_TIER_MAP[membershipTicket.membershipTier as MembershipTier]
+          ?? membershipTicket.membershipTier;
+        const mappedProductId = TIER_WP_PRODUCT_MAP[mappedTier as MembershipTier]
+          ?? membershipTicket.wpProductId;
         payload.membership = {
           tier: membershipTicket.membershipTier,
           wpProductId: membershipTicket.wpProductId,
           category: membershipTicket.category,
+          // Hybrid mapping: actual SRA membership tier & product to use
+          sraMembershipTier: mappedTier,
+          sraWpProductId: mappedProductId,
         };
       }
     }
@@ -520,45 +528,39 @@ export class StripeWebhookController {
 
     // 2. WP Role assignment (if membership ticket)
     if (membershipTicket) {
-      const category = membershipTicket.category ?? 'general';
-      const role = category === 'individual' ? 'candidate' : category === 'legal' ? 'employer' : null;
-      if (role) {
-        actions.push({
-          action: 'wp_role_assign',
-          description: `Assign WP role "${role}" based on ticket category "${category}"`,
-          detail: { role, category, wpProductId: membershipTicket.wpProductId },
-        });
-      }
+      // Hybrid mapping: all bundled tiers map to individual-type → always 'candidate'
+      const mappedTier = HYBRID_TIER_MAP[membershipTicket.membershipTier as MembershipTier]
+        ?? membershipTicket.membershipTier;
+      const mappedProductId = TIER_WP_PRODUCT_MAP[mappedTier as MembershipTier]
+        ?? membershipTicket.wpProductId;
+      actions.push({
+        action: 'wp_role_assign',
+        description: `Assign WP role "candidate" (hybrid mapping: ${membershipTicket.membershipTier} → ${mappedTier})`,
+        detail: { role: 'candidate', originalTier: membershipTicket.membershipTier, mappedTier, mappedProductId },
+      });
 
       // 3. ProfileGrid group assignment
       actions.push({
         action: 'profilegrid_group_assign',
-        description: `Assign ProfileGrid group for membership tier "${membershipTicket.membershipTier}" (WC Product #${membershipTicket.wpProductId})`,
+        description: `Assign ProfileGrid group for mapped tier "${mappedTier}" (WC Product #${mappedProductId})`,
         detail: {
-          membershipTier: membershipTicket.membershipTier,
-          wpProductId: membershipTicket.wpProductId,
+          originalTier: membershipTicket.membershipTier,
+          mappedTier,
+          mappedProductId,
         },
       });
 
       // 4. WooCommerce order creation
       actions.push({
         action: 'wc_order_create',
-        description: `Create & auto-complete WooCommerce order for Product #${membershipTicket.wpProductId} (${membershipTicket.membershipTier})`,
+        description: `Create & auto-complete WooCommerce order for Product #${mappedProductId} (${mappedTier})`,
         detail: {
-          wpProductId: membershipTicket.wpProductId,
+          originalProductId: membershipTicket.wpProductId,
+          mappedProductId,
           totalCents: paidOrder.totalCents,
           currency: paidOrder.currency,
         },
       });
-
-      // 5. SRA Company Profiles (for legal entities)
-      if (category === 'legal') {
-        actions.push({
-          action: 'sra_corporate_profile_create',
-          description: `Trigger SRA Company Profiles plugin to create corporate-member CPT`,
-          detail: { category, membershipTier: membershipTicket.membershipTier },
-        });
-      }
     }
 
     // 6. Form data → user meta

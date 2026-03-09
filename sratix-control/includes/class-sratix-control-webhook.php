@@ -368,6 +368,22 @@ class SRAtix_Control_Webhook {
 		$wp_product_id  = intval( $ticket_type['wpProductId'] ?? 0 ); // e.g. 4603
 		$ticket_name    = $ticket_type['name'] ?? '';
 
+		// ── Hybrid tier mapping ────────────────────────────────────
+		// Legal-entity tiers map to 'individual' SRA membership.
+		// Only student and retired keep their own tier.
+		$mapped_tier       = $this->get_hybrid_sra_tier( $membership_tier );
+		$mapped_product_id = $this->get_sra_wp_product_id( $mapped_tier );
+
+		if ( $membership_tier && $mapped_tier !== $membership_tier ) {
+			error_log( sprintf(
+				'SRAtix Control [order.paid]: Hybrid mapping: %s (product %d) → %s (product %d)',
+				$membership_tier,
+				$wp_product_id,
+				$mapped_tier,
+				$mapped_product_id
+			) );
+		}
+
 		// ── 2. Find or create WP user ─────────────────────────────
 		$wp_user = get_user_by( 'email', $email );
 		$is_new_user = false;
@@ -392,8 +408,8 @@ class SRAtix_Control_Webhook {
 		}
 
 		// ── 3. Assign WP role ─────────────────────────────────────
-		if ( $category !== 'general' && $wp_product_id ) {
-			$role = $this->get_wp_role_for_product( $wp_product_id );
+		if ( $category !== 'general' && $mapped_product_id ) {
+			$role = $this->get_wp_role_for_product( $mapped_product_id );
 			if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
 				$wp_user->set_role( $role );
 				error_log( "SRAtix Control [order.paid]: Set user {$user_id} role to {$role}" );
@@ -401,14 +417,14 @@ class SRAtix_Control_Webhook {
 		}
 
 		// ── 4. Assign ProfileGrid group ───────────────────────────
-		if ( $wp_product_id ) {
-			$this->assign_profilegrid_group( $user_id, $wp_product_id );
+		if ( $mapped_product_id ) {
+			$this->assign_profilegrid_group( $user_id, $mapped_product_id );
 		}
 
 		// ── 5-7. Create & complete WC order ───────────────────────
 		$wc_order_id = null;
-		if ( $wp_product_id && $category !== 'general' ) {
-			$wc_order_id = $this->create_membership_order( $user_id, $wp_product_id, $order_id, $order_number, $currency );
+		if ( $mapped_product_id && $category !== 'general' ) {
+			$wc_order_id = $this->create_membership_order( $user_id, $mapped_product_id, $order_id, $order_number, $currency );
 		}
 
 		// ── 8. Store mappings ─────────────────────────────────────
@@ -424,7 +440,7 @@ class SRAtix_Control_Webhook {
 		// ── 9. Store ticket meta ──────────────────────────────────
 		update_user_meta( $user_id, 'sratix_ticket_type', $ticket_name );
 		update_user_meta( $user_id, 'sratix_ticket_category', $category );
-		update_user_meta( $user_id, 'sratix_membership_tier', $membership_tier );
+		update_user_meta( $user_id, 'sratix_membership_tier', $mapped_tier ?: $membership_tier );
 		update_user_meta( $user_id, 'sratix_order_number', $order_number );
 		update_user_meta( $user_id, 'sratix_order_id', $order_id );
 		update_user_meta( $user_id, 'sratix_payment_status', 'paid' );
@@ -509,25 +525,65 @@ class SRAtix_Control_Webhook {
 	/**
 	 * Get the WP role for a given WC product ID.
 	 *
-	 * Individual tiers → 'candidate', Legal entity tiers → 'employer'.
+	 * Since hybrid tickets always map to individual-type SRA memberships
+	 * (student, individual, retired), all bundled users get 'candidate' role.
 	 *
 	 * @param int $product_id WC product ID.
 	 * @return string|null     WP role slug or null.
 	 */
 	private function get_wp_role_for_product( $product_id ) {
-		// Individual membership products → candidate role
+		// All individual-type membership products → candidate role
 		$candidate_products = array( 4601, 4603, 4605, 5335 );
-		// Legal entity membership products → employer role
-		$employer_products  = array( 4591, 4593, 4595, 4597, 4599 );
 
 		if ( in_array( $product_id, $candidate_products, true ) ) {
 			return 'candidate';
 		}
-		if ( in_array( $product_id, $employer_products, true ) ) {
-			return 'employer';
-		}
 
 		return null;
+	}
+
+	/**
+	 * Map a ticket's membership tier to the actual SRA membership tier.
+	 *
+	 * Legal-entity tiers (industry, academic, startup) are too expensive
+	 * to bundle 1:1 with event tickets, so they all map to 'individual'.
+	 *
+	 * @param string $tier Original membership tier from the ticket type.
+	 * @return string       Mapped SRA membership tier.
+	 */
+	private function get_hybrid_sra_tier( $tier ) {
+		if ( empty( $tier ) ) {
+			return '';
+		}
+
+		$hybrid_map = array(
+			'student'         => 'student',
+			'individual'      => 'individual',
+			'retired'         => 'retired',
+			'industry_small'  => 'individual',
+			'industry_medium' => 'individual',
+			'industry_large'  => 'individual',
+			'academic'        => 'individual',
+			'startup'         => 'individual',
+		);
+
+		return $hybrid_map[ $tier ] ?? $tier;
+	}
+
+	/**
+	 * Get the WC product ID for a mapped SRA membership tier.
+	 *
+	 * @param string $tier Mapped SRA membership tier.
+	 * @return int          WC product ID, or 0 if unknown.
+	 */
+	private function get_sra_wp_product_id( $tier ) {
+		$tier_product_map = array(
+			'student'    => 4603,
+			'individual' => 4601,
+			'retired'    => 4605,
+		);
+
+		return $tier_product_map[ $tier ] ?? 0;
 	}
 
 	/**

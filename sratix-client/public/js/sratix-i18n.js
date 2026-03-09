@@ -20,6 +20,8 @@ const sratixI18n = (function () {
       'tickets.soldOut':         'Sold Out',
       'tickets.earlyBird':       'Early Bird',
       'tickets.select':          'Select',
+      'tickets.sraMembership':   'SRA Membership',
+      'tickets.includesMembership': 'Incl. {price} {tier} membership (1 year)',
 
       // Quantity modal
       'qty.title':               '{name}',
@@ -127,6 +129,8 @@ const sratixI18n = (function () {
       'tickets.soldOut':         'Épuisé',
       'tickets.earlyBird':       'Tarif réduit',
       'tickets.select':          'Sélectionner',
+      'tickets.sraMembership':   'Adhésion SRA',
+      'tickets.includesMembership': 'Incl. {price} adhésion {tier} (1 an)',
 
       'qty.quantity':            'Quantité',
       'qty.decrease':            'Diminuer',
@@ -225,6 +229,8 @@ const sratixI18n = (function () {
       'tickets.soldOut':         'Ausverkauft',
       'tickets.earlyBird':       'Frühbucher',
       'tickets.select':          'Auswählen',
+      'tickets.sraMembership':   'SRA-Mitgliedschaft',
+      'tickets.includesMembership': 'Inkl. {price} {tier}-Mitgliedschaft (1 Jahr)',
 
       'qty.quantity':            'Anzahl',
       'qty.decrease':            'Verringern',
@@ -323,6 +329,8 @@ const sratixI18n = (function () {
       'tickets.soldOut':         'Esaurito',
       'tickets.earlyBird':       'Tariffa anticipata',
       'tickets.select':          'Seleziona',
+      'tickets.sraMembership':   'Adesione SRA',
+      'tickets.includesMembership': 'Incl. {price} adesione {tier} (1 anno)',
 
       'qty.quantity':            'Quantità',
       'qty.decrease':            'Diminuisci',
