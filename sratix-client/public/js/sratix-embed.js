@@ -25,87 +25,92 @@
   const API_BASE = config.apiUrl.replace(/\/$/, '');
   const EVENT_ID = config.eventId;
 
-  // ─── Ticket card icons (consistent line-art, 24×24 viewBox) ──────────────────
+  // ─── Ticket card icons (self-contained SVG with per-icon viewBox) ─────────────
 
   const TICKET_ICONS = {
-    // Single industrial robotic arm
-    industry_small:
-      '<path d="M8 22h8M12 22v-6"/>' +
-      '<circle cx="12" cy="15.5" r="1"/>' +
-      '<path d="M13 14.5 17 10.5"/>' +
-      '<circle cx="17.2" cy="10.3" r=".8"/>' +
-      '<path d="M17.8 9.5 19.5 7M19.5 7l1.3 1M19.5 7l1-.8"/>',
+    // Robot with conveyor belt (robot-two)
+    industry_small: {
+      viewBox: '0 0 48 48',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="4">' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M5 35a2 2 0 0 1 2-2h34a2 2 0 0 1 2 2v7H5v-7Zm37-17h-8l-6-6l6-6h8"/>' +
+        '<circle cx="8" cy="12" r="4"/>' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M12 12h16m-18 4l8 17"/>' +
+        '</g>',
+    },
 
-    // Two robotic arms from shared base
-    industry_medium:
-      '<path d="M4 22h16M12 22v-4"/>' +
-      '<circle cx="12" cy="17.5" r="1"/>' +
-      '<path d="M11 16.8 6 12.5"/>' +
-      '<circle cx="6" cy="12.5" r=".7"/>' +
-      '<path d="M5.5 12 3 9.5M3 9.5l-.5 1.8M3 9.5l-1.5-.2"/>' +
-      '<path d="M13 16.8 18 12.5"/>' +
-      '<circle cx="18" cy="12.5" r=".7"/>' +
-      '<path d="M18.5 12 21 9.5M21 9.5l.5 1.8M21 9.5l1.5-.2"/>',
+    // Factory with industrial robot arm
+    industry_medium: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">' +
+        '<path d="m9.25 18.876l-6.512-4.682m3.002-2.673l5.143 3.813M.751 11.751a2.5 2.5 0 1 0 5 0a2.5 2.5 0 0 0-5 0m4.886-.746l5.611-5.465m-.856-3.962L1.257 10.25m8.492-7a2.5 2.5 0 1 0 5 0a2.5 2.5 0 0 0-5 0m6.545 4.132l-2.3-2.35m1.756 3.719a2 2 0 1 0 4 0a2 2 0 0 0-4 0"/>' +
+        '<path d="M19.7 8.3a3 3 0 0 1 3.55 2.951m-3 3A3 3 0 0 1 17.3 10.7M1 23.251h22m-13.75 0V18a3 3 0 0 1 6 0v5.25"/>' +
+        '</g>',
+    },
 
-    // Factory building with chimney and smoke
-    industry_large:
-      '<path d="M2 22h20"/>' +
-      '<rect x="3" y="14" width="6" height="8" rx=".5"/>' +
-      '<path d="M9 18l4-4v8"/>' +
-      '<rect x="13" y="9" width="8" height="13" rx=".5"/>' +
-      '<rect x="16" y="5" width="2.5" height="4"/>' +
-      '<path d="M17 5c0-1 .4-2 .7-3M18 5c0-1 .4-2 .7-3"/>',
+    // AI science robot (atom orbits + robot head)
+    industry_large: {
+      viewBox: '0 0 48 48',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="3">' +
+        '<path d="M44.829 17.336c-.128 1.718-1.396 3.114-3.108 3.32C40.23 20.835 38.245 21 36 21s-4.229-.165-5.721-.344c-1.712-.206-2.98-1.602-3.108-3.32c-.09-1.224-.171-2.64-.171-3.836c0-4.198 3.375-7.45 7.573-7.493a142 142 0 0 1 2.854 0C41.625 6.049 45 9.302 45 13.5c0 1.195-.08 2.612-.171 3.836Z"/>' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M36 2v4m-3 7v1m6-1v1M16 27a5 5 0 1 0 10 0a5 5 0 1 0-10 0M5.423 27C1.504 20.526.633 14.328 4.48 10.48s10.046-2.976 16.52.943c-2.89 1.75-5.837 4.108-8.653 6.924S7.173 24.109 5.423 27m0 0C1.504 33.474.633 39.672 4.48 43.52s10.046 2.976 16.52-.943M5.423 27c1.75 2.89 4.108 5.837 6.924 8.653s5.762 5.174 8.653 6.924m0 0c6.474 3.919 12.672 4.79 16.52.943s2.976-10.046-.943-16.52c-1.75 2.89-4.108 5.837-6.924 8.653S23.891 40.827 21 42.577"/>' +
+        '</g>',
+    },
 
-    // Institutional building with pediment and columns
-    academic:
-      '<path d="M12 4l9 6H3z"/>' +
-      '<path d="M4 10v12M8 10v12M12 10v12M16 10v12M20 10v12"/>' +
-      '<path d="M2 22h20"/>',
+    // Classical building with columns (institution)
+    academic: {
+      viewBox: '0 0 24 24',
+      inner: '<path fill="currentColor" d="m12 .856l10 5.556V9H2V6.412L12 .856ZM5.06 7h13.88L12 3.144L5.06 7ZM7 11v8H5v-8h2Zm6 0v8h-2v-8h2Zm6 0v8h-2v-8h2ZM2 21h20v2H2v-2Z"/>',
+    },
 
-    // Upward-flying rocket
-    startup:
-      '<path d="M12 3c-2 3-3 7-3 11h6c0-4-1-8-3-11z"/>' +
-      '<circle cx="12" cy="11" r="1"/>' +
-      '<path d="M9 16l-2 5h2M15 16l2 5h-2"/>' +
-      '<path d="M10.5 21l1.5 1.5 1.5-1.5"/>',
+    // Rocket outline
+    startup: {
+      viewBox: '0 0 24 24',
+      inner: '<path fill="currentColor" d="m6 19.05l1.975-.8q-.25-.725-.463-1.475t-.337-1.5l-1.175.8v2.975ZM10 18h4q.45-1 .725-2.438T15 12.626q0-2.475-.825-4.688T12 4.526q-1.35 1.2-2.175 3.413T9 12.625q0 1.5.275 2.938T10 18Zm2-5q-.825 0-1.413-.588T10 11q0-.825.588-1.413T12 9q.825 0 1.413.588T14 11q0 .825-.588 1.413T12 13Zm6 6.05v-2.975l-1.175-.8q-.125.75-.338 1.5t-.462 1.475l1.975.8ZM12 1.975q2.475 1.8 3.738 4.575T17 13l2.1 1.4q.425.275.663.725t.237.95V22l-4.975-2h-6.05L4 22v-5.925q0-.5.238-.95T4.9 14.4L7 13q0-3.675 1.263-6.45T12 1.975Z"/>',
+    },
 
     // Two hands in a handshake with cuffs
-    general:
-      '<path d="M2 11.5v6M22 11.5v6"/>' +
-      '<path d="M2 14.5h5M22 14.5h-5"/>' +
-      '<path d="M7 14.5c1.5-2 3-3 5-3s3.5 1 5 3"/>' +
-      '<path d="M7 16c1.5-1 3-2 5-2s3.5 1 5 2"/>',
+    general: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 11.5v6M22 11.5v6"/>' +
+        '<path d="M2 14.5h5M22 14.5h-5"/>' +
+        '<path d="M7 14.5c1.5-2 3-3 5-3s3.5 1 5 3"/>' +
+        '<path d="M7 16c1.5-1 3-2 5-2s3.5 1 5 2"/>' +
+        '</g>',
+    },
 
     // Graduation cap with tassel
-    student:
-      '<path d="M2 10l10-5 10 5-10 5z"/>' +
-      '<path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>' +
-      '<path d="M20 10v6.5"/>' +
-      '<circle cx="20" cy="17" r=".8"/>',
+    student: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 10l10-5 10 5-10 5z"/>' +
+        '<path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>' +
+        '<path d="M20 10v6.5"/>' +
+        '<circle cx="20" cy="17" r=".8"/>' +
+        '</g>',
+    },
 
-    // Steaming coffee cup
-    retired:
-      '<path d="M5 21h12"/>' +
-      '<path d="M7 21v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v6"/>' +
-      '<path d="M15 16.5h1.5a1.5 1.5 0 0 1 0 3H15"/>' +
-      '<path d="M9 14c0-1.5.7-1.5.7-3"/>' +
-      '<path d="M11 13.5c0-1.5.7-1.5.7-3"/>' +
-      '<path d="M13 14c0-1.5.7-1.5.7-3"/>',
+    // Coffee cup with steam
+    retired: {
+      viewBox: '0 0 20 20',
+      inner: '<path fill="currentColor" d="M1.382 8.505v5.058a5.057 5.057 0 0 0 5.057 5.058h3.677a5.057 5.057 0 0 0 5.057-5.058V8.506L1.382 8.505ZM11.887.16a.69.69 0 0 1 .086.972c-.642.765-.784 1.287-.586 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.074 1.822a4.622 4.622 0 0 1-.751 1.328h3.881c.437.016.754.127.95.335c.11.114.188.258.237.432l.06-.002a3.448 3.448 0 0 1 0 6.897l-.116-.004A6.438 6.438 0 0 1 10.117 20H6.438a6.436 6.436 0 0 1-6.436-6.437V8.337c-.02-.433.062-.74.244-.92c.183-.18.453-.277.809-.29h2.953a.689.689 0 0 1 .144-.17C4.762 6.44 5.16 5.9 5.36 5.337c.114-.32.101-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.728-3.202a.69.69 0 1 1 1.057.886c-.642.765-.783 1.287-.585 1.637c.061.109.593.948.715 1.207c.275.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.858a.689.689 0 0 1 .144-.17C7.52 6.44 7.918 5.9 8.118 5.337c.114-.32.102-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.729-3.202a.69.69 0 1 1 1.056.886c-.641.765-.783 1.287-.585 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.859a.689.689 0 0 1 .143-.17c.61-.518 1.007-1.058 1.207-1.621c.114-.32.102-.51-.022-.771c-.078-.166-.568-.942-.667-1.116c-.538-.952-.242-2.044.729-3.202a.69.69 0 0 1 .971-.086Zm4.665 9.11v4.138a2.069 2.069 0 0 0 0-4.138Z"/>',
+    },
 
-    // Cute robot head with antenna
-    individual:
-      '<rect x="5" y="8" width="14" height="11" rx="3"/>' +
-      '<circle cx="9" cy="13" r="1.5" fill="currentColor"/>' +
-      '<circle cx="15" cy="13" r="1.5" fill="currentColor"/>' +
-      '<path d="M10 17h4"/>' +
-      '<path d="M12 8v-3"/>' +
-      '<circle cx="12" cy="4" r="1.2"/>',
+    // Robot with ears and antenna (robot-appreciate)
+    individual: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<path d="M14.706 4.313H9.294a4.981 4.981 0 0 0-4.982 4.981v5.412a4.982 4.982 0 0 0 4.982 4.982h5.412a4.982 4.982 0 0 0 4.982-4.982V9.294a4.982 4.982 0 0 0-4.982-4.982Z"/>' +
+        '<path d="M19.606 15.588h1.619a1.025 1.025 0 0 0 1.025-1.025V9.438a1.025 1.025 0 0 0-1.025-1.025h-1.62m-15.21 7.175h-1.62a1.025 1.025 0 0 1-1.025-1.025V9.438a1.025 1.025 0 0 1 1.025-1.025h1.62"/>' +
+        '<path stroke-linecap="round" stroke-linejoin="round" d="M2.765 8.413v-4.1m18.46 4.1l-.01-4.1M9.94 15.588h4.1m-6.16-4.613L8.903 9.95l1.025 1.025m4.102 0l1.025-1.025l1.024 1.025"/>' +
+        '</g>',
+    },
   };
 
   function ticketIconSvg(key) {
-    var inner = TICKET_ICONS[key];
-    if (!inner) return '';
-    return '<svg class="sratix-ticket-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+    var icon = TICKET_ICONS[key];
+    if (!icon) return '';
+    return '<svg class="sratix-ticket-icon" xmlns="http://www.w3.org/2000/svg" viewBox="' + icon.viewBox + '">' + icon.inner + '</svg>';
   }
 
   function getTicketIcon(tt) {
