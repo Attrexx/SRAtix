@@ -514,11 +514,10 @@ export default function FormsPage() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, idx)}
                       onDragEnd={handleDragEnd}
-                      className="group rounded-lg transition-all"
+                      className="group rounded-lg transition-all max-md:!w-full"
                       style={{
                         flex: 'none',
                         width: `calc(${field.width}% - ${((1 - field.width / 100) * 0.75).toFixed(4)}rem)`,
-                        minWidth: '180px',
                         background: 'var(--color-bg-field)',
                         border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                         boxShadow: dropIdx === idx
