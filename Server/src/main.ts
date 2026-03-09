@@ -202,7 +202,24 @@ async function bootstrap() {
       logger.warn(`Dashboard build not found at ${dashboardDir} — UI unavailable`);
     }
 
-    await app.listen(port, '0.0.0.0');
+    // Retry listen() — on deploy the old process may still hold the port
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 3000;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        await app.listen(port, '0.0.0.0');
+        break; // success
+      } catch (err: any) {
+        if (err.code === 'EADDRINUSE' && attempt < MAX_RETRIES) {
+          logger.warn(
+            `Port ${port} in use — retrying in ${RETRY_DELAY / 1000}s (attempt ${attempt}/${MAX_RETRIES})`,
+          );
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        } else {
+          throw err; // final attempt or different error
+        }
+      }
+    }
 
     logger.log(`SRAtix Server v0.1.0 listening on port ${port}`);
     logger.log(`Node ${process.version}, PID ${process.pid}`);
