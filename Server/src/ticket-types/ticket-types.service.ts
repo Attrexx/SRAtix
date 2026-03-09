@@ -649,7 +649,14 @@ export class TicketTypesService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    return ticketTypes.map((tt) => {
+    // ── Cross-membership visibility rules ──────────────────────────
+    // RobotX members don't see tickets that bundle SRA membership (and vice versa in future)
+    const filtered = ticketTypes.filter((tt) => {
+      if (memberGroup === 'robotx' && tt.membershipTier) return false;
+      return true;
+    });
+
+    return filtered.map((tt) => {
       const resolvedPrice = this.resolvePrice(tt, tt.pricingVariants);
       const available = tt.quantity != null ? Math.max(0, tt.quantity - tt.sold) : null;
       const soldOut = tt.quantity != null && tt.sold >= tt.quantity;
