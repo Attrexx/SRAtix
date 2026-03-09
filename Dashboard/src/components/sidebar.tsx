@@ -85,8 +85,8 @@ export function Sidebar({ eventId }: { eventId?: string }) {
           src="/logo.png"
           alt="SRAtix"
           width={180}
-          height={68}
-          className="w-[180px] h-[68px]"
+          height={58}
+          className="w-[180px] h-[58px]"
           draggable={false}
         />
       </div>
@@ -167,7 +167,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <img src="/logo.png" alt="SRAtix" width={180} height={68} className="h-[34px] w-auto" draggable={false} />
+        <img src="/logo.png" alt="SRAtix" width={180} height={58} className="h-[34px] w-auto" draggable={false} />
       </div>
 
       {/* ── Mobile drawer overlay ── */}
