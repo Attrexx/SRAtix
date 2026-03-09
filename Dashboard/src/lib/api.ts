@@ -268,6 +268,7 @@ export interface SraDiscount {
 export interface TicketTypeMeta {
   categories: readonly string[];
   tiers: readonly string[];
+  hybridTiers?: readonly string[];
   tierLabels: Record<string, string>;
   tierCategoryMap: Record<string, string>;
   tierWpProductMap: Record<string, number>;
