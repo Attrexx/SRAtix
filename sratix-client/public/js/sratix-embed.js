@@ -819,7 +819,7 @@
     // Width style from form builder (25–100%, default 100%)
     var widthPct = field.width && field.width > 0 && field.width < 100 ? field.width : 100;
     var widthStyle = widthPct < 100
-      ? ' style="flex: 0 0 calc(' + widthPct + '% - 10px); min-width: 140px;"'
+      ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: 140px;"'
       : '';
 
     // For consent type, label is already inline
