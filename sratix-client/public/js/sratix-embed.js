@@ -739,6 +739,92 @@
     requestAnimationFrame(() => modal.classList.add('sratix-modal--visible'));
   }
 
+  // ─── Recipient details modal (between qty and registration) ──────────────────
+
+  function openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf) {
+    var recipientCount = includeForSelf ? qty - 1 : qty;
+    if (recipientCount < 1) {
+      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, []);
+      return;
+    }
+
+    var modal = createModalShell('sratix-modal-recipients');
+    var rows = '';
+    for (var i = 0; i < recipientCount; i++) {
+      rows += '<div class="sratix-recipient-row" style="margin-bottom:12px;padding:12px;border:1px solid #e0e0e0;border-radius:8px;">'
+        + '<strong>' + escHtml(t('recipients.recipientLabel', { n: i + 1 }) || ('Recipient ' + (i + 1))) + '</strong>'
+        + '<div style="display:flex;gap:8px;margin-top:6px;">'
+        + '<input type="text" class="sratix-rcpt-first" data-idx="' + i + '" placeholder="' + escAttr(t('reg.firstName') || 'First name') + '" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;" />'
+        + '<input type="text" class="sratix-rcpt-last" data-idx="' + i + '" placeholder="' + escAttr(t('reg.lastName') || 'Last name') + '" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;" />'
+        + '</div>'
+        + '<input type="email" class="sratix-rcpt-email" data-idx="' + i + '" placeholder="' + escAttr(t('reg.email') || 'Email') + '" style="width:100%;margin-top:6px;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+        + '</div>';
+    }
+
+    modal.querySelector('.sratix-modal-inner').innerHTML =
+      '<h3>' + escHtml(t('recipients.title') || 'Recipient Details') + '</h3>'
+      + '<p style="margin-bottom:12px;color:#666;">' + escHtml(t('recipients.subtitle') || 'Enter details for each ticket recipient. They will receive an email to complete their registration.') + '</p>'
+      + '<div id="sratix-recipient-list">' + rows + '</div>'
+      + '<div id="sratix-rcpt-warn" style="display:none;padding:8px 12px;background:#fff3cd;border-radius:4px;margin-bottom:8px;font-size:0.9em;"></div>'
+      + '<div id="sratix-rcpt-error" style="display:none;padding:8px 12px;background:#f8d7da;color:#721c24;border-radius:4px;margin-bottom:8px;"></div>'
+      + '<div style="display:flex;gap:8px;margin-top:16px;">'
+      + '<button id="sratix-rcpt-back" class="sratix-btn" style="flex:1;background:#eee;color:#333;">' + escHtml(t('reg.back') || 'Back') + '</button>'
+      + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn-primary" style="flex:1;">' + escHtml(t('reg.continue') || 'Continue') + '</button>'
+      + '</div>';
+
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+
+    modal.querySelector('#sratix-rcpt-back').addEventListener('click', function() {
+      closeModal();
+      openQuantityModal(eventId, tt);
+    });
+
+    modal.querySelector('#sratix-rcpt-continue').addEventListener('click', function() {
+      var errorEl = modal.querySelector('#sratix-rcpt-error');
+      var warnEl = modal.querySelector('#sratix-rcpt-warn');
+      errorEl.style.display = 'none';
+      warnEl.style.display = 'none';
+
+      var firsts = modal.querySelectorAll('.sratix-rcpt-first');
+      var lasts = modal.querySelectorAll('.sratix-rcpt-last');
+      var emails = modal.querySelectorAll('.sratix-rcpt-email');
+      var recipients = [];
+      var emailSet = new Set();
+      var hasDupes = false;
+
+      for (var j = 0; j < recipientCount; j++) {
+        var fn = firsts[j].value.trim();
+        var ln = lasts[j].value.trim();
+        var em = emails[j].value.trim().toLowerCase();
+        if (!fn || !ln || !em) {
+          errorEl.textContent = t('recipients.allFieldsRequired') || 'Please fill in all fields for every recipient.';
+          errorEl.style.display = '';
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+          errorEl.textContent = (t('recipients.invalidEmail') || 'Invalid email for recipient') + ' ' + (j + 1) + '.';
+          errorEl.style.display = '';
+          return;
+        }
+        if (emailSet.has(em)) {
+          hasDupes = true;
+        }
+        emailSet.add(em);
+        recipients.push({ firstName: fn, lastName: ln, email: em });
+      }
+
+      if (hasDupes) {
+        warnEl.textContent = t('recipients.duplicateWarning') || 'Warning: some recipients share the same email address.';
+        warnEl.style.display = '';
+      }
+
+      closeModal();
+      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients);
+    });
+
+    requestAnimationFrame(function() { modal.classList.add('sratix-modal--visible'); });
+  }
+
   // ─── Conditions engine (client-side — mirrors Server/src/common/conditions.ts) ─
 
   function evalConditions(conditions, answers) {
@@ -979,7 +1065,9 @@
 
   // ─── Registration modal (Stage B) ────────────────────────────────────────────
 
-  async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents) {
+  async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeTicketForSelf, additionalAttendees) {
+    if (typeof includeTicketForSelf === 'undefined') includeTicketForSelf = true;
+    if (!additionalAttendees) additionalAttendees = [];
     var subtotal  = tt.priceCents * qty;
     var finalPrice = Math.max(0, subtotal - discountCents);
     var modal = createModalShell('sratix-modal-reg');
@@ -1486,6 +1574,131 @@
 
   function formatPrice(cents, currency) {
     return `${currency ?? 'CHF'} ${(cents / 100).toFixed(2)}`;
+  }
+
+  // ─── Register widget (token-based recipient registration) ─────────────────────
+
+  async function initRegisterWidget() {
+    var container = document.getElementById('sratix-register-widget');
+    if (!container) return;
+
+    var apiUrl = container.getAttribute('data-api-url');
+    if (!apiUrl) {
+      container.innerHTML = '<p class="sratix-error">API URL not configured.</p>';
+      return;
+    }
+    apiUrl = apiUrl.replace(/\/$/, '');
+
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    if (!token) {
+      container.innerHTML = '<p class="sratix-info">No registration token provided.</p>';
+      return;
+    }
+
+    // Sanitize token — only hex chars allowed (64 characters)
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      container.innerHTML = '<p class="sratix-error">Invalid registration link.</p>';
+      return;
+    }
+
+    container.innerHTML = '<p class="sratix-info">Loading registration…</p>';
+
+    try {
+      var res = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token));
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        container.innerHTML = '<p class="sratix-error">' + escHtml(data.message || 'This registration link is invalid or has expired.') + '</p>';
+        return;
+      }
+
+      var attendee = data.attendee || {};
+      var event = data.event || {};
+      var formFields = data.formFields || null;
+
+      // Build form
+      var formHtml = '<h3>' + escHtml(event.name || 'Event Registration') + '</h3>'
+        + '<p style="margin-bottom:16px;color:#666;">Complete your registration below.</p>'
+        + '<form id="sratix-register-form" style="max-width:500px;">'
+        + '<div style="margin-bottom:12px;">'
+        + '<label style="display:block;margin-bottom:4px;font-weight:600;">First name</label>'
+        + '<input type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+        + '</div>'
+        + '<div style="margin-bottom:12px;">'
+        + '<label style="display:block;margin-bottom:4px;font-weight:600;">Last name</label>'
+        + '<input type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+        + '</div>'
+        + '<div style="margin-bottom:12px;">'
+        + '<label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>'
+        + '<input type="email" name="email" value="' + escAttr(attendee.email || '') + '" readonly style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;box-sizing:border-box;" />'
+        + '</div>';
+
+      // Custom form fields from schema
+      if (formFields && formFields.length > 0) {
+        formFields.forEach(function(field) {
+          formHtml += renderFormField(field);
+        });
+      } else {
+        // Default fields: phone + company
+        formHtml += '<div style="margin-bottom:12px;">'
+          + '<label style="display:block;margin-bottom:4px;font-weight:600;">Phone</label>'
+          + '<input type="tel" name="phone" placeholder="+41 ..." style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+          + '</div>'
+          + '<div style="margin-bottom:12px;">'
+          + '<label style="display:block;margin-bottom:4px;font-weight:600;">Company / Organization</label>'
+          + '<input type="text" name="company" placeholder="" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" />'
+          + '</div>';
+      }
+
+      formHtml += '<div id="sratix-reg-error" style="display:none;padding:8px 12px;background:#f8d7da;color:#721c24;border-radius:4px;margin-bottom:12px;"></div>'
+        + '<button type="submit" class="sratix-btn sratix-btn-primary" style="width:100%;">Complete Registration</button>'
+        + '</form>';
+
+      container.innerHTML = formHtml;
+
+      container.querySelector('#sratix-register-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var errorEl = container.querySelector('#sratix-reg-error');
+        errorEl.style.display = 'none';
+        var submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting…';
+
+        var formDataObj = {};
+        var inputs = e.target.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(inp) {
+          if (inp.name && !inp.readOnly) {
+            formDataObj[inp.name] = inp.value;
+          }
+        });
+
+        try {
+          var postRes = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formData: formDataObj }),
+          });
+          var postData = await postRes.json().catch(function() { return {}; });
+          if (!postRes.ok) {
+            throw new Error(postData.message || 'Registration failed.');
+          }
+          container.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
+            + '<div style="font-size:48px;margin-bottom:16px;">✅</div>'
+            + '<h3>Registration Complete!</h3>'
+            + '<p style="color:#666;">You are now registered for <strong>' + escHtml(event.name || 'the event') + '</strong>.</p>'
+            + '<p style="color:#666;">A confirmation email has been sent to <strong>' + escHtml(attendee.email || '') + '</strong>.</p>'
+            + '</div>';
+        } catch (err) {
+          errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+          errorEl.style.display = '';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Complete Registration';
+        }
+      });
+
+    } catch (err) {
+      container.innerHTML = '<p class="sratix-error">Failed to load registration form. Please try again later.</p>';
+    }
   }
 
   // ─── Boot ─────────────────────────────────────────────────────────────────────
