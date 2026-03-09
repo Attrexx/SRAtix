@@ -302,13 +302,16 @@ export default function FormsPage() {
     setSaving(true);
     setError('');
     try {
+      // Stamp each field with its visual order so the embed widget
+      // renders them in the exact sequence shown in the builder.
+      const orderedFields = fields.map((f, idx) => ({ ...f, order: idx + 1 }));
       if (editSchemaId) {
         await api.updateFormSchema(editSchemaId, eventId, {
           name: formName.trim(),
-          fields: { fields },
+          fields: { fields: orderedFields },
         });
       } else {
-        await api.createFormSchema({ eventId, name: formName.trim(), fields: { fields } });
+        await api.createFormSchema({ eventId, name: formName.trim(), fields: { fields: orderedFields } });
       }
       resetBuilder();
       await loadSchemas();

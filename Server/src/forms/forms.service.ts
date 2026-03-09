@@ -46,6 +46,7 @@ export interface FormField {
   requiredJustification?: string; // GDPR: why is this field required?
   section?: string;
   order?: number;
+  width?: number; // Display width percentage: 25 | 33 | 50 | 66 | 75 | 100
   options?: Array<{
     value: string;
     label: Record<string, string>;
@@ -297,8 +298,10 @@ export class FormsService {
     );
     if (needsHydration.length === 0) return;
 
-    // Batch-fetch all matching FieldDefinitions by slug
-    const slugs = needsHydration.map((f) => f.id);
+    // Batch-fetch all matching FieldDefinitions by slug.
+    // Fields from seed templates use id = slug directly;
+    // fields from the Dashboard builder store the slug in a separate property.
+    const slugs = needsHydration.map((f) => (f as any).slug || f.id);
     const fieldDefs = await this.prisma.fieldDefinition.findMany({
       where: { slug: { in: slugs }, active: true },
       select: { slug: true, options: true },
@@ -311,7 +314,8 @@ export class FormsService {
 
     // Merge options into the schema fields
     for (const field of needsHydration) {
-      const opts = optionsBySlug.get(field.id);
+      const fieldSlug = (field as any).slug || field.id;
+      const opts = optionsBySlug.get(fieldSlug);
       if (Array.isArray(opts) && opts.length > 0) {
         field.options = opts as FormField['options'];
       } else if (field.type === 'country') {

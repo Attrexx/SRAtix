@@ -811,12 +811,18 @@
 
     var helpHtml = help ? '<p class="sratix-field-help">' + escHtml(help) + '</p>' : '';
 
+    // Width style from form builder (25–100%, default 100%)
+    var widthPct = field.width && field.width > 0 && field.width < 100 ? field.width : 100;
+    var widthStyle = widthPct < 100
+      ? ' style="flex: 0 0 calc(' + widthPct + '% - 10px); min-width: 140px;"'
+      : '';
+
     // For consent type, label is already inline
     if (field.type === 'consent') {
-      return '<div class="sratix-field sratix-df" data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
+      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
     }
 
-    return '<div class="sratix-field sratix-df" data-df-id="' + escAttr(field.id) + '">'
+    return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
       + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + '</label>'
       + html + helpHtml
       + '</div>';
@@ -929,11 +935,16 @@
     // ── Build form body ──
     var formBodyHtml;
     if (useCustomForm) {
-      // Sort by order if present
-      var sorted = schemaFields.slice().sort(function (a, b) {
-        return (a.order || 0) - (b.order || 0);
+      // Sort by explicit order when available; otherwise preserve the DB array
+      // order which matches the visual drag-drop sequence in the builder.
+      var sorted = schemaFields.slice();
+      sorted.sort(function (a, b) {
+        var oa = typeof a.order === 'number' ? a.order : Infinity;
+        var ob = typeof b.order === 'number' ? b.order : Infinity;
+        if (oa !== Infinity || ob !== Infinity) return oa - ob;
+        return 0; // both lack order — preserve original array position
       });
-      formBodyHtml = sorted.map(renderFormField).join('');
+      formBodyHtml = '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
     } else {
       // Default 5-field form (backward compatible)
       formBodyHtml = ''

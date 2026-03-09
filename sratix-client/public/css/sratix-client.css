@@ -372,6 +372,19 @@
 
 .sratix-field { margin-bottom: 14px; flex: 1; }
 
+/* ── Custom form field grid (flex-wrap) ── */
+.sratix-form-fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 14px;
+}
+.sratix-form-fields > .sratix-field {
+	flex: 1 1 100%;
+}
+@media (max-width: 480px) {
+	.sratix-form-fields > .sratix-field { flex: 1 1 100% !important; min-width: 100% !important; }
+}
+
 .sratix-field-row {
 	display: flex;
 	gap: 14px;
