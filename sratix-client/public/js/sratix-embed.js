@@ -389,6 +389,7 @@
 
     container.innerHTML = `
       <div class="sratix-member-gate">
+        <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
         <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
         <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
         <div class="sratix-member-gate__buttons">
@@ -416,6 +417,11 @@
     container.querySelector('[data-member="none"]').addEventListener('click', function () {
       setMemberSession({ memberGroup: 'none' });
       loadAndRenderTickets(container, eventId, layout, null);
+    });
+    container.querySelector('#sratix-back-to-role').addEventListener('click', function (e) {
+      e.preventDefault();
+      clearRole();
+      renderRoleChoice(container, eventId, layout);
     });
   }
 
