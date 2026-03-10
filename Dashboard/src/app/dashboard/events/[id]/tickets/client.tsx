@@ -717,7 +717,7 @@ export default function TicketsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {tickets.map((tt, idx) => {
             const soldPct =
               tt.quantity != null && tt.quantity > 0
