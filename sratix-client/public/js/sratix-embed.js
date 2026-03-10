@@ -232,7 +232,15 @@
         apiFetch(`events/${eventId}/public-info`).catch(function () { return {}; }),
       ]);
       if (!ticketTypes || ticketTypes.length === 0) {
-        container.innerHTML = `<p class="sratix-info">${escHtml(t('tickets.noTickets'))}</p>`;
+        container.innerHTML = `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`
+          + `<p class="sratix-info">${escHtml(t('tickets.noTickets'))}</p>`;
+        const backLink = container.querySelector('[data-action="change-role"]');
+        if (backLink) backLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          clearRole();
+          clearMemberSession();
+          initTicketsWidget();
+        });
         return;
       }
       let html = '';

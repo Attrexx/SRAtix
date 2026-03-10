@@ -977,9 +977,9 @@
 	align-items: center;
 	justify-content: center;
 	gap: 12px;
-	width: 240px;
+	width: 260px;
 	min-height: 180px;
-	padding: 28px 24px;
+	padding: 28px 20px;
 	border: 2px solid var(--sratix-border);
 	border-radius: 12px;
 	background: var(--sratix-navy-light);
@@ -990,7 +990,6 @@
 	cursor: pointer;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 	text-align: center;
-	overflow: hidden;
 }
 
 .sratix-role-btn:hover {
@@ -1034,12 +1033,13 @@
 
 .sratix-role-btn__desc {
 	font-weight: 400;
-	font-size: 0.82em;
+	font-size: 0.8em;
 	color: var(--sratix-text-muted);
 	line-height: 1.35;
 	max-width: 100%;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
+	padding: 0 4px;
 }
 
 /* ── Wizard Step Indicator ── */
