@@ -155,6 +155,8 @@ export class EventsService {
     ticketTitle: string;
     ticketTitleSize: string;
     ticketIntro: string;
+    exhibitorTicketTitle: string;
+    exhibitorTicketIntro: string;
   }> {
     const event = await this.prisma.event.findFirst({ where: { id: eventId } });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
@@ -165,6 +167,8 @@ export class EventsService {
       ticketTitle: (meta.ticketTitle as string) ?? '',
       ticketTitleSize: (meta.ticketTitleSize as string) ?? '1.75',
       ticketIntro: (meta.ticketIntro as string) ?? '',
+      exhibitorTicketTitle: (meta.exhibitorTicketTitle as string) ?? '',
+      exhibitorTicketIntro: (meta.exhibitorTicketIntro as string) ?? '',
     };
   }
 

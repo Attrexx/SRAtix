@@ -71,6 +71,8 @@ export default function EventSettingsPage() {
   const [ticketTitle, setTicketTitle] = useState('');
   const [ticketTitleSize, setTicketTitleSize] = useState('1.75');
   const [ticketIntro, setTicketIntro] = useState('');
+  const [exhibitorTicketTitle, setExhibitorTicketTitle] = useState('');
+  const [exhibitorTicketIntro, setExhibitorTicketIntro] = useState('');
   const [logoIconUrl, setLogoIconUrl] = useState('');
   const [logoLandscapeUrl, setLogoLandscapeUrl] = useState('');
   const [uploadingIcon, setUploadingIcon] = useState(false);
@@ -94,6 +96,8 @@ export default function EventSettingsPage() {
     setTicketTitle((meta.ticketTitle as string) ?? '');
     setTicketTitleSize((meta.ticketTitleSize as string) ?? '1.75');
     setTicketIntro((meta.ticketIntro as string) ?? '');
+    setExhibitorTicketTitle((meta.exhibitorTicketTitle as string) ?? '');
+    setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
   }, []);
@@ -136,6 +140,8 @@ export default function EventSettingsPage() {
           ticketTitle: ticketTitle.trim() || undefined,
           ticketTitleSize,
           ticketIntro: ticketIntro.trim() || undefined,
+          exhibitorTicketTitle: exhibitorTicketTitle.trim() || undefined,
+          exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
         },
       };
       const updated = await api.updateEvent(id, payload);
@@ -319,12 +325,6 @@ export default function EventSettingsPage() {
             {t('events.settings.ticketDisplayHint')}
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
-            <FieldInput
-              label={t('events.settings.ticketTitle')}
-              value={ticketTitle}
-              onChange={setTicketTitle}
-              placeholder={t('events.settings.ticketTitlePlaceholder')}
-            />
             <FieldSelect
               label={t('events.settings.ticketTitleSize')}
               value={ticketTitleSize}
@@ -332,15 +332,51 @@ export default function EventSettingsPage() {
               options={TITLE_SIZE_OPTIONS}
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-              {t('events.settings.ticketIntro')}
-            </label>
-            <RichTextEditor
-              value={ticketIntro}
-              onChange={setTicketIntro}
-              placeholder={t('events.settings.ticketIntroPlaceholder')}
-            />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Left column — Visitor */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                Visitor Flow
+              </h3>
+              <FieldInput
+                label={t('events.settings.ticketTitle')}
+                value={ticketTitle}
+                onChange={setTicketTitle}
+                placeholder={t('events.settings.ticketTitlePlaceholder')}
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {t('events.settings.ticketIntro')}
+                </label>
+                <RichTextEditor
+                  value={ticketIntro}
+                  onChange={setTicketIntro}
+                  placeholder={t('events.settings.ticketIntroPlaceholder')}
+                />
+              </div>
+            </div>
+            {/* Right column — Exhibitor */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-warning, #f59e0b)' }}>
+                Exhibitor Flow
+              </h3>
+              <FieldInput
+                label="Exhibitor Title"
+                value={exhibitorTicketTitle}
+                onChange={setExhibitorTicketTitle}
+                placeholder="e.g. Exhibit at Swiss Robotics Day 2026"
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  Exhibitor Intro
+                </label>
+                <RichTextEditor
+                  value={exhibitorTicketIntro}
+                  onChange={setExhibitorTicketIntro}
+                  placeholder="Intro text shown to exhibitors before booth selection"
+                />
+              </div>
+            </div>
           </div>
         </Section>
 

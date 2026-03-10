@@ -105,6 +105,28 @@
         '<path stroke-linecap="round" stroke-linejoin="round" d="M2.765 8.413v-4.1m18.46 4.1l-.01-4.1M9.94 15.588h4.1m-6.16-4.613L8.903 9.95l1.025 1.025m4.102 0l1.025-1.025l1.024 1.025"/>' +
         '</g>',
     },
+
+    // Compress / shrink arrows (inward arrows on diagonal)
+    compress_alt: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M4 14h6v6"/>' +
+        '<path d="M20 10h-6V4"/>' +
+        '<path d="M14 10l7-7"/>' +
+        '<path d="M3 21l7-7"/>' +
+        '</g>',
+    },
+
+    // Enlarge / expand arrows (outward arrows on diagonal)
+    enlarge2: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M15 3h6v6"/>' +
+        '<path d="M9 21H3v-6"/>' +
+        '<path d="M21 3l-7 7"/>' +
+        '<path d="M3 21l7-7"/>' +
+        '</g>',
+    },
   };
 
   function ticketIconSvg(key) {
@@ -245,14 +267,22 @@
       }
       let html = '';
       // Ticket display header (title + intro from event settings)
-      if (publicInfo.ticketTitle || publicInfo.ticketIntro) {
+      // Use exhibitor-specific text when in the exhibitor flow, fallback to visitor
+      var role = getRole();
+      var displayTitle = (role === 'exhibitor' && publicInfo.exhibitorTicketTitle)
+        ? publicInfo.exhibitorTicketTitle
+        : publicInfo.ticketTitle;
+      var displayIntro = (role === 'exhibitor' && publicInfo.exhibitorTicketIntro)
+        ? publicInfo.exhibitorTicketIntro
+        : publicInfo.ticketIntro;
+      if (displayTitle || displayIntro) {
         html += '<div class="sratix-ticket-header">';
-        if (publicInfo.ticketTitle) {
+        if (displayTitle) {
           var size = publicInfo.ticketTitleSize || '1.75';
-          html += '<h2 class="sratix-ticket-title" style="font-size:' + escAttr(size) + 'rem">' + escHtml(publicInfo.ticketTitle) + '</h2>';
+          html += '<h2 class="sratix-ticket-title" style="font-size:' + escAttr(size) + 'rem">' + escHtml(displayTitle) + '</h2>';
         }
-        if (publicInfo.ticketIntro) {
-          html += '<div class="sratix-ticket-intro">' + publicInfo.ticketIntro + '</div>';
+        if (displayIntro) {
+          html += '<div class="sratix-ticket-intro">' + displayIntro + '</div>';
         }
         html += '</div>';
       }
