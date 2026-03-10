@@ -649,7 +649,7 @@ export default function TicketsPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {tickets.map((tt) => {
             const soldPct =
               tt.quantity != null && tt.quantity > 0
@@ -662,7 +662,7 @@ export default function TicketsPage() {
             return (
               <div
                 key={tt.id}
-                className="flex flex-col gap-3 rounded-xl px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                className="flex flex-col rounded-xl px-4 py-3"
                 style={{
                   background: 'var(--color-bg-card)',
                   border: '1px solid var(--color-border)',
@@ -670,8 +670,8 @@ export default function TicketsPage() {
                 }}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
                       {tt.name}
                     </h3>
                     <StatusBadge status={tt.status} />
@@ -701,60 +701,46 @@ export default function TicketsPage() {
                     )}
                   </div>
                   {tt.description && (
-                    <p className="mt-0.5 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                    <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--color-text-muted)' }} title={tt.description}>
                       {tt.description}
                     </p>
                   )}
                   <div
-                    className="mt-2 flex flex-wrap gap-4 text-sm"
+                    className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {/* Price display */}
                     <span className="inline-flex items-center gap-1">
-                      <Icons.Tag size={14} />
+                      <Icons.Tag size={12} />
                       {priceInfo.activePriceCents === 0
                         ? t('common.free')
                         : `${(priceInfo.activePriceCents / 100).toFixed(2)} ${currency}`}
                       {priceInfo.activeLabel === 'earlyBird' && (
                         <span
-                          className="ml-1 text-[10px] font-medium"
+                          className="ml-0.5 text-[10px] font-medium"
                           style={{ color: 'var(--color-success)' }}
                         >
                           {t('tickets.earlyBird')}
                         </span>
                       )}
+                      {priceInfo.activeLabel === 'earlyBird' && (
+                        <span className="line-through opacity-50">
+                          {(priceInfo.fullPriceCents / 100).toFixed(2)} {currency}
+                        </span>
+                      )}
                     </span>
-                    {/* Show full price when early bird is active */}
-                    {priceInfo.activeLabel === 'earlyBird' && (
-                      <span className="inline-flex items-center gap-1 line-through opacity-50">
-                        {(priceInfo.fullPriceCents / 100).toFixed(2)} {currency}
-                      </span>
-                    )}
                     <span className="inline-flex items-center gap-1">
-                      <Icons.Ticket size={14} /> {tt.sold}
+                      <Icons.Ticket size={12} /> {tt.sold}
                       {tt.quantity != null ? ` / ${tt.quantity}` : ''} {t('common.sold')}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Icons.Package size={14} />{' '}
+                      <Icons.Package size={12} />{' '}
                       {t('tickets.maxPerOrder').replace('{max}', String(tt.maxPerOrder))}
                     </span>
-                    {tt.salesStart && (
-                      <span className="inline-flex items-center gap-1">
-                        <Icons.Clock size={14} />{' '}
-                        {tt.salesEnd
-                          ? t('tickets.salesPeriod')
-                              .replace('{start}', new Date(tt.salesStart).toLocaleDateString('en-CH'))
-                              .replace('{end}', new Date(tt.salesEnd).toLocaleDateString('en-CH'))
-                          : t('tickets.salesPeriodOpen').replace(
-                              '{start}',
-                              new Date(tt.salesStart).toLocaleDateString('en-CH'),
-                            )}
-                      </span>
-                    )}
                     {/* Membership tier label */}
                     {isMembership && tt.membershipTier && meta && (
                       <span className="inline-flex items-center gap-1">
-                        <Icons.User size={14} />
+                        <Icons.User size={12} />
                         {t(`tickets.tiers.${tt.membershipTier}`) ||
                           meta.tierLabels[tt.membershipTier]}
                         {' · '}
@@ -764,7 +750,7 @@ export default function TicketsPage() {
                   </div>
                   {tt.quantity != null && (
                     <div
-                      className="mt-2 h-1.5 w-48 overflow-hidden rounded-full"
+                      className="mt-1.5 h-1 w-full overflow-hidden rounded-full"
                       style={{ background: 'var(--color-bg-muted)' }}
                     >
                       <div
@@ -783,11 +769,11 @@ export default function TicketsPage() {
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 sm:pl-4">
+                {/* Actions — compact icon row */}
+                <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: 'var(--color-border)' }}>
                   <button
                     onClick={() => toggleStatus(tt)}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: 'var(--color-text-secondary)',
@@ -799,43 +785,36 @@ export default function TicketsPage() {
                     }
                   >
                     {tt.status === 'active' ? (
-                      <>
-                        <Icons.Pause size={14} /> {t('common.pause')}
-                      </>
+                      <Icons.Pause size={13} />
                     ) : (
-                      <>
-                        <Icons.Play size={14} /> {t('common.resume')}
-                      </>
+                      <Icons.Play size={13} />
                     )}
                   </button>
                   <button
                     onClick={() => openEdit(tt)}
-                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: 'var(--color-text-secondary)',
                     }}
+                    title={t('common.edit')}
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Edit size={14} /> {t('common.edit')}
-                    </span>
+                    <Icons.Edit size={13} />
                   </button>
                   <button
                     onClick={() => openDuplicate(tt)}
-                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: 'var(--color-text-secondary)',
                     }}
                     title={t('tickets.duplicateTicket')}
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Copy size={14} /> {t('tickets.duplicateTicket')}
-                    </span>
+                    <Icons.Copy size={13} />
                   </button>
                   <button
                     onClick={() => handleDelete(tt)}
-                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
                     style={{
                       border: '1px solid var(--color-border)',
                       color: tt.sold > 0 ? 'var(--color-text-muted)' : 'var(--color-danger, #dc2626)',
@@ -847,9 +826,7 @@ export default function TicketsPage() {
                         : t('common.delete')
                     }
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Trash size={14} /> {t('common.delete')}
-                    </span>
+                    <Icons.Trash size={13} />
                   </button>
                 </div>
               </div>
