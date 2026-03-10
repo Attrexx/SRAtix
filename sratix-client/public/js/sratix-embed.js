@@ -361,16 +361,16 @@
         <h2 class="sratix-role-choice__title">${escHtml(t('roleChoice.title'))}</h2>
         <p class="sratix-role-choice__subtitle">${escHtml(t('roleChoice.subtitle'))}</p>
         <div class="sratix-role-choice__buttons">
-          <button class="sratix-role-btn sratix-role-btn--visitor" data-role="visitor">
+          <div class="sratix-role-btn sratix-role-btn--visitor" role="button" tabindex="0" data-role="visitor">
             <span class="sratix-role-btn__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a3 3 0 0 1 0-6V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></span>
             <span class="sratix-role-btn__label">${escHtml(t('roleChoice.visitorLabel'))}</span>
             <span class="sratix-role-btn__desc">${escHtml(t('roleChoice.visitorDesc'))}</span>
-          </button>
-          <button class="sratix-role-btn sratix-role-btn--exhibitor" data-role="exhibitor">
+          </div>
+          <div class="sratix-role-btn sratix-role-btn--exhibitor" role="button" tabindex="0" data-role="exhibitor">
             <span class="sratix-role-btn__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 22V12h6v10"/><path d="M9 12V8l3-2 3 2v4"/></svg></span>
             <span class="sratix-role-btn__label">${escHtml(t('roleChoice.exhibitorLabel'))}</span>
             <span class="sratix-role-btn__desc">${escHtml(t('roleChoice.exhibitorDesc'))}</span>
-          </button>
+          </div>
         </div>
       </div>
     `;
