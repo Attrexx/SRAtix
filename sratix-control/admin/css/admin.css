@@ -28,3 +28,29 @@
 	background: #f8d7da;
 	color: #721c24;
 }
+
+/* Logo upload field */
+.sratix-logo-field {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.sratix-logo-field .description {
+	flex-basis: 100%;
+}
+
+.sratix-logo-preview {
+	flex-basis: 100%;
+	margin-bottom: 4px;
+}
+
+.sratix-logo-preview img {
+	max-width: 300px;
+	max-height: 150px;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	background: #f0f0f1;
+	padding: 4px;
+}

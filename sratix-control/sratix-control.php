@@ -38,11 +38,13 @@ require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-admin.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-api.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-sync.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-webhook.php';
+require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-event-logos.php';
 
 /*──────────────────────────────────────────────────────────────
  * Bootstrap
  *────────────────────────────────────────────────────────────*/
 function sratix_control_init() {
+	SRAtix_Event_Logos::init();
 	$plugin = new SRAtix_Control();
 	$plugin->run();
 }

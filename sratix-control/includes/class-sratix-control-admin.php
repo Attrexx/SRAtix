@@ -46,6 +46,18 @@ class SRAtix_Control_Admin {
 			'default'           => '',
 		) );
 
+		register_setting( self::OPTION_GROUP, 'sratix_event_logo_icon_id', array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+		) );
+
+		register_setting( self::OPTION_GROUP, 'sratix_event_logo_landscape_id', array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+		) );
+
 		// Settings section
 		add_settings_section(
 			'sratix_api_section',
@@ -66,6 +78,24 @@ class SRAtix_Control_Admin {
 			echo '<input type="password" name="sratix_api_secret" value="' . esc_attr( $val ) . '" class="regular-text" />';
 			echo '<p class="description">' . esc_html__( 'Shared secret for WP ↔ Server HMAC authentication. Must match WP_API_SECRET on the server.', 'sratix-control' ) . '</p>';
 		}, self::PAGE_SLUG, 'sratix_api_section' );
+
+		// ── Event Branding section ──
+		add_settings_section(
+			'sratix_event_branding',
+			__( 'Event Branding', 'sratix-control' ),
+			function () {
+				echo '<p>' . esc_html__( 'Upload event logos used in emails and other communications.', 'sratix-control' ) . '</p>';
+			},
+			self::PAGE_SLUG
+		);
+
+		add_settings_field( 'sratix_event_logo_icon_id', __( 'Square / Icon Logo', 'sratix-control' ), function () {
+			$this->render_logo_field( 'sratix_event_logo_icon_id', __( 'Square format, ideal for avatars and icons. Recommended: 512 × 512 px.', 'sratix-control' ) );
+		}, self::PAGE_SLUG, 'sratix_event_branding' );
+
+		add_settings_field( 'sratix_event_logo_landscape_id', __( 'Landscape / Banner Logo', 'sratix-control' ), function () {
+			$this->render_logo_field( 'sratix_event_logo_landscape_id', __( 'Wide format for email headers and banners. Recommended: 600 × 200 px.', 'sratix-control' ) );
+		}, self::PAGE_SLUG, 'sratix_event_branding' );
 
 		add_settings_field( 'sratix_webhook_secret', __( 'Webhook Secret', 'sratix-control' ), function () {
 			$val = get_option( 'sratix_webhook_secret', '' );
@@ -275,6 +305,28 @@ class SRAtix_Control_Admin {
 	}
 
 	/**
+	 * Render a media-upload logo field.
+	 *
+	 * @param string $option_name Option key storing the attachment ID.
+	 * @param string $description Help text shown below the field.
+	 */
+	private function render_logo_field( $option_name, $description ) {
+		$attachment_id = (int) get_option( $option_name, 0 );
+		$img_url       = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'medium' ) : '';
+		?>
+		<div class="sratix-logo-field" data-option="<?php echo esc_attr( $option_name ); ?>">
+			<div class="sratix-logo-preview" style="<?php echo $img_url ? '' : 'display:none'; ?>">
+				<img src="<?php echo esc_url( $img_url ); ?>" alt="" />
+			</div>
+			<input type="hidden" name="<?php echo esc_attr( $option_name ); ?>" value="<?php echo esc_attr( $attachment_id ); ?>" />
+			<button type="button" class="button sratix-logo-upload"><?php echo $img_url ? esc_html__( 'Replace', 'sratix-control' ) : esc_html__( 'Upload Logo', 'sratix-control' ); ?></button>
+			<button type="button" class="button sratix-logo-remove" style="<?php echo $img_url ? '' : 'display:none'; ?>"><?php esc_html_e( 'Remove', 'sratix-control' ); ?></button>
+			<p class="description"><?php echo esc_html( $description ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Enqueue admin assets (only on our page).
 	 */
 	public function enqueue_assets( $hook ) {
@@ -282,11 +334,21 @@ class SRAtix_Control_Admin {
 			return;
 		}
 
+		wp_enqueue_media();
+
 		wp_enqueue_style(
 			'sratix-control-admin',
 			SRATIX_CONTROL_URL . 'admin/css/admin.css',
 			array(),
 			SRATIX_CONTROL_VERSION
+		);
+
+		wp_enqueue_script(
+			'sratix-control-admin',
+			SRATIX_CONTROL_URL . 'admin/js/admin.js',
+			array( 'jquery' ),
+			SRATIX_CONTROL_VERSION,
+			true
 		);
 	}
 
