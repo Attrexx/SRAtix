@@ -59,8 +59,15 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     e.preventDefault();
     const html = e.clipboardData.getData('text/html');
     if (html) {
-      const clean = html.replace(/font-family\s*:[^;"']*(;|(?=[;"']))/gi, '');
-      document.execCommand('insertHTML', false, clean);
+      // Parse pasted HTML and strip all inline styles, classes, and IDs
+      // to prevent foreign formatting from leaking into the editor.
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      doc.body.querySelectorAll('*').forEach((el) => {
+        el.removeAttribute('style');
+        el.removeAttribute('class');
+        el.removeAttribute('id');
+      });
+      document.execCommand('insertHTML', false, doc.body.innerHTML);
     } else {
       const text = e.clipboardData.getData('text/plain');
       document.execCommand('insertText', false, text);
