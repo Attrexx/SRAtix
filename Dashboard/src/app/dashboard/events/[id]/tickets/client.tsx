@@ -717,209 +717,109 @@ export default function TicketsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {tickets.map((tt, idx) => {
-            const soldPct =
-              tt.quantity != null && tt.quantity > 0
-                ? Math.round((tt.sold / tt.quantity) * 100)
-                : 0;
-            const isExhibitor = tt.category === 'exhibitor';
-            const isMembership = tt.category === 'individual' || tt.category === 'legal';
-            const priceInfo = getDisplayPrice(tt);
-
+        <div className="space-y-8">
+          {/* ── Visitor Tickets Section ── */}
+          {(() => {
+            const visitorTickets = tickets
+              .map((tt, idx) => ({ tt, idx }))
+              .filter(({ tt }) => tt.category !== 'exhibitor');
             return (
-              <div
-                key={tt.id}
-                draggable
-                onDragStart={() => handleDragStart(idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, idx)}
-                onDragEnd={handleDragEnd}
-                className="group flex flex-col rounded-xl px-4 py-3 transition-all"
-                style={{
-                  background: 'var(--color-bg-card)',
-                  border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                  boxShadow: dropIdx === idx
-                    ? '0 0 0 2px rgba(0,115,170,0.15)'
-                    : 'var(--shadow-sm)',
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className="cursor-grab opacity-30 transition-opacity group-hover:opacity-70 active:cursor-grabbing"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      <Icons.GripVertical size={16} />
-                    </span>
-                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
-                      {tt.name}
-                    </h3>
-                    <StatusBadge status={tt.status} />
-                    {isMembership && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                        style={{
-                          background: 'var(--color-primary)',
-                          color: '#fff',
-                          opacity: 0.9,
-                        }}
-                      >
-                        {t('tickets.badgeMembership')}
-                      </span>
-                    )}
-                    {isExhibitor && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                        style={{
-                          background: 'var(--color-warning, #f59e0b)',
-                          color: '#fff',
-                          opacity: 0.9,
-                        }}
-                      >
-                        Exhibitor
-                      </span>
-                    )}
-                  </div>
-                  {tt.description && (
-                    <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--color-text-muted)' }} title={tt.description}>
-                      {tt.description}
-                    </p>
-                  )}
-                  <div
-                    className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {/* Price display */}
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Tag size={12} />
-                      {priceInfo.activePriceCents === 0
-                        ? t('common.free')
-                        : `${(priceInfo.activePriceCents / 100).toFixed(2)} ${currency}`}
-                      {priceInfo.activeLabel === 'earlyBird' && (
-                        <span
-                          className="ml-0.5 text-[10px] font-medium"
-                          style={{ color: 'var(--color-success)' }}
-                        >
-                          {t('tickets.earlyBird')}
-                        </span>
-                      )}
-                      {priceInfo.activeLabel === 'earlyBird' && (
-                        <span className="line-through opacity-50">
-                          {(priceInfo.fullPriceCents / 100).toFixed(2)} {currency}
-                        </span>
-                      )}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Ticket size={12} /> {tt.sold}
-                      {tt.quantity != null ? ` / ${tt.quantity}` : ''} {t('common.sold')}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Icons.Package size={12} />{' '}
-                      {t('tickets.maxPerOrder').replace('{max}', String(tt.maxPerOrder))}
-                    </span>
-                    {/* Membership tier label */}
-                    {isMembership && tt.membershipTier && meta && (
-                      <span className="inline-flex items-center gap-1">
-                        <Icons.User size={12} />
-                        {t(`tickets.tiers.${tt.membershipTier}`) ||
-                          meta.tierLabels[tt.membershipTier]}
-                        {' · '}
-                        {t(`tickets.categories.${tt.category}`)}
-                      </span>
-                    )}
-                  </div>
-                  {tt.quantity != null && (
-                    <div
-                      className="mt-1.5 h-1 w-full overflow-hidden rounded-full"
-                      style={{ background: 'var(--color-bg-muted)' }}
-                    >
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(soldPct, 100)}%`,
-                          background:
-                            soldPct >= 90
-                              ? 'var(--color-danger)'
-                              : soldPct >= 70
-                                ? 'var(--color-warning)'
-                                : 'var(--color-success)',
-                        }}
+              <div>
+                <h2
+                  className="mb-3 flex items-center gap-2 text-base font-semibold"
+                  style={{ color: 'var(--color-info, #3b82f6)' }}
+                >
+                  <Icons.Ticket size={18} />
+                  Visitor Tickets
+                  <span className="text-xs font-normal" style={{ color: 'var(--color-text-muted)' }}>
+                    ({visitorTickets.length})
+                  </span>
+                </h2>
+                {visitorTickets.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No visitor tickets yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {visitorTickets.map(({ tt, idx }) => (
+                      <TicketCard
+                        key={tt.id}
+                        tt={tt}
+                        idx={idx}
+                        dropIdx={dropIdx}
+                        currency={currency}
+                        meta={meta}
+                        t={t}
+                        getDisplayPrice={getDisplayPrice}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                        onToggleStatus={toggleStatus}
+                        onEdit={openEdit}
+                        onDuplicate={openDuplicate}
+                        onDelete={handleDelete}
                       />
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions — compact icon row */}
-                <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: 'var(--color-border)' }}>
-                  <button
-                    onClick={() => toggleStatus(tt)}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                    title={
-                      tt.status === 'active'
-                        ? t('tickets.pauseSales')
-                        : t('tickets.resumeSales')
-                    }
-                  >
-                    {tt.status === 'active' ? (
-                      <Icons.Pause size={13} />
-                    ) : (
-                      <Icons.Play size={13} />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => openEdit(tt)}
-                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                    title={t('common.edit')}
-                  >
-                    <Icons.Edit size={13} />
-                  </button>
-                  <button
-                    onClick={() => openDuplicate(tt)}
-                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                    }}
-                    title={t('tickets.duplicateTicket')}
-                  >
-                    <Icons.Copy size={13} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(tt)}
-                    className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
-                    style={{
-                      border: '1px solid var(--color-border)',
-                      color: tt.sold > 0 ? 'var(--color-text-muted)' : 'var(--color-danger, #dc2626)',
-                    }}
-                    disabled={tt.sold > 0}
-                    title={
-                      tt.sold > 0
-                        ? t('tickets.cannotDeleteSold')
-                        : t('common.delete')
-                    }
-                  >
-                    <Icons.Trash size={13} />
-                  </button>
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
-          })}
+          })()}
+
+          {/* ── Exhibitor Tickets Section ── */}
+          {(() => {
+            const exhibitorTickets = tickets
+              .map((tt, idx) => ({ tt, idx }))
+              .filter(({ tt }) => tt.category === 'exhibitor');
+            return (
+              <div>
+                <h2
+                  className="mb-3 flex items-center gap-2 text-base font-semibold"
+                  style={{ color: 'var(--color-warning, #f59e0b)' }}
+                >
+                  <Icons.Package size={18} />
+                  Exhibitor Tickets
+                  <span className="text-xs font-normal" style={{ color: 'var(--color-text-muted)' }}>
+                    ({exhibitorTickets.length})
+                  </span>
+                </h2>
+                {exhibitorTickets.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No exhibitor tickets yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {exhibitorTickets.map(({ tt, idx }) => (
+                      <TicketCard
+                        key={tt.id}
+                        tt={tt}
+                        idx={idx}
+                        dropIdx={dropIdx}
+                        currency={currency}
+                        meta={meta}
+                        t={t}
+                        getDisplayPrice={getDisplayPrice}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                        onToggleStatus={toggleStatus}
+                        onEdit={openEdit}
+                        onDuplicate={openDuplicate}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Trailing drop zone */}
           <div
             onDragOver={(e) => handleDragOver(e, tickets.length)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, tickets.length)}
-            className="col-span-full flex items-center justify-center rounded-lg transition-all"
+            className="flex items-center justify-center rounded-lg transition-all"
             style={{
               border: dropIdx === tickets.length ? '2px solid var(--color-primary)' : '2px dashed transparent',
               minHeight: '32px',
@@ -1502,6 +1402,235 @@ function Field({
           color: 'var(--color-text)',
         }}
       />
+    </div>
+  );
+}
+
+/* ── Extracted Ticket Card Component ── */
+function TicketCard({
+  tt,
+  idx,
+  dropIdx,
+  currency,
+  meta,
+  t,
+  getDisplayPrice,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  onToggleStatus,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: {
+  tt: TicketType;
+  idx: number;
+  dropIdx: number | null;
+  currency: string;
+  meta: TicketTypeMeta | null;
+  t: (key: string, vars?: Record<string, string>) => string;
+  getDisplayPrice: (tt: TicketType) => { activePriceCents: number; activeLabel: string; fullPriceCents: number };
+  onDragStart: (idx: number) => void;
+  onDragOver: (e: DragEvent<HTMLDivElement>, idx: number) => void;
+  onDragLeave: () => void;
+  onDrop: (e: DragEvent<HTMLDivElement>, idx: number) => void;
+  onDragEnd: () => void;
+  onToggleStatus: (tt: TicketType) => void;
+  onEdit: (tt: TicketType) => void;
+  onDuplicate: (tt: TicketType) => void;
+  onDelete: (tt: TicketType) => void;
+}) {
+  const soldPct =
+    tt.quantity != null && tt.quantity > 0
+      ? Math.round((tt.sold / tt.quantity) * 100)
+      : 0;
+  const isExhibitor = tt.category === 'exhibitor';
+  const isMembership = tt.category === 'individual' || tt.category === 'legal';
+  const priceInfo = getDisplayPrice(tt);
+
+  return (
+    <div
+      draggable
+      onDragStart={() => onDragStart(idx)}
+      onDragOver={(e) => onDragOver(e, idx)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, idx)}
+      onDragEnd={onDragEnd}
+      className="group flex flex-col rounded-xl px-4 py-3 transition-all"
+      style={{
+        background: 'var(--color-bg-card)',
+        border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+        boxShadow: dropIdx === idx
+          ? '0 0 0 2px rgba(0,115,170,0.15)'
+          : 'var(--shadow-sm)',
+      }}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="cursor-grab opacity-30 transition-opacity group-hover:opacity-70 active:cursor-grabbing"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <Icons.GripVertical size={16} />
+          </span>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
+            {tt.name}
+          </h3>
+          <StatusBadge status={tt.status} />
+          {isMembership && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              style={{
+                background: 'var(--color-primary)',
+                color: '#fff',
+                opacity: 0.9,
+              }}
+            >
+              {t('tickets.badgeMembership')}
+            </span>
+          )}
+          {isExhibitor && (
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              style={{
+                background: 'var(--color-warning, #f59e0b)',
+                color: '#fff',
+                opacity: 0.9,
+              }}
+            >
+              Exhibitor
+            </span>
+          )}
+        </div>
+        {tt.description && (
+          <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--color-text-muted)' }} title={tt.description}>
+            {tt.description}
+          </p>
+        )}
+        <div
+          className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          <span className="inline-flex items-center gap-1">
+            <Icons.Tag size={12} />
+            {priceInfo.activePriceCents === 0
+              ? t('common.free')
+              : `${(priceInfo.activePriceCents / 100).toFixed(2)} ${currency}`}
+            {priceInfo.activeLabel === 'earlyBird' && (
+              <span
+                className="ml-0.5 text-[10px] font-medium"
+                style={{ color: 'var(--color-success)' }}
+              >
+                {t('tickets.earlyBird')}
+              </span>
+            )}
+            {priceInfo.activeLabel === 'earlyBird' && (
+              <span className="line-through opacity-50">
+                {(priceInfo.fullPriceCents / 100).toFixed(2)} {currency}
+              </span>
+            )}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Icons.Ticket size={12} /> {tt.sold}
+            {tt.quantity != null ? ` / ${tt.quantity}` : ''} {t('common.sold')}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Icons.Package size={12} />{' '}
+            {t('tickets.maxPerOrder').replace('{max}', String(tt.maxPerOrder))}
+          </span>
+          {isMembership && tt.membershipTier && meta && (
+            <span className="inline-flex items-center gap-1">
+              <Icons.User size={12} />
+              {t(`tickets.tiers.${tt.membershipTier}`) ||
+                meta.tierLabels[tt.membershipTier]}
+              {' · '}
+              {t(`tickets.categories.${tt.category}`)}
+            </span>
+          )}
+        </div>
+        {tt.quantity != null && (
+          <div
+            className="mt-1.5 h-1 w-full overflow-hidden rounded-full"
+            style={{ background: 'var(--color-bg-muted)' }}
+          >
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(soldPct, 100)}%`,
+                background:
+                  soldPct >= 90
+                    ? 'var(--color-danger)'
+                    : soldPct >= 70
+                      ? 'var(--color-warning)'
+                      : 'var(--color-success)',
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: 'var(--color-border)' }}>
+        <button
+          onClick={() => onToggleStatus(tt)}
+          className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+          title={
+            tt.status === 'active'
+              ? t('tickets.pauseSales')
+              : t('tickets.resumeSales')
+          }
+        >
+          {tt.status === 'active' ? (
+            <Icons.Pause size={13} />
+          ) : (
+            <Icons.Play size={13} />
+          )}
+        </button>
+        <button
+          onClick={() => onEdit(tt)}
+          className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+          title={t('common.edit')}
+        >
+          <Icons.Edit size={13} />
+        </button>
+        <button
+          onClick={() => onDuplicate(tt)}
+          className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-secondary)',
+          }}
+          title={t('tickets.duplicateTicket')}
+        >
+          <Icons.Copy size={13} />
+        </button>
+        <button
+          onClick={() => onDelete(tt)}
+          className="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            color: tt.sold > 0 ? 'var(--color-text-muted)' : 'var(--color-danger, #dc2626)',
+          }}
+          disabled={tt.sold > 0}
+          title={
+            tt.sold > 0
+              ? t('tickets.cannotDeleteSold')
+              : t('common.delete')
+          }
+        >
+          <Icons.Trash size={13} />
+        </button>
+      </div>
     </div>
   );
 }
