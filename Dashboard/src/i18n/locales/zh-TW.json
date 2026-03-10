@@ -502,7 +502,7 @@
   "forms.hasSubmissions": "此表單已有提交記錄，無法刪除。",
 
   "audit.title": "活動紀錄",
-  "audit.subtitle": "此活動的完整稽核紀錄",
+  "audit.subtitle": "追蹤每項變更 — 訂單、簽到、退款、設定修改等。使用此紀錄來調查問題、核實工作人員操作，以及查閱此活動的完整歷史。",
   "audit.allActions": "所有操作",
   "audit.searchPlaceholder": "搜尋操作、實體、IP…",
   "audit.dateFrom": "開始日期",

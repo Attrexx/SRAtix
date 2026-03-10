@@ -502,7 +502,7 @@
   "forms.hasSubmissions": "Questo modulo ha degli invii e non può essere eliminato.",
 
   "audit.title": "Registro attività",
-  "audit.subtitle": "Cronologia completa di questo evento",
+  "audit.subtitle": "Tieni traccia di ogni modifica — ordini, check-in, rimborsi, modifiche alle impostazioni e altro. Usa questo registro per indagare sui problemi, verificare le azioni dello staff e consultare la cronologia completa di questo evento.",
   "audit.allActions": "Tutte le azioni",
   "audit.searchPlaceholder": "Cerca azioni, entità, IP…",
   "audit.dateFrom": "Data inizio",

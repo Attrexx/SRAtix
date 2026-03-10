@@ -502,7 +502,7 @@
   "forms.failedToApplyTemplate": "Failed to apply template.",
 
   "audit.title": "Activity Log",
-  "audit.subtitle": "Full audit trail for this event",
+  "audit.subtitle": "Track every change — orders, check-ins, refunds, setting edits, and more. Use this log to investigate issues, verify staff actions, and review the full history of this event.",
   "audit.allActions": "All actions",
   "audit.searchPlaceholder": "Search actions, entities, IPs…",
   "audit.dateFrom": "From date",

@@ -502,7 +502,7 @@
   "forms.hasSubmissions": "Ce formulaire contient des soumissions et ne peut pas être supprimé.",
 
   "audit.title": "Journal d'activité",
-  "audit.subtitle": "Historique complet de cet événement",
+  "audit.subtitle": "Suivez chaque modification — commandes, check-ins, remboursements, changements de paramètres, etc. Utilisez ce journal pour enquêter sur les problèmes, vérifier les actions du personnel et consulter l'historique complet de cet événement.",
   "audit.allActions": "Toutes les actions",
   "audit.searchPlaceholder": "Rechercher actions, entités, IPs…",
   "audit.dateFrom": "Date de début",

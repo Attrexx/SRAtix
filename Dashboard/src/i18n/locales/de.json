@@ -502,7 +502,7 @@
   "forms.hasSubmissions": "Dieses Formular hat Einreichungen und kann nicht gelöscht werden.",
 
   "audit.title": "Aktivitätsprotokoll",
-  "audit.subtitle": "Vollständiger Verlauf dieser Veranstaltung",
+  "audit.subtitle": "Verfolgen Sie jede Änderung — Bestellungen, Check-ins, Rückerstattungen, Einstellungsänderungen und mehr. Nutzen Sie dieses Protokoll, um Probleme zu untersuchen, Mitarbeiteraktionen zu überprüfen und den gesamten Verlauf dieser Veranstaltung einzusehen.",
   "audit.allActions": "Alle Aktionen",
   "audit.searchPlaceholder": "Aktionen, Entitäten, IPs suchen…",
   "audit.dateFrom": "Von Datum",
