@@ -143,6 +143,25 @@
     sessionStorage.removeItem(MEMBER_SESSION_KEY);
   }
 
+  // ─── Role state (visitor vs exhibitor) ──────────────────────────────────────
+
+  const ROLE_KEY = 'sratix_role';
+
+  function getRole() {
+    try {
+      const role = sessionStorage.getItem(ROLE_KEY);
+      return (role === 'visitor' || role === 'exhibitor') ? role : null;
+    } catch { return null; }
+  }
+
+  function setRole(role) {
+    sessionStorage.setItem(ROLE_KEY, role);
+  }
+
+  function clearRole() {
+    sessionStorage.removeItem(ROLE_KEY);
+  }
+
   // ─── API helpers ─────────────────────────────────────────────────────────────
 
   async function apiFetch(endpoint, options = {}) {
@@ -167,14 +186,21 @@
     const eventId = container.dataset.eventId || EVENT_ID;
     const layout = container.dataset.layout || 'cards';
 
-    // Check for existing member session
+    // Step 1: Role choice (visitor vs exhibitor)
+    const role = getRole();
+    if (!role) {
+      renderRoleChoice(container, eventId, layout);
+      return;
+    }
+
+    // Step 2: Check for existing member session
     const session = getMemberSession();
     if (session && session.memberGroup) {
       // Already authenticated — show tickets with member pricing
       return loadAndRenderTickets(container, eventId, layout, session);
     }
 
-    // Show member gate if enabled and no session yet
+    // Step 3: Show member gate if enabled and no session yet
     if (config.memberGateEnabled) {
       renderMemberGate(container, eventId, layout);
       return;
@@ -188,13 +214,19 @@
     try {
       let endpoint = `events/${eventId}/ticket-types/public`;
       const headers = {};
+      const params = new URLSearchParams();
+
+      // Role filter
+      const role = getRole();
+      if (role) params.set('role', role);
+
       if (memberSession && memberSession.sessionToken) {
-        const params = new URLSearchParams();
         params.set('memberGroup', memberSession.memberGroup);
         if (memberSession.tier) params.set('memberTier', memberSession.tier);
-        endpoint += '?' + params.toString();
         headers['Authorization'] = 'Bearer ' + memberSession.sessionToken;
       }
+      const qs = params.toString();
+      if (qs) endpoint += '?' + qs;
       const [ticketTypes, publicInfo] = await Promise.all([
         apiFetch(endpoint, { headers }),
         apiFetch(`events/${eventId}/public-info`).catch(function () { return {}; }),
@@ -221,6 +253,8 @@
       } else if (config.memberGateEnabled) {
         html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">${escHtml(t('memberGate.backToMembership'))}</a>`;
       }
+      // "Change role" link
+      html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
       html += renderTicketCards(ticketTypes, layout, memberSession);
       container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
@@ -229,6 +263,16 @@
       if (changeBtn) {
         changeBtn.addEventListener('click', function (e) {
           e.preventDefault();
+          clearMemberSession();
+          initTicketsWidget();
+        });
+      }
+      // Bind "change role" link
+      const roleBtn = container.querySelector('[data-action="change-role"]');
+      if (roleBtn) {
+        roleBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          clearRole();
           clearMemberSession();
           initTicketsWidget();
         });
@@ -299,6 +343,38 @@
       </div>
       <a href="#" data-action="change-member" class="sratix-welcome-change">${escHtml(t('memberGate.changeType'))}</a>
     </div>`;
+  }
+
+  // ─── Role choice screen ───────────────────────────────────────────────────────
+
+  function renderRoleChoice(container, eventId, layout) {
+    container.innerHTML = `
+      <div class="sratix-role-choice">
+        <h2 class="sratix-role-choice__title">${escHtml(t('roleChoice.title'))}</h2>
+        <p class="sratix-role-choice__subtitle">${escHtml(t('roleChoice.subtitle'))}</p>
+        <div class="sratix-role-choice__buttons">
+          <button class="sratix-role-btn sratix-role-btn--visitor" data-role="visitor">
+            <span class="sratix-role-btn__icon">🎟️</span>
+            <span class="sratix-role-btn__label">${escHtml(t('roleChoice.visitorLabel'))}</span>
+            <span class="sratix-role-btn__desc">${escHtml(t('roleChoice.visitorDesc'))}</span>
+          </button>
+          <button class="sratix-role-btn sratix-role-btn--exhibitor" data-role="exhibitor">
+            <span class="sratix-role-btn__icon">🏢</span>
+            <span class="sratix-role-btn__label">${escHtml(t('roleChoice.exhibitorLabel'))}</span>
+            <span class="sratix-role-btn__desc">${escHtml(t('roleChoice.exhibitorDesc'))}</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    container.querySelector('[data-role="visitor"]').addEventListener('click', function () {
+      setRole('visitor');
+      initTicketsWidget();
+    });
+    container.querySelector('[data-role="exhibitor"]').addEventListener('click', function () {
+      setRole('exhibitor');
+      initTicketsWidget();
+    });
   }
 
   // ─── Member gate screen ──────────────────────────────────────────────────────
@@ -600,7 +676,12 @@
       btn.addEventListener('click', () => {
         const id = btn.dataset.ticketTypeId;
         const tt = ticketTypes.find((item) => item.id === id);
-        if (tt) openQuantityModal(eventId, tt);
+        if (!tt) return;
+        if (tt.category === 'exhibitor') {
+          openExhibitorRegistrationWizard(eventId, tt);
+        } else {
+          openQuantityModal(eventId, tt);
+        }
       });
     });
   }
@@ -873,6 +954,42 @@
   // ─── Dynamic form field rendering ──────────────────────────────────────────────
 
   /**
+   * Initialize richtext editor toolbar bindings and paste sanitization
+   * for all .sratix-richtext-wrap elements within a container.
+   */
+  function initRichtextEditors(container) {
+    var wraps = container.querySelectorAll('.sratix-richtext-wrap');
+    wraps.forEach(function (wrap) {
+      var editor = wrap.querySelector('.sratix-richtext-editor');
+      if (!editor) return;
+      wrap.querySelectorAll('.sratix-richtext-btn').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (e) {
+          e.preventDefault(); // keep focus in editor
+          var cmd = btn.getAttribute('data-cmd');
+          if (cmd === 'createLink') {
+            var url = prompt('URL:');
+            if (url) document.execCommand('createLink', false, url);
+          } else {
+            document.execCommand(cmd, false, null);
+          }
+        });
+      });
+      // Strip font-family on paste
+      editor.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var html = e.clipboardData.getData('text/html');
+        if (html) {
+          html = html.replace(/font-family\s*:[^;"]*/gi, '');
+          document.execCommand('insertHTML', false, html);
+        } else {
+          var text = e.clipboardData.getData('text/plain');
+          document.execCommand('insertText', false, text);
+        }
+      });
+    });
+  }
+
+  /**
    * Resolve a localised label object to a string.
    * @param {Object|string} label  e.g. { en: 'Name', de: 'Name' } or plain string
    * @returns {string}
@@ -916,6 +1033,19 @@
         break;
       case 'textarea':
         html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '"></textarea>';
+        break;
+      case 'richtext':
+        html = '<div class="sratix-richtext-wrap" data-field-id="' + escAttr(field.id) + '">'
+          + '<div class="sratix-richtext-toolbar">'
+          + '<button type="button" data-cmd="bold" title="Bold" class="sratix-richtext-btn"><b>B</b></button>'
+          + '<button type="button" data-cmd="italic" title="Italic" class="sratix-richtext-btn"><i>I</i></button>'
+          + '<button type="button" data-cmd="underline" title="Underline" class="sratix-richtext-btn"><u>U</u></button>'
+          + '<button type="button" data-cmd="createLink" title="Link" class="sratix-richtext-btn">🔗</button>'
+          + '<button type="button" data-cmd="insertUnorderedList" title="Bullet List" class="sratix-richtext-btn">•</button>'
+          + '<button type="button" data-cmd="insertOrderedList" title="Numbered List" class="sratix-richtext-btn">1.</button>'
+          + '</div>'
+          + '<div class="sratix-richtext-editor sratix-input" id="' + escAttr(id) + '" contenteditable="true" data-placeholder="' + escAttr(ph) + '"></div>'
+          + '</div>';
         break;
       case 'select':
       case 'country':
@@ -1046,6 +1176,10 @@
         case 'file':
         case 'image-upload':
           // File uploads not supported in public widget — skip
+          break;
+        case 'richtext':
+          el = form.querySelector('#' + CSS.escape(id));
+          result[field.id] = el ? el.innerHTML.trim() : '';
           break;
         default:
           el = form.querySelector('#' + CSS.escape(id));
@@ -1199,6 +1333,9 @@
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
       }
+
+      // Initialize richtext editors if any exist in this form
+      initRichtextEditors(formEl);
     }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -1337,6 +1474,472 @@
     });
 
     requestAnimationFrame(() => modal.classList.add('sratix-modal--visible'));
+  }
+
+  // ─── Exhibitor Registration Wizard (3-step) ──────────────────────────────────
+
+  async function openExhibitorRegistrationWizard(eventId, tt) {
+    var modal = createModalShell('sratix-modal-exhibitor');
+
+    // Fetch form schema to get section/field layout and maxStaff
+    var schema = null;
+    var schemaFields = null;
+    var maxStaff = 0;
+    if (tt.formSchemaId) {
+      try {
+        schema = await apiFetch(
+          'public/forms/ticket-type/' + encodeURIComponent(tt.id)
+          + '/event/' + encodeURIComponent(eventId),
+        );
+        if (schema && schema.fields) {
+          schemaFields = schema.fields.fields || [];
+          maxStaff = schema.fields.maxStaff || 0;
+        }
+      } catch (err) {
+        console.warn('[SRAtix] Could not load exhibitor form schema:', err);
+      }
+    }
+
+    var currentStep = 1;
+    var totalSteps = 3;
+
+    // State
+    var purchaserData = { firstName: '', lastName: '', email: '', phone: '', company: '' };
+    var formAnswers = {};
+    var staffEntries = [];
+    var staffCount = 0;
+
+    // Pre-fill from WP context
+    if (config.userEmail) purchaserData.email = config.userEmail;
+    if (config.userFirstName) purchaserData.firstName = config.userFirstName;
+    if (config.userLastName) purchaserData.lastName = config.userLastName;
+
+    function renderStepIndicator() {
+      var steps = [
+        t('reg.title'),
+        t('exhibitorForm.companyTitle'),
+        t('exhibitorForm.staffTitle'),
+      ];
+      return '<div class="sratix-wizard-steps">' + steps.map(function (label, idx) {
+        var stepNum = idx + 1;
+        var cls = 'sratix-wizard-step';
+        if (stepNum < currentStep) cls += ' sratix-wizard-step--done';
+        if (stepNum === currentStep) cls += ' sratix-wizard-step--active';
+        return '<div class="' + cls + '">'
+          + '<span class="sratix-wizard-step__num">' + (stepNum < currentStep ? '✓' : stepNum) + '</span>'
+          + '<span class="sratix-wizard-step__label">' + escHtml(label) + '</span>'
+          + '</div>';
+      }).join('<div class="sratix-wizard-step__line"></div>') + '</div>';
+    }
+
+    function renderStep1() {
+      return '<div class="sratix-wizard-body">'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-ex-fn">' + escHtml(t('reg.firstName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-ex-fn" type="text" value="' + escAttr(purchaserData.firstName) + '" autocomplete="given-name" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-ex-ln">' + escHtml(t('reg.lastName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-ex-ln" type="text" value="' + escAttr(purchaserData.lastName) + '" autocomplete="family-name" />'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-ex-email">' + escHtml(t('reg.email')) + ' <span class="sratix-req">*</span></label>'
+        +   '<input class="sratix-input" id="sratix-ex-email" type="email" value="' + escAttr(purchaserData.email) + '" autocomplete="email" />'
+        + '</div>'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-ex-phone">' + escHtml(t('reg.phone')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-ex-phone" type="tel" value="' + escAttr(purchaserData.phone) + '" autocomplete="tel" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-ex-company">' + escHtml(t('reg.organization')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-ex-company" type="text" value="' + escAttr(purchaserData.company) + '" autocomplete="organization" />'
+        +   '</div>'
+        + '</div>'
+        + '</div>';
+    }
+
+    function renderStep2() {
+      var fieldsHtml = '';
+      if (schemaFields && schemaFields.length > 0) {
+        var sorted = schemaFields.slice().sort(function (a, b) {
+          var oa = typeof a.order === 'number' ? a.order : Infinity;
+          var ob = typeof b.order === 'number' ? b.order : Infinity;
+          if (oa !== Infinity || ob !== Infinity) return oa - ob;
+          return 0;
+        });
+        fieldsHtml = '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
+      } else {
+        // Fallback if no schema: simple company fields
+        fieldsHtml = ''
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-ex-logo">Company Logo</label>'
+          +   '<input class="sratix-input" id="sratix-ex-logo" type="file" accept="image/*" />'
+          + '</div>'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-ex-desc">Company Description</label>'
+          +   '<textarea class="sratix-input" id="sratix-ex-desc" rows="4"></textarea>'
+          + '</div>'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-ex-web">Company Website</label>'
+          +   '<input class="sratix-input" id="sratix-ex-web" type="url" />'
+          + '</div>';
+      }
+      return '<div class="sratix-wizard-body">'
+        + '<p class="sratix-wizard-subtitle">' + escHtml(t('exhibitorForm.companySubtitle')) + '</p>'
+        + fieldsHtml
+        + '<div class="sratix-info-callout">' + t('exhibitorForm.companyNote') + '</div>'
+        + '</div>';
+    }
+
+    function renderStep3() {
+      var staffHtml = '';
+      if (maxStaff > 0) {
+        staffHtml += '<p class="sratix-wizard-subtitle">'
+          + escHtml(t('exhibitorForm.staffSubtitle').replace('{max}', maxStaff)) + '</p>';
+        staffHtml += '<p class="sratix-field-help">'
+          + escHtml(t('exhibitorForm.staffOptionalNote')) + '</p>';
+        staffHtml += '<div class="sratix-field" style="margin-bottom:16px">'
+          + '<label class="sratix-label" for="sratix-ex-staff-count">'
+          + escHtml(t('exhibitorForm.staffCount')) + '</label>'
+          + '<div class="sratix-qty-stepper">'
+          + '<button type="button" class="sratix-qty-btn" id="sratix-staff-dec">−</button>'
+          + '<span class="sratix-qty-val" id="sratix-staff-val">' + staffCount + '</span>'
+          + '<button type="button" class="sratix-qty-btn" id="sratix-staff-inc">+</button>'
+          + '</div>'
+          + '<span class="sratix-field-help">' + escHtml(t('exhibitorForm.staffMax').replace('{max}', maxStaff)) + '</span>'
+          + '</div>';
+        staffHtml += '<div id="sratix-staff-fields">' + renderStaffFields() + '</div>';
+        staffHtml += '<a href="#" id="sratix-skip-staff" class="sratix-back-to-gate" style="margin-top:8px;display:inline-block">'
+          + escHtml(t('exhibitorForm.skipStaff')) + '</a>';
+      } else {
+        staffHtml += '<p class="sratix-wizard-subtitle">'
+          + escHtml(t('exhibitorForm.staffOptionalNote')) + '</p>';
+      }
+      return '<div class="sratix-wizard-body">' + staffHtml + '</div>';
+    }
+
+    function renderStaffFields() {
+      var html = '';
+      for (var i = 0; i < staffCount; i++) {
+        var entry = staffEntries[i] || { firstName: '', lastName: '', email: '' };
+        html += '<div class="sratix-recipient-block" data-staff-idx="' + i + '">'
+          + '<p class="sratix-label" style="font-weight:600;margin-bottom:4px">Staff #' + (i + 1) + '</p>'
+          + '<div class="sratix-field-row">'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label">' + escHtml(t('reg.firstName')) + ' *</label>'
+          +     '<input class="sratix-input sratix-staff-fn" type="text" value="' + escAttr(entry.firstName) + '" />'
+          +   '</div>'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label">' + escHtml(t('reg.lastName')) + ' *</label>'
+          +     '<input class="sratix-input sratix-staff-ln" type="text" value="' + escAttr(entry.lastName) + '" />'
+          +   '</div>'
+          + '</div>'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label">' + escHtml(t('reg.email')) + ' *</label>'
+          +   '<input class="sratix-input sratix-staff-email" type="email" value="' + escAttr(entry.email) + '" />'
+          + '</div>'
+          + '</div>';
+      }
+      return html;
+    }
+
+    function collectStaffFromDOM() {
+      var blocks = modal.querySelectorAll('.sratix-recipient-block');
+      staffEntries = [];
+      blocks.forEach(function (block) {
+        staffEntries.push({
+          firstName: block.querySelector('.sratix-staff-fn').value.trim(),
+          lastName: block.querySelector('.sratix-staff-ln').value.trim(),
+          email: block.querySelector('.sratix-staff-email').value.trim(),
+        });
+      });
+    }
+
+    function renderWizard() {
+      var stepBody = '';
+      if (currentStep === 1) stepBody = renderStep1();
+      else if (currentStep === 2) stepBody = renderStep2();
+      else stepBody = renderStep3();
+
+      var navLeft = currentStep > 1
+        ? '<button class="sratix-btn sratix-btn--ghost" id="sratix-ex-back">' + escHtml(t('exhibitorForm.back')) + '</button>'
+        : '';
+      var navRight = '';
+      if (currentStep < totalSteps) {
+        navRight = '<button class="sratix-btn sratix-btn--primary" id="sratix-ex-next">' + escHtml(t('exhibitorForm.next')) + '</button>';
+      } else {
+        var label = tt.priceCents === 0 ? t('reg.completeRegistration') : t('exhibitorForm.continueToPay');
+        navRight = '<button class="sratix-btn sratix-btn--primary" id="sratix-ex-submit">' + escHtml(label) + '</button>';
+      }
+
+      modal.innerHTML = ''
+        + '<div class="sratix-modal-box sratix-modal-box--wide">'
+        +   '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
+        +   '<h2 class="sratix-modal-title">' + escHtml(tt.name) + '</h2>'
+        +   '<p class="sratix-modal-subtitle">'
+        +     '<strong>' + (tt.priceCents === 0 ? escHtml(t('tickets.free')) : formatPrice(tt.priceCents, tt.currency)) + '</strong> — '
+        +     escHtml(t('exhibitorForm.step').replace('{current}', currentStep).replace('{total}', totalSteps))
+        +   '</p>'
+        +   renderStepIndicator()
+        +   '<div class="sratix-modal-body">'
+        +     stepBody
+        +     '<p class="sratix-error-msg" id="sratix-ex-error" style="display:none"></p>'
+        +   '</div>'
+        +   '<div class="sratix-modal-footer">'
+        +     navLeft + navRight
+        +   '</div>'
+        + '</div>';
+
+      document.body.appendChild(modal);
+
+      // Bind events
+      modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
+      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+      if (currentStep === 2) {
+        initRichtextEditors(modal);
+        // Restore previously collected answers
+        if (schemaFields) {
+          schemaFields.forEach(function (f) {
+            if (formAnswers[f.id] !== undefined) {
+              var el = modal.querySelector('#sratix-df-' + CSS.escape(f.id));
+              if (el) {
+                if (f.type === 'richtext' && el.getAttribute('contenteditable')) {
+                  el.innerHTML = formAnswers[f.id];
+                } else if (el.tagName === 'SELECT') {
+                  el.value = formAnswers[f.id];
+                } else if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                  el.value = formAnswers[f.id];
+                }
+              }
+            }
+          });
+          // Wire condition visibility
+          if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
+            var formEl = modal.querySelector('.sratix-form-fields') || modal;
+            formEl.addEventListener('input', function () {
+              var snap = collectDynamicAnswers(formEl, schemaFields, {});
+              applyConditionVisibility(formEl, schemaFields, snap);
+            });
+            formEl.addEventListener('change', function () {
+              var snap = collectDynamicAnswers(formEl, schemaFields, {});
+              applyConditionVisibility(formEl, schemaFields, snap);
+            });
+            var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyConditionVisibility(formEl, schemaFields, initSnap);
+          }
+        }
+      }
+
+      if (currentStep === 3 && maxStaff > 0) {
+        var decBtn = modal.querySelector('#sratix-staff-dec');
+        var incBtn = modal.querySelector('#sratix-staff-inc');
+        var valEl = modal.querySelector('#sratix-staff-val');
+        if (decBtn) decBtn.addEventListener('click', function () {
+          if (staffCount > 0) {
+            collectStaffFromDOM();
+            staffCount--;
+            valEl.textContent = staffCount;
+            modal.querySelector('#sratix-staff-fields').innerHTML = renderStaffFields();
+          }
+        });
+        if (incBtn) incBtn.addEventListener('click', function () {
+          if (staffCount < maxStaff) {
+            collectStaffFromDOM();
+            staffCount++;
+            valEl.textContent = staffCount;
+            modal.querySelector('#sratix-staff-fields').innerHTML = renderStaffFields();
+          }
+        });
+        var skipLink = modal.querySelector('#sratix-skip-staff');
+        if (skipLink) skipLink.addEventListener('click', function (e) {
+          e.preventDefault();
+          staffCount = 0;
+          staffEntries = [];
+          submitExhibitorCheckout();
+        });
+      }
+
+      var backBtn = modal.querySelector('#sratix-ex-back');
+      if (backBtn) backBtn.addEventListener('click', function () {
+        saveCurrentStep();
+        currentStep--;
+        renderWizard();
+      });
+
+      var nextBtn = modal.querySelector('#sratix-ex-next');
+      if (nextBtn) nextBtn.addEventListener('click', function () {
+        if (!validateCurrentStep()) return;
+        saveCurrentStep();
+        currentStep++;
+        renderWizard();
+      });
+
+      var submitBtn = modal.querySelector('#sratix-ex-submit');
+      if (submitBtn) submitBtn.addEventListener('click', function () {
+        if (!validateCurrentStep()) return;
+        saveCurrentStep();
+        submitExhibitorCheckout();
+      });
+
+      requestAnimationFrame(function () { modal.classList.add('sratix-modal--visible'); });
+    }
+
+    function saveCurrentStep() {
+      if (currentStep === 1) {
+        purchaserData.firstName = (modal.querySelector('#sratix-ex-fn')?.value || '').trim();
+        purchaserData.lastName = (modal.querySelector('#sratix-ex-ln')?.value || '').trim();
+        purchaserData.email = (modal.querySelector('#sratix-ex-email')?.value || '').trim();
+        purchaserData.phone = (modal.querySelector('#sratix-ex-phone')?.value || '').trim();
+        purchaserData.company = (modal.querySelector('#sratix-ex-company')?.value || '').trim();
+      } else if (currentStep === 2 && schemaFields) {
+        var formEl = modal.querySelector('.sratix-form-fields') || modal;
+        formAnswers = collectDynamicAnswers(formEl, schemaFields, {});
+      } else if (currentStep === 3) {
+        collectStaffFromDOM();
+      }
+    }
+
+    function validateCurrentStep() {
+      var errorEl = modal.querySelector('#sratix-ex-error');
+      errorEl.style.display = 'none';
+
+      if (currentStep === 1) {
+        var fn = (modal.querySelector('#sratix-ex-fn')?.value || '').trim();
+        var ln = (modal.querySelector('#sratix-ex-ln')?.value || '').trim();
+        var em = (modal.querySelector('#sratix-ex-email')?.value || '').trim();
+        if (!fn || !ln) {
+          errorEl.textContent = t('reg.nameRequired');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+          errorEl.textContent = t('reg.emailInvalid');
+          errorEl.style.display = '';
+          return false;
+        }
+      }
+
+      if (currentStep === 2 && schemaFields) {
+        var formEl = modal.querySelector('.sratix-form-fields') || modal;
+        var rawAnswers = collectDynamicAnswers(formEl, schemaFields, {});
+        var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
+        for (var i = 0; i < schemaFields.length; i++) {
+          var f = schemaFields[i];
+          if (f.type === 'group') continue;
+          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (f.required) {
+            var val = answers[f.id];
+            if (val === undefined || val === null || val === ''
+              || (Array.isArray(val) && val.length === 0)
+              || (f.type === 'consent' && val && !val.granted)) {
+              errorEl.textContent = t('reg.form.fieldRequired', { field: resolveLabel(f.label) });
+              errorEl.style.display = '';
+              return false;
+            }
+          }
+        }
+      }
+
+      if (currentStep === 3 && staffCount > 0) {
+        collectStaffFromDOM();
+        for (var j = 0; j < staffEntries.length; j++) {
+          var s = staffEntries[j];
+          if (!s.firstName || !s.lastName) {
+            errorEl.textContent = t('reg.nameRequired') + ' (Staff #' + (j + 1) + ')';
+            errorEl.style.display = '';
+            return false;
+          }
+          if (!s.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email)) {
+            errorEl.textContent = t('reg.emailInvalid') + ' (Staff #' + (j + 1) + ')';
+            errorEl.style.display = '';
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    async function submitExhibitorCheckout() {
+      var errorEl = modal.querySelector('#sratix-ex-error');
+      var submitBtn = modal.querySelector('#sratix-ex-submit') || modal.querySelector('#sratix-skip-staff');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = t('reg.pleaseWait');
+      }
+
+      try {
+        var successUrl = buildSuccessUrl();
+        var payload = {
+          eventId: eventId,
+          ticketTypeId: tt.id,
+          quantity: 1,
+          includeTicketForSelf: true,
+          attendeeData: {
+            email: purchaserData.email,
+            firstName: purchaserData.firstName,
+            lastName: purchaserData.lastName,
+            phone: purchaserData.phone || undefined,
+            company: purchaserData.company || undefined,
+          },
+          successUrl: successUrl,
+          cancelUrl: window.location.href,
+          additionalAttendees: staffEntries.length > 0 ? staffEntries : [],
+        };
+
+        // Include form data
+        if (schema && Object.keys(formAnswers).length > 0) {
+          payload.formSchemaId = schema.id;
+          var coreIds = ['first_name', 'firstName', 'last_name', 'lastName', 'email', 'phone', 'company', 'organization'];
+          var formData = {};
+          Object.keys(formAnswers).forEach(function (k) {
+            if (coreIds.indexOf(k) === -1) {
+              formData[k] = formAnswers[k];
+            }
+          });
+          payload.formData = formData;
+        }
+
+        // Include member context for discount validation
+        var memberSess = getMemberSession();
+        if (memberSess && memberSess.memberGroup && memberSess.memberGroup !== 'none') {
+          payload.memberGroup = memberSess.memberGroup;
+          if (memberSess.tier) payload.memberTier = memberSess.tier;
+          if (memberSess.sessionToken) payload.memberSessionToken = memberSess.sessionToken;
+        }
+
+        var result = await apiFetch('payments/checkout/public', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+
+        closeModal();
+
+        if (result.free) {
+          window.location.href = result.successUrl;
+        } else if (result.checkoutUrl) {
+          window.location.href = result.checkoutUrl;
+        } else {
+          throw new Error('Unexpected response from server');
+        }
+      } catch (err) {
+        if (errorEl) {
+          errorEl.textContent = err instanceof Error ? err.message : t('reg.genericError');
+          errorEl.style.display = '';
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = t('exhibitorForm.continueToPay');
+        }
+      }
+    }
+
+    // Initial render
+    renderWizard();
   }
 
   // ─── Success banner ───────────────────────────────────────────────────────────

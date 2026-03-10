@@ -221,6 +221,33 @@ export class PublicCheckoutController {
       );
     }
 
+    // ── 2b. Exhibitor-specific validation ────────────────────────────────
+    const isExhibitor = tt.category === 'exhibitor';
+    let maxStaff = 0;
+    if (isExhibitor) {
+      if (dto.quantity !== 1) {
+        throw new BadRequestException(
+          'Exhibitor tickets are limited to 1 per order',
+        );
+      }
+      // Load maxStaff from form schema meta if a form schema is assigned
+      if (tt.formSchemaId) {
+        const schema = await this.prisma.formSchema.findUnique({
+          where: { id: tt.formSchemaId },
+        });
+        if (schema) {
+          const schemaDef = schema.fields as Record<string, unknown>;
+          maxStaff = (schemaDef?.maxStaff as number) ?? 0;
+        }
+      }
+      const staffCount = dto.additionalAttendees?.length ?? 0;
+      if (maxStaff > 0 && staffCount > maxStaff) {
+        throw new BadRequestException(
+          `Maximum ${maxStaff} staff pass(es) allowed for this exhibitor ticket`,
+        );
+      }
+    }
+
     // ── 3. Upsert attendee ───────────────────────────────────────────────
     let attendee = await this.attendees.findByEmail(
       dto.eventId,
@@ -263,11 +290,15 @@ export class PublicCheckoutController {
     const includeTicketForSelf = dto.includeTicketForSelf !== false;
 
     if (dto.additionalAttendees && dto.additionalAttendees.length > 0) {
-      const expectedRecipients = dto.quantity - (includeTicketForSelf ? 1 : 0);
-      if (dto.additionalAttendees.length !== expectedRecipients) {
-        throw new BadRequestException(
-          `Expected ${expectedRecipients} recipient(s) but received ${dto.additionalAttendees.length}`,
-        );
+      if (isExhibitor) {
+        // Exhibitor: staff count validated in 2b above; no exact-match required
+      } else {
+        const expectedRecipients = dto.quantity - (includeTicketForSelf ? 1 : 0);
+        if (dto.additionalAttendees.length !== expectedRecipients) {
+          throw new BadRequestException(
+            `Expected ${expectedRecipients} recipient(s) but received ${dto.additionalAttendees.length}`,
+          );
+        }
       }
 
       // Token expires at end of event day (23:59:59)

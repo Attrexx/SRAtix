@@ -10,6 +10,7 @@ import {
   ConditionRule,
   evaluateConditions,
 } from '../common/conditions';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Supported form field types per PRODUCTION-ARCHITECTURE.md §8.
@@ -24,6 +25,7 @@ export type FieldType =
   | 'checkbox'
   | 'radio'
   | 'textarea'
+  | 'richtext'
   | 'date'
   | 'file'
   | 'image-upload'
@@ -484,6 +486,19 @@ export class FormsService {
               `Consent field '${field.id}' must include granted and timestamp`,
             );
           }
+          break;
+        case 'richtext':
+          if (typeof value !== 'string') {
+            throw new BadRequestException(
+              `Field '${field.id}' must be a string`,
+            );
+          }
+          // Sanitize HTML — allow only safe formatting tags
+          answers[field.id] = sanitizeHtml(value, {
+            allowedTags: ['b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'p', 'br'],
+            allowedAttributes: { a: ['href'] },
+            allowedSchemes: ['https', 'http', 'mailto'],
+          });
           break;
       }
 

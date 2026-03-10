@@ -26,6 +26,7 @@ export class TicketTypesPublicController {
     @Param('eventId') eventId: string,
     @Query('memberGroup') memberGroup?: string,
     @Query('memberTier') memberTier?: string,
+    @Query('role') role?: string,
     @Headers('authorization') authHeader?: string,
   ) {
     // Validate member session token if member pricing is requested
@@ -42,10 +43,14 @@ export class TicketTypesPublicController {
       // If token is invalid/expired, silently fall back to regular pricing
     }
 
+    // Normalize role to 'visitor' | 'exhibitor' | undefined
+    const validatedRole = role === 'visitor' || role === 'exhibitor' ? role : undefined;
+
     return this.ticketTypesService.findPublicByEventWithDiscounts(
       eventId,
       validatedGroup,
       validatedTier,
+      validatedRole,
     );
   }
 }

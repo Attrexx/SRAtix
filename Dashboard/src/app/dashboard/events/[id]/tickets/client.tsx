@@ -18,7 +18,7 @@ import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
 
 // ─── Types ──────────────────────────────────────────────────────
-type TicketKind = 'regular' | 'membership';
+type TicketKind = 'regular' | 'membership' | 'exhibitor';
 
 // ─── Ticket icon SVG data (mirrors sratix-embed.js TICKET_ICONS) ────────────
 const TICKET_ICON_OPTIONS: { value: string; label: string; viewBox: string; paths: React.ReactNode }[] = [
@@ -221,8 +221,9 @@ export default function TicketsPage() {
   };
 
   const openEdit = (tt: TicketType) => {
+    const isExhibitor = tt.category === 'exhibitor';
     const isMembership = tt.category === 'individual' || tt.category === 'legal';
-    setFormKind(isMembership ? 'membership' : 'regular');
+    setFormKind(isExhibitor ? 'exhibitor' : isMembership ? 'membership' : 'regular');
     setFormName(tt.name);
     setFormDescription(tt.description ?? '');
     setFormFullPrice((tt.priceCents / 100).toFixed(2));
@@ -331,16 +332,19 @@ export default function TicketsPage() {
   };
 
   // ── Derived state ──
-  const derivedCategory = formTier && meta
-    ? meta.tierCategoryMap[formTier] ?? ''
-    : '';
+  const derivedCategory = formKind === 'exhibitor'
+    ? 'exhibitor'
+    : formTier && meta
+      ? meta.tierCategoryMap[formTier] ?? ''
+      : '';
   const derivedWpProductId = formTier && meta
     ? meta.tierWpProductMap[formTier] ?? undefined
     : undefined;
 
-  // Filter form templates by category when in membership mode
+  // Filter form templates by category when in membership or exhibitor mode
   const filteredTemplates = formTemplates.filter((tpl) => {
     if (formKind === 'regular') return !tpl.category || tpl.category === 'general';
+    if (formKind === 'exhibitor') return !tpl.category || tpl.category === 'exhibitor';
     if (!derivedCategory) return true;
     return !tpl.category || tpl.category === derivedCategory;
   });
@@ -361,6 +365,13 @@ export default function TicketsPage() {
       return;
     }
 
+    // Derive category from kind
+    const resolvedCategory = formKind === 'exhibitor'
+      ? 'exhibitor'
+      : formKind === 'membership'
+        ? derivedCategory
+        : 'general';
+
     // ── Duplicate check: prevent identical tickets across all fields ──
     const ebPriceCentsCheck = formEarlyBirdPrice
       ? Math.round(parseFloat(formEarlyBirdPrice) * 100)
@@ -375,8 +386,7 @@ export default function TicketsPage() {
         (tt.quantity ?? null) === (formCapacity ? parseInt(formCapacity, 10) : null);
       const matchMaxPerOrder = tt.maxPerOrder === (parseInt(formMaxPerOrder, 10) || 10);
       const matchCategory =
-        (tt.category ?? 'general') ===
-        (formKind === 'membership' ? derivedCategory : 'general');
+        (tt.category ?? 'general') === resolvedCategory;
       const matchTier = (tt.membershipTier ?? '') === (formKind === 'membership' ? formTier : '');
       const matchSchema = (tt.formSchemaId ?? '') === (formSchemaId || '');
       // Check early-bird variant
@@ -434,7 +444,7 @@ export default function TicketsPage() {
         maxPerOrder: parseInt(formMaxPerOrder, 10) || 10,
         salesStart: formSalesStart ? new Date(formSalesStart).toISOString() : null,
         salesEnd: formSalesEnd ? new Date(formSalesEnd).toISOString() : null,
-        category: formKind === 'membership' ? derivedCategory : 'general',
+        category: resolvedCategory,
         membershipTier: formKind === 'membership' ? formTier : null,
         wpProductId: formKind === 'membership' ? derivedWpProductId ?? null : null,
         formSchemaId: resolvedSchemaId || null,
@@ -464,7 +474,7 @@ export default function TicketsPage() {
           salesStart: formSalesStart || undefined,
           salesEnd: formSalesEnd || undefined,
           sortOrder: tickets.length,
-          category: formKind === 'membership' ? derivedCategory : 'general',
+          category: resolvedCategory,
           membershipTier: formKind === 'membership' ? formTier : undefined,
           wpProductId: formKind === 'membership' ? derivedWpProductId : undefined,
           formSchemaId: resolvedSchemaId || undefined,
@@ -645,6 +655,7 @@ export default function TicketsPage() {
               tt.quantity != null && tt.quantity > 0
                 ? Math.round((tt.sold / tt.quantity) * 100)
                 : 0;
+            const isExhibitor = tt.category === 'exhibitor';
             const isMembership = tt.category === 'individual' || tt.category === 'legal';
             const priceInfo = getDisplayPrice(tt);
 
@@ -674,6 +685,18 @@ export default function TicketsPage() {
                         }}
                       >
                         {t('tickets.badgeMembership')}
+                      </span>
+                    )}
+                    {isExhibitor && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                        style={{
+                          background: 'var(--color-warning, #f59e0b)',
+                          color: '#fff',
+                          opacity: 0.9,
+                        }}
+                      >
+                        Exhibitor
                       </span>
                     )}
                   </div>
@@ -942,6 +965,33 @@ export default function TicketsPage() {
                         className="accent-[var(--color-primary)]"
                       />
                       {t('tickets.form.kindMembership')}
+                    </label>
+                    <label
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-sm transition-colors"
+                      style={{
+                        borderColor:
+                          formKind === 'exhibitor'
+                            ? 'var(--color-warning, #f59e0b)'
+                            : 'var(--color-border)',
+                        background:
+                          formKind === 'exhibitor'
+                            ? 'rgba(245,158,11,0.08)'
+                            : 'transparent',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="ticketKind"
+                        value="exhibitor"
+                        checked={formKind === 'exhibitor'}
+                        onChange={() => {
+                          setFormKind('exhibitor');
+                          setFormTier('');
+                        }}
+                        className="accent-[var(--color-warning)]"
+                      />
+                      Exhibitor
                     </label>
                   </div>
                 </div>

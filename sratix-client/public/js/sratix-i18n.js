@@ -119,6 +119,30 @@ const sratixI18n = (function () {
       'memberGate.welcomeDisclaimer': 'If a larger discount (e.g. early bird) is active, it will be applied instead.',
       'memberGate.changeType':     'Switch membership ↻',
       'memberGate.backToMembership': '← Are you a member? Sign in for discounts',
+
+      // Role choice
+      'roleChoice.title':          'How are you attending Swiss Robotics Day?',
+      'roleChoice.subtitle':       'Select your role to see the right tickets for you.',
+      'roleChoice.visitorLabel':   'Conference Visitor',
+      'roleChoice.visitorDesc':    'Attend talks, demos, and networking sessions.',
+      'roleChoice.exhibitorLabel': 'Exhibitor',
+      'roleChoice.exhibitorDesc':  'Purchase a booth package and register your exhibition team.',
+      'roleChoice.changeRole':     '← Change role',
+
+      // Exhibitor wizard
+      'exhibitorForm.companyTitle':    'Company Information',
+      'exhibitorForm.companySubtitle': 'Basic details for your exhibitor listing.',
+      'exhibitorForm.companyNote':     'After purchasing your booth, you\'ll have access to the <strong>Exhibitor Portal</strong> to provide richer details, upload media, select your booth, and manage your team.',
+      'exhibitorForm.staffTitle':      'Booth Staff Passes',
+      'exhibitorForm.staffSubtitle':   'Your ticket includes up to {max} staff passes.',
+      'exhibitorForm.staffOptionalNote': 'You can add staff now or manage them later from your Exhibitor Portal.',
+      'exhibitorForm.staffCount':      'Number of staff to add now',
+      'exhibitorForm.staffMax':        'Maximum {max} staff included',
+      'exhibitorForm.skipStaff':       'Skip — I\'ll add staff later',
+      'exhibitorForm.step':            'Step {current} of {total}',
+      'exhibitorForm.next':            'Next →',
+      'exhibitorForm.back':            '← Back',
+      'exhibitorForm.continueToPay':   'Continue to Payment →',
     },
 
     fr: {
@@ -219,6 +243,30 @@ const sratixI18n = (function () {
       'memberGate.welcomeDisclaimer': 'Si une réduction plus importante (ex. tarif anticipé) est active, elle sera appliquée.',
       'memberGate.changeType':     'Changer d\u2019adh\u00e9sion \u21bb',
       'memberGate.backToMembership': '← Vous êtes membre ? Connectez-vous pour bénéficier de réductions',
+
+      // Role choice
+      'roleChoice.title':          'Comment participez-vous au Swiss Robotics Day ?',
+      'roleChoice.subtitle':       'Sélectionnez votre rôle pour voir les billets adaptés.',
+      'roleChoice.visitorLabel':   'Visiteur de conférence',
+      'roleChoice.visitorDesc':    'Assistez aux présentations, démos et sessions de networking.',
+      'roleChoice.exhibitorLabel': 'Exposant',
+      'roleChoice.exhibitorDesc':  'Achetez un stand et inscrivez votre équipe d\'exposition.',
+      'roleChoice.changeRole':     '← Changer de rôle',
+
+      // Exhibitor wizard
+      'exhibitorForm.companyTitle':    'Informations sur l\'entreprise',
+      'exhibitorForm.companySubtitle': 'Détails de base pour votre fiche exposant.',
+      'exhibitorForm.companyNote':     'Après l\'achat de votre stand, vous aurez accès au <strong>Portail Exposant</strong> pour fournir des détails plus complets, télécharger des médias, choisir votre stand et gérer votre équipe.',
+      'exhibitorForm.staffTitle':      'Passes personnel du stand',
+      'exhibitorForm.staffSubtitle':   'Votre billet comprend jusqu\'à {max} passes personnel.',
+      'exhibitorForm.staffOptionalNote': 'Vous pouvez ajouter du personnel maintenant ou plus tard depuis votre Portail Exposant.',
+      'exhibitorForm.staffCount':      'Nombre de membres du personnel à ajouter',
+      'exhibitorForm.staffMax':        'Maximum {max} personnes incluses',
+      'exhibitorForm.skipStaff':       'Passer — J\'ajouterai le personnel plus tard',
+      'exhibitorForm.step':            'Étape {current} sur {total}',
+      'exhibitorForm.next':            'Suivant →',
+      'exhibitorForm.back':            '← Retour',
+      'exhibitorForm.continueToPay':   'Continuer vers le paiement →',
     },
 
     de: {
@@ -319,6 +367,30 @@ const sratixI18n = (function () {
       'memberGate.welcomeDisclaimer': 'Falls ein grösserer Rabatt (z.B. Frühbucher) aktiv ist, wird dieser stattdessen angewendet.',
       'memberGate.changeType':     'Mitgliedschaft wechseln \u21bb',
       'memberGate.backToMembership': '← Mitglied? Anmelden für Rabatte',
+
+      // Role choice
+      'roleChoice.title':          'Wie nehmen Sie am Swiss Robotics Day teil?',
+      'roleChoice.subtitle':       'Wählen Sie Ihre Rolle, um die passenden Tickets zu sehen.',
+      'roleChoice.visitorLabel':   'Konferenzbesucher',
+      'roleChoice.visitorDesc':    'Besuchen Sie Vorträge, Demos und Networking-Sessions.',
+      'roleChoice.exhibitorLabel': 'Aussteller',
+      'roleChoice.exhibitorDesc':  'Buchen Sie ein Standpaket und registrieren Sie Ihr Ausstellungsteam.',
+      'roleChoice.changeRole':     '← Rolle wechseln',
+
+      // Exhibitor wizard
+      'exhibitorForm.companyTitle':    'Unternehmensinformationen',
+      'exhibitorForm.companySubtitle': 'Grundlegende Angaben für Ihren Ausstellereintrag.',
+      'exhibitorForm.companyNote':     'Nach dem Kauf Ihres Standes haben Sie Zugang zum <strong>Aussteller-Portal</strong>, um weitere Details anzugeben, Medien hochzuladen, Ihren Stand auszuwählen und Ihr Team zu verwalten.',
+      'exhibitorForm.staffTitle':      'Stand-Mitarbeiterpässe',
+      'exhibitorForm.staffSubtitle':   'Ihr Ticket umfasst bis zu {max} Mitarbeiterpässe.',
+      'exhibitorForm.staffOptionalNote': 'Sie können Mitarbeiter jetzt hinzufügen oder später über Ihr Aussteller-Portal verwalten.',
+      'exhibitorForm.staffCount':      'Anzahl der jetzt hinzuzufügenden Mitarbeiter',
+      'exhibitorForm.staffMax':        'Maximal {max} Mitarbeiter inklusive',
+      'exhibitorForm.skipStaff':       'Überspringen — Ich füge Mitarbeiter später hinzu',
+      'exhibitorForm.step':            'Schritt {current} von {total}',
+      'exhibitorForm.next':            'Weiter →',
+      'exhibitorForm.back':            '← Zurück',
+      'exhibitorForm.continueToPay':   'Weiter zur Zahlung →',
     },
 
     it: {
@@ -418,6 +490,30 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    'Iscrizione: {tier}',
       'memberGate.welcomeDisclaimer': 'Se è attivo uno sconto maggiore (es. tariffa anticipata), verrà applicato quello.',
       'memberGate.changeType':     'Cambia iscrizione \u21bb',
+
+      // Role choice
+      'roleChoice.title':          'Come partecipate allo Swiss Robotics Day?',
+      'roleChoice.subtitle':       'Selezionate il vostro ruolo per vedere i biglietti giusti.',
+      'roleChoice.visitorLabel':   'Visitatore della conferenza',
+      'roleChoice.visitorDesc':    'Partecipate a presentazioni, demo e sessioni di networking.',
+      'roleChoice.exhibitorLabel': 'Espositore',
+      'roleChoice.exhibitorDesc':  'Acquistate un pacchetto stand e registrate il vostro team espositivo.',
+      'roleChoice.changeRole':     '← Cambia ruolo',
+
+      // Exhibitor wizard
+      'exhibitorForm.companyTitle':    'Informazioni aziendali',
+      'exhibitorForm.companySubtitle': 'Dettagli di base per la vostra scheda espositore.',
+      'exhibitorForm.companyNote':     'Dopo l\'acquisto del vostro stand, avrete accesso al <strong>Portale Espositore</strong> per fornire dettagli più completi, caricare media, selezionare il vostro stand e gestire il team.',
+      'exhibitorForm.staffTitle':      'Pass personale dello stand',
+      'exhibitorForm.staffSubtitle':   'Il vostro biglietto include fino a {max} pass per il personale.',
+      'exhibitorForm.staffOptionalNote': 'Potete aggiungere il personale ora o gestirlo in seguito dal Portale Espositore.',
+      'exhibitorForm.staffCount':      'Numero di membri del personale da aggiungere',
+      'exhibitorForm.staffMax':        'Massimo {max} persone incluse',
+      'exhibitorForm.skipStaff':       'Salta — Aggiungerò il personale più tardi',
+      'exhibitorForm.step':            'Passo {current} di {total}',
+      'exhibitorForm.next':            'Avanti →',
+      'exhibitorForm.back':            '← Indietro',
+      'exhibitorForm.continueToPay':   'Continua al pagamento →',
     },
 
     'zh-TW': {
@@ -516,6 +612,30 @@ const sratixI18n = (function () {
       'memberGate.welcomeDisclaimer': '若有更大的折扣（如早鳥優惠）正在進行，則會套用較大的折扣。',
       'memberGate.changeType':     '切換會員 ↻',
       'memberGate.backToMembership': '← 是會員嗎？登入享折扣',
+
+      // Role choice
+      'roleChoice.title':          '您如何參加 Swiss Robotics Day？',
+      'roleChoice.subtitle':       '選擇您的角色以查看適合的票券。',
+      'roleChoice.visitorLabel':   '會議訪客',
+      'roleChoice.visitorDesc':    '參加演講、展示和交流活動。',
+      'roleChoice.exhibitorLabel': '展商',
+      'roleChoice.exhibitorDesc':  '購買攤位套餐並註冊您的展覽團隊。',
+      'roleChoice.changeRole':     '← 更換角色',
+
+      // Exhibitor wizard
+      'exhibitorForm.companyTitle':    '公司資訊',
+      'exhibitorForm.companySubtitle': '展商名錄的基本資料。',
+      'exhibitorForm.companyNote':     '購買攤位後，您可以透過<strong>展商入口</strong>提供更豐富的資訊、上傳媒體、選擇攤位並管理團隊。',
+      'exhibitorForm.staffTitle':      '攤位工作人員通行證',
+      'exhibitorForm.staffSubtitle':   '您的票券包含最多 {max} 張工作人員通行證。',
+      'exhibitorForm.staffOptionalNote': '您可以現在新增工作人員，或稍後從展商入口管理。',
+      'exhibitorForm.staffCount':      '現在要新增的工作人員數量',
+      'exhibitorForm.staffMax':        '最多包含 {max} 名工作人員',
+      'exhibitorForm.skipStaff':       '略過 — 稍後再新增工作人員',
+      'exhibitorForm.step':            '第 {current} 步，共 {total} 步',
+      'exhibitorForm.next':            '下一步 →',
+      'exhibitorForm.back':            '← 上一步',
+      'exhibitorForm.continueToPay':   '繼續付款 →',
     },
   };
 

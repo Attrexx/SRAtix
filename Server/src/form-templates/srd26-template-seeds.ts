@@ -527,7 +527,7 @@ function template6_ExhibitorPackage(): { name: string; description: string; cate
     f('exhibitor_onsite_contact_name', 'text', { en: 'Primary On-site Contact', de: 'Kontaktperson vor Ort', fr: 'Contact sur place', it: 'Referente in loco', 'zh-TW': '現場主要聯絡人' }, 'exhibitor_ops', 0, { required: true }),
     f('exhibitor_onsite_contact_phone', 'phone', { en: 'Contact Phone', de: 'Kontakttelefon', fr: 'Téléphone contact', it: 'Telefono referente', 'zh-TW': '聯絡電話' }, 'exhibitor_ops', 1, { required: true }),
     f('org_website', 'url', { en: 'Company Website', de: 'Firmenwebsite', fr: 'Site web', it: 'Sito web', 'zh-TW': '公司網站' }, 'exhibitor_ops', 2),
-    f('exhibitor_company_description', 'textarea', { en: 'Company Description (for directory)', de: 'Firmenbeschreibung (für Verzeichnis)', fr: 'Description (pour annuaire)', it: 'Descrizione (per elenco)', 'zh-TW': '公司描述' }, 'exhibitor_ops', 3),
+    f('exhibitor_company_description', 'richtext', { en: 'Company Description (for directory)', de: 'Firmenbeschreibung (für Verzeichnis)', fr: 'Description (pour annuaire)', it: 'Descrizione (per elenco)', 'zh-TW': '公司描述' }, 'exhibitor_ops', 3),
     f('exhibitor_logo', 'image-upload', { en: 'Company Logo', de: 'Firmenlogo', fr: 'Logo', it: 'Logo', 'zh-TW': '公司標誌' }, 'exhibitor_ops', 4),
     f('exhibitor_robotics_fields', 'multi-select', { en: 'Robotics Fields', de: 'Robotik-Bereiche', fr: 'Domaines robotique', it: 'Campi robotica', 'zh-TW': '機器人領域' }, 'exhibitor_ops', 5),
     f('exhibitor_robotics_subfields', 'multi-select', { en: 'Robotics Sub-fields', de: 'Robotik-Unterbereiche', fr: 'Sous-domaines', it: 'Sotto-campi', 'zh-TW': '子領域' }, 'exhibitor_ops', 6),
@@ -589,8 +589,8 @@ function template6_ExhibitorPackage(): { name: string; description: string; cate
   return {
     name: 'SRD26 — Exhibitor Package Purchase',
     description: 'Company-level registration for exhibitor booth packages. Collects billing, ops, SRA directory profile, and Swiss Robotics Map listing.',
-    category: 'legal',
-    fields: { fields, sections },
+    category: 'exhibitor',
+    fields: { fields, sections, maxStaff: 5 },
   };
 }
 

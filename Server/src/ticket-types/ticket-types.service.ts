@@ -25,7 +25,7 @@ const TICKET_TYPE_TRANSITIONS: Record<string, Set<string>> = {
 /**
  * Valid ticket categories — determines form variation and WP sync behavior.
  */
-export const TICKET_CATEGORIES = ['general', 'individual', 'legal'] as const;
+export const TICKET_CATEGORIES = ['general', 'individual', 'legal', 'exhibitor'] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
 /**
@@ -634,6 +634,7 @@ export class TicketTypesService {
     eventId: string,
     memberGroup?: string,
     memberTier?: string,
+    role?: 'visitor' | 'exhibitor',
   ) {
     const now = new Date();
     const ticketTypes = await this.prisma.ticketType.findMany({
@@ -653,6 +654,9 @@ export class TicketTypesService {
     // RobotX members don't see tickets that bundle SRA membership (and vice versa in future)
     const filtered = ticketTypes.filter((tt) => {
       if (memberGroup === 'robotx' && tt.membershipTier) return false;
+      // Role-based filtering: visitor sees non-exhibitor, exhibitor sees only exhibitor
+      if (role === 'visitor' && tt.category === 'exhibitor') return false;
+      if (role === 'exhibitor' && tt.category !== 'exhibitor') return false;
       return true;
     });
 
