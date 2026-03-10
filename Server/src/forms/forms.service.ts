@@ -72,6 +72,7 @@ export interface FormSchemaDefinition {
   fields: FormField[];
   sections?: FormSection[];
   ticketTypeFieldMappings?: Record<string, string[]>;
+  maxStaff?: number;
 }
 
 /**
