@@ -159,6 +159,16 @@ function LoginForm() {
             />
           </div>
 
+          <div className="text-right">
+            <a
+              href="/auth/forgot-password"
+              className="text-xs transition-colors hover:underline"
+              style={{ color: 'var(--color-primary)' }}
+            >
+              Forgot password?
+            </a>
+          </div>
+
           {error && (
             <div
               className="rounded-lg px-4 py-2 text-sm"

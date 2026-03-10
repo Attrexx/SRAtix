@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { api, type AppUser, type RoleDefinition } from '@/lib/api';
+import { api, type AppUser, type RoleDefinition, type UserStats } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -57,7 +57,10 @@ export default function UsersPage() {
 
   return (
     <div>
-      {/* Header */}
+      {/* Super Admin Stats Panel */}
+      {hasRole('super_admin') && <SuperAdminPanel />}
+
+      {/* Header */
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl" style={{ color: 'var(--color-text)' }}>
@@ -639,6 +642,180 @@ function FieldInput({
           color: 'var(--color-text)',
         }}
       />
+    </div>
+  );
+}
+
+// ─── Super Admin Stats Panel ────────────────────────────────────
+
+function SuperAdminPanel() {
+  const { t } = useI18n();
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [statsError, setStatsError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchStats = () => {
+      api.getUserStats()
+        .then((data) => { if (!cancelled) setStats(data); })
+        .catch(() => { if (!cancelled) setStatsError('Failed to load stats'); });
+    };
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  if (statsError) return null; // Silently hide on error
+  if (!stats) {
+    return (
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 animate-pulse rounded-xl" style={{ background: 'var(--color-bg-muted)' }} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+        {t('users.stats.title')}
+      </h2>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {/* Active Users */}
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('users.stats.activeUsers')}
+            </span>
+            <span
+              className="rounded-full px-2 py-0.5 text-xs font-bold"
+              style={{
+                background: stats.activeUsers.length > 0 ? 'var(--color-success-light, #dcfce7)' : 'var(--color-bg-muted)',
+                color: stats.activeUsers.length > 0 ? 'var(--color-success, #16a34a)' : 'var(--color-text-muted)',
+              }}
+            >
+              {stats.activeUsers.length} {t('users.stats.activeNow')}
+            </span>
+          </div>
+          {stats.activeUsers.length === 0 ? (
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t('users.stats.noActiveUsers')}
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {stats.activeUsers.map((u) => (
+                <li key={u.id} className="flex items-center gap-2">
+                  <span className="text-sm" style={{ color: 'var(--color-text)' }}>{u.displayName}</span>
+                  <div className="flex gap-1">
+                    {u.roles.map((r) => (
+                      <span
+                        key={r}
+                        className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                        style={{
+                          background: r === 'super_admin' || r === 'admin' ? 'var(--color-primary-light)' : 'var(--color-bg-muted)',
+                          color: r === 'super_admin' || r === 'admin' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                        }}
+                      >
+                        {r.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Login History */}
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          <div className="mb-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              {t('users.stats.loginHistory')}
+            </span>
+            <span className="ml-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t('users.stats.loginHistoryDesc')}
+            </span>
+          </div>
+          {stats.loginHistory.length === 0 ? (
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              {t('users.stats.noLoginHistory')}
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+              {stats.loginHistory.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between rounded px-2 py-1 text-xs"
+                  style={{ background: 'var(--color-bg-subtle)' }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium" style={{ color: 'var(--color-text)' }}>
+                      {entry.displayName}
+                    </span>
+                    {entry.roles.slice(0, 1).map((r) => (
+                      <span
+                        key={r}
+                        className="rounded-full px-1.5 py-0.5 text-[10px]"
+                        style={{
+                          background: r === 'super_admin' || r === 'admin' ? 'var(--color-primary-light)' : 'var(--color-bg-muted)',
+                          color: r === 'super_admin' || r === 'admin' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                        }}
+                      >
+                        {r.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                  <span style={{ color: 'var(--color-text-muted)' }}>
+                    {new Date(entry.timestamp).toLocaleDateString('en-CH', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Never Logged In Count */}
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('users.stats.neverLoggedIn')}
+          </span>
+          <p
+            className="mt-2 text-3xl font-bold"
+            style={{ color: stats.neverLoggedInCount > 0 ? 'var(--color-warning, #d97706)' : 'var(--color-text)' }}
+          >
+            {stats.neverLoggedInCount}
+          </p>
+          <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {t('users.stats.neverLoggedInDesc')}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

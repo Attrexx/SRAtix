@@ -462,6 +462,25 @@ export interface RoleDefinition {
   description: string;
 }
 
+export interface UserStats {
+  activeUsers: Array<{
+    id: string;
+    displayName: string;
+    email: string;
+    roles: string[];
+  }>;
+  loginHistory: Array<{
+    id: string;
+    userId: string;
+    displayName: string;
+    roles: string[];
+    ip: string | null;
+    userAgent: string | null;
+    timestamp: string;
+  }>;
+  neverLoggedInCount: number;
+}
+
 export interface SettingValue {
   key: string;
   envVar: string;
@@ -890,6 +909,23 @@ export const api = {
 
   activateUser: (id: string) =>
     request<{ success: boolean }>(`/users/${id}/activate`, { method: 'POST' }),
+
+  getUserStats: (signal?: AbortSignal) =>
+    request<UserStats>('/users/stats', { signal }),
+
+  // ─── Auth (Public) ────────────────────────────────────────────
+
+  forgotPassword: (email: string) =>
+    request<{ success: boolean }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    request<{ success: boolean }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+    }),
 
   // ─── Settings (Super Admin) ────────────────────────────────────
 

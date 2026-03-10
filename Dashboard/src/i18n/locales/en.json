@@ -641,5 +641,36 @@
   "users.form.roles": "Roles",
   "users.form.savePasswordHint": "Save this password — it won't be shown again",
   "users.badge.wp": "WP",
+
+  "users.stats.title": "Platform Insights",
+  "users.stats.activeUsers": "Active Users",
+  "users.stats.activeNow": "online now",
+  "users.stats.noActiveUsers": "No active users right now",
+  "users.stats.loginHistory": "Login History",
+  "users.stats.loginHistoryDesc": "Last 50 login events",
+  "users.stats.noLoginHistory": "No login events recorded yet",
+  "users.stats.neverLoggedIn": "Never Logged In",
+  "users.stats.neverLoggedInDesc": "Active users who have never signed in",
+
+  "auth.forgotPassword": "Forgot password?",
+  "auth.forgotPassword.title": "Reset Your Password",
+  "auth.forgotPassword.description": "Enter your email and we'll send you a reset link.",
+  "auth.forgotPassword.submit": "Send Reset Link",
+  "auth.forgotPassword.sending": "Sending…",
+  "auth.forgotPassword.success": "If an account with that email exists, a password reset link has been sent. Check your inbox.",
+  "auth.forgotPassword.backToLogin": "Back to Sign In",
+
+  "auth.resetPassword.title": "Set New Password",
+  "auth.resetPassword.newPassword": "New Password",
+  "auth.resetPassword.confirmPassword": "Confirm Password",
+  "auth.resetPassword.submit": "Reset Password",
+  "auth.resetPassword.resetting": "Resetting…",
+  "auth.resetPassword.success": "Your password has been reset successfully. Redirecting to sign in…",
+  "auth.resetPassword.invalidToken": "This reset link is invalid or has expired.",
+  "auth.resetPassword.requestNew": "Request a new reset link",
+  "auth.resetPassword.mismatch": "Passwords do not match",
+  "auth.resetPassword.tooShort": "Password must be at least 8 characters",
+  "auth.resetPassword.noToken": "No reset token provided. Please use the link from your email.",
+
   "maintenance.bannerTitle": "Maintenance Mode Active"
 }
