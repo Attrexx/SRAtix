@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, type DragEvent } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import {
   api,
@@ -155,6 +155,42 @@ export default function TicketsPage() {
 
   // Track existing early-bird variant id for edits
   const [existingEbVariantId, setExistingEbVariantId] = useState<string | null>(null);
+
+  // ── Drag-and-drop reorder state ──
+  const dragIdx = useRef<number | null>(null);
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
+
+  const handleDragStart = (idx: number) => { dragIdx.current = idx; };
+
+  const handleDragOver = (e: DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropIdx(idx);
+  };
+
+  const handleDragLeave = () => { setDropIdx(null); };
+
+  const handleDrop = async (e: DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    setDropIdx(null);
+    const fromIdx = dragIdx.current;
+    if (fromIdx === null || fromIdx === targetIdx) return;
+    dragIdx.current = null;
+    // Optimistic reorder
+    const reordered = [...tickets];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+    setTickets(reordered);
+    // Persist
+    try {
+      await api.reorderTicketTypes(eventId, reordered.map((t) => t.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reorder');
+      await loadData(); // revert on error
+    }
+  };
+
+  const handleDragEnd = () => { dragIdx.current = null; setDropIdx(null); };
 
   // ── Data loading ──
   const loadData = useCallback(async () => {
@@ -656,7 +692,7 @@ export default function TicketsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {tickets.map((tt) => {
+          {tickets.map((tt, idx) => {
             const soldPct =
               tt.quantity != null && tt.quantity > 0
                 ? Math.round((tt.sold / tt.quantity) * 100)
@@ -668,15 +704,29 @@ export default function TicketsPage() {
             return (
               <div
                 key={tt.id}
-                className="flex flex-col rounded-xl px-4 py-3"
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+                className="group flex flex-col rounded-xl px-4 py-3 transition-all"
                 style={{
                   background: 'var(--color-bg-card)',
-                  border: '1px solid var(--color-border)',
-                  boxShadow: 'var(--shadow-sm)',
+                  border: dropIdx === idx ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                  boxShadow: dropIdx === idx
+                    ? '0 0 0 2px rgba(0,115,170,0.15)'
+                    : 'var(--shadow-sm)',
                 }}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className="cursor-grab opacity-30 transition-opacity group-hover:opacity-70 active:cursor-grabbing"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      <Icons.GripVertical size={16} />
+                    </span>
                     <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
                       {tt.name}
                     </h3>
@@ -838,6 +888,17 @@ export default function TicketsPage() {
               </div>
             );
           })}
+          {/* Trailing drop zone */}
+          <div
+            onDragOver={(e) => handleDragOver(e, tickets.length)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, tickets.length)}
+            className="col-span-full flex items-center justify-center rounded-lg transition-all"
+            style={{
+              border: dropIdx === tickets.length ? '2px solid var(--color-primary)' : '2px dashed transparent',
+              minHeight: '32px',
+            }}
+          />
         </div>
       )}
 

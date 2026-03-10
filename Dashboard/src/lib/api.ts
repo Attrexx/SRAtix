@@ -586,6 +586,9 @@ export const api = {
   deleteTicketType: (eventId: string, id: string) =>
     request<void>(`/events/${eventId}/ticket-types/${id}`, { method: 'DELETE' }),
 
+  reorderTicketTypes: (eventId: string, orderedIds: string[]) =>
+    request<void>(`/events/${eventId}/ticket-types/reorder`, { method: 'PUT', body: { orderedIds } }),
+
   // Pricing Variants
   getVariants: (eventId: string, ticketTypeId: string, signal?: AbortSignal) =>
     request<PricingVariant[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/variants`, { signal }),

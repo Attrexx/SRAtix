@@ -98,6 +98,15 @@ export class TicketTypesController {
     });
   }
 
+  @Put('reorder')
+  @Roles('event_admin', 'super_admin')
+  reorder(
+    @Param('eventId') eventId: string,
+    @Body() dto: { orderedIds: string[] },
+  ) {
+    return this.ticketTypesService.reorder(eventId, dto.orderedIds);
+  }
+
   @Patch(':id')
   @Roles('event_admin', 'super_admin')
   update(

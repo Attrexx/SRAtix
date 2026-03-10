@@ -241,6 +241,18 @@ export class TicketTypesService {
     };
   }
 
+  // ─── Reorder ─────────────────────────────────────────────────
+
+  async reorder(eventId: string, orderedIds: string[]) {
+    const updates = orderedIds.map((id, idx) =>
+      this.prisma.ticketType.updateMany({
+        where: { id, eventId },
+        data: { sortOrder: idx },
+      }),
+    );
+    await this.prisma.$transaction(updates);
+  }
+
   // ─── Queries ──────────────────────────────────────────────────
 
   async findByEvent(eventId: string) {
