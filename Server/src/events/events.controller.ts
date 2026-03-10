@@ -24,7 +24,7 @@ import { CreateEventDto, UpdateEventDto, ToggleMaintenanceDto } from './dto/even
 import { FastifyRequest } from 'fastify';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync } from 'fs';
-import sharp from 'sharp';
+import * as sharp from 'sharp';
 
 @Controller('events')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
