@@ -100,11 +100,12 @@ export class TicketTypesController {
 
   @Put('reorder')
   @Roles('event_admin', 'super_admin')
-  reorder(
+  async reorder(
     @Param('eventId') eventId: string,
     @Body() dto: { orderedIds: string[] },
   ) {
-    return this.ticketTypesService.reorder(eventId, dto.orderedIds);
+    await this.ticketTypesService.reorder(eventId, dto.orderedIds);
+    return { ok: true };
   }
 
   @Patch(':id')
