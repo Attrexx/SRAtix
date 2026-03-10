@@ -575,6 +575,8 @@ export const api = {
     wpProductId?: number;
     formSchemaId?: string;
     meta?: Record<string, unknown>;
+    robotxDiscountType?: string;
+    robotxDiscountValue?: number;
   }) =>
     request<TicketType>(`/events/${eventId}/ticket-types`, { method: 'POST', body: data }),
 

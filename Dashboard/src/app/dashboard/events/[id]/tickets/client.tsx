@@ -479,6 +479,12 @@ export default function TicketsPage() {
           wpProductId: formKind === 'membership' ? derivedWpProductId : undefined,
           formSchemaId: resolvedSchemaId || undefined,
           meta: formIcon ? { icon: formIcon } : undefined,
+          robotxDiscountType: robotxDiscountEnabled ? robotxDiscountType : undefined,
+          robotxDiscountValue: robotxDiscountEnabled && robotxDiscountValue
+            ? (robotxDiscountType === 'percentage'
+              ? parseInt(robotxDiscountValue, 10)
+              : Math.round(parseFloat(robotxDiscountValue) * 100))
+            : undefined,
         });
         ticketId = created.id;
       }
