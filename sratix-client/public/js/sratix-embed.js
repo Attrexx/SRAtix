@@ -268,7 +268,6 @@
       let html = '';
       // Ticket display header (title + intro from event settings)
       // Use exhibitor-specific text when in the exhibitor flow, fallback to visitor
-      var role = getRole();
       var displayTitle = (role === 'exhibitor' && publicInfo.exhibitorTicketTitle)
         ? publicInfo.exhibitorTicketTitle
         : publicInfo.ticketTitle;
