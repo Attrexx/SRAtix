@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /*──────────────────────────────────────────────────────────────
  * Constants
  *────────────────────────────────────────────────────────────*/
-define( 'SRATIX_CLIENT_VERSION', '0.6.0' );
+define( 'SRATIX_CLIENT_VERSION', '0.6.1' );
 define( 'SRATIX_CLIENT_FILE',    __FILE__ );
 define( 'SRATIX_CLIENT_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'SRATIX_CLIENT_URL',     plugin_dir_url( __FILE__ ) );

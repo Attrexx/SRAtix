@@ -469,6 +469,9 @@
 	flex-wrap: wrap;
 	gap: 6px 16px;
 }
+label.sratix-checkbox-label {
+	font-size: 0.9rem;
+}
 
 /* ── Custom form field grid (flex-wrap) ── */
 .sratix-form-fields {
