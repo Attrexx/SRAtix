@@ -71,6 +71,10 @@ export default function EventSettingsPage() {
   const [ticketTitle, setTicketTitle] = useState('');
   const [ticketTitleSize, setTicketTitleSize] = useState('1.75');
   const [ticketIntro, setTicketIntro] = useState('');
+  const [logoIconUrl, setLogoIconUrl] = useState('');
+  const [logoLandscapeUrl, setLogoLandscapeUrl] = useState('');
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [uploadingLandscape, setUploadingLandscape] = useState(false);
 
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
@@ -90,6 +94,8 @@ export default function EventSettingsPage() {
     setTicketTitle((meta.ticketTitle as string) ?? '');
     setTicketTitleSize((meta.ticketTitleSize as string) ?? '1.75');
     setTicketIntro((meta.ticketIntro as string) ?? '');
+    setLogoIconUrl((meta.logoIconUrl as string) ?? '');
+    setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
   }, []);
 
   useEffect(() => {
@@ -251,6 +257,60 @@ export default function EventSettingsPage() {
             onChange={setStatus}
             options={STATUS_OPTIONS.map((s) => ({ value: s.value, label: t(s.label) }))}
           />
+        </Section>
+
+        {/* ── Event Branding ── */}
+        <Section title={t('events.settings.branding')}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.brandingHint')}
+          </p>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <LogoUploadField
+              label={t('events.settings.logoIcon')}
+              hint={t('events.settings.logoIconHint')}
+              currentUrl={logoIconUrl}
+              uploading={uploadingIcon}
+              onUpload={async (file) => {
+                if (!event) return;
+                setUploadingIcon(true);
+                try {
+                  const result = await api.uploadEventLogo(id, file, 'icon');
+                  setLogoIconUrl(result.url);
+                  toast.success(t('events.settings.logoUploaded'));
+                  // Refresh event to get updated meta
+                  const updated = await api.getEvent(id);
+                  setEvent(updated);
+                  populateForm(updated);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : t('events.settings.logoUploadFailed'));
+                } finally {
+                  setUploadingIcon(false);
+                }
+              }}
+            />
+            <LogoUploadField
+              label={t('events.settings.logoLandscape')}
+              hint={t('events.settings.logoLandscapeHint')}
+              currentUrl={logoLandscapeUrl}
+              uploading={uploadingLandscape}
+              onUpload={async (file) => {
+                if (!event) return;
+                setUploadingLandscape(true);
+                try {
+                  const result = await api.uploadEventLogo(id, file, 'landscape');
+                  setLogoLandscapeUrl(result.url);
+                  toast.success(t('events.settings.logoUploaded'));
+                  const updated = await api.getEvent(id);
+                  setEvent(updated);
+                  populateForm(updated);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : t('events.settings.logoUploadFailed'));
+                } finally {
+                  setUploadingLandscape(false);
+                }
+              }}
+            />
+          </div>
         </Section>
 
         {/* ── Ticket Display ── */}
@@ -466,6 +526,68 @@ function FieldSelect({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function LogoUploadField({
+  label,
+  hint,
+  currentUrl,
+  uploading,
+  onUpload,
+}: {
+  label: string;
+  hint: string;
+  currentUrl: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+}) {
+  const { t } = useI18n();
+  const inputId = `logo-${label.replace(/\s/g, '-').toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+        {label}
+      </label>
+      <p className="mb-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>{hint}</p>
+
+      {currentUrl && (
+        <div
+          className="mb-2 inline-block rounded-lg p-2"
+          style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+        >
+          <img
+            src={currentUrl}
+            alt={label}
+            className="max-h-24 max-w-full rounded object-contain"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor={inputId}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+          style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+        >
+          <Icons.Upload size={14} />
+          {uploading ? t('common.uploading') : (currentUrl ? t('events.settings.logoReplace') : t('events.settings.logoUpload'))}
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          disabled={uploading}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onUpload(file);
+            e.target.value = '';
+          }}
+        />
+      </div>
     </div>
   );
 }

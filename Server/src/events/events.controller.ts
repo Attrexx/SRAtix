@@ -7,6 +7,8 @@ import {
   Body,
   UseGuards,
   Logger,
+  Req,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,6 +21,10 @@ import { SettingsService } from '../settings/settings.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { SseService } from '../sse/sse.service';
 import { CreateEventDto, UpdateEventDto, ToggleMaintenanceDto } from './dto/event.dto';
+import { FastifyRequest } from 'fastify';
+import { resolve, join } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
+import sharp from 'sharp';
 
 @Controller('events')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -158,6 +164,81 @@ export class EventsController {
     }
 
     this.logger.log(`Admin ${type} notification sent for event ${event.id}`);
+  }
+
+  // ─── Event Logo Upload ───────────────────────────────────────
+
+  /**
+   * POST /api/events/:id/logo
+   * Upload an event logo (icon or landscape). Accepts multipart with:
+   *   - file: image file (max 5 MB, image/*)
+   *   - type: 'icon' | 'landscape'
+   *
+   * Resizes to optimal dimensions, converts to WebP, stores in /uploads/events/.
+   * Saves URL in Event.meta.logoIconUrl or Event.meta.logoLandscapeUrl.
+   */
+  @Post(':id/logo')
+  @Roles('event_admin', 'super_admin')
+  async uploadLogo(
+    @Param('id') id: string,
+    @Req() req: FastifyRequest,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    // Ensure event exists + ownership
+    const event = this.isSuperAdmin(user)
+      ? await this.eventsService.findOne(id)
+      : await this.eventsService.findOne(id, user.orgId);
+
+    const data = await req.file();
+    if (!data) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const logoType = (data.fields?.type as any)?.value as string | undefined;
+    if (logoType !== 'icon' && logoType !== 'landscape') {
+      throw new BadRequestException('Field "type" must be "icon" or "landscape"');
+    }
+
+    if (!data.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+
+    const buffer = await data.toBuffer();
+
+    // Resize: icon → 512×512 (cover), landscape → 600×200 (cover)
+    const dimensions = logoType === 'icon'
+      ? { width: 512, height: 512 }
+      : { width: 600, height: 200 };
+
+    const optimized = await sharp(buffer)
+      .resize(dimensions.width, dimensions.height, { fit: 'cover' })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    // Store in uploads/events/<eventId>/
+    const uploadsBase = resolve(__dirname, '..', '..', 'uploads', 'events', id);
+    mkdirSync(uploadsBase, { recursive: true });
+
+    const filename = `logo-${logoType}.webp`;
+    writeFileSync(join(uploadsBase, filename), optimized);
+
+    // Build public URL
+    const logoUrl = `/uploads/events/${id}/${filename}?v=${Date.now()}`;
+
+    // Persist in Event.meta
+    const existingMeta = (event.meta as Record<string, unknown>) ?? {};
+    const metaKey = logoType === 'icon' ? 'logoIconUrl' : 'logoLandscapeUrl';
+    const updatedMeta = { ...existingMeta, [metaKey]: logoUrl };
+
+    await this.eventsService.update(
+      id,
+      this.isSuperAdmin(user) ? undefined : user.orgId,
+      { meta: updatedMeta as any },
+    );
+
+    this.logger.log(`Event logo (${logoType}) uploaded for ${id} by ${user.email}`);
+
+    return { url: logoUrl, type: logoType };
   }
 
   // ─── Maintenance Mode ────────────────────────────────────────

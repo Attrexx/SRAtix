@@ -535,6 +535,25 @@ export const api = {
   updateEvent: (id: string, data: Partial<Event>) =>
     request<Event>(`/events/${id}`, { method: 'PATCH', body: data }),
 
+  uploadEventLogo: async (eventId: string, file: File, type: 'icon' | 'landscape') => {
+    let token = getToken();
+    if (!token) token = await refreshAccessToken();
+    const form = new FormData();
+    form.append('file', file);
+    form.append('type', type);
+    const res = await fetch(`${API_BASE}/api/events/${eventId}/logo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new ApiError(res.status, data?.message ?? `HTTP ${res.status}`, data);
+    }
+    return res.json() as Promise<{ url: string; type: string }>;
+  },
+
   // Ticket Types
   getTicketTypes: (eventId: string, signal?: AbortSignal) =>
     request<TicketType[]>(`/events/${eventId}/ticket-types`, { signal }),

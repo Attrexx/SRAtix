@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
@@ -42,6 +43,7 @@
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "satori": "^0.19.2",
+    "sharp": "^0.34.5",
     "stripe": "^17.0.0",
     "uuid": "^13.0.0"
   },
@@ -52,6 +54,7 @@
     "@types/node": "^22.0.0",
     "@types/nodemailer": "^6.4.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
     "mysql2": "^3.19.0",
     "prisma": "^6.0.0",

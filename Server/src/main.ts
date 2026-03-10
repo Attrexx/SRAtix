@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import { existsSync, readFileSync } from 'fs';
 import { AuditLogService, AuditAction } from './audit-log/audit-log.service';
 
@@ -37,6 +38,11 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     await app.register(fastifyCookie as any, {
       secret: configService.get<string>('COOKIE_SECRET') || configService.getOrThrow<string>('JWT_SECRET'),
+    });
+
+    // Multipart file uploads (event logos, etc.)
+    await app.register(fastifyMultipart as any, {
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
     });
 
     // Global validation pipe — DTOs auto-validated
@@ -77,11 +83,26 @@ async function bootstrap() {
 
     const port = configService.get<number>('PORT', 3000);
 
+    // ── Uploads static serving ───────────────────────────────────
+    // Serve uploaded files (event logos, etc.) from /uploads/
+    const uploadsDir = resolve(__dirname, '..', 'uploads');
+    const { mkdirSync } = await import('fs');
+    mkdirSync(uploadsDir, { recursive: true });
+
+    const fastify = app.getHttpAdapter().getInstance();
+    await fastify.register(fastifyStatic, {
+      root: uploadsDir,
+      prefix: '/uploads/',
+      decorateReply: false,
+      setHeaders(res: any) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    });
+
     // ── Dashboard Static Files ───────────────────────────────────
     // Serve the Next.js static export (Dashboard/out/) directly from
     // Fastify. Single process, single port — no separate Next.js server.
     const dashboardDir = resolve(__dirname, '..', '..', 'Dashboard', 'out');
-    const fastify = app.getHttpAdapter().getInstance();
 
     if (existsSync(dashboardDir)) {
       // Serve static assets (_next/*, images, etc.)
