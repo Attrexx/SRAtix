@@ -1855,6 +1855,8 @@
         var fn = (modal.querySelector('#sratix-ex-fn')?.value || '').trim();
         var ln = (modal.querySelector('#sratix-ex-ln')?.value || '').trim();
         var em = (modal.querySelector('#sratix-ex-email')?.value || '').trim();
+        var ph = (modal.querySelector('#sratix-ex-phone')?.value || '').trim();
+        var org = (modal.querySelector('#sratix-ex-company')?.value || '').trim();
         if (!fn || !ln) {
           errorEl.textContent = t('reg.nameRequired');
           errorEl.style.display = '';
@@ -1862,6 +1864,16 @@
         }
         if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
           errorEl.textContent = t('reg.emailInvalid');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!ph) {
+          errorEl.textContent = t('reg.form.fieldRequired', { field: t('reg.phone') });
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!org) {
+          errorEl.textContent = t('reg.form.fieldRequired', { field: t('reg.organization') });
           errorEl.style.display = '';
           return false;
         }
