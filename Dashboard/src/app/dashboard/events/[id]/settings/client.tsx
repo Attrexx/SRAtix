@@ -335,7 +335,7 @@ export default function EventSettingsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Left column — Visitor */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--color-info, #3b82f6)' }}>
                 Visitor Flow
               </h3>
               <FieldInput
