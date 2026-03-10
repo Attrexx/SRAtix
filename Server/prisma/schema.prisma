@@ -467,6 +467,8 @@ model User {
   passwordHash    String?   @db.VarChar(255) // bcrypt hash — null for WP-only users
   emailConfirmedAt DateTime? @db.DateTime(3)  // null = unconfirmed
   confirmToken    String?   @unique @db.VarChar(100) // email confirmation token
+  resetToken      String?   @unique @db.VarChar(100) // password reset token (SHA-256 hash)
+  resetTokenExpiresAt DateTime? @db.DateTime(3)      // reset token expiry
   wpUserId        Int?      @unique // linked WP user (legacy bridge)
   avatarUrl       String?   @db.VarChar(500)
   lastLoginAt     DateTime? @db.DateTime(3)

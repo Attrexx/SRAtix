@@ -2,10 +2,11 @@ import { Injectable, UnauthorizedException, Logger, OnModuleDestroy } from '@nes
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { VALID_ROLES } from '../users/users.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
+import { EmailService } from '../email/email.service';
 
 export interface JwtPayload {
   sub: string; // user ID
@@ -46,6 +47,7 @@ export class AuthService implements OnModuleDestroy {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly emailService: EmailService,
   ) {
     // Purge nonces older than 10 minutes every 5 minutes
     this.nonceCleanupInterval = setInterval(() => {
@@ -73,6 +75,7 @@ export class AuthService implements OnModuleDestroy {
     wpDisplayName?: string,
     timestamp?: string,
     nonce?: string,
+    meta?: { ip?: string; userAgent?: string },
   ): Promise<TokenPair> {
     // ── Replay protection: validate timestamp & nonce ──────────────────
     if (timestamp && nonce) {
@@ -216,6 +219,16 @@ export class AuthService implements OnModuleDestroy {
       action: AuditAction.AUTH_TOKEN_EXCHANGE,
       entity: 'auth',
       detail: { wpUserId, sourceSite, roles: sratixRoles },
+    });
+
+    this.audit.log({
+      userId,
+      action: AuditAction.AUTH_LOGIN,
+      entity: 'user',
+      entityId: userId,
+      detail: { method: 'wp_token_exchange', sourceSite },
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
     });
 
     return this.generateTokenPair({
@@ -385,6 +398,7 @@ export class AuthService implements OnModuleDestroy {
   async loginWithPassword(
     email: string,
     password: string,
+    meta?: { ip?: string; userAgent?: string },
   ): Promise<TokenPair> {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -408,6 +422,16 @@ export class AuthService implements OnModuleDestroy {
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
+    });
+
+    this.audit.log({
+      userId: user.id,
+      action: AuditAction.AUTH_LOGIN,
+      entity: 'user',
+      entityId: user.id,
+      detail: { method: 'password' },
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
     });
 
     const roles = user.roles.map((r) => r.role);
@@ -526,6 +550,139 @@ export class AuthService implements OnModuleDestroy {
    */
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
+  }
+
+  // ─── Password Reset ────────────────────────────────────────────
+
+  /**
+   * Request a password reset email.
+   * Always succeeds silently to prevent email enumeration.
+   */
+  async requestPasswordReset(
+    email: string,
+    meta?: { ip?: string; userAgent?: string },
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, active: true, passwordHash: true, displayName: true },
+    });
+
+    // Silently return for non-existent, inactive, or WP-only users
+    if (!user || !user.active || !user.passwordHash) return;
+
+    // Generate token: store SHA-256 hash in DB, send raw in email
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: hashedToken,
+        resetTokenExpiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+      },
+    });
+
+    this.audit.log({
+      userId: user.id,
+      action: AuditAction.AUTH_PASSWORD_RESET_REQUESTED,
+      entity: 'user',
+      entityId: user.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+    });
+
+    // Send reset email
+    const resetUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}`;
+    const html = this.renderPasswordResetEmail(user.displayName, resetUrl);
+    const text = `Hi ${user.displayName},\n\nYou requested a password reset for your SRAtix account.\n\nClick here to reset your password: ${resetUrl}\n\nThis link expires in 30 minutes. If you did not request this, you can safely ignore this email.\n\n— Swiss Robotics Association / SRAtix`;
+
+    this.emailService.sendNotification(email, 'Reset your SRAtix password', html, text);
+  }
+
+  /**
+   * Reset password using a valid token.
+   */
+  async resetPassword(
+    rawToken: string,
+    newPassword: string,
+    meta?: { ip?: string; userAgent?: string },
+  ): Promise<void> {
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+
+    const user = await this.prisma.user.findUnique({
+      where: { resetToken: hashedToken },
+      select: { id: true, resetTokenExpiresAt: true },
+    });
+
+    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetToken: null,
+        resetTokenExpiresAt: null,
+        tokenVersion: { increment: 1 }, // invalidate all sessions
+      },
+    });
+
+    this.audit.log({
+      userId: user.id,
+      action: AuditAction.AUTH_PASSWORD_RESET_COMPLETED,
+      entity: 'user',
+      entityId: user.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+    });
+  }
+
+  /**
+   * Render password reset email HTML.
+   */
+  private renderPasswordResetEmail(displayName: string, resetUrl: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <tr><td style="padding:32px 32px 0;text-align:center;">
+          <img src="https://tix.swiss-robotics.org/logo.png" alt="SRAtix" height="32" style="height:32px;" />
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px;">
+          <h2 style="margin:0 0 16px;font-size:20px;color:#1a1a2e;">Reset Your Password</h2>
+          <p style="margin:0 0 16px;font-size:15px;color:#4a4a68;line-height:1.5;">
+            Hi <strong>${displayName}</strong>,
+          </p>
+          <p style="margin:0 0 24px;font-size:15px;color:#4a4a68;line-height:1.5;">
+            We received a request to reset your password. Click the button below to choose a new password.
+          </p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr><td align="center">
+              <a href="${resetUrl}" style="display:inline-block;padding:12px 32px;background:#1a1a2e;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:600;">
+                Reset Password
+              </a>
+            </td></tr>
+          </table>
+          <p style="margin:24px 0 0;font-size:13px;color:#8a8aab;line-height:1.5;">
+            This link expires in <strong>30 minutes</strong>. If you did not request a password reset, you can safely ignore this email.
+          </p>
+          <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb;" />
+          <p style="margin:0;font-size:11px;color:#b0b0c0;text-align:center;">
+            Swiss Robotics Association &middot; SRAtix
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
   }
 
   // ─── Member verification (SRA + RobotX) ────────────────────────

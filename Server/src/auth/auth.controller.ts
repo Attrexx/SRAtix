@@ -82,6 +82,21 @@ class LoginDto {
   password!: string;
 }
 
+class ForgotPasswordDto {
+  @IsEmail()
+  email!: string;
+}
+
+class ResetPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+
 class SraVerifyDto {
   @IsEmail()
   email!: string;
@@ -166,6 +181,7 @@ export class AuthController {
   @RateLimit({ limit: 20, windowSec: 60 })
   async exchangeToken(
     @Body() dto: ExchangeTokenDto,
+    @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<ClientAuthResponse> {
     const tokens = await this.authService.exchangeToken(
@@ -177,6 +193,7 @@ export class AuthController {
       dto.displayName,
       dto.timestamp,
       dto.nonce,
+      { ip: req.ip, userAgent: req.headers['user-agent'] },
     );
     this.setRefreshCookie(reply, tokens.refreshToken);
     return this.buildClientResponse(tokens);
@@ -213,9 +230,13 @@ export class AuthController {
   @RateLimit({ limit: 10, windowSec: 60 })
   async login(
     @Body() dto: LoginDto,
+    @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<ClientAuthResponse> {
-    const tokens = await this.authService.loginWithPassword(dto.email, dto.password);
+    const tokens = await this.authService.loginWithPassword(dto.email, dto.password, {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
     this.setRefreshCookie(reply, tokens.refreshToken);
     return this.buildClientResponse(tokens);
   }
@@ -299,5 +320,43 @@ export class AuthController {
   @RateLimit({ limit: 20, windowSec: 60 })
   async robotxVerify(@Body() dto: RobotxVerifyDto) {
     return this.authService.verifyRobotxCode(dto.eventId, dto.code);
+  }
+
+  // ─── Password Reset ────────────────────────────────────────────
+
+  /**
+   * POST /api/auth/forgot-password
+   * Request a password reset email. Always returns success to prevent email enumeration.
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 3, windowSec: 60 })
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() req: FastifyRequest,
+  ): Promise<{ success: boolean }> {
+    await this.authService.requestPasswordReset(dto.email, {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    return { success: true };
+  }
+
+  /**
+   * POST /api/auth/reset-password
+   * Reset password using a valid token from the reset email.
+   */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 5, windowSec: 60 })
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Req() req: FastifyRequest,
+  ): Promise<{ success: boolean }> {
+    await this.authService.resetPassword(dto.token, dto.password, {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+    return { success: true };
   }
 }

@@ -295,6 +295,90 @@ export class UsersService {
   }
 
   /**
+   * Get user stats for the Super Admin panel.
+   */
+  async getStats(): Promise<{
+    activeUsers: Array<{ id: string; displayName: string; email: string; roles: string[] }>;
+    loginHistory: Array<{
+      id: string;
+      userId: string;
+      displayName: string;
+      roles: string[];
+      ip: string | null;
+      userAgent: string | null;
+      timestamp: Date;
+    }>;
+    neverLoggedInCount: number;
+  }> {
+    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+    const [activeUsersRaw, loginHistoryRaw, neverLoggedInCount] = await Promise.all([
+      // Users active in the last 15 minutes (lastLoginAt updated on token refresh)
+      this.prisma.user.findMany({
+        where: {
+          active: true,
+          lastLoginAt: { gte: fifteenMinAgo },
+        },
+        include: { roles: true },
+        orderBy: { lastLoginAt: 'desc' },
+      }),
+      // Last 50 login events from audit log
+      this.prisma.auditLog.findMany({
+        where: { action: 'auth.login' },
+        orderBy: { timestamp: 'desc' },
+        take: 50,
+        include: {
+          user: {
+            select: { displayName: true },
+            // Also get roles via a separate include
+          },
+        },
+      }),
+      // Count of active users who never logged in
+      this.prisma.user.count({
+        where: {
+          active: true,
+          lastLoginAt: null,
+        },
+      }),
+    ]);
+
+    const activeUsers = activeUsersRaw.map((u) => ({
+      id: u.id,
+      displayName: u.displayName,
+      email: u.email,
+      roles: u.roles.map((r) => r.role),
+    }));
+
+    // For login history, we need user roles too — fetch them in batch
+    const userIds = [...new Set(loginHistoryRaw.filter((l) => l.userId).map((l) => l.userId!))];
+    const userRolesMap = new Map<string, string[]>();
+    if (userIds.length > 0) {
+      const userRoles = await this.prisma.userRole.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, role: true },
+      });
+      for (const ur of userRoles) {
+        const existing = userRolesMap.get(ur.userId) ?? [];
+        existing.push(ur.role);
+        userRolesMap.set(ur.userId, existing);
+      }
+    }
+
+    const loginHistory = loginHistoryRaw.map((entry) => ({
+      id: entry.id,
+      userId: entry.userId ?? '',
+      displayName: entry.user?.displayName ?? 'Unknown',
+      roles: entry.userId ? (userRolesMap.get(entry.userId) ?? []) : [],
+      ip: entry.ip,
+      userAgent: entry.userAgent,
+      timestamp: entry.timestamp,
+    }));
+
+    return { activeUsers, loginHistory, neverLoggedInCount };
+  }
+
+  /**
    * Get available SRAtix roles for the role selector UI.
    * Values are sourced from the VALID_ROLES constant — the single source of truth.
    */

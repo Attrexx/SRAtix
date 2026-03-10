@@ -102,6 +102,16 @@ export class UsersController {
   }
 
   /**
+   * GET /api/users/stats
+   * Get user statistics (Super Admin only).
+   */
+  @Get('stats')
+  @Roles('super_admin')
+  async getStats() {
+    return this.usersService.getStats();
+  }
+
+  /**
    * GET /api/users/:id
    * Get a single user (Super Admin / Admin).
    */

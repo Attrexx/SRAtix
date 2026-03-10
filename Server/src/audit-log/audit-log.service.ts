@@ -38,9 +38,12 @@ export const AuditAction = {
   ATTENDEE_DELETED: 'attendee.deleted',
 
   // Auth
+  AUTH_LOGIN: 'auth.login',
   AUTH_TOKEN_EXCHANGE: 'auth.token_exchange',
   AUTH_TOKEN_REFRESH: 'auth.token_refresh',
   AUTH_FAILED: 'auth.failed',
+  AUTH_PASSWORD_RESET_REQUESTED: 'auth.password_reset_requested',
+  AUTH_PASSWORD_RESET_COMPLETED: 'auth.password_reset_completed',
 
   // Settings
   SETTING_UPDATED: 'setting.updated',
