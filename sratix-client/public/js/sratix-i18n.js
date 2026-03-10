@@ -135,7 +135,7 @@ const sratixI18n = (function () {
       'exhibitorForm.companyNote':     'After purchasing your booth, you\'ll have access to the <strong>Exhibitor Portal</strong> to provide richer details, upload media, select your booth, and manage your team.',
       'exhibitorForm.staffTitle':      'Booth Staff Passes',
       'exhibitorForm.staffSubtitle':   'Your ticket includes up to {max} staff passes.',
-      'exhibitorForm.staffOptionalNote': 'You can add staff now or manage them later from your Exhibitor Portal.',
+      'exhibitorForm.staffOptionalNote': 'You can add staff now on the previous page or manage them later from your Exhibitor Portal.',
       'exhibitorForm.staffCount':      'Number of staff to add now',
       'exhibitorForm.staffMax':        'Maximum {max} staff included',
       'exhibitorForm.skipStaff':       'Skip — I\'ll add staff later',
