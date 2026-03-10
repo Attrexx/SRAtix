@@ -37,7 +37,7 @@ export class SseController {
    * Unified stream — all channels for an event.
    */
   @Sse(':eventId')
-  @Roles('event_admin', 'super_admin', 'staff')
+  @Roles('event_admin', 'admin', 'super_admin', 'staff')
   streamAll(@Param('eventId') eventId: string): Observable<MessageEvent> {
     this.logger.log(`SSE unified stream opened for event ${eventId}`);
     return this.sse.subscribeAll(eventId);
@@ -47,7 +47,7 @@ export class SseController {
    * Check-in feed — live check-in events.
    */
   @Sse(':eventId/check-ins')
-  @Roles('event_admin', 'super_admin', 'staff', 'gate_staff', 'scanner')
+  @Roles('event_admin', 'admin', 'super_admin', 'staff', 'gate_staff', 'scanner')
   streamCheckIns(@Param('eventId') eventId: string): Observable<MessageEvent> {
     this.logger.log(`SSE check-in stream opened for event ${eventId}`);
     return this.sse.subscribe(eventId, 'check-ins');
@@ -57,7 +57,7 @@ export class SseController {
    * Stats stream — capacity, revenue, registration velocity.
    */
   @Sse(':eventId/stats')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   streamStats(@Param('eventId') eventId: string): Observable<MessageEvent> {
     this.logger.log(`SSE stats stream opened for event ${eventId}`);
     return this.sse.subscribe(eventId, 'stats');
@@ -67,7 +67,7 @@ export class SseController {
    * Orders stream — new order notifications.
    */
   @Sse(':eventId/orders')
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   streamOrders(@Param('eventId') eventId: string): Observable<MessageEvent> {
     this.logger.log(`SSE orders stream opened for event ${eventId}`);
     return this.sse.subscribe(eventId, 'orders');
@@ -77,7 +77,7 @@ export class SseController {
    * Alerts stream — system alerts and capacity warnings.
    */
   @Sse(':eventId/alerts')
-  @Roles('event_admin', 'super_admin', 'staff')
+  @Roles('event_admin', 'admin', 'super_admin', 'staff')
   streamAlerts(@Param('eventId') eventId: string): Observable<MessageEvent> {
     this.logger.log(`SSE alerts stream opened for event ${eventId}`);
     return this.sse.subscribe(eventId, 'alerts');

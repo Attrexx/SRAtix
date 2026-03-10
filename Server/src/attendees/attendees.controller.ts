@@ -84,19 +84,19 @@ export class AttendeesController {
   ) {}
 
   @Get('event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findByEvent(@Param('eventId') eventId: string) {
     return this.attendeesService.findByEvent(eventId);
   }
 
   @Get(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('id') id: string) {
     return this.attendeesService.findOne(id);
   }
 
   @Get('event/:eventId/lookup')
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   findByEmail(
     @Param('eventId') eventId: string,
     @Query('email') email: string,
@@ -105,7 +105,7 @@ export class AttendeesController {
   }
 
   @Post()
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   async create(
     @Body() dto: CreateAttendeeDto,
     @CurrentUser() user: JwtPayload,
@@ -121,7 +121,7 @@ export class AttendeesController {
   }
 
   @Get(':id/submissions/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findSubmissions(
     @Param('id') attendeeId: string,
     @Param('eventId') eventId: string,
@@ -130,7 +130,7 @@ export class AttendeesController {
   }
 
   @Patch(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateAttendeeDto,

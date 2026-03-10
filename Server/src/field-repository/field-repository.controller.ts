@@ -33,7 +33,7 @@ export class FieldRepositoryController {
    */
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findBuildableFields() {
     return this.fieldRepo.findBuildableFields();
   }
@@ -44,7 +44,7 @@ export class FieldRepositoryController {
    */
   @Get('all')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   findAll(
     @Query('group') group?: string,
     @Query('isSystem') isSystem?: string,
@@ -61,7 +61,7 @@ export class FieldRepositoryController {
    */
   @Get('groups')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   getGroups() {
     return this.fieldRepo.getGroups();
   }
@@ -72,7 +72,7 @@ export class FieldRepositoryController {
    */
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('id') id: string) {
     return this.fieldRepo.findOne(id);
   }
@@ -83,7 +83,7 @@ export class FieldRepositoryController {
    */
   @Get('slug/:slug')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findBySlug(@Param('slug') slug: string) {
     return this.fieldRepo.findBySlug(slug);
   }
@@ -96,7 +96,7 @@ export class FieldRepositoryController {
    */
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   create(@Body() dto: Record<string, unknown>) {
     return this.fieldRepo.create(dto as any);
   }
@@ -107,7 +107,7 @@ export class FieldRepositoryController {
    */
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   update(@Param('id') id: string, @Body() dto: Record<string, unknown>) {
     return this.fieldRepo.update(id, dto as any);
   }
@@ -118,7 +118,7 @@ export class FieldRepositoryController {
    */
   @Post('seed')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   seedDefaults() {
     return this.fieldRepo.seedDefaults();
   }

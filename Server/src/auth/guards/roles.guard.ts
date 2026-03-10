@@ -29,8 +29,9 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('No roles assigned');
     }
 
-    // super_admin bypasses all role checks
-    if (user.roles.includes('super_admin')) {
+    // super_admin and admin bypass all route-level role checks
+    // (business logic in controllers still enforces hierarchy for admin)
+    if (user.roles.includes('super_admin') || user.roles.includes('admin')) {
       return true;
     }
 

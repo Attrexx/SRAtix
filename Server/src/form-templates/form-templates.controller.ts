@@ -30,7 +30,7 @@ export class FormTemplatesController {
    * List all templates for the organization.
    */
   @Get()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findAll(
     @Param('orgId') orgId: string,
     @Query('category') category?: string,
@@ -48,7 +48,7 @@ export class FormTemplatesController {
    * Restricted to super_admin.
    */
   @Post('seed')
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   seed(
     @Param('orgId') orgId: string,
     @Body('force') force?: boolean,
@@ -61,7 +61,7 @@ export class FormTemplatesController {
    * Get a single template.
    */
   @Get(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.formTemplates.findOne(id, orgId);
   }
@@ -71,7 +71,7 @@ export class FormTemplatesController {
    * Create a new template.
    */
   @Post()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   create(
     @Param('orgId') orgId: string,
     @Body() dto: {
@@ -95,7 +95,7 @@ export class FormTemplatesController {
    * Update a template.
    */
   @Patch(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   update(
     @Param('orgId') orgId: string,
     @Param('id') id: string,
@@ -109,7 +109,7 @@ export class FormTemplatesController {
    * Delete a template.
    */
   @Delete(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   remove(@Param('orgId') orgId: string, @Param('id') id: string) {
     return this.formTemplates.delete(id, orgId);
   }
@@ -119,7 +119,7 @@ export class FormTemplatesController {
    * Duplicate a template with a new name.
    */
   @Post(':id/duplicate')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   duplicate(
     @Param('orgId') orgId: string,
     @Param('id') id: string,

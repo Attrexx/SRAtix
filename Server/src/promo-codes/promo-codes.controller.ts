@@ -117,7 +117,7 @@ export class PromoCodesController {
    * List all promo codes for an event.
    */
   @Get('event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findByEvent(@Param('eventId') eventId: string) {
     return this.promoCodesService.findByEvent(eventId);
   }
@@ -127,7 +127,7 @@ export class PromoCodesController {
    * Get a specific promo code.
    */
   @Get(':id/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -140,7 +140,7 @@ export class PromoCodesController {
    * Create a new promo code for an event.
    */
   @Post()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   create(@Body() dto: CreatePromoCodeDto) {
     return this.promoCodesService.create({
       ...dto,
@@ -154,7 +154,7 @@ export class PromoCodesController {
    * Update a promo code.
    */
   @Patch(':id/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   update(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -172,7 +172,7 @@ export class PromoCodesController {
    * Deactivate a promo code.
    */
   @Patch(':id/event/:eventId/deactivate')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   deactivate(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -186,7 +186,7 @@ export class PromoCodesController {
    * Used by the checkout flow before payment processing.
    */
   @Post('validate/event/:eventId')
-  @Roles('event_admin', 'super_admin', 'box_office', 'attendee')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office', 'attendee')
   validate(
     @Param('eventId') eventId: string,
     @Body() dto: ValidatePromoCodeDto,

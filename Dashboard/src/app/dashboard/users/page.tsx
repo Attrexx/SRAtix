@@ -39,7 +39,7 @@ export default function UsersPage() {
     loadData();
   }, [loadData]);
 
-  if (!hasRole('super_admin')) {
+  if (!hasRole('super_admin') && !hasRole('admin')) {
     return (
       <div className="py-16 text-center">
         <span className="opacity-30" style={{ color: 'var(--color-text)' }}><Icons.Lock size={48} /></span>
@@ -187,6 +187,13 @@ function UserRow({
   onToggleActive: () => void;
 }) {
   const { t } = useI18n();
+  const { hasRole } = useAuth();
+
+  // Hierarchy-based button visibility: admin users cannot manage same-rank or higher
+  const isActorAdmin = hasRole('admin') && !hasRole('super_admin');
+  const targetHasHighRank = user.roles.some((r) => r === 'super_admin' || r === 'admin');
+  const canManage = !isActorAdmin || !targetHasHighRank;
+
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
       <td className="px-4 py-3">
@@ -206,8 +213,8 @@ function UserRow({
               key={role}
               className="rounded-full px-2 py-0.5 text-xs font-medium"
               style={{
-                background: role === 'super_admin' ? 'var(--color-primary-light)' : 'var(--color-bg-muted)',
-                color: role === 'super_admin' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                background: role === 'super_admin' || role === 'admin' ? 'var(--color-primary-light)' : 'var(--color-bg-muted)',
+                color: role === 'super_admin' || role === 'admin' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               }}
             >
               {role.replace(/_/g, ' ')}
@@ -251,28 +258,32 @@ function UserRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
-          <button
-            onClick={onEdit}
-            className="rounded px-2 py-1 text-xs transition-colors"
-            style={{ color: 'var(--color-primary)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-primary-light)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            {t('common.edit')}
-          </button>
-          <button
-            onClick={onToggleActive}
-            className="rounded px-2 py-1 text-xs transition-colors"
-            style={{ color: user.active ? 'var(--color-danger)' : 'var(--color-success, #16a34a)' }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = user.active
-                ? 'var(--color-danger-light)'
-                : 'var(--color-success-light, #dcfce7)')
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            {user.active ? t('common.deactivate') : t('common.activate')}
-          </button>
+          {canManage && (
+            <button
+              onClick={onEdit}
+              className="rounded px-2 py-1 text-xs transition-colors"
+              style={{ color: 'var(--color-primary)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-primary-light)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              {t('common.edit')}
+            </button>
+          )}
+          {canManage && (
+            <button
+              onClick={onToggleActive}
+              className="rounded px-2 py-1 text-xs transition-colors"
+              style={{ color: user.active ? 'var(--color-danger)' : 'var(--color-success, #16a34a)' }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = user.active
+                  ? 'var(--color-danger-light)'
+                  : 'var(--color-success-light, #dcfce7)')
+              }
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              {user.active ? t('common.deactivate') : t('common.activate')}
+            </button>
+          )}
         </div>
       </td>
     </tr>

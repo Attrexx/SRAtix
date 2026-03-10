@@ -76,25 +76,25 @@ export class OrdersController {
   ) {}
 
   @Get('event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findByEvent(@Param('eventId') eventId: string) {
     return this.ordersService.findByEvent(eventId);
   }
 
   @Get(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('id') id: string) {
     return this.ordersService.findOne(id);
   }
 
   @Get(':id/details')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOneWithDetails(@Param('id') id: string) {
     return this.ordersService.findOneWithDetails(id);
   }
 
   @Post()
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   create(
     @Body() dto: CreateOrderDto,
     @CurrentUser() user: { orgId: string },
@@ -106,7 +106,7 @@ export class OrdersController {
   }
 
   @Patch(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateOrderDto,
@@ -115,7 +115,7 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateOrderStatusDto,
@@ -124,19 +124,19 @@ export class OrdersController {
   }
 
   @Patch(':id/cancel')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   cancel(@Param('id') id: string) {
     return this.ordersService.cancel(id);
   }
 
   @Delete(':id')
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   delete(@Param('id') id: string) {
     return this.ordersService.delete(id);
   }
 
   @Post(':id/resend-gift-notifications')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async resendGiftNotifications(@Param('id') id: string) {
     const order = await this.ordersService.findOne(id);
     const meta = (order.meta as Record<string, unknown>) ?? {};

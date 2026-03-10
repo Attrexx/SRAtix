@@ -25,7 +25,7 @@ export class InvoicesController {
    * Generate and download an invoice PDF for a paid order.
    */
   @Get('order/:orderId')
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   async getInvoice(
     @Param('orderId') orderId: string,
     @Res() reply: FastifyReply,
@@ -45,7 +45,7 @@ export class InvoicesController {
    * Inline preview (Content-Disposition: inline) — opens in browser PDF viewer.
    */
   @Get('order/:orderId/preview')
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   async previewInvoice(
     @Param('orderId') orderId: string,
     @Res() reply: FastifyReply,

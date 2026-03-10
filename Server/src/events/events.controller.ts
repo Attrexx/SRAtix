@@ -44,7 +44,7 @@ export class EventsController {
   }
 
   @Get()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findAll(@CurrentUser() user: JwtPayload) {
     // Super admins see all events across all orgs
     if (this.isSuperAdmin(user)) {
@@ -54,7 +54,7 @@ export class EventsController {
   }
 
   @Get(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     // Super admins can view any event
     if (this.isSuperAdmin(user)) {
@@ -64,7 +64,7 @@ export class EventsController {
   }
 
   @Post()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async create(@Body() dto: CreateEventDto, @CurrentUser() user: JwtPayload) {
     // Resolve the orgId — super admins without an org get a default one
     let orgId = user.orgId;
@@ -87,7 +87,7 @@ export class EventsController {
   }
 
   @Patch(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateEventDto,
@@ -178,7 +178,7 @@ export class EventsController {
    * Saves URL in Event.meta.logoIconUrl or Event.meta.logoLandscapeUrl.
    */
   @Post(':id/logo')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async uploadLogo(
     @Param('id') id: string,
     @Req() req: FastifyRequest,
@@ -262,7 +262,7 @@ export class EventsController {
    * Toggle maintenance mode on/off. Dispatches webhook + SSE alert.
    */
   @Patch(':id/maintenance')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async toggleMaintenance(
     @Param('id') id: string,
     @Body() dto: ToggleMaintenanceDto,

@@ -27,7 +27,7 @@ export class ExportController {
    * Download attendee list as CSV.
    */
   @Get('attendees/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportAttendees(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -41,7 +41,7 @@ export class ExportController {
    * Download orders list as CSV.
    */
   @Get('orders/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportOrders(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -55,7 +55,7 @@ export class ExportController {
    * Download check-ins log as CSV.
    */
   @Get('check-ins/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportCheckIns(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -69,7 +69,7 @@ export class ExportController {
    * Download form submissions as CSV.
    */
   @Get('submissions/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportSubmissions(
     @Param('eventId') eventId: string,
     @Query('formSchemaId') formSchemaId: string,
@@ -106,7 +106,7 @@ export class ExportController {
    * Download attendee list as Excel.
    */
   @Get('attendees/event/:eventId/xlsx')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportAttendeesXlsx(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -120,7 +120,7 @@ export class ExportController {
    * Download orders list as Excel.
    */
   @Get('orders/event/:eventId/xlsx')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportOrdersXlsx(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -134,7 +134,7 @@ export class ExportController {
    * Download check-ins log as Excel.
    */
   @Get('check-ins/event/:eventId/xlsx')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportCheckInsXlsx(
     @Param('eventId') eventId: string,
     @Res() reply: FastifyReply,
@@ -148,7 +148,7 @@ export class ExportController {
    * Download form submissions as Excel.
    */
   @Get('submissions/event/:eventId/xlsx')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async exportSubmissionsXlsx(
     @Param('eventId') eventId: string,
     @Query('formSchemaId') formSchemaId: string,

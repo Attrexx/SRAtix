@@ -16,6 +16,7 @@ import * as bcrypt from 'bcrypt';
  */
 export const VALID_ROLES = [
   'super_admin',         // Platform owner — full access (global scope)
+  'admin',               // Restricted platform admin — no settings, no event deletion, limited user mgmt
   'organization_admin',  // Full org admin (org-scoped)
   'event_admin',         // Manages events, attendees, check-ins (org-scoped)
   'staff',               // Check-in ops + attendee assistance (org-scoped)
@@ -28,6 +29,35 @@ export const VALID_ROLES = [
 ] as const;
 
 export type SratixRole = typeof VALID_ROLES[number];
+
+/**
+ * Role hierarchy levels — lower number = higher rank.
+ * Used for user-management authorization (admins cannot manage same-rank or higher users).
+ */
+export const ROLE_HIERARCHY: Record<string, number> = {
+  super_admin: 0,
+  admin: 1,
+  organization_admin: 2,
+  event_admin: 2,
+  staff: 3,
+  scanner: 3,
+  volunteer: 3,
+  exhibitor: 3,
+  sponsor: 3,
+  partner: 3,
+  attendee: 4,
+};
+
+/** Get the hierarchy level for a single role (unknown roles → 99). */
+export function getRoleLevel(role: string): number {
+  return ROLE_HIERARCHY[role] ?? 99;
+}
+
+/** Get the highest rank (lowest numeric level) from an array of roles. */
+export function getHighestRoleLevel(roles: string[]): number {
+  if (roles.length === 0) return 99;
+  return Math.min(...roles.map(getRoleLevel));
+}
 
 /** Validate a set of role strings and throw 400 if any are unknown. */
 function validateRoles(roles: string[]): void {
@@ -271,6 +301,7 @@ export class UsersService {
   getAvailableRoles() {
     const meta: Record<string, { label: string; description: string }> = {
       super_admin:         { label: 'Super Admin',         description: 'Full platform access' },
+      admin:               { label: 'Admin',               description: 'Platform admin (no settings, limited user management)' },
       organization_admin:  { label: 'Organization Admin',  description: 'Manage org exhibitor/sponsor data' },
       event_admin:         { label: 'Event Admin',         description: 'Manage events, attendees, check-ins' },
       staff:               { label: 'Staff',               description: 'Check-in ops, attendee assistance' },

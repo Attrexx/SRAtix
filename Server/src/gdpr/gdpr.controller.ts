@@ -30,7 +30,7 @@ export class GdprController {
    * Data Subject Access Request — returns all data held about an attendee.
    */
   @Get('access/:attendeeId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   @RateLimit({ limit: 10, windowSec: 60 })
   getAttendeeData(
     @Param('attendeeId') attendeeId: string,
@@ -45,7 +45,7 @@ export class GdprController {
    * Financial records are preserved per Swiss law (10 years).
    */
   @Delete('erasure/:attendeeId')
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   @RateLimit({ limit: 5, windowSec: 60 })
   eraseAttendee(
     @Param('attendeeId') attendeeId: string,
@@ -65,7 +65,7 @@ export class GdprController {
    * Retrieve all consent records for an attendee.
    */
   @Get('consent/:attendeeId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   getConsentRecords(@Param('attendeeId') attendeeId: string) {
     return this.gdprService.getConsentRecords(attendeeId);
   }
@@ -75,7 +75,7 @@ export class GdprController {
    * Find attendees eligible for data purge based on retention policy.
    */
   @Get('retention/event/:eventId')
-  @Roles('super_admin')
+  @Roles('super_admin', 'admin')
   findExpiredAttendees(
     @Param('eventId') eventId: string,
     @Query('months') months?: string,

@@ -70,7 +70,7 @@ export class FormsController {
    * List all form schemas for an event.
    */
   @Get('event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findSchemasByEvent(@Param('eventId') eventId: string) {
     return this.formsService.findSchemasByEvent(eventId);
   }
@@ -80,7 +80,7 @@ export class FormsController {
    * Get a specific form schema by ID.
    */
   @Get(':id/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findSchema(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -93,7 +93,7 @@ export class FormsController {
    * Create a new form schema (or new version if name already exists).
    */
   @Post()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   createSchema(@Body() dto: CreateFormSchemaDto) {
     return this.formsService.createSchema(dto);
   }
@@ -103,7 +103,7 @@ export class FormsController {
    * Deactivate a form schema (doesn't delete — submissions reference it).
    */
   @Patch(':id/event/:eventId/deactivate')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   deactivateSchema(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -116,7 +116,7 @@ export class FormsController {
    * Update a form schema's name and/or fields.
    */
   @Patch(':id/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   updateSchema(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -130,7 +130,7 @@ export class FormsController {
    * Delete a form schema (only if no submissions exist).
    */
   @Delete(':id/event/:eventId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   deleteSchema(
     @Param('id') id: string,
     @Param('eventId') eventId: string,
@@ -143,7 +143,7 @@ export class FormsController {
    * List form submissions for an event (optionally filtered by schema).
    */
   @Get('event/:eventId/submissions')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findSubmissions(
     @Param('eventId') eventId: string,
     @Query('formSchemaId') formSchemaId?: string,
@@ -162,7 +162,7 @@ export class FormsController {
    * Create a form submission (attendee answers).
    */
   @Post('submit')
-  @Roles('event_admin', 'super_admin', 'box_office')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
   createSubmission(@Body() dto: SubmitFormDto) {
     return this.formsService.createSubmission(dto);
   }

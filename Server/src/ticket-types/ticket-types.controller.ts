@@ -34,7 +34,7 @@ export class TicketTypesController {
    * Static metadata for building ticket forms: tiers, categories, mappings.
    */
   @Get('meta')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   getMeta() {
     return {
       categories: TICKET_CATEGORIES,
@@ -47,19 +47,19 @@ export class TicketTypesController {
   }
 
   @Get()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findAll(@Param('eventId') eventId: string) {
     return this.ticketTypesService.findByEvent(eventId);
   }
 
   @Get(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findOne(@Param('eventId') eventId: string, @Param('id') id: string) {
     return this.ticketTypesService.findOne(id, eventId);
   }
 
   @Post()
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   create(
     @Param('eventId') eventId: string,
     @Body() dto: {
@@ -99,7 +99,7 @@ export class TicketTypesController {
   }
 
   @Put('reorder')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async reorder(
     @Param('eventId') eventId: string,
     @Body() dto: { orderedIds: string[] },
@@ -109,7 +109,7 @@ export class TicketTypesController {
   }
 
   @Patch(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   update(
     @Param('eventId') eventId: string,
     @Param('id') id: string,
@@ -121,7 +121,7 @@ export class TicketTypesController {
   // ─── Pricing Variant CRUD ─────────────────────────────────────
 
   @Get(':id/variants')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   findVariants(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,
@@ -130,7 +130,7 @@ export class TicketTypesController {
   }
 
   @Post(':id/variants')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   createVariant(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,
@@ -158,7 +158,7 @@ export class TicketTypesController {
   }
 
   @Patch(':id/variants/:variantId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   updateVariant(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,
@@ -174,7 +174,7 @@ export class TicketTypesController {
   }
 
   @Delete(':id')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   remove(
     @Param('eventId') eventId: string,
     @Param('id') id: string,
@@ -183,7 +183,7 @@ export class TicketTypesController {
   }
 
   @Delete(':id/variants/:variantId')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   deleteVariant(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,
@@ -199,7 +199,7 @@ export class TicketTypesController {
   // ─── SRA Discount CRUD ─────────────────────────────────────────
 
   @Get(':id/sra-discounts')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   getSraDiscounts(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,
@@ -208,7 +208,7 @@ export class TicketTypesController {
   }
 
   @Put(':id/sra-discounts')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   setSraDiscounts(
     @Param('eventId') eventId: string,
     @Param('id') ticketTypeId: string,

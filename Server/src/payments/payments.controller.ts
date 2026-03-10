@@ -58,7 +58,7 @@ export class PaymentsController {
    * Returns the Checkout URL for redirect.
    */
   @Post('checkout')
-  @Roles('event_admin', 'super_admin', 'box_office', 'attendee')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office', 'attendee')
   async createCheckout(
     @Body() dto: CreateCheckoutDto,
     @CurrentUser() user: JwtPayload,
@@ -147,7 +147,7 @@ export class PaymentsController {
    * Check payment status of an order via its Stripe session.
    */
   @Get('status/:orderId')
-  @Roles('event_admin', 'super_admin', 'box_office', 'attendee')
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office', 'attendee')
   async getStatus(@Param('orderId') orderId: string) {
     const order = await this.orders.findOne(orderId);
 
@@ -171,7 +171,7 @@ export class PaymentsController {
    * Issue a refund for a paid order.
    */
   @Post('refund')
-  @Roles('event_admin', 'super_admin')
+  @Roles('event_admin', 'admin', 'super_admin')
   async refund(@Body() dto: RefundDto) {
     const order = await this.orders.findOne(dto.orderId);
 
