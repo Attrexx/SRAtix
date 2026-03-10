@@ -539,9 +539,9 @@ export const api = {
     let token = getToken();
     if (!token) token = await refreshAccessToken();
     const form = new FormData();
-    form.append('file', file);
     form.append('type', type);
-    const res = await fetch(`${API_BASE}/api/events/${eventId}/logo`, {
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/api/events/${eventId}/logo?type=${type}`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: form,

@@ -194,7 +194,12 @@ export class EventsController {
       throw new BadRequestException('No file uploaded');
     }
 
-    const logoType = (data.fields?.type as any)?.value as string | undefined;
+    // Accept type from form field OR query param (Fastify streams multipart
+    // sequentially, so fields appended after the file may not be available yet).
+    const logoType =
+      ((data.fields?.type as any)?.value as string | undefined) ??
+      ((req.query as Record<string, string>)?.type) ??
+      'icon';
     if (logoType !== 'icon' && logoType !== 'landscape') {
       throw new BadRequestException('Field "type" must be "icon" or "landscape"');
     }
