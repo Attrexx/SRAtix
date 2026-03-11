@@ -454,6 +454,8 @@
   "forms.creating": "Creazione…",
   "forms.formName": "Nome del modulo",
   "forms.formNamePlaceholder": "es. Registrazione generale",
+  "forms.maxStaff": "Pass staff max.",
+  "forms.maxStaffHint": "Pass staff inclusi per biglietti espositori. 0 = passaggio staff disabilitato.",
   "forms.fields": "Campi",
   "forms.addField": "Aggiungi campo",
   "forms.noFieldsYet": "Nessun campo. Clicca su «Aggiungi campo» per iniziare.",

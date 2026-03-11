@@ -454,6 +454,8 @@
   "forms.creating": "Wird erstellt…",
   "forms.formName": "Formularname",
   "forms.formNamePlaceholder": "z.B. Allgemeine Anmeldung",
+  "forms.maxStaff": "Max. Mitarbeiter-Pässe",
+  "forms.maxStaffHint": "Enthaltene Mitarbeiter-Pässe für Aussteller-Tickets. 0 = Mitarbeiter-Schritt deaktiviert.",
   "forms.fields": "Felder",
   "forms.addField": "Feld hinzufügen",
   "forms.noFieldsYet": "Noch keine Felder. Klicken Sie auf «Feld hinzufügen».",

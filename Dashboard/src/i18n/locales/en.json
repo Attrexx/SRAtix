@@ -454,6 +454,8 @@
   "forms.creating": "Creating...",
   "forms.formName": "Form Name",
   "forms.formNamePlaceholder": "e.g. General Registration",
+  "forms.maxStaff": "Max Staff Passes",
+  "forms.maxStaffHint": "Included staff passes for exhibitor tickets. 0 = staff step disabled.",
   "forms.fields": "Fields",
   "forms.addField": "Add Field",
   "forms.noFieldsYet": "No fields yet. Click \"Add Field\" to start.",

@@ -454,6 +454,8 @@
   "forms.creating": "Création…",
   "forms.formName": "Nom du formulaire",
   "forms.formNamePlaceholder": "ex. Inscription générale",
+  "forms.maxStaff": "Passes staff max.",
+  "forms.maxStaffHint": "Passes staff inclus pour billets exposant. 0 = étape staff désactivée.",
   "forms.fields": "Champs",
   "forms.addField": "Ajouter un champ",
   "forms.noFieldsYet": "Aucun champ. Cliquez sur « Ajouter un champ » pour commencer.",

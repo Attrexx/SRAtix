@@ -454,6 +454,8 @@
   "forms.creating": "建立中…",
   "forms.formName": "表單名稱",
   "forms.formNamePlaceholder": "例如：一般報名",
+  "forms.maxStaff": "最大工作人員通行證",
+  "forms.maxStaffHint": "展商票包含的工作人員通行證數量。0 = 停用工作人員步驟。",
   "forms.fields": "欄位",
   "forms.addField": "新增欄位",
   "forms.noFieldsYet": "尚無欄位。點擊「新增欄位」開始。",
