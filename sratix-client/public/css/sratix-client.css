@@ -49,6 +49,32 @@
 	transition: none;
 }
 
+.sratix-page-wrap button:hover,
+.sratix-page-wrap button:focus,
+.sratix-page-wrap button:active,
+.sratix-page-wrap [type="button"]:hover,
+.sratix-page-wrap [type="button"]:focus,
+.sratix-page-wrap [type="button"]:active,
+.sratix-page-wrap [type="submit"]:hover,
+.sratix-page-wrap [type="submit"]:focus,
+.sratix-page-wrap [type="submit"]:active,
+.sratix-modal button:hover,
+.sratix-modal button:focus,
+.sratix-modal button:active,
+.sratix-modal [type="button"]:hover,
+.sratix-modal [type="button"]:focus,
+.sratix-modal [type="button"]:active,
+.sratix-modal [type="submit"]:hover,
+.sratix-modal [type="submit"]:focus,
+.sratix-modal [type="submit"]:active {
+	outline: none;
+	box-shadow: none;
+	background: inherit;
+	color: inherit;
+	border: inherit;
+	text-decoration: none;
+}
+
 /* ── Full-bleed page wrapper ── */
 .sratix-page-wrap {
 	position: relative;
