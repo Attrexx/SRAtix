@@ -29,6 +29,7 @@ import { FieldRepositoryModule } from './field-repository/field-repository.modul
 import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SystemModule } from './system/system.module';
+import { ContactModule } from './contact/contact.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
@@ -116,6 +117,9 @@ import { join } from 'path';
 
     // System — rebuild notifications, global SSE
     SystemModule,
+
+    // Contact — public lead form (reCAPTCHA-protected)
+    ContactModule,
   ],
   providers: [
     // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
