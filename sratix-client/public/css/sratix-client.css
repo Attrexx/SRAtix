@@ -19,13 +19,14 @@
 /* ── Theme-override umbrella reset ──
    WordPress themes aggressively style button / [type=button] / [type=submit].
    This blanket reset neutralises those defaults inside any SRAtix container
-   so that our own .sratix-btn / .sratix-qty-btn classes take effect cleanly. */
-.sratix-page-wrap button,
-.sratix-page-wrap [type="button"],
-.sratix-page-wrap [type="submit"],
-.sratix-modal button,
-.sratix-modal [type="button"],
-.sratix-modal [type="submit"] {
+   so that our own .sratix-btn / .sratix-qty-btn classes take effect cleanly.
+   :where() gives zero specificity so any component class overrides this. */
+:where(.sratix-page-wrap) button,
+:where(.sratix-page-wrap) [type="button"],
+:where(.sratix-page-wrap) [type="submit"],
+:where(.sratix-modal) button,
+:where(.sratix-modal) [type="button"],
+:where(.sratix-modal) [type="submit"] {
 	all: unset;
 	box-sizing: border-box;
 	display: inline-flex;
@@ -49,24 +50,24 @@
 	transition: none;
 }
 
-.sratix-page-wrap button:hover,
-.sratix-page-wrap button:focus,
-.sratix-page-wrap button:active,
-.sratix-page-wrap [type="button"]:hover,
-.sratix-page-wrap [type="button"]:focus,
-.sratix-page-wrap [type="button"]:active,
-.sratix-page-wrap [type="submit"]:hover,
-.sratix-page-wrap [type="submit"]:focus,
-.sratix-page-wrap [type="submit"]:active,
-.sratix-modal button:hover,
-.sratix-modal button:focus,
-.sratix-modal button:active,
-.sratix-modal [type="button"]:hover,
-.sratix-modal [type="button"]:focus,
-.sratix-modal [type="button"]:active,
-.sratix-modal [type="submit"]:hover,
-.sratix-modal [type="submit"]:focus,
-.sratix-modal [type="submit"]:active {
+:where(.sratix-page-wrap) button:hover,
+:where(.sratix-page-wrap) button:focus,
+:where(.sratix-page-wrap) button:active,
+:where(.sratix-page-wrap) [type="button"]:hover,
+:where(.sratix-page-wrap) [type="button"]:focus,
+:where(.sratix-page-wrap) [type="button"]:active,
+:where(.sratix-page-wrap) [type="submit"]:hover,
+:where(.sratix-page-wrap) [type="submit"]:focus,
+:where(.sratix-page-wrap) [type="submit"]:active,
+:where(.sratix-modal) button:hover,
+:where(.sratix-modal) button:focus,
+:where(.sratix-modal) button:active,
+:where(.sratix-modal) [type="button"]:hover,
+:where(.sratix-modal) [type="button"]:focus,
+:where(.sratix-modal) [type="button"]:active,
+:where(.sratix-modal) [type="submit"]:hover,
+:where(.sratix-modal) [type="submit"]:focus,
+:where(.sratix-modal) [type="submit"]:active {
 	outline: none;
 	box-shadow: none;
 	text-decoration: none;
