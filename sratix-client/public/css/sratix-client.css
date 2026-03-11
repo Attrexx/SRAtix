@@ -277,33 +277,35 @@
 
 /* ── Buttons ── */
 .sratix-btn {
-	display: inline-block;
-	padding: 8px 20px;
-	border: none;
-	border-radius: 6px;
-	font-size: 0.9em;
-	font-weight: 600;
-	font-family: 'Outfit', sans-serif;
-	cursor: pointer;
-	text-decoration: none;
-	transition: background 0.2s ease, border-color 0.2s ease;
+	display: inline-block !important;
+	padding: 8px 20px !important;
+	border: none !important;
+	border-radius: 6px !important;
+	font-size: 0.9em !important;
+	font-weight: 600 !important;
+	font-family: 'Outfit', sans-serif !important;
+	cursor: pointer !important;
+	text-decoration: none !important;
+	color: inherit !important;
+	background: transparent !important;
+	transition: background 0.2s ease, border-color 0.2s ease !important;
 }
 
 .sratix-btn--primary {
-	background: var(--sratix-red);
-	color: #fff;
+	background: var(--sratix-red) !important;
+	color: #fff !important;
 }
 
 .sratix-btn--primary:hover,
 .sratix-btn--primary:focus {
-	background: var(--sratix-red-hover);
-	color: #fff;
+	background: var(--sratix-red-hover) !important;
+	color: #fff !important;
 }
 
 .sratix-btn--ghost:hover,
 .sratix-btn--ghost:focus {
-	background: var(--sratix-navy-mid);
-	color: var(--sratix-text);
+	background: var(--sratix-navy-mid) !important;
+	color: var(--sratix-text) !important;
 }
 
 /* ── Badges ── */
@@ -454,20 +456,21 @@
 }
 
 .sratix-qty-btn {
-	width: 36px;
-	height: 36px;
-	min-width: 36px;
-	min-height: 36px;
-	border: 1px solid var(--sratix-border-h);
-	border-radius: 50%;
-	background: var(--sratix-navy-mid);
-	color: var(--sratix-text);
-	font-size: 1.3em;
-	line-height: 1;
-	transition: background 0.15s;
+	width: 36px !important;
+	height: 36px !important;
+	min-width: 36px !important;
+	min-height: 36px !important;
+	border: 1px solid var(--sratix-border-h) !important;
+	border-radius: 50% !important;
+	background: var(--sratix-navy-mid) !important;
+	color: var(--sratix-text) !important;
+	font-size: 1.3em !important;
+	line-height: 1 !important;
+	padding: 0 !important;
+	transition: background 0.15s !important;
 }
 
-.sratix-qty-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+.sratix-qty-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1) !important; }
 .sratix-qty-btn:disabled { opacity: 0.35; cursor: default; }
 
 .sratix-qty-val {
@@ -616,27 +619,27 @@ label.sratix-checkbox-label {
 
 /* ── Button variants ── */
 .sratix-btn--outline {
-	background: transparent;
-	border: 1px solid var(--sratix-border-h);
-	color: var(--sratix-text);
-	white-space: nowrap;
+	background: transparent !important;
+	border: 1px solid var(--sratix-border-h) !important;
+	color: var(--sratix-text) !important;
+	white-space: nowrap !important;
 }
 
 .sratix-btn--outline:hover {
-	background: var(--sratix-navy-mid);
-	border-color: rgba(255,255,255,0.2);
-	color: #fff;
+	background: var(--sratix-navy-mid) !important;
+	border-color: rgba(255,255,255,0.2) !important;
+	color: #fff !important;
 }
 
 .sratix-btn--ghost {
-	background: transparent;
-	border: 1px solid var(--sratix-border);
-	color: var(--sratix-text-muted);
+	background: transparent !important;
+	border: 1px solid var(--sratix-border) !important;
+	color: var(--sratix-text-muted) !important;
 }
 
 .sratix-btn--ghost:hover {
-	background: var(--sratix-navy-mid);
-	color: var(--sratix-text);
+	background: var(--sratix-navy-mid) !important;
+	color: var(--sratix-text) !important;
 }
 
 /* ── Success banner ── */
