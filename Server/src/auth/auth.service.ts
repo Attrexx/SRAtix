@@ -332,7 +332,6 @@ export class AuthService implements OnModuleDestroy {
 
     // If no roles stored in DB, fallback to attendee
     const effectiveRoles = roles.length > 0 ? roles : ['attendee'];
-    });
 
     return this.generateTokenPair({
       sub: decoded.sub,
