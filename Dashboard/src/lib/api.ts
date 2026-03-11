@@ -40,7 +40,7 @@ class ApiError extends Error {
   }
 }
 
-function getToken(): string | null {
+export function getApiToken(): string | null {
   return _apiToken;
 }
 
@@ -75,7 +75,7 @@ async function doRefreshToken(): Promise<string | null> {
 }
 
 /** Refresh with deduplication — only one refresh request at a time. */
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = doRefreshToken().finally(() => { refreshPromise = null; });
   }
@@ -83,7 +83,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  let token = getToken();
+  let token = getApiToken();
 
   // If no access token is in memory, try refreshing before the request
   if (!token) {
@@ -149,7 +149,7 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
  * Used for export endpoints that require JWT auth.
  */
 export async function downloadFile(url: string, fallbackFilename: string): Promise<void> {
-  let token = getToken();
+  let token = getApiToken();
   if (!token) {
     token = await refreshAccessToken();
   }
@@ -555,7 +555,7 @@ export const api = {
     request<Event>(`/events/${id}`, { method: 'PATCH', body: data }),
 
   uploadEventLogo: async (eventId: string, file: File, type: 'icon' | 'landscape') => {
-    let token = getToken();
+    let token = getApiToken();
     if (!token) token = await refreshAccessToken();
     const form = new FormData();
     form.append('type', type);
