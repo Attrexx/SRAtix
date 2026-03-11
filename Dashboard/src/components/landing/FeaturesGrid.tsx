@@ -18,6 +18,7 @@ const FEATURES: Feature[] = [
   { key: 'gdpr', icon: <Icons.Shield size={28} /> },
   { key: 'multilang', icon: <Icons.Columns size={28} /> },
   { key: 'api', icon: <Icons.Zap size={28} /> },
+  { key: 'exhibitor', icon: <Icons.Users size={28} /> },
 ];
 
 export function FeaturesGrid() {

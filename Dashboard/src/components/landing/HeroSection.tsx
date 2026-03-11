@@ -85,9 +85,9 @@ export function HeroSection() {
         position: 'relative',
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '120px 24px 80px',
+        padding: 'max(120px, 15vh) 24px 80px',
         overflow: 'hidden',
       }}
     >

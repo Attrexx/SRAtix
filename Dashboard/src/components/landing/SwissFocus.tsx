@@ -6,10 +6,10 @@ import { Icons } from '@/components/icons';
 const ITEMS = [
   { key: 'hosting', icon: <Icons.Monitor size={24} /> },
   { key: 'privacy', icon: <Icons.Shield size={24} /> },
-  { key: 'currency', icon: <Icons.DollarSign size={24} /> },
+  { key: 'currency', icon: <Icons.Tag size={24} /> },
   { key: 'languages', icon: <Icons.Columns size={24} /> },
   { key: 'academic', icon: <Icons.FileText size={24} /> },
-  { key: 'robotics', icon: <Icons.Zap size={24} /> },
+  { key: 'robotics', icon: <Icons.Activity size={24} /> },
 ];
 
 export function SwissFocus() {

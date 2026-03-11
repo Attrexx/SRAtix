@@ -656,7 +656,7 @@
   "landing.nav.whitelabel": "Für Veranstalter",
   "landing.nav.srd": "SRD 2026",
   "landing.nav.app": "Companion App",
-  "landing.nav.dashboard": "Dashboard",
+  "landing.nav.dashboard": "Admin Dashboard",
   "landing.nav.contact": "Kontakt",
 
   "landing.hero.badge": "In Entwicklung — Öffentliche Veröffentlichung steht bevor",
@@ -684,7 +684,7 @@
   "landing.features.ticketing.title": "Intelligentes Ticketing",
   "landing.features.ticketing.desc": "Flexible Tickettypen, Frühbucherpreise, Promo-Codes, Gruppenanmeldungen und gestaffelte Mitgliederpreise. Sichere globale Zahlungen über Stripe.",
   "landing.features.forms.title": "Dynamische Anmeldeformulare",
-  "landing.features.forms.desc": "Versionierte Formularschemata mit Drag-and-Drop-Builder. Erfassen Sie genau das, was Sie brauchen — Ernährungswünsche, Forschungsinteressen, Barrierefreiheit.",
+  "landing.features.forms.desc": "Drag-and-Drop-Formular-Builder mit intelligenter Feldbibliothek. Erfassen Sie genau das, was Sie brauchen — Ernährungswünsche, Forschungsinteressen, Barrierefreiheit. Formulare entwickeln sich mit Ihrem Event weiter, ohne bestehende Anmeldungen zu beeinträchtigen.",
   "landing.features.checkin.title": "QR-Check-in-System",
   "landing.features.checkin.desc": "Echtzeit-Check-in mit QR-Code-Scanning, Live-Anwesenheitsdashboards, Offline-Modus und Personalrollenverwaltung.",
   "landing.features.badges.title": "Badge-Generierung",
@@ -699,7 +699,8 @@
   "landing.features.multilang.desc": "Vollständige Lokalisierung in Englisch, Französisch, Deutsch, Italienisch und Chinesisch. Formulare unterstützen feldweise Übersetzungen.",
   "landing.features.api.title": "API-First Architektur",
   "landing.features.api.desc": "Saubere REST-API mit OpenAPI-Dokumentation. Webhook-System für Echtzeit-Integrationen. SDK-bereit für individuelle Clients und mobile Apps.",
-
+  "landing.features.exhibitor.title": "Aussteller-Portal",
+  "landing.features.exhibitor.desc": "Dediziertes Aussteller-Dashboard mit Standpersonal-Management, Lead-Scanning, Material-Upload und Echtzeit-Hallenplan-Integration. Aussteller verwalten ihre Präsenz selbst — ohne endlose E-Mail-Kommunikation.",
   "landing.swiss.overline": "Swiss Made",
   "landing.swiss.title": "Präzisions-Engineering für Schweizer Events",
   "landing.swiss.subtitle": "Entwickelt von der Swiss Robotics Association versteht SRAtix die einzigartigen Anforderungen von Schweizer Konferenzen, wissenschaftlichen Symposien und Branchenevents.",
@@ -713,8 +714,8 @@
   "landing.swiss.languages.desc": "Vollständiger Plattform-Support für Deutsch, Französisch, Italienisch und Englisch — die mehrsprachige Realität der Schweiz.",
   "landing.swiss.academic.title": "Akademische Workflows",
   "landing.swiss.academic.desc": "Entwickelt für wissenschaftliche Konferenzen: Abstract-Einreichungen, Sessions, Poster-Sessions und institutionelle Rechnungsstellung.",
-  "landing.swiss.robotics.title": "Robotik- & Tech-Fokus",
-  "landing.swiss.robotics.desc": "Massgeschneiderte Felder für Robotik-Expertise (Biorobotik, chirurgische Robotik, autonome Systeme, SLAM, etc.), Kantonsauswahl und institutionelle Zugehörigkeiten.",
+  "landing.swiss.robotics.title": "Aus echten Events entstanden",
+  "landing.swiss.robotics.desc": "SRAtix wurde auf Basis realer Schwierigkeiten bei Robotik-Konferenzen und Tech-Ausstellungen entwickelt — von langen Anmeldeschlangen über manuelle Badge-Verwaltung bis zu isolierten Aussteller-Workflows. Jede Funktion löst ein Problem, das wir aus erster Hand kennen.",
 
   "landing.whitelabel.overline": "Für Veranstalter",
   "landing.whitelabel.title": "Ihr Event. Ihre Marke. Unser Motor.",
