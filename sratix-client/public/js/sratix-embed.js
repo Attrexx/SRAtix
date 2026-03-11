@@ -1676,7 +1676,7 @@
           + escHtml(t('exhibitorForm.skipStaff')) + '</a>';
       } else {
         staffHtml += '<p class="sratix-wizard-subtitle">'
-          + escHtml(t('exhibitorForm.staffOptionalNote')) + '</p>';
+          + escHtml(t('exhibitorForm.staffDeclinedNote')) + '</p>';
       }
       return '<div class="sratix-wizard-body">' + staffHtml + '</div>';
     }
