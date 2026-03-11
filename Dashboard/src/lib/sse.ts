@@ -6,13 +6,21 @@ import { getApiToken, refreshAccessToken } from './api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+/** Non-retriable error — stops SSE reconnection. */
+class FatalSSEError extends Error {}
+
 /**
  * Hook to subscribe to Server-Sent Events from the SRAtix Server.
  *
  * Uses @microsoft/fetch-event-source so we can send the JWT access token
  * in the Authorization header (native EventSource doesn't support headers).
  *
- * On 401 the hook automatically refreshes the token and retries.
+ * Auth flow:
+ *   1. Custom `fetch` reads the latest in-memory token on every request.
+ *   2. On 401, it transparently refreshes the token and retries once.
+ *   3. If refresh fails (session expired), the error propagates to `onopen`
+ *      which throws a FatalSSEError to stop reconnection.
+ *   4. Network errors (server down, connectivity lost) auto-retry via the library.
  *
  * Channels:
  *   - events/{eventId}/check-ins — live check-in feed
@@ -41,18 +49,35 @@ export function useSSE<T = unknown>(
     fetchEventSource(url, {
       signal: ctrl.signal,
       openWhenHidden: true,
+      credentials: 'include',
+
+      // Inject Authorization header dynamically on every request (including retries).
+      // Handles 401 → refresh → retry transparently within a single fetch call.
+      async fetch(input, init) {
+        const headers = { ...(init?.headers as Record<string, string>) };
+        const token = getApiToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        let response = await window.fetch(input, { ...init, headers });
+
+        if (response.status === 401) {
+          const newToken = await refreshAccessToken();
+          if (newToken) {
+            headers['Authorization'] = `Bearer ${newToken}`;
+            response = await window.fetch(input, { ...init, headers });
+          }
+        }
+
+        return response;
+      },
 
       async onopen(response) {
         if (response.ok) {
           setIsConnected(true);
           return;
         }
-        // Non-retriable open errors (e.g. 403) — stop retrying
-        if (response.status !== 401) {
-          throw new Error(`SSE open failed: ${response.status}`);
-        }
-        // 401 is handled by onerror → refresh → retry
-        throw new Error('Unauthorized');
+        // Custom fetch already tried refresh — any HTTP error is non-retriable
+        throw new FatalSSEError(`SSE open failed: ${response.status}`);
       },
 
       onmessage(event) {
@@ -69,27 +94,12 @@ export function useSSE<T = unknown>(
         setIsConnected(false);
       },
 
-      async onerror(err) {
+      onerror(err) {
         setIsConnected(false);
-
-        // If aborted intentionally (cleanup), stop retrying
         if (ctrl.signal.aborted) throw err;
-
-        // Try to refresh the access token before retrying
-        const newToken = await refreshAccessToken();
-        if (!newToken) {
-          // Refresh failed — session expired, stop retrying
-          throw err;
-        }
-        // Return void to let fetch-event-source retry with new headers
+        if (err instanceof FatalSSEError) throw err;
+        // Network error — return void to let the library auto-retry
       },
-
-      headers: () => {
-        const token = getApiToken();
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      },
-
-      credentials: 'include',
     });
 
     return () => {
