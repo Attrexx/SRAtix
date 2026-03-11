@@ -643,5 +643,10 @@
   "users.form.roles": "Rôles",
   "users.form.savePasswordHint": "Sauvegardez ce mot de passe — il ne sera plus affiché",
   "users.badge.wp": "WP",
-  "maintenance.bannerTitle": "Mode maintenance actif"
+  "maintenance.bannerTitle": "Mode maintenance actif",
+
+  "system.rebuildNotice": "Mise \u00e0 jour en cours \u2014 l\u2019application sera bri\u00e8vement indisponible pendant le d\u00e9ploiement.",
+  "system.broadcastRebuild": "Diffuser un avis de mise \u00e0 jour",
+  "system.broadcastConfirm": "Cela notifiera tous les utilisateurs connect\u00e9s que l\u2019application va red\u00e9marrer. Continuer\u00a0?",
+  "system.broadcastSuccess": "Avis de mise \u00e0 jour envoy\u00e9 \u00e0 tous les utilisateurs connect\u00e9s."
 }

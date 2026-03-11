@@ -6,6 +6,7 @@ import { api, type SettingValue } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { type ReactNode } from 'react';
 import { useI18n } from '@/i18n/i18n-provider';
+import { toast } from 'sonner';
 
 /** Group order for display. */
 const GROUP_ORDER = [
@@ -34,6 +35,7 @@ export default function SettingsPage() {
   const [edits, setEdits] = useState<Record<string, string>>({});
   // Track which secret fields are revealed
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [broadcasting, setBroadcasting] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -156,6 +158,19 @@ export default function SettingsPage() {
     });
   };
 
+  const handleBroadcastRebuild = async () => {
+    if (!window.confirm(t('system.broadcastConfirm'))) return;
+    setBroadcasting(true);
+    try {
+      await api.broadcastRebuildNotice();
+      toast.success(t('system.broadcastSuccess'));
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to broadcast');
+    } finally {
+      setBroadcasting(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSkeleton />;
   }
@@ -181,6 +196,18 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleBroadcastRebuild}
+            disabled={broadcasting}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              color: '#b45309',
+              background: 'var(--color-warning-bg, #fef3c7)',
+              border: '1px solid #f59e0b',
+            }}
+          >
+            {broadcasting ? '…' : t('system.broadcastRebuild')}
+          </button>
           {hasChanges && (
             <button
               onClick={handleDiscard}

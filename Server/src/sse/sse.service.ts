@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Subject, Observable, filter, map } from 'rxjs';
+import { Subject, Observable, filter, map, merge, interval } from 'rxjs';
 
 /**
  * Event types emitted via SSE.
@@ -16,6 +16,13 @@ export interface SseEvent {
   timestamp: string;
 }
 
+/** System-wide events (not scoped to a single event). */
+export interface SystemSseEvent {
+  type: 'rebuild' | 'info';
+  message: string;
+  timestamp: string;
+}
+
 /**
  * SSE Service — in-process event bus for real-time dashboard streams.
  *
@@ -27,6 +34,7 @@ export interface SseEvent {
 export class SseService {
   private readonly logger = new Logger(SseService.name);
   private readonly bus$ = new Subject<SseEvent>();
+  private readonly systemBus$ = new Subject<SystemSseEvent>();
 
   /**
    * Emit an event to all connected SSE clients subscribed to this
@@ -133,5 +141,49 @@ export class SseService {
     },
   ) {
     this.emit(eventId, 'alerts', data);
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Global system bus — not scoped to a single event
+  // ────────────────────────────────────────────────────────────
+
+  /** Broadcast a system-wide event to all connected clients. */
+  emitSystem(type: SystemSseEvent['type'], message: string) {
+    const event: SystemSseEvent = {
+      type,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+    this.logger.log(`System broadcast: ${type} — ${message}`);
+    this.systemBus$.next(event);
+  }
+
+  /**
+   * Subscribe to the global system stream.
+   * Merges system events with a 30-second heartbeat to keep proxies alive.
+   */
+  subscribeSystem(): Observable<MessageEvent> {
+    const heartbeat$ = interval(30_000).pipe(
+      map(
+        () =>
+          ({
+            data: {
+              type: 'heartbeat',
+              timestamp: new Date().toISOString(),
+            },
+          }) as MessageEvent,
+      ),
+    );
+
+    const system$ = this.systemBus$.pipe(
+      map(
+        (e) =>
+          ({
+            data: e,
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(system$, heartbeat$);
   }
 }

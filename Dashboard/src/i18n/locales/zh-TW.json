@@ -643,5 +643,9 @@
   "users.form.roles": "角色",
   "users.form.savePasswordHint": "請儲存此密碼 — 之後將不再顯示",
   "users.badge.wp": "WP",
-  "maintenance.bannerTitle": "維護模式已啟用"
+  "maintenance.bannerTitle": "維護模式已啟用",
+  "system.rebuildNotice": "系統更新中 — 應用程式將在部署更新時短暫離線。",
+  "system.broadcastRebuild": "廣播更新通知",
+  "system.broadcastConfirm": "這將通知所有已連線的儀表板使用者應用程式即將重新啟動。是否繼續？",
+  "system.broadcastSuccess": "更新通知已發送給所有已連線的使用者。"
 }

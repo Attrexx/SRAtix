@@ -674,5 +674,10 @@
   "auth.resetPassword.tooShort": "Password must be at least 8 characters",
   "auth.resetPassword.noToken": "No reset token provided. Please use the link from your email.",
 
-  "maintenance.bannerTitle": "Maintenance Mode Active"
+  "maintenance.bannerTitle": "Maintenance Mode Active",
+
+  "system.rebuildNotice": "System update in progress \u2014 the app will be briefly unavailable while updates are deployed.",
+  "system.broadcastRebuild": "Broadcast Rebuild Notice",
+  "system.broadcastConfirm": "This will notify all connected dashboard users that the app is about to go offline for updates. Continue?",
+  "system.broadcastSuccess": "Rebuild notice sent to all connected users."
 }

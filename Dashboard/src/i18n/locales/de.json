@@ -643,5 +643,9 @@
   "users.form.roles": "Rollen",
   "users.form.savePasswordHint": "Dieses Passwort speichern — es wird nicht erneut angezeigt",
   "users.badge.wp": "WP",
-  "maintenance.bannerTitle": "Wartungsmodus aktiv"
+  "maintenance.bannerTitle": "Wartungsmodus aktiv",
+  "system.rebuildNotice": "Systemupdate läuft — die App wird kurzzeitig nicht verfügbar sein, während Updates bereitgestellt werden.",
+  "system.broadcastRebuild": "Update-Hinweis senden",
+  "system.broadcastConfirm": "Alle verbundenen Dashboard-Benutzer werden benachrichtigt, dass die App neu gestartet wird. Fortfahren?",
+  "system.broadcastSuccess": "Update-Hinweis an alle verbundenen Benutzer gesendet."
 }

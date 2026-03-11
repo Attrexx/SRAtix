@@ -938,6 +938,14 @@ export const api = {
       body: { settings },
     }),
 
+  // ─── System ────────────────────────────────────────────────
+
+  broadcastRebuildNotice: (message?: string) =>
+    request<{ ok: boolean; broadcast: boolean; message: string }>(
+      '/system/rebuild-notice',
+      { method: 'POST', body: { message } },
+    ),
+
   // ─── Maintenance Mode ──────────────────────────────────────
 
   getMaintenanceStatus: (eventId: string, signal?: AbortSignal) =>

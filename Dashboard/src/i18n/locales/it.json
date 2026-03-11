@@ -643,5 +643,9 @@
   "users.form.roles": "Ruoli",
   "users.form.savePasswordHint": "Salva questa password — non verrà più mostrata",
   "users.badge.wp": "WP",
-  "maintenance.bannerTitle": "Modalità manutenzione attiva"
+  "maintenance.bannerTitle": "Modalità manutenzione attiva",
+  "system.rebuildNotice": "Aggiornamento in corso — l'app sarà brevemente non disponibile durante il deploy.",
+  "system.broadcastRebuild": "Invia avviso di aggiornamento",
+  "system.broadcastConfirm": "Tutti gli utenti connessi alla dashboard verranno avvisati che l'app sta per riavviarsi. Continuare?",
+  "system.broadcastSuccess": "Avviso di aggiornamento inviato a tutti gli utenti connessi."
 }

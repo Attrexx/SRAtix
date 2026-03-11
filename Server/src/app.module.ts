@@ -28,6 +28,7 @@ import { SettingsModule } from './settings/settings.module';
 import { FieldRepositoryModule } from './field-repository/field-repository.module';
 import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SystemModule } from './system/system.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
@@ -112,6 +113,9 @@ import { join } from 'path';
 
     // Analytics — time-series aggregation for line graphs
     AnalyticsModule,
+
+    // System — rebuild notifications, global SSE
+    SystemModule,
   ],
   providers: [
     // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
