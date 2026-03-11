@@ -1672,8 +1672,8 @@
           + '<span class="sratix-field-help">' + escHtml(t('exhibitorForm.staffMax').replace('{max}', maxStaff)) + '</span>'
           + '</div>';
         staffHtml += '<div id="sratix-staff-fields">' + renderStaffFields() + '</div>';
-        staffHtml += '<a href="#" id="sratix-skip-staff" class="sratix-back-to-gate" style="margin-top:8px;display:inline-block">'
-          + escHtml(t('exhibitorForm.skipStaff')) + '</a>';
+        staffHtml += '<button type="button" id="sratix-skip-staff" class="sratix-btn sratix-btn--ghost" style="margin-top:12px;width:100%">'
+          + escHtml(t('exhibitorForm.skipStaff')) + '</button>';
       } else {
         staffHtml += '<p class="sratix-wizard-subtitle">'
           + escHtml(t('exhibitorForm.staffDeclinedNote')) + '</p>';

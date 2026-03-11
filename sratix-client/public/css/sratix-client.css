@@ -397,21 +397,30 @@
 }
 
 .sratix-qty-btn {
-	width: 36px;
-	height: 36px;
-	border: 1px solid var(--sratix-border-h);
-	border-radius: 50%;
-	background: var(--sratix-navy-mid);
-	color: var(--sratix-text);
-	font-size: 1.3em;
+	all: unset;
+	box-sizing: border-box;
+	width: 36px !important;
+	height: 36px !important;
+	min-width: 36px;
+	min-height: 36px;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: 1px solid var(--sratix-border-h) !important;
+	border-radius: 50% !important;
+	background: var(--sratix-navy-mid) !important;
+	color: var(--sratix-text) !important;
+	font-size: 1.3em !important;
+	line-height: 1;
 	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
 	transition: background 0.15s;
+	-webkit-appearance: none;
+	appearance: none;
 }
 
-.sratix-qty-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+.sratix-qty-btn:hover:not(:disabled) { background: rgba(255,255,255,0.1) !important; }
 .sratix-qty-btn:disabled { opacity: 0.35; cursor: default; }
 
 .sratix-qty-val {
@@ -420,6 +429,15 @@
 	min-width: 30px;
 	text-align: center;
 	color: var(--sratix-text);
+}
+
+/* ── Field help / hint text ── */
+.sratix-field-help {
+	display: block;
+	font-size: 0.82em;
+	color: var(--sratix-text-muted);
+	margin-top: 4px;
+	line-height: 1.4;
 }
 
 .sratix-price-row {
