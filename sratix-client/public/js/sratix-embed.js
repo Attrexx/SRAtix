@@ -1553,6 +1553,16 @@
     var staffEntries = [];
     var staffCount = 0;
 
+    /** Check if the exhibitor chose to assign staff passes now and maxStaff allows it. */
+    function wantsStaffNow() {
+      if (maxStaff <= 0) return false;
+      if (!schemaFields) return true; // no schema → show stepper if maxStaff > 0
+      var assignField = schemaFields.find(function (f) { return f.slug === 'exhibitor_assign_passes_now'; });
+      if (!assignField) return true; // field not in form → default to showing stepper
+      var answer = formAnswers[assignField.id];
+      return answer === 'yes';
+    }
+
     // Pre-fill from WP context
     if (config.userEmail) purchaserData.email = config.userEmail;
     if (config.userFirstName) purchaserData.firstName = config.userFirstName;
@@ -1640,7 +1650,12 @@
 
     function renderStep3() {
       var staffHtml = '';
-      if (maxStaff > 0) {
+      if (!wantsStaffNow()) {
+        // Clear any leftover staff data when not assigning now
+        staffCount = 0;
+        staffEntries = [];
+      }
+      if (wantsStaffNow()) {
         staffHtml += '<p class="sratix-wizard-subtitle">'
           + escHtml(t('exhibitorForm.staffSubtitle').replace('{max}', maxStaff)) + '</p>';
         staffHtml += '<p class="sratix-field-help">'
@@ -1778,7 +1793,7 @@
         }
       }
 
-      if (currentStep === 3 && maxStaff > 0) {
+      if (currentStep === 3 && wantsStaffNow()) {
         var decBtn = modal.querySelector('#sratix-staff-dec');
         var incBtn = modal.querySelector('#sratix-staff-inc');
         var valEl = modal.querySelector('#sratix-staff-val');
