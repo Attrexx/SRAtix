@@ -165,6 +165,7 @@ export default function TicketsPage() {
   const [formEarlyBirdUntil, setFormEarlyBirdUntil] = useState('');
   const [formCapacity, setFormCapacity] = useState('');
   const [formMaxPerOrder, setFormMaxPerOrder] = useState('10');
+  const [formMaxStaff, setFormMaxStaff] = useState('');
   const [formSalesStart, setFormSalesStart] = useState('');
   const [formSalesEnd, setFormSalesEnd] = useState('');
   const [formTier, setFormTier] = useState('');
@@ -266,6 +267,7 @@ export default function TicketsPage() {
     setFormEarlyBirdUntil('');
     setFormCapacity('');
     setFormMaxPerOrder('10');
+    setFormMaxStaff('');
     setFormSalesStart('');
     setFormSalesEnd('');
     setFormTier('');
@@ -291,6 +293,7 @@ export default function TicketsPage() {
     setFormFullPrice((tt.priceCents / 100).toFixed(2));
     setFormCapacity(tt.quantity != null ? String(tt.quantity) : '');
     setFormMaxPerOrder(String(tt.maxPerOrder ?? 10));
+    setFormMaxStaff(tt.maxStaff != null ? String(tt.maxStaff) : '');
     setFormSalesStart(tt.salesStart ? tt.salesStart.slice(0, 16) : '');
     setFormSalesEnd(tt.salesEnd ? tt.salesEnd.slice(0, 16) : '');
     setFormTier(tt.membershipTier ?? '');
@@ -504,6 +507,7 @@ export default function TicketsPage() {
         priceCents: fullPriceCents,
         quantity: capacity ?? null,
         maxPerOrder: parseInt(formMaxPerOrder, 10) || 10,
+        maxStaff: formMaxStaff ? Math.max(0, parseInt(formMaxStaff, 10)) : null,
         salesStart: formSalesStart ? new Date(formSalesStart).toISOString() : null,
         salesEnd: formSalesEnd ? new Date(formSalesEnd).toISOString() : null,
         category: resolvedCategory,
@@ -540,6 +544,7 @@ export default function TicketsPage() {
           membershipTier: formKind === 'membership' ? formTier : undefined,
           wpProductId: formKind === 'membership' ? derivedWpProductId : undefined,
           formSchemaId: resolvedSchemaId || undefined,
+          maxStaff: formMaxStaff ? Math.max(0, parseInt(formMaxStaff, 10)) : undefined,
           meta: formIcon ? { icon: formIcon } : undefined,
           robotxDiscountType: robotxDiscountEnabled ? robotxDiscountType : undefined,
           robotxDiscountValue: robotxDiscountEnabled && robotxDiscountValue
@@ -1078,6 +1083,23 @@ export default function TicketsPage() {
                     type="number"
                   />
                 </div>
+
+                {/* Max Staff Passes — exhibitor tickets only */}
+                {formKind === 'exhibitor' && (
+                  <div>
+                    <Field
+                      label={t('tickets.form.maxStaff')}
+                      value={formMaxStaff}
+                      onChange={setFormMaxStaff}
+                      placeholder={t('tickets.form.maxStaffPlaceholder')}
+                      type="number"
+                    />
+                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('tickets.form.maxStaffHint')}
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <Field
                     label={t('tickets.form.salesStart')}

@@ -69,6 +69,7 @@ export class TicketTypesController {
       currency?: string;
       quantity?: number;
       maxPerOrder?: number;
+      maxStaff?: number;
       salesStart?: string;
       salesEnd?: string;
       sortOrder?: number;
@@ -87,6 +88,7 @@ export class TicketTypesController {
       currency: dto.currency,
       quantity: dto.quantity,
       maxPerOrder: dto.maxPerOrder,
+      maxStaff: dto.maxStaff,
       salesStart: dto.salesStart ? new Date(dto.salesStart) : undefined,
       salesEnd: dto.salesEnd ? new Date(dto.salesEnd) : undefined,
       sortOrder: dto.sortOrder,

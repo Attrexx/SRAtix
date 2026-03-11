@@ -330,6 +330,7 @@ export class TicketTypesService {
     currency?: string;
     quantity?: number;
     maxPerOrder?: number;
+    maxStaff?: number;
     salesStart?: Date;
     salesEnd?: Date;
     sortOrder?: number;
@@ -391,6 +392,7 @@ export class TicketTypesService {
       priceCents: number;
       quantity: number;
       maxPerOrder: number;
+      maxStaff: number;
       salesStart: Date;
       salesEnd: Date;
       status: string;
@@ -719,6 +721,7 @@ export class TicketTypesService {
         available,
         soldOut,
         maxPerOrder: tt.maxPerOrder,
+        maxStaff: tt.maxStaff ?? 0,
         category: tt.category,
         membershipTier: tt.membershipTier,
         // Mapped SRA membership tier + product for hybrid ticket display

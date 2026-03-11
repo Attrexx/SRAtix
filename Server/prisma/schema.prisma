@@ -99,6 +99,7 @@ model TicketType {
   quantity      Int?     // null = unlimited
   sold          Int      @default(0)
   maxPerOrder   Int      @default(10)
+  maxStaff      Int?     // max staff/booth passes for exhibitor tickets (null/0 = disabled)
   salesStart    DateTime? @db.DateTime(3)
   salesEnd      DateTime? @db.DateTime(3)
   status        String   @default("active") @db.VarChar(30) // draft | active | paused | sold_out | archived

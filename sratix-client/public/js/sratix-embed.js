@@ -1525,10 +1525,12 @@
   async function openExhibitorRegistrationWizard(eventId, tt) {
     var modal = createModalShell('sratix-modal-exhibitor');
 
-    // Fetch form schema to get section/field layout and maxStaff
+    // maxStaff comes from the ticket type itself, not the form schema
+    var maxStaff = tt.maxStaff || 0;
+
+    // Fetch form schema for field layout
     var schema = null;
     var schemaFields = null;
-    var maxStaff = 0;
     if (tt.formSchemaId) {
       try {
         schema = await apiFetch(
@@ -1537,7 +1539,6 @@
         );
         if (schema && schema.fields) {
           schemaFields = schema.fields.fields || [];
-          maxStaff = schema.fields.maxStaff || 0;
         }
       } catch (err) {
         console.warn('[SRAtix] Could not load exhibitor form schema:', err);

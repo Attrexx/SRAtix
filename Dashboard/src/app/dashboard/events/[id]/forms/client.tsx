@@ -141,7 +141,6 @@ export default function FormsPage() {
   // Builder state
   const [formName, setFormName] = useState('');
   const [fields, setFields] = useState<BuilderField[]>([]);
-  const [maxStaff, setMaxStaff] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [editSchemaId, setEditSchemaId] = useState<string | null>(null);
@@ -263,7 +262,6 @@ export default function FormsPage() {
   const resetBuilder = () => {
     setFormName('');
     setFields([]);
-    setMaxStaff(0);
     setError('');
     setEditSchemaId(null);
     setShowBuilder(false);
@@ -276,8 +274,6 @@ export default function FormsPage() {
     setEditSchemaId(schema.id);
     setFormName(schema.name);
     setFields(normalizeFields(schema));
-    const raw = schema.fields as Record<string, unknown>;
-    setMaxStaff(typeof raw?.maxStaff === 'number' ? raw.maxStaff : 0);
     setError('');
     setShowBuilder(true);
     await loadRepo();
@@ -309,9 +305,7 @@ export default function FormsPage() {
       // Stamp each field with its visual order so the embed widget
       // renders them in the exact sequence shown in the builder.
       const orderedFields = fields.map((f, idx) => ({ ...f, order: idx + 1 }));
-      const fieldsPayload = maxStaff > 0
-        ? { fields: orderedFields, maxStaff }
-        : { fields: orderedFields };
+      const fieldsPayload = { fields: orderedFields };
       if (editSchemaId) {
         await api.updateFormSchema(editSchemaId, eventId, {
           name: formName.trim(),
@@ -484,27 +478,6 @@ export default function FormsPage() {
                 className="w-full max-w-lg rounded-lg px-3 py-2 text-sm"
                 style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
               />
-            </div>
-
-            {/* Max staff passes (exhibitor forms) */}
-            <div className="px-5 pb-2">
-              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('forms.maxStaff')}
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={maxStaff}
-                  onChange={(e) => setMaxStaff(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                  className="w-24 rounded-lg px-3 py-2 text-sm"
-                  style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                />
-                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('forms.maxStaffHint')}
-                </span>
-              </div>
             </div>
 
             {/* Field list header */}

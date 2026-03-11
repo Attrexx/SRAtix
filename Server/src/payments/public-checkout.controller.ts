@@ -223,23 +223,13 @@ export class PublicCheckoutController {
 
     // ── 2b. Exhibitor-specific validation ────────────────────────────────
     const isExhibitor = tt.category === 'exhibitor';
-    let maxStaff = 0;
     if (isExhibitor) {
       if (dto.quantity !== 1) {
         throw new BadRequestException(
           'Exhibitor tickets are limited to 1 per order',
         );
       }
-      // Load maxStaff from form schema meta if a form schema is assigned
-      if (tt.formSchemaId) {
-        const schema = await this.prisma.formSchema.findUnique({
-          where: { id: tt.formSchemaId },
-        });
-        if (schema) {
-          const schemaDef = schema.fields as Record<string, unknown>;
-          maxStaff = (schemaDef?.maxStaff as number) ?? 0;
-        }
-      }
+      const maxStaff = tt.maxStaff ?? 0;
       const staffCount = dto.additionalAttendees?.length ?? 0;
       if (maxStaff > 0 && staffCount > maxStaff) {
         throw new BadRequestException(

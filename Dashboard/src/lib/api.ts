@@ -593,6 +593,7 @@ export const api = {
     membershipTier?: string;
     wpProductId?: number;
     formSchemaId?: string;
+    maxStaff?: number;
     meta?: Record<string, unknown>;
     robotxDiscountType?: string;
     robotxDiscountValue?: number;
