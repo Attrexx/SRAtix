@@ -284,10 +284,17 @@ export class AuthService implements OnModuleDestroy {
       throw new UnauthorizedException('Token is not a refresh token');
     }
 
-    // Look up user from DB to get current data
+    // Look up user + roles in a single query (eliminates a DB roundtrip)
     const user = await this.prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, displayName: true, wpUserId: true, tokenVersion: true },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        wpUserId: true,
+        tokenVersion: true,
+        roles: { select: { role: true } },
+      },
     });
 
     if (!user) {
@@ -299,35 +306,32 @@ export class AuthService implements OnModuleDestroy {
       throw new UnauthorizedException('Token has been revoked');
     }
 
-    // Look up WP mapping to resolve orgId
-    let orgId: string | undefined;
-    if (user.wpUserId) {
-      const mapping = await this.prisma.wpMapping.findUnique({
-        where: {
-          wpEntityType_wpEntityId: {
-            wpEntityType: 'user',
-            wpEntityId: user.wpUserId,
-          },
-        },
-      });
-      orgId = mapping?.orgId ?? undefined;
-    }
+    // Parallelize independent DB calls: WP mapping lookup + last-login update
+    const [orgId] = await Promise.all([
+      // Resolve orgId from WP mapping (if user has a WP account)
+      user.wpUserId
+        ? this.prisma.wpMapping
+            .findUnique({
+              where: {
+                wpEntityType_wpEntityId: {
+                  wpEntityType: 'user',
+                  wpEntityId: user.wpUserId,
+                },
+              },
+            })
+            .then((m) => m?.orgId ?? undefined)
+        : Promise.resolve(undefined),
+      // Update last login timestamp (fire-and-forget, no return value needed)
+      this.prisma.user.update({
+        where: { id: decoded.sub },
+        data: { lastLoginAt: new Date() },
+      }),
+    ]);
 
-    // Look up user's current roles from UserRole table
-    const userRoles = await this.prisma.userRole.findMany({
-      where: { userId: decoded.sub },
-      select: { role: true },
-    });
-
-    const roles = userRoles.map((ur) => ur.role);
+    const roles = user.roles.map((ur) => ur.role);
 
     // If no roles stored in DB, fallback to attendee
     const effectiveRoles = roles.length > 0 ? roles : ['attendee'];
-
-    // Update last login
-    await this.prisma.user.update({
-      where: { id: decoded.sub },
-      data: { lastLoginAt: new Date() },
     });
 
     return this.generateTokenPair({

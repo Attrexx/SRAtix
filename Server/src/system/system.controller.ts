@@ -2,13 +2,10 @@ import {
   Controller,
   Post,
   Body,
-  Sse,
   UseGuards,
   Logger,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import { SseService } from '../sse/sse.service';
-import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { DeployAuthGuard } from './guards/deploy-auth.guard';
 import { RebuildNoticeDto } from './dto/rebuild-notice.dto';
 
@@ -35,17 +32,5 @@ export class SystemController {
     this.sse.emitSystem('rebuild', message);
     this.logger.warn(`Rebuild notice broadcast: ${message}`);
     return { ok: true, broadcast: true, message };
-  }
-
-  /**
-   * SSE stream for global system notifications.
-   * Unauthenticated — data is non-sensitive (rebuild alerts only).
-   * The Dashboard component only renders for authenticated users.
-   */
-  @Sse('notifications')
-  @SkipRateLimit()
-  streamNotifications(): Observable<MessageEvent> {
-    this.logger.log('System SSE stream opened');
-    return this.sse.subscribeSystem();
   }
 }
