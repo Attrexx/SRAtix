@@ -159,16 +159,32 @@ export class UsersController {
     @CurrentUser() actor: JwtPayload,
   ): Promise<UserWithRoles> {
     const actorLevel = getHighestRoleLevel(actor.roles);
-    // Check target user's current rank
-    const target = await this.usersService.findOne(id);
-    if (getHighestRoleLevel(target.roles) <= actorLevel) {
-      throw new ForbiddenException('Cannot modify a user at or above your own level');
+    const isSelf = actor.sub === id;
+    // Check target user's current rank (self-edit is always allowed)
+    if (!isSelf) {
+      const target = await this.usersService.findOne(id);
+      if (getHighestRoleLevel(target.roles) <= actorLevel) {
+        throw new ForbiddenException('Cannot modify a user at or above your own level');
+      }
     }
     // Check new roles if provided
     if (dto.roles) {
-      const hasDisallowed = dto.roles.some((r) => getRoleLevel(r) <= actorLevel);
-      if (hasDisallowed) {
-        throw new ForbiddenException('Cannot assign roles at or above your own level');
+      if (isSelf) {
+        // Self-edit: allow keeping existing roles, block adding new ones at or above own level
+        const currentRoles = new Set(
+          (await this.usersService.findOne(id)).roles,
+        );
+        const newHighRoles = dto.roles.filter(
+          (r) => getRoleLevel(r) <= actorLevel && !currentRoles.has(r),
+        );
+        if (newHighRoles.length) {
+          throw new ForbiddenException('Cannot assign roles at or above your own level');
+        }
+      } else {
+        const hasDisallowed = dto.roles.some((r) => getRoleLevel(r) <= actorLevel);
+        if (hasDisallowed) {
+          throw new ForbiddenException('Cannot assign roles at or above your own level');
+        }
       }
     }
     return this.usersService.update(id, dto);
