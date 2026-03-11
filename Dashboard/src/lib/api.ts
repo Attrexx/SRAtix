@@ -240,6 +240,7 @@ export interface TicketType {
   quantity?: number | null;
   sold: number;
   maxPerOrder: number;
+  maxStaff?: number | null;
   salesStart?: string | null;
   salesEnd?: string | null;
   status: string;
