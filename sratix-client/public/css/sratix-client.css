@@ -69,9 +69,6 @@
 .sratix-modal [type="submit"]:active {
 	outline: none;
 	box-shadow: none;
-	background: inherit;
-	color: inherit;
-	border: inherit;
 	text-decoration: none;
 }
 
