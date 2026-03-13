@@ -304,9 +304,16 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 2,
       validation: { required: true },
     }),
-    fd('photography_consent', { en: 'Photography / Media Consent', de: 'Foto- / Medienzustimmung', fr: 'Consentement photo / média', it: 'Consenso foto / media', 'zh-TW': '攝影 / 媒體同意書' }, 'yes-no', 'legal_compliance', {
+    fd('photography_consent', { en: 'Photography / Media Consent', de: 'Foto- / Medienzustimmung', fr: 'Consentement photo / média', it: 'Consenso foto / media', 'zh-TW': '攝影 / 媒體同意書' }, 'consent', 'legal_compliance', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 3,
       validation: { required: true },
+      helpText: {
+        en: 'By participating in our programs and events, you consent to being filmed and/or photographed, and you grant Swissnex permission to use your image and other details (such as your name, title, organization and bio) on our website and for marketing purposes.',
+        de: 'Mit Ihrer Teilnahme an unseren Programmen und Veranstaltungen stimmen Sie zu, gefilmt und/oder fotografiert zu werden, und Sie erteilen Swissnex die Erlaubnis, Ihr Bild und andere Angaben (wie Name, Titel, Organisation und Biografie) auf unserer Website und zu Marketingzwecken zu verwenden.',
+        fr: 'En participant à nos programmes et événements, vous consentez à être filmé(e) et/ou photographié(e), et vous autorisez Swissnex à utiliser votre image et autres informations (telles que votre nom, titre, organisation et biographie) sur notre site web et à des fins marketing.',
+        it: 'Partecipando ai nostri programmi ed eventi, acconsentite a essere filmati e/o fotografati e autorizzate Swissnex a utilizzare la vostra immagine e altri dettagli (come nome, titolo, organizzazione e biografia) sul nostro sito web e per scopi di marketing.',
+        'zh-TW': '參加我們的計畫與活動即表示您同意被拍攝和/或攝影，並授權 Swissnex 在其網站及行銷用途中使用您的肖像及其他資訊（如姓名、職稱、組織及簡介）。',
+      },
     }),
 
     // ── Profile Fields ───────────────────────────────────────
