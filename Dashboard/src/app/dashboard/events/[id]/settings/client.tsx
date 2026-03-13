@@ -373,7 +373,7 @@ export default function EventSettingsPage() {
                 <RichTextEditor
                   value={exhibitorTicketIntro}
                   onChange={setExhibitorTicketIntro}
-                  placeholder="Intro text shown to exhibitors before booth selection"
+                  placeholder="Intro text shown to exhibitors before package selection"
                 />
               </div>
             </div>

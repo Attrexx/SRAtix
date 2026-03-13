@@ -268,7 +268,7 @@ export default function EventOverviewPage() {
         />
         {/* Exhibitor Tickets */}
         <TicketCategoryCard
-          title="Exhibitor Booths"
+          title="Exhibitor Packages"
           icon={<Icons.Package size={18} />}
           tickets={exhibitorTickets}
           totalSold={exhibitorSold}

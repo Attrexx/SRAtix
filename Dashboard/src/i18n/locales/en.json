@@ -732,7 +732,7 @@
   "landing.features.api.title": "API-First Architecture",
   "landing.features.api.desc": "Clean REST API with OpenAPI documentation. Webhook system for real-time integrations. SDK-ready for custom clients and mobile apps.",
   "landing.features.exhibitor.title": "Exhibitor Portal",
-  "landing.features.exhibitor.desc": "Dedicated exhibitor dashboard with booth staff management, lead scanning, material upload, and real-time floor plan integration. Exhibitors self-manage their presence — no back-and-forth emails.",
+  "landing.features.exhibitor.desc": "Dedicated exhibitor dashboard with staff management, lead scanning, and material upload. Exhibitors self-manage their presence — no back-and-forth emails.",
 
   "landing.swiss.overline": "Swiss Made",
   "landing.swiss.title": "Precision-Engineered for Swiss Events",

@@ -132,7 +132,7 @@ const sratixI18n = (function () {
       // Exhibitor wizard
       'exhibitorForm.companyTitle':    'Company Information',
       'exhibitorForm.companySubtitle': 'Basic details for your exhibitor listing.',
-      'exhibitorForm.companyNote':     'After purchasing your booth, you\'ll have access to the <strong>Exhibitor Portal</strong> to provide richer details, upload media, select your booth, and manage your team.',
+      'exhibitorForm.companyNote':     'After purchasing your booth, you\'ll have access to the <strong>Exhibitor Portal</strong> to provide richer details, upload media, and manage your team.',
       'exhibitorForm.staffTitle':      'Booth Staff Passes',
       'exhibitorForm.staffSubtitle':   'Your ticket includes up to {max} staff passes.',
       'exhibitorForm.staffOptionalNote': 'You can add staff now on the previous page or manage them later from your Exhibitor Portal.',
@@ -257,7 +257,7 @@ const sratixI18n = (function () {
       // Exhibitor wizard
       'exhibitorForm.companyTitle':    'Informations sur l\'entreprise',
       'exhibitorForm.companySubtitle': 'Détails de base pour votre fiche exposant.',
-      'exhibitorForm.companyNote':     'Après l\'achat de votre stand, vous aurez accès au <strong>Portail Exposant</strong> pour fournir des détails plus complets, télécharger des médias, choisir votre stand et gérer votre équipe.',
+      'exhibitorForm.companyNote':     'Après l\'achat de votre stand, vous aurez accès au <strong>Portail Exposant</strong> pour fournir des détails plus complets, télécharger des médias et gérer votre équipe.',
       'exhibitorForm.staffTitle':      'Passes personnel du stand',
       'exhibitorForm.staffSubtitle':   'Votre billet comprend jusqu\'à {max} passes personnel.',
       'exhibitorForm.staffOptionalNote': 'Vous pouvez ajouter du personnel maintenant ou plus tard depuis votre Portail Exposant.',
@@ -382,7 +382,7 @@ const sratixI18n = (function () {
       // Exhibitor wizard
       'exhibitorForm.companyTitle':    'Unternehmensinformationen',
       'exhibitorForm.companySubtitle': 'Grundlegende Angaben für Ihren Ausstellereintrag.',
-      'exhibitorForm.companyNote':     'Nach dem Kauf Ihres Standes haben Sie Zugang zum <strong>Aussteller-Portal</strong>, um weitere Details anzugeben, Medien hochzuladen, Ihren Stand auszuwählen und Ihr Team zu verwalten.',
+      'exhibitorForm.companyNote':     'Nach dem Kauf Ihres Standes haben Sie Zugang zum <strong>Aussteller-Portal</strong>, um weitere Details anzugeben, Medien hochzuladen und Ihr Team zu verwalten.',
       'exhibitorForm.staffTitle':      'Stand-Mitarbeiterpässe',
       'exhibitorForm.staffSubtitle':   'Ihr Ticket umfasst bis zu {max} Mitarbeiterpässe.',
       'exhibitorForm.staffOptionalNote': 'Sie können Mitarbeiter jetzt hinzufügen oder später über Ihr Aussteller-Portal verwalten.',
@@ -506,7 +506,7 @@ const sratixI18n = (function () {
       // Exhibitor wizard
       'exhibitorForm.companyTitle':    'Informazioni aziendali',
       'exhibitorForm.companySubtitle': 'Dettagli di base per la vostra scheda espositore.',
-      'exhibitorForm.companyNote':     'Dopo l\'acquisto del vostro stand, avrete accesso al <strong>Portale Espositore</strong> per fornire dettagli più completi, caricare media, selezionare il vostro stand e gestire il team.',
+      'exhibitorForm.companyNote':     'Dopo l\'acquisto del vostro stand, avrete accesso al <strong>Portale Espositore</strong> per fornire dettagli più completi, caricare media e gestire il team.',
       'exhibitorForm.staffTitle':      'Pass personale dello stand',
       'exhibitorForm.staffSubtitle':   'Il vostro biglietto include fino a {max} pass per il personale.',
       'exhibitorForm.staffOptionalNote': 'Potete aggiungere il personale ora o gestirlo in seguito dal Portale Espositore.',
@@ -629,7 +629,7 @@ const sratixI18n = (function () {
       // Exhibitor wizard
       'exhibitorForm.companyTitle':    '公司資訊',
       'exhibitorForm.companySubtitle': '展商名錄的基本資料。',
-      'exhibitorForm.companyNote':     '購買攤位後，您可以透過<strong>展商入口</strong>提供更豐富的資訊、上傳媒體、選擇攤位並管理團隊。',
+      'exhibitorForm.companyNote':     '購買攤位後，您可以透過<strong>展商入口</strong>提供更豐富的資訊、上傳媒體並管理團隊。',
       'exhibitorForm.staffTitle':      '攤位工作人員通行證',
       'exhibitorForm.staffSubtitle':   '您的票券包含最多 {max} 張工作人員通行證。',
       'exhibitorForm.staffOptionalNote': '您可以現在新增工作人員，或稍後從展商入口管理。',
