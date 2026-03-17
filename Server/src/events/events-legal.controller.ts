@@ -23,30 +23,37 @@ export class EventsLegalController {
     @Param('slug') slug: string,
     @Res() reply: FastifyReply,
   ) {
-    const content = await this.eventsService.getLegalPage(eventId, slug);
+    try {
+      const content = await this.eventsService.getLegalPage(eventId, slug);
 
-    if (!content) {
+      if (!content) {
+        return reply
+          .status(404)
+          .type('text/html')
+          .send(this.renderPage('Page Not Found', '<p>This legal document has not been configured yet.</p>'));
+      }
+
+      // Sanitize stored HTML to prevent XSS
+      const safe = sanitizeHtml(content, {
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'img']),
+        allowedAttributes: {
+          ...sanitizeHtml.defaults.allowedAttributes,
+          img: ['src', 'alt', 'width', 'height'],
+          a: ['href', 'target', 'rel'],
+        },
+      });
+
+      const title = this.slugToTitle(slug);
+
+      return reply
+        .type('text/html')
+        .send(this.renderPage(title, safe));
+    } catch {
       return reply
         .status(404)
         .type('text/html')
-        .send(this.renderPage('Page Not Found', '<p>This legal document has not been configured yet.</p>'));
+        .send(this.renderPage('Page Not Found', '<p>This legal document is not available.</p>'));
     }
-
-    // Sanitize stored HTML to prevent XSS
-    const safe = sanitizeHtml(content, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'img']),
-      allowedAttributes: {
-        ...sanitizeHtml.defaults.allowedAttributes,
-        img: ['src', 'alt', 'width', 'height'],
-        a: ['href', 'target', 'rel'],
-      },
-    });
-
-    const title = this.slugToTitle(slug);
-
-    return reply
-      .type('text/html')
-      .send(this.renderPage(title, safe));
   }
 
   private slugToTitle(slug: string): string {

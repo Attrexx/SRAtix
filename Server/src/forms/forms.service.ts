@@ -279,7 +279,6 @@ export class FormsService {
 
     // Hydrate field options from the Field Repository for any select/multi-select/
     // country/canton fields that have no inline options in the schema snapshot.
-    // Also hydrate documentUrl for consent fields missing it.
     await this.hydrateFieldOptions(schema);
 
     return schema;
@@ -329,28 +328,6 @@ export class FormsService {
       }
     }
 
-    // Hydrate documentUrl for consent fields that don't have it inline
-    const consentFields = def.fields.filter(
-      (f) => f.type === 'consent' && !f.documentUrl,
-    );
-    if (consentFields.length > 0) {
-      const consentSlugs = consentFields.map((f) => (f as any).slug || f.id);
-      const consentDefs = await this.prisma.fieldDefinition.findMany({
-        where: { slug: { in: consentSlugs }, active: true },
-        select: { slug: true, documentUrl: true },
-      });
-      const urlBySlug = new Map<string, unknown>();
-      for (const cd of consentDefs) {
-        if (cd.documentUrl) urlBySlug.set(cd.slug, cd.documentUrl);
-      }
-      for (const field of consentFields) {
-        const slug = (field as any).slug || field.id;
-        const url = urlBySlug.get(slug);
-        if (url) {
-          field.documentUrl = url as Record<string, string>;
-        }
-      }
-    }
   }
 
   // ─── Submissions ──────────────────────────────────────────────

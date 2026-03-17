@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 
 interface RichTextEditorProps {
   value: string;
@@ -19,6 +19,7 @@ const TOOLBAR_BUTTONS = [
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalUpdate = useRef(false);
+  const [codeMode, setCodeMode] = useState(false);
 
   // Sync external value changes (initial load, reset) into the editor.
   // Skip if the editor itself triggered the change to prevent caret jumping.
@@ -75,6 +76,10 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
     handleInput();
   }, [handleInput]);
 
+  const toggleCodeMode = useCallback(() => {
+    setCodeMode((prev) => !prev);
+  }, []);
+
   return (
     <div
       className="rounded-lg overflow-hidden"
@@ -99,6 +104,8 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
               color: 'var(--color-text)',
               background: 'var(--color-bg-subtle)',
               border: '1px solid var(--color-border)',
+              opacity: codeMode ? 0.4 : 1,
+              pointerEvents: codeMode ? 'none' : 'auto',
               ...(btn.style ? { [btn.style.split(':')[0]]: btn.style.split(':')[1] } : {}),
             }}
             title={btn.cmd}
@@ -117,26 +124,62 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
             color: 'var(--color-text)',
             background: 'var(--color-bg-subtle)',
             border: '1px solid var(--color-border)',
+            opacity: codeMode ? 0.4 : 1,
+            pointerEvents: codeMode ? 'none' : 'auto',
           }}
           title="Link"
         >
           🔗
         </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Code toggle */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={toggleCodeMode}
+          className="rounded px-2 py-0.5 text-sm font-mono hover:opacity-80"
+          style={{
+            color: codeMode ? '#fff' : 'var(--color-text)',
+            background: codeMode ? 'var(--color-primary, #6366f1)' : 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border)',
+          }}
+          title={codeMode ? 'Visual editor' : 'HTML code'}
+        >
+          {'</>'}
+        </button>
       </div>
 
-      {/* Editable area */}
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onPaste={handlePaste}
-        data-placeholder={placeholder}
-        className="min-h-[100px] px-3 py-2 text-sm outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:pointer-events-none"
-        style={{
-          background: 'var(--color-bg-subtle)',
-          color: 'var(--color-text)',
-        }}
-      />
+      {/* Editable area — visual or code mode */}
+      {codeMode ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full min-h-[100px] px-3 py-2 text-sm font-mono outline-none resize-y"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            color: 'var(--color-text)',
+            border: 'none',
+          }}
+          spellCheck={false}
+        />
+      ) : (
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleInput}
+          onPaste={handlePaste}
+          data-placeholder={placeholder}
+          className="min-h-[100px] px-3 py-2 text-sm outline-none [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:pointer-events-none"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            color: 'var(--color-text)',
+          }}
+        />
+      )}
     </div>
   );
 }
