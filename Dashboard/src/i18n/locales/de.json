@@ -215,6 +215,14 @@
   "events.settings.logoUploaded": "Logo hochgeladen",
   "events.settings.logoUploadFailed": "Fehler beim Hochladen des Logos",
 
+  "events.settings.pagePaths": "Seitenpfade",
+  "events.settings.pagePathsHint": "WordPress-Seitenslugs, auf denen die SRAtix-Shortcodes platziert sind. Werden für die Verlinkung zwischen Widgets verwendet.",
+  "events.settings.pathTickets": "Tickets-Seite",
+  "events.settings.pathRegister": "Registrierungsseite",
+  "events.settings.pathMyTickets": "Meine Tickets-Seite",
+  "events.settings.pathSchedule": "Programm-Seite",
+  "events.settings.pathExhibitorPortal": "Aussteller-Portal-Seite",
+
   "events.settings.legalCompliance": "Recht & Compliance",
   "events.settings.legalComplianceHint": "Bearbeiten Sie die rechtlichen Dokumente, die den Teilnehmenden bei der Registrierung angezeigt werden. Jedes Dokument öffnet sich in einem neuen Tab.",
   "events.settings.legalTerms": "AGB",

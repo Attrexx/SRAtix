@@ -215,6 +215,14 @@
   "events.settings.logoUploaded": "Logo caricato",
   "events.settings.logoUploadFailed": "Caricamento del logo fallito",
 
+  "events.settings.pagePaths": "Percorsi pagine",
+  "events.settings.pagePathsHint": "Slug delle pagine WordPress dove sono inseriti gli shortcode SRAtix. Usati per i collegamenti tra widget.",
+  "events.settings.pathTickets": "Pagina Biglietti",
+  "events.settings.pathRegister": "Pagina Registrazione",
+  "events.settings.pathMyTickets": "Pagina I miei biglietti",
+  "events.settings.pathSchedule": "Pagina Programma",
+  "events.settings.pathExhibitorPortal": "Pagina Portale espositore",
+
   "events.settings.legalCompliance": "Legale & Conformità",
   "events.settings.legalComplianceHint": "Modifica i documenti legali mostrati ai partecipanti durante la registrazione. Ogni documento si apre in una nuova scheda.",
   "events.settings.legalTerms": "Termini e condizioni",

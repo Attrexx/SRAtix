@@ -77,6 +77,7 @@ model Event {
   settings      Setting[]
   badgeTemplates BadgeTemplate[]
   webhookEndpoints WebhookEndpoint[]
+  eventExhibitors  EventExhibitor[]
 
   @@unique([orgId, slug])
   @@index([orgId])
@@ -653,4 +654,75 @@ model WebhookDelivery {
   @@index([eventType])
   @@index([createdAt])
   @@map("webhook_deliveries")
+}
+
+// ============================================================================
+// EXHIBITOR PORTAL (Phase 1a)
+// ============================================================================
+
+/// Persistent company profile scoped to an Organization (survives across events).
+model ExhibitorProfile {
+  id           String   @id @default(uuid()) @db.Char(36)
+  orgId        String   @db.Char(36)
+  companyName  String   @db.VarChar(255)
+  legalName    String?  @db.VarChar(255)
+  website      String?  @db.VarChar(500)
+  description  String?  @db.Text           // rich text (sanitized HTML)
+  contactEmail String?  @db.VarChar(255)
+  contactPhone String?  @db.VarChar(50)
+  socialLinks  Json?    // { linkedin?, twitter?, instagram?, youtube? }
+  logoFileId   String?  @db.Char(36)
+  logoUrl      String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @db.DateTime(3)
+
+  logoFile         UploadedFile?     @relation(fields: [logoFileId], references: [id])
+  eventExhibitors  EventExhibitor[]
+
+  @@unique([orgId])
+  @@map("exhibitor_profiles")
+}
+
+/// Event-specific exhibitor participation record (booth, demos, sync state).
+model EventExhibitor {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventId             String   @db.Char(36)
+  exhibitorProfileId  String   @db.Char(36)
+  boothNumber         String?  @db.VarChar(50)
+  expoArea            String?  @db.VarChar(100)
+  exhibitorCategory   String?  @db.VarChar(100)  // maps to WP exhibitor-category taxonomy
+  exhibitorType       String?  @db.VarChar(100)  // maps to WP exhibitor-type taxonomy
+  demoTitle           String?  @db.VarChar(255)
+  demoDescription     String?  @db.Text          // rich text
+  status              String   @default("draft") @db.VarChar(30) // draft | published | archived
+  wpPostId            Int?     // synced WordPress exhibitor post ID
+  syncedAt            DateTime? @db.DateTime(3)
+  meta                Json?    // flexible extra fields
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+  updatedAt           DateTime @updatedAt @db.DateTime(3)
+
+  event             Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  exhibitorProfile  ExhibitorProfile  @relation(fields: [exhibitorProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, exhibitorProfileId])
+  @@index([eventId])
+  @@index([exhibitorProfileId])
+  @@map("event_exhibitors")
+}
+
+/// Centralized file registry for uploaded assets (logos, gallery images, etc.).
+model UploadedFile {
+  id           String   @id @default(uuid()) @db.Char(36)
+  orgId        String   @db.Char(36)
+  originalName String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(100)
+  sizeBytes    Int
+  storagePath  String   @db.VarChar(500) // relative path on server
+  publicUrl    String   @db.VarChar(500)
+  createdAt    DateTime @default(now()) @db.DateTime(3)
+
+  exhibitorProfiles ExhibitorProfile[]
+
+  @@index([orgId])
+  @@map("uploaded_files")
 }

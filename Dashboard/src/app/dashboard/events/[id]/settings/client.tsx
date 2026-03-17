@@ -84,6 +84,13 @@ export default function EventSettingsPage() {
   const [legalModalHtml, setLegalModalHtml] = useState('');
   const [legalSaving, setLegalSaving] = useState(false);
 
+  // Page paths (shortcode page URLs)
+  const [pagePathTickets, setPagePathTickets] = useState('/tickets/');
+  const [pagePathRegister, setPagePathRegister] = useState('/register/');
+  const [pagePathMyTickets, setPagePathMyTickets] = useState('/my-tickets/');
+  const [pagePathSchedule, setPagePathSchedule] = useState('/schedule/');
+  const [pagePathExhibitorPortal, setPagePathExhibitorPortal] = useState('/exhibitor-portal/');
+
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
     setSlug(ev.slug);
@@ -106,6 +113,12 @@ export default function EventSettingsPage() {
     setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
+    const paths = (meta.pagePaths ?? {}) as Record<string, string>;
+    setPagePathTickets(paths.tickets ?? '/tickets/');
+    setPagePathRegister(paths.register ?? '/register/');
+    setPagePathMyTickets(paths.myTickets ?? '/my-tickets/');
+    setPagePathSchedule(paths.schedule ?? '/schedule/');
+    setPagePathExhibitorPortal(paths.exhibitorPortal ?? '/exhibitor-portal/');
   }, []);
 
   useEffect(() => {
@@ -152,6 +165,13 @@ export default function EventSettingsPage() {
           ticketIntro: ticketIntro.trim() || undefined,
           exhibitorTicketTitle: exhibitorTicketTitle.trim() || undefined,
           exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
+          pagePaths: {
+            tickets: pagePathTickets.trim() || '/tickets/',
+            register: pagePathRegister.trim() || '/register/',
+            myTickets: pagePathMyTickets.trim() || '/my-tickets/',
+            schedule: pagePathSchedule.trim() || '/schedule/',
+            exhibitorPortal: pagePathExhibitorPortal.trim() || '/exhibitor-portal/',
+          },
         },
       };
       const updated = await api.updateEvent(id, payload);
@@ -387,6 +407,20 @@ export default function EventSettingsPage() {
                 />
               </div>
             </div>
+          </div>
+        </Section>
+
+        {/* ── Page Paths ── */}
+        <Section title={t('events.settings.pagePaths')}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.pagePathsHint')}
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FieldInput label={t('events.settings.pathTickets')} value={pagePathTickets} onChange={setPagePathTickets} placeholder="/tickets/" />
+            <FieldInput label={t('events.settings.pathRegister')} value={pagePathRegister} onChange={setPagePathRegister} placeholder="/register/" />
+            <FieldInput label={t('events.settings.pathMyTickets')} value={pagePathMyTickets} onChange={setPagePathMyTickets} placeholder="/my-tickets/" />
+            <FieldInput label={t('events.settings.pathSchedule')} value={pagePathSchedule} onChange={setPagePathSchedule} placeholder="/schedule/" />
+            <FieldInput label={t('events.settings.pathExhibitorPortal')} value={pagePathExhibitorPortal} onChange={setPagePathExhibitorPortal} placeholder="/exhibitor-portal/" />
           </div>
         </Section>
 

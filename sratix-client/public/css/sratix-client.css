@@ -1466,3 +1466,185 @@ label.sratix-checkbox-label {
 	max-width: 520px;
 	margin: 0;
 }
+
+/* ── Button size modifier ── */
+.sratix-btn--sm {
+	padding: 8px 16px;
+	font-size: 0.88em;
+}
+
+/* ── Exhibitor Portal ── */
+.sratix-exhibitor-portal {
+	margin: 20px 0;
+}
+
+.sratix-portal-tabs {
+	display: flex;
+	gap: 0;
+	border-bottom: 1px solid var(--sratix-border);
+	margin-bottom: 24px;
+}
+
+.sratix-portal-tab {
+	padding: 12px 24px;
+	font-size: 0.95em;
+	font-weight: 500;
+	color: var(--sratix-text-muted);
+	border-bottom: 2px solid transparent;
+	transition: color 0.15s, border-color 0.15s;
+	cursor: pointer;
+}
+
+.sratix-portal-tab:hover {
+	color: var(--sratix-text);
+}
+
+.sratix-portal-tab--active {
+	color: var(--sratix-text);
+	border-bottom-color: var(--sratix-red);
+}
+
+.sratix-portal-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.sratix-portal-logo-section {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	padding: 16px;
+	background: var(--sratix-navy-light);
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+}
+
+.sratix-portal-logo-preview {
+	width: 80px;
+	height: 80px;
+	flex-shrink: 0;
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--sratix-navy-mid);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.sratix-portal-logo-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.sratix-portal-logo-placeholder {
+	font-size: 0.75em;
+	color: var(--sratix-text-muted);
+	text-align: center;
+	padding: 8px;
+}
+
+.sratix-portal-logo-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.sratix-portal-fields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+@media (max-width: 600px) {
+	.sratix-portal-fields { grid-template-columns: 1fr; }
+}
+
+.sratix-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.sratix-field-group--full {
+	grid-column: 1 / -1;
+}
+
+.sratix-field-group .sratix-label {
+	margin: 0;
+}
+
+.sratix-field-group .sratix-input {
+	margin: 0;
+}
+
+.sratix-field-group textarea.sratix-input {
+	resize: vertical;
+	min-height: 80px;
+}
+
+.sratix-required {
+	color: var(--sratix-red);
+}
+
+.sratix-portal-fieldset {
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	padding: 16px;
+	margin: 0;
+}
+
+.sratix-portal-legend {
+	font-weight: 600;
+	font-size: 0.95em;
+	color: var(--sratix-text);
+	padding: 0 8px;
+}
+
+.sratix-portal-actions {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.sratix-portal-status {
+	font-size: 0.9em;
+	transition: opacity 0.2s;
+}
+
+.sratix-portal-status--success {
+	color: #4ade80;
+}
+
+.sratix-portal-status--error {
+	color: #f87171;
+}
+
+/* Event detail cards */
+.sratix-event-card {
+	background: var(--sratix-navy-light);
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 16px;
+}
+
+.sratix-event-card__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.sratix-event-card__title {
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--sratix-text);
+	margin: 0;
+}
+
+.sratix-badge--pending {
+	background: rgba(234, 179, 8, 0.15);
+	color: #facc15;
+}

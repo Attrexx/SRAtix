@@ -215,6 +215,14 @@
   "events.settings.logoUploaded": "標誌已上傳",
   "events.settings.logoUploadFailed": "標誌上傳失敗",
 
+  "events.settings.pagePaths": "頁面路徑",
+  "events.settings.pagePathsHint": "放置各 SRAtix 短碼的 WordPress 頁面路徑。用於小工具之間的連結。",
+  "events.settings.pathTickets": "票券頁面",
+  "events.settings.pathRegister": "報名頁面",
+  "events.settings.pathMyTickets": "我的票券頁面",
+  "events.settings.pathSchedule": "議程頁面",
+  "events.settings.pathExhibitorPortal": "展商入口頁面",
+
   "events.settings.legalCompliance": "法律與合規",
   "events.settings.legalComplianceHint": "編輯報名時向與會者顯示的法律文件。每份文件將在新分頁中開啟。",
   "events.settings.legalTerms": "條款與細則",

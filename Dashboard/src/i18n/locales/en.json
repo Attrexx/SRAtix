@@ -215,6 +215,14 @@
   "events.settings.logoUploaded": "Logo uploaded",
   "events.settings.logoUploadFailed": "Failed to upload logo",
 
+  "events.settings.pagePaths": "Page Paths",
+  "events.settings.pagePathsHint": "WordPress page slugs where each SRAtix shortcode is placed. Used for cross-linking between widgets.",
+  "events.settings.pathTickets": "Tickets Page",
+  "events.settings.pathRegister": "Register Page",
+  "events.settings.pathMyTickets": "My Tickets Page",
+  "events.settings.pathSchedule": "Schedule Page",
+  "events.settings.pathExhibitorPortal": "Exhibitor Portal Page",
+
   "events.settings.legalCompliance": "Legal & Compliance",
   "events.settings.legalComplianceHint": "Edit the legal documents shown to attendees during registration. Each document opens in a new tab when the attendee clicks the consent checkbox label.",
   "events.settings.legalTerms": "Terms & Conditions",

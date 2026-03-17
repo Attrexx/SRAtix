@@ -17,6 +17,7 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_my_tickets', array( $this, 'render_my_tickets' ) );
 		add_shortcode( 'sratix_schedule',   array( $this, 'render_schedule' ) );
 		add_shortcode( 'sratix_register',   array( $this, 'render_register' ) );
+		add_shortcode( 'sratix_exhibitor_portal', array( $this, 'render_exhibitor_portal' ) );
 	}
 
 	/**
@@ -31,7 +32,8 @@ class SRAtix_Client_Public {
 		$has_shortcode = has_shortcode( $post->post_content, 'sratix_tickets' )
 			|| has_shortcode( $post->post_content, 'sratix_my_tickets' )
 			|| has_shortcode( $post->post_content, 'sratix_schedule' )
-			|| has_shortcode( $post->post_content, 'sratix_register' );
+			|| has_shortcode( $post->post_content, 'sratix_register' )
+			|| has_shortcode( $post->post_content, 'sratix_exhibitor_portal' );
 
 		if ( ! $has_shortcode ) {
 			return;
@@ -335,6 +337,54 @@ class SRAtix_Client_Public {
 			. '<div id="sratix-register-widget" data-api-url="%s"></div>'
 			. '</div></div>',
 			esc_attr( rtrim( $api_url, '/' ) )
+		);
+	}
+
+	/**
+	 * [sratix_exhibitor_portal] — Exhibitor self-service portal.
+	 *
+	 * Requires login. Provides company-profile editing and per-event
+	 * exhibitor details (booth number, demo description, etc.).
+	 */
+	public function render_exhibitor_portal( $atts ) {
+		$maint = $this->get_maintenance_status();
+		if ( $maint['active'] ) {
+			return $this->render_maintenance_screen( $maint['message'] );
+		}
+
+		if ( ! is_user_logged_in() ) {
+			$current_url = ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) );
+
+			if ( class_exists( 'SRD_Auth' ) ) {
+				$login_url    = SRD_Auth::login_url( $current_url );
+				$register_url = SRD_Auth::register_url();
+			} else {
+				$login_url    = wp_login_url( $current_url );
+				$register_url = wp_registration_url();
+			}
+
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<div class="sratix-auth-prompt">'
+				. '<p class="sratix-auth-prompt__text">'
+				. esc_html__( 'Sign in to access the Exhibitor Portal.', 'sratix-client' )
+				. '</p>'
+				. '<div class="sratix-auth-prompt__buttons">'
+				. '<a href="' . esc_url( $login_url ) . '" class="sratix-btn sratix-btn--primary">'
+				. esc_html__( 'Sign In', 'sratix-client' ) . '</a>'
+				. '<a href="' . esc_url( $register_url ) . '" class="sratix-btn sratix-btn--outline">'
+				. esc_html__( 'Create Account', 'sratix-client' ) . '</a>'
+				. '</div>'
+				. '</div>'
+				. '</div></div>';
+		}
+
+		$event_id = get_option( 'sratix_client_event_id', '' );
+
+		return sprintf(
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-exhibitor-portal-widget" data-event-id="%s"></div>'
+			. '</div></div>',
+			esc_attr( $event_id )
 		);
 	}
 

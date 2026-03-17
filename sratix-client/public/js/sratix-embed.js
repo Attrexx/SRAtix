@@ -2447,6 +2447,342 @@
     }
   }
 
+  // ─── Exhibitor Portal widget ──────────────────────────────────────────────────
+
+  async function initExhibitorPortalWidget() {
+    const container = document.getElementById('sratix-exhibitor-portal-widget');
+    if (!container) return;
+
+    const user = config.user;
+    if (!user || !user.email) {
+      if (!container.querySelector('.sratix-auth-prompt')) {
+        container.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.login'))}</p>`;
+      }
+      return;
+    }
+
+    container.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.loading'))}</p>`;
+
+    try {
+      // Authenticate via WP identity exchange
+      const authRes = await apiFetch('auth/token', {
+        method: 'POST',
+        body: JSON.stringify({
+          wpUserId: user.wpUserId,
+          wpRoles: user.roles || [],
+          signature: user.signature,
+          sourceSite: user.sourceSite,
+          email: user.email,
+          displayName: (user.firstName || '') + (user.lastName ? ' ' + user.lastName : ''),
+        }),
+      });
+
+      const authHeaders = { Authorization: `Bearer ${authRes.accessToken}` };
+
+      // Fetch profile and events in parallel
+      const [profile, events] = await Promise.all([
+        apiFetch('exhibitor-portal/profile', { headers: authHeaders }),
+        apiFetch('exhibitor-portal/events', { headers: authHeaders }),
+      ]);
+
+      renderExhibitorPortal(container, profile, events, authHeaders);
+    } catch (err) {
+      console.error('[SRAtix] Exhibitor portal error:', err);
+      container.innerHTML = `<p class="sratix-error">${escHtml(t('exhibitorPortal.loadError'))}</p>`;
+    }
+  }
+
+  function renderExhibitorPortal(container, profile, events, authHeaders) {
+    const activeTab = sessionStorage.getItem('sratix_exhibitor_tab') || 'profile';
+
+    container.innerHTML = `
+      <div class="sratix-exhibitor-portal">
+        <div class="sratix-portal-tabs">
+          <button class="sratix-portal-tab ${activeTab === 'profile' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="profile">${escHtml(t('exhibitorPortal.tabProfile'))}</button>
+          <button class="sratix-portal-tab ${activeTab === 'events' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="events">${escHtml(t('exhibitorPortal.tabEvents'))}</button>
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-profile"
+             style="${activeTab !== 'profile' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-events"
+             style="${activeTab !== 'events' ? 'display:none' : ''}">
+        </div>
+      </div>
+    `;
+
+    // Tab switching
+    container.querySelectorAll('.sratix-portal-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        sessionStorage.setItem('sratix_exhibitor_tab', tab);
+        container.querySelectorAll('.sratix-portal-tab').forEach(b => b.classList.remove('sratix-portal-tab--active'));
+        btn.classList.add('sratix-portal-tab--active');
+        container.querySelectorAll('.sratix-portal-panel').forEach(p => p.style.display = 'none');
+        document.getElementById('sratix-panel-' + tab).style.display = '';
+      });
+    });
+
+    renderProfilePanel(container.querySelector('#sratix-panel-profile'), profile, authHeaders);
+    renderEventsPanel(container.querySelector('#sratix-panel-events'), events, authHeaders);
+  }
+
+  function renderProfilePanel(panel, profile, authHeaders) {
+    const social = profile.socialLinks || {};
+
+    panel.innerHTML = `
+      <form class="sratix-portal-form" id="sratix-profile-form">
+        <div class="sratix-portal-logo-section">
+          <div class="sratix-portal-logo-preview">
+            ${profile.logoUrl
+              ? `<img src="${escAttr(profile.logoUrl)}" alt="Company logo" class="sratix-portal-logo-img" />`
+              : `<div class="sratix-portal-logo-placeholder">${escHtml(t('exhibitorPortal.noLogo'))}</div>`}
+          </div>
+          <div class="sratix-portal-logo-actions">
+            <label class="sratix-btn sratix-btn--outline sratix-btn--sm">
+              ${escHtml(t('exhibitorPortal.uploadLogo'))}
+              <input type="file" accept="image/*" id="sratix-logo-input" hidden />
+            </label>
+            ${profile.logoUrl
+              ? `<button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--sm" id="sratix-remove-logo">${escHtml(t('exhibitorPortal.removeLogo'))}</button>`
+              : ''}
+          </div>
+        </div>
+
+        <div class="sratix-portal-fields">
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.companyName'))} <span class="sratix-required">*</span></label>
+            <input type="text" name="companyName" value="${escAttr(profile.companyName || '')}" required class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.legalName'))}</label>
+            <input type="text" name="legalName" value="${escAttr(profile.legalName || '')}" class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.website'))}</label>
+            <input type="url" name="website" value="${escAttr(profile.website || '')}" class="sratix-input" placeholder="https://" />
+          </div>
+          <div class="sratix-field-group sratix-field-group--full">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.description'))}</label>
+            <textarea name="description" rows="4" class="sratix-input" maxlength="10000">${escHtml(profile.description || '')}</textarea>
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.contactEmail'))}</label>
+            <input type="email" name="contactEmail" value="${escAttr(profile.contactEmail || '')}" class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.contactPhone'))}</label>
+            <input type="tel" name="contactPhone" value="${escAttr(profile.contactPhone || '')}" class="sratix-input" />
+          </div>
+        </div>
+
+        <fieldset class="sratix-portal-fieldset">
+          <legend class="sratix-portal-legend">${escHtml(t('exhibitorPortal.socialLinks'))}</legend>
+          <div class="sratix-portal-fields">
+            <div class="sratix-field-group">
+              <label class="sratix-label">LinkedIn</label>
+              <input type="url" name="social_linkedin" value="${escAttr(social.linkedin || '')}" class="sratix-input" placeholder="https://linkedin.com/company/..." />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">X / Twitter</label>
+              <input type="url" name="social_twitter" value="${escAttr(social.twitter || '')}" class="sratix-input" placeholder="https://x.com/..." />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">YouTube</label>
+              <input type="url" name="social_youtube" value="${escAttr(social.youtube || '')}" class="sratix-input" placeholder="https://youtube.com/..." />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">Instagram</label>
+              <input type="url" name="social_instagram" value="${escAttr(social.instagram || '')}" class="sratix-input" placeholder="https://instagram.com/..." />
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="sratix-portal-actions">
+          <button type="submit" class="sratix-btn sratix-btn--primary" id="sratix-save-profile">
+            ${escHtml(t('exhibitorPortal.saveProfile'))}
+          </button>
+          <span class="sratix-portal-status" id="sratix-profile-status"></span>
+        </div>
+      </form>
+    `;
+
+    // Logo upload
+    const logoInput = panel.querySelector('#sratix-logo-input');
+    logoInput.addEventListener('change', async () => {
+      const file = logoInput.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch(API_BASE + '/exhibitor-portal/profile/logo', {
+          method: 'POST',
+          headers: { Authorization: authHeaders.Authorization },
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        await res.json();
+        // Re-fetch full profile and re-render
+        const refreshed = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
+        renderProfilePanel(panel, refreshed, authHeaders);
+      } catch (err) {
+        console.error('[SRAtix] Logo upload error:', err);
+        showStatus(panel.querySelector('#sratix-profile-status'), t('exhibitorPortal.logoUploadError'), true);
+      }
+    });
+
+    // Logo remove
+    const removeBtn = panel.querySelector('#sratix-remove-logo');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', async () => {
+        try {
+          await apiFetch('exhibitor-portal/profile/logo', {
+            method: 'DELETE',
+            headers: authHeaders,
+          });
+          const refreshed = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
+          renderProfilePanel(panel, refreshed, authHeaders);
+        } catch (err) {
+          console.error('[SRAtix] Logo remove error:', err);
+        }
+      });
+    }
+
+    // Profile save
+    panel.querySelector('#sratix-profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const saveBtn = form.querySelector('#sratix-save-profile');
+      const statusEl = form.querySelector('#sratix-profile-status');
+      saveBtn.disabled = true;
+
+      const body = {
+        companyName: form.companyName.value.trim(),
+        legalName: form.legalName.value.trim() || undefined,
+        website: form.website.value.trim() || undefined,
+        description: form.description.value.trim() || undefined,
+        contactEmail: form.contactEmail.value.trim() || undefined,
+        contactPhone: form.contactPhone.value.trim() || undefined,
+        socialLinks: {
+          linkedin: form.social_linkedin.value.trim() || undefined,
+          twitter: form.social_twitter.value.trim() || undefined,
+          youtube: form.social_youtube.value.trim() || undefined,
+          instagram: form.social_instagram.value.trim() || undefined,
+        },
+      };
+
+      try {
+        await apiFetch('exhibitor-portal/profile', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify(body),
+        });
+        showStatus(statusEl, t('exhibitorPortal.saved'), false);
+      } catch (err) {
+        console.error('[SRAtix] Profile save error:', err);
+        showStatus(statusEl, t('exhibitorPortal.saveError'), true);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  function renderEventsPanel(panel, events, authHeaders) {
+    if (!events || events.length === 0) {
+      panel.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.noEvents'))}</p>`;
+      return;
+    }
+
+    panel.innerHTML = events.map(ev => `
+      <div class="sratix-event-card" data-event-id="${escAttr(ev.eventId)}">
+        <div class="sratix-event-card__header">
+          <h3 class="sratix-event-card__title">${escHtml(ev.event?.name || ev.eventId)}</h3>
+          <span class="sratix-badge sratix-badge--${ev.status === 'confirmed' ? 'valid' : 'pending'}">
+            ${escHtml(ev.status || 'draft')}
+          </span>
+        </div>
+        <form class="sratix-portal-form sratix-event-detail-form">
+          <div class="sratix-portal-fields">
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.boothNumber'))}</label>
+              <input type="text" name="boothNumber" value="${escAttr(ev.boothNumber || '')}" class="sratix-input" />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.expoArea'))}</label>
+              <input type="text" name="expoArea" value="${escAttr(ev.expoArea || '')}" class="sratix-input" />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorCategory'))}</label>
+              <input type="text" name="exhibitorCategory" value="${escAttr(ev.exhibitorCategory || '')}" class="sratix-input" />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorType'))}</label>
+              <input type="text" name="exhibitorType" value="${escAttr(ev.exhibitorType || '')}" class="sratix-input" />
+            </div>
+            <div class="sratix-field-group sratix-field-group--full">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.demoTitle'))}</label>
+              <input type="text" name="demoTitle" value="${escAttr(ev.demoTitle || '')}" class="sratix-input" />
+            </div>
+            <div class="sratix-field-group sratix-field-group--full">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.demoDescription'))}</label>
+              <textarea name="demoDescription" rows="3" class="sratix-input">${escHtml(ev.demoDescription || '')}</textarea>
+            </div>
+          </div>
+          <div class="sratix-portal-actions">
+            <button type="submit" class="sratix-btn sratix-btn--primary sratix-btn--sm">
+              ${escHtml(t('exhibitorPortal.saveEvent'))}
+            </button>
+            <span class="sratix-portal-status"></span>
+          </div>
+        </form>
+      </div>
+    `).join('');
+
+    // Save handlers for each event form
+    panel.querySelectorAll('.sratix-event-card').forEach(card => {
+      const eventId = card.dataset.eventId;
+      const form = card.querySelector('.sratix-event-detail-form');
+      const statusEl = card.querySelector('.sratix-portal-status');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+
+        const body = {
+          boothNumber: form.boothNumber.value.trim() || undefined,
+          expoArea: form.expoArea.value.trim() || undefined,
+          exhibitorCategory: form.exhibitorCategory.value.trim() || undefined,
+          exhibitorType: form.exhibitorType.value.trim() || undefined,
+          demoTitle: form.demoTitle.value.trim() || undefined,
+          demoDescription: form.demoDescription.value.trim() || undefined,
+        };
+
+        try {
+          await apiFetch(`exhibitor-portal/events/${eventId}/details`, {
+            method: 'PUT',
+            headers: authHeaders,
+            body: JSON.stringify(body),
+          });
+          showStatus(statusEl, t('exhibitorPortal.saved'), false);
+        } catch (err) {
+          console.error('[SRAtix] Event details save error:', err);
+          showStatus(statusEl, t('exhibitorPortal.saveError'), true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function showStatus(el, message, isError) {
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'sratix-portal-status ' + (isError ? 'sratix-portal-status--error' : 'sratix-portal-status--success');
+    setTimeout(() => { el.textContent = ''; el.className = 'sratix-portal-status'; }, 4000);
+  }
+
   // ─── Boot ─────────────────────────────────────────────────────────────────────
 
   function init() {
@@ -2457,6 +2793,7 @@
     initMyTicketsWidget();
     initScheduleWidget();
     initRegisterWidget();
+    initExhibitorPortalWidget();
   }
 
   if (document.readyState === 'loading') {
