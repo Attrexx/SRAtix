@@ -25,6 +25,9 @@
   const API_BASE = config.apiUrl.replace(/\/$/, '');
   const EVENT_ID = config.eventId;
 
+  // Legal page URLs from event public-info (populated on ticket selection)
+  var legalPageUrls = {};
+
   // ─── Ticket card icons (self-contained SVG with per-icon viewBox) ─────────────
 
   const TICKET_ICONS = {
@@ -253,6 +256,12 @@
         apiFetch(endpoint, { headers }),
         apiFetch(`events/${eventId}/public-info`).catch(function () { return {}; }),
       ]);
+
+      // Store legal page URLs for consent field rendering
+      if (publicInfo.legalPageUrls) {
+        legalPageUrls = publicInfo.legalPageUrls;
+      }
+
       if (!ticketTypes || ticketTypes.length === 0) {
         container.innerHTML = `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`
           + `<p class="sratix-info">${escHtml(t('tickets.noTickets'))}</p>`;
@@ -1134,6 +1143,10 @@
         break;
       case 'consent':
         var docUrl = resolveLabel(field.documentUrl) || '';
+        // Fallback: use event-level legal page URL from public-info
+        if (!docUrl && legalPageUrls[field.id]) {
+          docUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
+        }
         var consentLabelHtml;
         if (docUrl) {
           consentLabelHtml = '<a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';

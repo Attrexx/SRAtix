@@ -301,4 +301,41 @@ export class EventsController {
 
     return result;
   }
+
+  // ─── Legal Pages (per-event) ──────────────────────────────────
+
+  /**
+   * PUT /api/events/:id/legal/:slug
+   * Save legal page content. Stores in event.meta.legalPages[slug].
+   */
+  @Patch(':id/legal/:slug')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async saveLegalPage(
+    @Param('id') id: string,
+    @Param('slug') slug: string,
+    @Body() body: { html: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const orgId = this.isSuperAdmin(user) ? undefined : user.orgId;
+    await this.eventsService.setLegalPage(id, orgId, slug, body.html ?? '');
+    this.logger.log(`Legal page '${slug}' updated for event ${id} by ${user.email}`);
+    return { ok: true };
+  }
+
+  /**
+   * GET /api/events/:id/legal-pages
+   * Get all legal page contents (authenticated — for Dashboard editor).
+   */
+  @Get(':id/legal-pages')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async getLegalPages(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const event = this.isSuperAdmin(user)
+      ? await this.eventsService.findOne(id)
+      : await this.eventsService.findOne(id, user.orgId);
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+    return (meta.legalPages as Record<string, string>) ?? {};
+  }
 }

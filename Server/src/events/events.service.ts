@@ -1,10 +1,19 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
 /** Slug for the auto-created default organization. */
 const DEFAULT_ORG_SLUG = 'sra-default';
+
+/** Allowed legal page slugs (consent field IDs). */
+const LEGAL_PAGE_SLUGS = [
+  'terms_conditions',
+  'privacy_policy',
+  'code_of_conduct',
+  'photography_consent',
+] as const;
+type LegalPageSlug = typeof LEGAL_PAGE_SLUGS[number];
 
 @Injectable()
 export class EventsService {
@@ -157,6 +166,7 @@ export class EventsService {
     ticketIntro: string;
     exhibitorTicketTitle: string;
     exhibitorTicketIntro: string;
+    legalPageUrls: Record<string, string>;
   }> {
     const event = await this.prisma.event.findFirst({ where: { id: eventId } });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
@@ -169,6 +179,7 @@ export class EventsService {
       ticketIntro: (meta.ticketIntro as string) ?? '',
       exhibitorTicketTitle: (meta.exhibitorTicketTitle as string) ?? '',
       exhibitorTicketIntro: (meta.exhibitorTicketIntro as string) ?? '',
+      legalPageUrls: this.getLegalPageUrls(eventId, meta, '/api'),
     };
   }
 
@@ -210,5 +221,79 @@ export class EventsService {
     });
 
     return { active, message: message ?? '', since };
+  }
+
+  // ─── Legal Pages ──────────────────────────────────────────────
+
+  /**
+   * Get legal page HTML content for a specific consent field.
+   */
+  async getLegalPage(eventId: string, slug: string): Promise<string | null> {
+    const normalised = slug.replace(/-/g, '_');
+    if (!LEGAL_PAGE_SLUGS.includes(normalised as LegalPageSlug)) {
+      throw new BadRequestException(`Invalid legal page slug: ${slug}`);
+    }
+    const event = await this.prisma.event.findFirst({ where: { id: eventId } });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+    const legalPages = (meta.legalPages as Record<string, string>) ?? {};
+    return legalPages[normalised] || null;
+  }
+
+  /**
+   * Save legal page HTML content for a consent field.
+   */
+  async setLegalPage(
+    eventId: string,
+    orgId: string | undefined,
+    slug: string,
+    html: string,
+  ): Promise<void> {
+    const normalised = slug.replace(/-/g, '_');
+    if (!LEGAL_PAGE_SLUGS.includes(normalised as LegalPageSlug)) {
+      throw new BadRequestException(`Invalid legal page slug: ${slug}`);
+    }
+    const event = await this.findOne(eventId, orgId);
+    const existingMeta = (event.meta as Record<string, unknown>) ?? {};
+    const legalPages = (existingMeta.legalPages as Record<string, string>) ?? {};
+
+    const updatedMeta = {
+      ...existingMeta,
+      legalPages: { ...legalPages, [normalised]: html },
+    };
+
+    await this.prisma.event.update({
+      where: { id: eventId },
+      data: { meta: updatedMeta as any },
+    });
+
+    this.audit.log({
+      eventId,
+      action: AuditAction.EVENT_UPDATED,
+      entity: 'event',
+      entityId: eventId,
+      detail: { legalPage: normalised, action: html ? 'updated' : 'cleared' },
+    });
+  }
+
+  /**
+   * Get URLs for all legal pages that have content.
+   * Returns a map of consent field ID → public URL.
+   */
+  getLegalPageUrls(
+    eventId: string,
+    meta: Record<string, unknown>,
+    apiBase: string,
+  ): Record<string, string> {
+    const legalPages = (meta.legalPages as Record<string, string>) ?? {};
+    const urls: Record<string, string> = {};
+    for (const slug of LEGAL_PAGE_SLUGS) {
+      if (legalPages[slug]) {
+        const urlSlug = slug.replace(/_/g, '-');
+        urls[slug] = `${apiBase}/events/${eventId}/legal/${urlSlug}`;
+      }
+    }
+    return urls;
   }
 }

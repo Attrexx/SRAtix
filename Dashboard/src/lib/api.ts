@@ -574,6 +574,13 @@ export const api = {
     return res.json() as Promise<{ url: string; type: string }>;
   },
 
+  // Legal Pages
+  getLegalPages: (eventId: string, signal?: AbortSignal) =>
+    request<Record<string, string>>(`/events/${eventId}/legal-pages`, { signal }),
+
+  saveLegalPage: (eventId: string, slug: string, html: string) =>
+    request<{ ok: boolean }>(`/events/${eventId}/legal/${slug}`, { method: 'PATCH', body: { html } }),
+
   // Ticket Types
   getTicketTypes: (eventId: string, signal?: AbortSignal) =>
     request<TicketType[]>(`/events/${eventId}/ticket-types`, { signal }),

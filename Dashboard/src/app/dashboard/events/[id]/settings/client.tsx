@@ -78,6 +78,12 @@ export default function EventSettingsPage() {
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingLandscape, setUploadingLandscape] = useState(false);
 
+  // Legal pages
+  const [legalPages, setLegalPages] = useState<Record<string, string>>({});
+  const [legalModalSlug, setLegalModalSlug] = useState<string | null>(null);
+  const [legalModalHtml, setLegalModalHtml] = useState('');
+  const [legalSaving, setLegalSaving] = useState(false);
+
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
     setSlug(ev.slug);
@@ -105,10 +111,14 @@ export default function EventSettingsPage() {
   useEffect(() => {
     if (!id || id === '_') return;
     const ac = new AbortController();
-    api.getEvent(id, ac.signal)
-      .then((ev) => {
+    Promise.all([
+      api.getEvent(id, ac.signal),
+      api.getLegalPages(id, ac.signal).catch(() => ({})),
+    ])
+      .then(([ev, pages]) => {
         setEvent(ev);
         populateForm(ev);
+        setLegalPages(pages);
       })
       .catch(() => {
         toast.error(t('events.settings.failedToLoad'));
@@ -425,6 +435,132 @@ export default function EventSettingsPage() {
             {t('events.settings.robotxSaveNote')}
           </p>
         </Section>
+
+        {/* ── Legal & Compliance Pages ── */}
+        <Section title={t('events.settings.legalCompliance')}>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.legalComplianceHint')}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {([
+              { slug: 'terms_conditions', label: t('events.settings.legalTerms') },
+              { slug: 'privacy_policy', label: t('events.settings.legalPrivacy') },
+              { slug: 'code_of_conduct', label: t('events.settings.legalConduct') },
+              { slug: 'photography_consent', label: t('events.settings.legalPhoto') },
+            ] as const).map(({ slug, label }) => (
+              <button
+                key={slug}
+                onClick={() => { setLegalModalSlug(slug); setLegalModalHtml(legalPages[slug] ?? ''); }}
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors hover:opacity-90"
+                style={{
+                  background: 'var(--color-bg-subtle)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                <Icons.FileText size={18} style={{ opacity: 0.6 }} />
+                <span className="flex-1">{label}</span>
+                {legalPages[slug] ? (
+                  <span className="rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--color-success, #22c55e)', color: '#fff' }}>
+                    {t('events.settings.legalSet')}
+                  </span>
+                ) : (
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {t('events.settings.legalNotSet')}
+                  </span>
+                )}
+                <Icons.Edit size={14} style={{ opacity: 0.5 }} />
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        {/* ── Legal Page Editor Modal ── */}
+        {legalModalSlug && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,.55)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setLegalModalSlug(null); }}
+          >
+            <div
+              className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
+              style={{
+                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border)',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,.25)',
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: 'var(--color-border)' }}>
+                <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {({
+                    terms_conditions: t('events.settings.legalTerms'),
+                    privacy_policy: t('events.settings.legalPrivacy'),
+                    code_of_conduct: t('events.settings.legalConduct'),
+                    photography_consent: t('events.settings.legalPhoto'),
+                  } as Record<string, string>)[legalModalSlug] ?? legalModalSlug}
+                </h3>
+                <button
+                  onClick={() => setLegalModalSlug(null)}
+                  className="rounded-lg p-1.5 hover:opacity-70"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  <Icons.X size={20} />
+                </button>
+              </div>
+
+              {/* Editor */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                <RichTextEditor
+                  value={legalModalHtml}
+                  onChange={setLegalModalHtml}
+                  placeholder={t('events.settings.legalEditorPlaceholder')}
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t px-6 py-4" style={{ borderColor: 'var(--color-border)' }}>
+                <button
+                  onClick={() => { setLegalModalHtml(''); }}
+                  className="rounded-lg px-4 py-2 text-sm"
+                  style={{ color: 'var(--color-danger, #ef4444)', border: '1px solid var(--color-danger, #ef4444)' }}
+                >
+                  {t('events.settings.legalClear')}
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setLegalModalSlug(null)}
+                    className="rounded-lg px-4 py-2 text-sm"
+                    style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    disabled={legalSaving}
+                    onClick={async () => {
+                      if (!legalModalSlug) return;
+                      setLegalSaving(true);
+                      try {
+                        await api.saveLegalPage(id, legalModalSlug.replace(/_/g, '-'), legalModalHtml);
+                        setLegalPages((prev) => ({ ...prev, [legalModalSlug]: legalModalHtml }));
+                        toast.success(t('events.settings.legalSaved'));
+                        setLegalModalSlug(null);
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : t('events.settings.legalSaveFailed'));
+                      } finally {
+                        setLegalSaving(false);
+                      }
+                    }}
+                    className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+                    style={{ background: 'var(--color-primary)' }}
+                  >
+                    {legalSaving ? t('common.saving') : t('events.settings.legalSaveBtn')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Danger Zone ── */}
         <div
