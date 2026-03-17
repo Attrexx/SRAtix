@@ -129,6 +129,7 @@ export class FieldRepositoryService implements OnModuleInit {
     defaultValue?: unknown;
     categoryFilter?: string[];
     conditionalOn?: Record<string, unknown>;
+    documentUrl?: Record<string, string>;
     sortOrder?: number;
     isSystem?: boolean;
   }) {
@@ -155,6 +156,7 @@ export class FieldRepositoryService implements OnModuleInit {
         defaultValue: data.defaultValue as any,
         categoryFilter: data.categoryFilter as any,
         conditionalOn: data.conditionalOn as any,
+        documentUrl: data.documentUrl as any,
         sortOrder: data.sortOrder ?? 0,
         isSystem: data.isSystem ?? false,
       },
@@ -179,6 +181,7 @@ export class FieldRepositoryService implements OnModuleInit {
       defaultValue: unknown;
       categoryFilter: string[];
       conditionalOn: Record<string, unknown>;
+      documentUrl: Record<string, string>;
       sortOrder: number;
       active: boolean;
     }>,
@@ -1055,6 +1058,7 @@ function fd(
     defaultValue?: unknown;
     categoryFilter?: string[];
     conditionalOn?: Record<string, unknown>;
+    documentUrl?: Record<string, string>;
     isSystem?: boolean;
   },
 ) {
@@ -1073,6 +1077,7 @@ function fd(
     defaultValue: opts?.defaultValue ?? null,
     categoryFilter: opts?.categoryFilter ?? null,
     conditionalOn: opts?.conditionalOn ?? null,
+    documentUrl: opts?.documentUrl ?? null,
     isSystem: opts?.isSystem ?? false,
     active: true,
   };

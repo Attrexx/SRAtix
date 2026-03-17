@@ -48,6 +48,7 @@ function f(
     helpText?: Record<string, string>;
     placeholder?: Record<string, string>;
     validation?: Record<string, unknown>;
+    documentUrl?: Record<string, string>;
   },
 ): FormField {
   return {
@@ -62,6 +63,7 @@ function f(
     helpText: opts?.helpText,
     placeholder: opts?.placeholder,
     validation: opts?.validation,
+    documentUrl: opts?.documentUrl,
   };
 }
 

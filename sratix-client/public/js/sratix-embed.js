@@ -1133,7 +1133,14 @@
         html += '</div>';
         break;
       case 'consent':
-        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + escHtml(label) + req + '</label>';
+        var docUrl = resolveLabel(field.documentUrl) || '';
+        var consentLabelHtml;
+        if (docUrl) {
+          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
+        } else {
+          consentLabelHtml = escHtml(label);
+        }
+        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + consentLabelHtml + req + '</label>';
         // Consent renders label inline; clear req so it isn't duplicated above
         req = '';
         break;

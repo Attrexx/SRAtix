@@ -391,6 +391,7 @@ model FieldDefinition {
   defaultValue      Json?    // default value (if any)
   categoryFilter    Json?    // ["general","individual","legal"] — which ticket categories can use this field; null = all
   conditionalOn     Json?    // { field: "billing_details_differ", operator: "eq", value: true } — show only when condition met
+  documentUrl       Json?    // i18n URL to linked document (consent fields): { en: "https://...", de: "..." }
   sortOrder         Int      @default(0)
   isSystem          Boolean  @default(false) // system fields (ticket_id, event_id, etc.) — hidden from form builder
   active            Boolean  @default(true)

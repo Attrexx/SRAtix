@@ -541,6 +541,20 @@ label.sratix-checkbox-label {
 	font-size: 0.9rem;
 }
 
+/* ── Consent document link ── */
+.sratix-consent-link {
+	color: var(--sratix-accent, #6366f1);
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-underline-offset: 2px;
+	cursor: pointer;
+	transition: color 0.15s;
+}
+.sratix-consent-link:hover {
+	color: var(--sratix-accent-hover, #818cf8);
+	text-decoration-style: solid;
+}
+
 /* ── Custom form field grid (flex-wrap) ── */
 .sratix-form-fields {
 	display: flex;
