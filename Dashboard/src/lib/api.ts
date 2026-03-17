@@ -516,6 +516,25 @@ export interface TimeSeriesResponse {
   firstSaleDate: string | null;
 }
 
+export interface SetupRequest {
+  id: string;
+  eventExhibitorId: string;
+  status: string; // draft | submitted | confirmed | modification_requested
+  data: Record<string, unknown> | null;
+  adminNotes: string | null;
+  totalExtrasCents: number;
+  submittedAt: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  eventExhibitor?: {
+    id: string;
+    boothNumber?: string;
+    expoArea?: string;
+    exhibitorProfile?: { companyName: string };
+  };
+}
+
 export interface FieldDefinition {
   id: string;
   slug: string;
@@ -980,6 +999,23 @@ export const api = {
     request<TimeSeriesResponse>(
       `/analytics/${eventId}/timeseries?from=${from}&to=${to}`,
       { signal },
+    ),
+
+  // ─── Exhibitor Setup Requests (Admin) ──────────────────────────
+
+  getSetupRequests: (eventId: string, signal?: AbortSignal) =>
+    request<SetupRequest[]>(
+      `/admin/exhibitor-portal/events/${eventId}/setup-requests`,
+      { signal },
+    ),
+
+  adminUpdateSetupRequest: (
+    requestId: string,
+    data: { status?: string; adminNotes?: string },
+  ) =>
+    request<SetupRequest>(
+      `/admin/exhibitor-portal/setup-requests/${requestId}`,
+      { method: 'PUT', body: data },
     ),
 };
 

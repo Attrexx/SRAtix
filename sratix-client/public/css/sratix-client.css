@@ -1648,3 +1648,302 @@ label.sratix-checkbox-label {
 	background: rgba(234, 179, 8, 0.15);
 	color: #facc15;
 }
+
+/* ── Staff Panel ─────────────────────────────────────────────────── */
+
+.sratix-staff-panel__title {
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--sratix-text);
+	margin: 0 0 16px;
+}
+
+.sratix-staff-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.sratix-staff-count {
+	font-size: 0.9em;
+	color: var(--sratix-text-muted);
+}
+
+.sratix-staff-table-wrap {
+	overflow-x: auto;
+	margin-bottom: 16px;
+}
+
+.sratix-staff-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9em;
+}
+
+.sratix-staff-table th,
+.sratix-staff-table td {
+	padding: 10px 12px;
+	text-align: left;
+	border-bottom: 1px solid var(--sratix-border);
+	color: var(--sratix-text);
+}
+
+.sratix-staff-table th {
+	font-weight: 600;
+	color: var(--sratix-text-muted);
+	font-size: 0.85em;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+
+.sratix-staff-actions {
+	display: flex;
+	gap: 6px;
+	white-space: nowrap;
+}
+
+.sratix-staff-form {
+	background: var(--sratix-navy-light);
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	padding: 20px;
+	margin-top: 16px;
+}
+
+.sratix-staff-form__title {
+	font-size: 1em;
+	font-weight: 600;
+	color: var(--sratix-text);
+	margin: 0 0 16px;
+}
+
+.sratix-btn--xs {
+	padding: 4px 8px;
+	font-size: 0.75em;
+}
+
+.sratix-btn--danger {
+	color: #f87171;
+}
+
+.sratix-btn--danger:hover {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.1);
+}
+
+.sratix-badge--default {
+	background: rgba(156, 163, 175, 0.15);
+	color: #9ca3af;
+}
+
+/* ── Media Panel ─────────────────────────────────────────────────── */
+
+.sratix-media-panel {
+	padding: 4px 0;
+}
+
+.sratix-media-section__title {
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--sratix-text);
+	margin: 0 0 4px;
+}
+
+.sratix-media-section__desc {
+	font-size: 0.9em;
+	color: var(--sratix-text-muted);
+	margin: 0 0 16px;
+}
+
+.sratix-media-gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.sratix-media-item {
+	position: relative;
+	width: 120px;
+	height: 90px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid var(--sratix-border);
+}
+
+.sratix-media-thumb {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.sratix-media-remove {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	background: rgba(0, 0, 0, 0.6);
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	width: 22px;
+	height: 22px;
+	font-size: 12px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.sratix-media-remove:hover {
+	background: rgba(239, 68, 68, 0.8);
+}
+
+.sratix-media-add {
+	display: flex;
+	gap: 12px;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	margin-bottom: 16px;
+}
+
+.sratix-media-add .sratix-field-group {
+	flex: 1;
+	min-width: 180px;
+}
+
+.sratix-video-link-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.sratix-video-link-input {
+	flex: 1;
+}
+
+/* ── Analytics Panel (Phase 1d) ──────────────────────────────────────── */
+
+.sratix-analytics-panel {
+	padding: 8px 0;
+}
+
+.sratix-kpi-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 16px;
+	margin: 20px 0;
+}
+
+.sratix-kpi-card {
+	background: var(--sratix-surface, #f9fafb);
+	border: 1px solid var(--sratix-border, #e5e7eb);
+	border-radius: 10px;
+	padding: 20px 16px;
+	text-align: center;
+}
+
+.sratix-kpi-value {
+	font-size: 2rem;
+	font-weight: 700;
+	color: var(--sratix-primary, #4f8cff);
+	line-height: 1.1;
+}
+
+.sratix-kpi-label {
+	font-size: 0.85rem;
+	color: var(--sratix-text-muted, #6b7280);
+	margin-top: 6px;
+}
+
+.sratix-booth-qr-section {
+	margin: 24px 0;
+	padding: 16px;
+	background: var(--sratix-surface, #f9fafb);
+	border: 1px solid var(--sratix-border, #e5e7eb);
+	border-radius: 8px;
+}
+
+.sratix-booth-qr-section h4 {
+	margin: 0 0 8px;
+}
+
+.sratix-qr-payload {
+	margin-top: 12px;
+}
+
+.sratix-qr-payload code {
+	display: block;
+	background: #1e293b;
+	color: #e2e8f0;
+	padding: 12px 16px;
+	border-radius: 6px;
+	font-size: 0.9rem;
+	word-break: break-all;
+	margin-bottom: 8px;
+}
+
+.sratix-chart-section {
+	margin: 24px 0;
+}
+
+.sratix-chart-section h4 {
+	margin: 0 0 12px;
+}
+
+.sratix-chart-section canvas {
+	max-width: 100%;
+	height: auto;
+}
+
+/* ── Logistics Panel (Phase 1e) ──────────────────────────────────────── */
+
+.sratix-logistics-panel {
+	padding: 8px 0;
+}
+
+.sratix-logistics-status {
+	padding: 12px 16px;
+	border-radius: 8px;
+	margin-bottom: 16px;
+	font-size: 0.9rem;
+}
+
+.sratix-logistics-status--confirmed {
+	background: #dcfce7;
+	color: #166534;
+	border: 1px solid #86efac;
+}
+
+.sratix-logistics-status--submitted {
+	background: #dbeafe;
+	color: #1e40af;
+	border: 1px solid #93c5fd;
+}
+
+.sratix-logistics-status--mod-requested {
+	background: #fef3c7;
+	color: #92400e;
+	border: 1px solid #fcd34d;
+}
+
+.sratix-logistics-admin-notes {
+	margin-top: 8px;
+	font-style: italic;
+	opacity: 0.85;
+}
+
+.sratix-logistics-actions {
+	display: flex;
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.sratix-checkbox-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9rem;
+	cursor: pointer;
+}

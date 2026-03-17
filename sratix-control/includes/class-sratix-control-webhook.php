@@ -221,6 +221,9 @@ class SRAtix_Control_Webhook {
 			case 'entity.create_request':
 				return $this->on_entity_create_request( $payload );
 
+			case 'exhibitor.updated':
+				return $this->on_exhibitor_updated( $payload );
+
 			default:
 				// Unknown event — acknowledge but ignore
 				break;
@@ -1049,5 +1052,190 @@ class SRAtix_Control_Webhook {
 			'created'  => false,
 			'reason'   => 'Entity type not supported or creation function unavailable',
 		), 200 );
+	}
+
+	/*──────────────────────────────────────────────────────────
+	 * Exhibitor sync — exhibitor.updated webhook
+	 *────────────────────────────────────────────────────────*/
+
+	/**
+	 * Sync exhibitor data from SRAtix to WordPress.
+	 * Creates or updates an `exhibitor` CPT post with ACF meta and taxonomies.
+	 *
+	 * Expected payload shape:
+	 * {
+	 *   eventExhibitorId: string,
+	 *   eventId: string,
+	 *   wpPostId: int|null,
+	 *   status: string,
+	 *   profile: { companyName, legalName, website, description, contactEmail,
+	 *              contactPhone, socialLinks, logoUrl, mediaGallery, videoLinks },
+	 *   event: { boothNumber, expoArea, exhibitorCategory, exhibitorType,
+	 *            demoTitle, demoDescription, demoMediaGallery, demoVideoLinks }
+	 * }
+	 */
+	private function on_exhibitor_updated( $payload ) {
+		$data    = $payload['data'] ?? $payload;
+		$profile = $data['profile'] ?? array();
+		$event   = $data['event']   ?? array();
+
+		$company_name = sanitize_text_field( $profile['companyName'] ?? '' );
+		if ( empty( $company_name ) ) {
+			return new \WP_REST_Response( array(
+				'received' => true,
+				'synced'   => false,
+				'reason'   => 'Missing companyName',
+			), 200 );
+		}
+
+		$wp_post_id          = ! empty( $data['wpPostId'] ) ? intval( $data['wpPostId'] ) : 0;
+		$event_exhibitor_id  = sanitize_text_field( $data['eventExhibitorId'] ?? '' );
+		$sratix_event_id     = sanitize_text_field( $data['eventId'] ?? '' );
+		$exhibitor_status    = sanitize_text_field( $data['status'] ?? 'draft' );
+
+		// Map SRAtix status to WP post status
+		$post_status = ( $exhibitor_status === 'published' ) ? 'publish' : 'draft';
+
+		// Prepare post data
+		$post_data = array(
+			'post_type'    => 'exhibitor',
+			'post_title'   => $company_name,
+			'post_content' => wp_kses_post( $profile['description'] ?? '' ),
+			'post_status'  => $post_status,
+		);
+
+		// Try to find existing post by wpPostId or by sratix meta
+		$existing_id = 0;
+		if ( $wp_post_id && get_post_type( $wp_post_id ) === 'exhibitor' ) {
+			$existing_id = $wp_post_id;
+		}
+
+		if ( ! $existing_id && $event_exhibitor_id ) {
+			$found = get_posts( array(
+				'post_type'      => 'exhibitor',
+				'post_status'    => 'any',
+				'meta_key'       => '_sratix_event_exhibitor_id',
+				'meta_value'     => $event_exhibitor_id,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			) );
+			if ( ! empty( $found ) ) {
+				$existing_id = $found[0];
+			}
+		}
+
+		if ( $existing_id ) {
+			$post_data['ID'] = $existing_id;
+			wp_update_post( $post_data );
+			$post_id = $existing_id;
+		} else {
+			$post_id = wp_insert_post( $post_data );
+			if ( is_wp_error( $post_id ) ) {
+				return new \WP_REST_Response( array(
+					'received' => true,
+					'synced'   => false,
+					'reason'   => $post_id->get_error_message(),
+				), 200 );
+			}
+		}
+
+		// ── Store meta fields ──
+		update_post_meta( $post_id, '_sratix_event_exhibitor_id', $event_exhibitor_id );
+		update_post_meta( $post_id, '_sratix_event_id', $sratix_event_id );
+		update_post_meta( $post_id, '_sratix_synced_at', current_time( 'mysql' ) );
+
+		// Profile fields
+		$meta_map = array(
+			'legal_name'    => sanitize_text_field( $profile['legalName'] ?? '' ),
+			'website'       => esc_url_raw( $profile['website'] ?? '' ),
+			'contact_email' => sanitize_email( $profile['contactEmail'] ?? '' ),
+			'contact_phone' => sanitize_text_field( $profile['contactPhone'] ?? '' ),
+			'social_links'  => wp_json_encode( $profile['socialLinks'] ?? array() ),
+			'logo_url'      => esc_url_raw( $profile['logoUrl'] ?? '' ),
+		);
+
+		// Event-specific fields
+		$meta_map['booth_number']      = sanitize_text_field( $event['boothNumber'] ?? '' );
+		$meta_map['expo_area']         = sanitize_text_field( $event['expoArea'] ?? '' );
+		$meta_map['demo_title']        = sanitize_text_field( $event['demoTitle'] ?? '' );
+		$meta_map['demo_description']  = wp_kses_post( $event['demoDescription'] ?? '' );
+
+		// Media (stored as JSON)
+		if ( isset( $profile['mediaGallery'] ) ) {
+			$meta_map['media_gallery'] = wp_json_encode( $profile['mediaGallery'] );
+		}
+		if ( isset( $profile['videoLinks'] ) ) {
+			$meta_map['video_links'] = wp_json_encode( $profile['videoLinks'] );
+		}
+		if ( isset( $event['demoMediaGallery'] ) ) {
+			$meta_map['demo_media_gallery'] = wp_json_encode( $event['demoMediaGallery'] );
+		}
+		if ( isset( $event['demoVideoLinks'] ) ) {
+			$meta_map['demo_video_links'] = wp_json_encode( $event['demoVideoLinks'] );
+		}
+
+		foreach ( $meta_map as $key => $value ) {
+			update_post_meta( $post_id, $key, $value );
+		}
+
+		// ── Taxonomies ──
+		$category = sanitize_text_field( $event['exhibitorCategory'] ?? '' );
+		if ( $category && taxonomy_exists( 'exhibitor-category' ) ) {
+			wp_set_object_terms( $post_id, $category, 'exhibitor-category' );
+		}
+
+		$type = sanitize_text_field( $event['exhibitorType'] ?? '' );
+		if ( $type && taxonomy_exists( 'exhibitor-type' ) ) {
+			wp_set_object_terms( $post_id, $type, 'exhibitor-type' );
+		}
+
+		// ── Featured image from logo URL ──
+		$logo_url = $profile['logoUrl'] ?? '';
+		if ( $logo_url && function_exists( 'media_sideload_image' ) ) {
+			$this->maybe_sideload_featured_image( $post_id, $logo_url );
+		}
+
+		// ── Report wpPostId back so server can store it ──
+		return new \WP_REST_Response( array(
+			'received' => true,
+			'synced'   => true,
+			'wpPostId' => $post_id,
+			'action'   => $existing_id ? 'updated' : 'created',
+		), 200 );
+	}
+
+	/**
+	 * Sideload an image URL as the post's featured image if not already set.
+	 *
+	 * @param int    $post_id
+	 * @param string $url
+	 */
+	private function maybe_sideload_featured_image( $post_id, $url ) {
+		// Skip if already has a thumbnail
+		if ( has_post_thumbnail( $post_id ) ) {
+			return;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$tmp = download_url( $url );
+		if ( is_wp_error( $tmp ) ) {
+			return;
+		}
+
+		$file_array = array(
+			'name'     => basename( wp_parse_url( $url, PHP_URL_PATH ) ),
+			'tmp_name' => $tmp,
+		);
+
+		$attachment_id = media_handle_sideload( $file_array, $post_id );
+		if ( is_wp_error( $attachment_id ) ) {
+			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			return;
+		}
+
+		set_post_thumbnail( $post_id, $attachment_id );
 	}
 }

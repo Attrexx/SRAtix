@@ -20,6 +20,7 @@
   "nav.activityLog": "Journal d'activité",
   "nav.export": "Exportation",
   "nav.webhooks": "Webhooks",
+  "nav.exhibitorSetup": "Config. Exposants",
   "nav.eventSettings": "Paramètres",
   "nav.signOut": "Se déconnecter",
   "nav.openMenu": "Ouvrir le menu",
@@ -800,5 +801,23 @@
   "landing.login.forgot": "Mot de passe oublié ?",
   "landing.login.submit": "Se connecter",
   "landing.login.submitting": "Connexion en cours…",
-  "landing.login.close": "Fermer"
+  "landing.login.close": "Fermer",
+
+  "exhibitorSetup.title": "Demandes de configuration exposants",
+  "exhibitorSetup.noRequests": "Aucune demande de configuration soumise.",
+  "exhibitorSetup.loadError": "Impossible de charger les demandes.",
+  "exhibitorSetup.updated": "Demande mise \u00e0 jour.",
+  "exhibitorSetup.updateError": "\u00c9chec de la mise \u00e0 jour.",
+  "exhibitorSetup.booth": "Stand",
+  "exhibitorSetup.submittedData": "Donn\u00e9es soumises",
+  "exhibitorSetup.noData": "Aucune donn\u00e9e soumise.",
+  "exhibitorSetup.adminNotes": "Notes admin",
+  "exhibitorSetup.adminNotesPlaceholder": "Ajouter des notes pour l'exposant…",
+  "exhibitorSetup.confirm": "Confirmer",
+  "exhibitorSetup.requestModification": "Demander une modification",
+  "exhibitorSetup.confirmedAt": "Confirm\u00e9",
+  "exhibitorSetup.statusDraft": "Brouillon",
+  "exhibitorSetup.statusSubmitted": "Soumis",
+  "exhibitorSetup.statusConfirmed": "Confirm\u00e9",
+  "exhibitorSetup.statusModRequested": "Modification demand\u00e9e"
 }

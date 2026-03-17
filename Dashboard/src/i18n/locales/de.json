@@ -20,6 +20,7 @@
   "nav.activityLog": "Aktivitätsprotokoll",
   "nav.export": "Export",
   "nav.webhooks": "Webhooks",
+  "nav.exhibitorSetup": "Aussteller-Setup",
   "nav.eventSettings": "Event-Einstellungen",
   "nav.signOut": "Abmelden",
   "nav.openMenu": "Menü öffnen",
@@ -798,5 +799,23 @@
   "landing.login.forgot": "Passwort vergessen?",
   "landing.login.submit": "Anmelden",
   "landing.login.submitting": "Anmeldung läuft…",
-  "landing.login.close": "Schliessen"
+  "landing.login.close": "Schliessen",
+
+  "exhibitorSetup.title": "Aussteller-Setup-Anfragen",
+  "exhibitorSetup.noRequests": "Noch keine Setup-Anfragen eingereicht.",
+  "exhibitorSetup.loadError": "Fehler beim Laden der Anfragen.",
+  "exhibitorSetup.updated": "Anfrage aktualisiert.",
+  "exhibitorSetup.updateError": "Aktualisierung fehlgeschlagen.",
+  "exhibitorSetup.booth": "Stand",
+  "exhibitorSetup.submittedData": "Eingereichte Daten",
+  "exhibitorSetup.noData": "Keine Daten eingereicht.",
+  "exhibitorSetup.adminNotes": "Admin-Notizen",
+  "exhibitorSetup.adminNotesPlaceholder": "Notizen f\u00fcr den Aussteller hinzuf\u00fcgen…",
+  "exhibitorSetup.confirm": "Best\u00e4tigen",
+  "exhibitorSetup.requestModification": "\u00c4nderung anfordern",
+  "exhibitorSetup.confirmedAt": "Best\u00e4tigt",
+  "exhibitorSetup.statusDraft": "Entwurf",
+  "exhibitorSetup.statusSubmitted": "Eingereicht",
+  "exhibitorSetup.statusConfirmed": "Best\u00e4tigt",
+  "exhibitorSetup.statusModRequested": "\u00c4nderung angefordert"
 }

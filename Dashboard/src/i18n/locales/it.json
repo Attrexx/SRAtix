@@ -20,6 +20,7 @@
   "nav.activityLog": "Registro attività",
   "nav.export": "Esportazione",
   "nav.webhooks": "Webhook",
+  "nav.exhibitorSetup": "Setup Espositori",
   "nav.eventSettings": "Impostazioni",
   "nav.signOut": "Esci",
   "nav.openMenu": "Apri il menu",
@@ -670,5 +671,23 @@
   "system.rebuildNotice": "Aggiornamento in corso — l'app sarà brevemente non disponibile durante il deploy.",
   "system.broadcastRebuild": "Invia avviso di aggiornamento",
   "system.broadcastConfirm": "Tutti gli utenti connessi alla dashboard verranno avvisati che l'app sta per riavviarsi. Continuare?",
-  "system.broadcastSuccess": "Avviso di aggiornamento inviato a tutti gli utenti connessi."
+  "system.broadcastSuccess": "Avviso di aggiornamento inviato a tutti gli utenti connessi.",
+
+  "exhibitorSetup.title": "Richieste di configurazione espositori",
+  "exhibitorSetup.noRequests": "Nessuna richiesta di configurazione inviata.",
+  "exhibitorSetup.loadError": "Impossibile caricare le richieste.",
+  "exhibitorSetup.updated": "Richiesta aggiornata.",
+  "exhibitorSetup.updateError": "Aggiornamento non riuscito.",
+  "exhibitorSetup.booth": "Stand",
+  "exhibitorSetup.submittedData": "Dati inviati",
+  "exhibitorSetup.noData": "Nessun dato inviato.",
+  "exhibitorSetup.adminNotes": "Note admin",
+  "exhibitorSetup.adminNotesPlaceholder": "Aggiungi note per l'espositore…",
+  "exhibitorSetup.confirm": "Conferma",
+  "exhibitorSetup.requestModification": "Richiedi modifica",
+  "exhibitorSetup.confirmedAt": "Confermato",
+  "exhibitorSetup.statusDraft": "Bozza",
+  "exhibitorSetup.statusSubmitted": "Inviato",
+  "exhibitorSetup.statusConfirmed": "Confermato",
+  "exhibitorSetup.statusModRequested": "Modifica richiesta"
 }

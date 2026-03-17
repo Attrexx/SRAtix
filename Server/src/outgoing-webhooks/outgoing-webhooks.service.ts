@@ -28,6 +28,7 @@ export const WEBHOOK_EVENT_TYPES = [
   'checkin.created',
   'attendee.registered',
   'event.updated',
+  'exhibitor.updated',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];

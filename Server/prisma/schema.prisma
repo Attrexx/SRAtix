@@ -273,6 +273,9 @@ model Attendee {
   formSubmissions FormSubmission[]
   checkIns        CheckIn[]
   badgeRenders    BadgeRender[]
+  exhibitorStaff  ExhibitorStaff[]
+  boothScans      BoothScan[]
+  boothLeads      BoothLead[]
 
   @@unique([eventId, email])
   @@index([orgId])
@@ -670,11 +673,13 @@ model ExhibitorProfile {
   description  String?  @db.Text           // rich text (sanitized HTML)
   contactEmail String?  @db.VarChar(255)
   contactPhone String?  @db.VarChar(50)
-  socialLinks  Json?    // { linkedin?, twitter?, instagram?, youtube? }
-  logoFileId   String?  @db.Char(36)
-  logoUrl      String?  @db.VarChar(500)
-  createdAt    DateTime @default(now()) @db.DateTime(3)
-  updatedAt    DateTime @updatedAt @db.DateTime(3)
+  socialLinks   Json?    // { linkedin?, twitter?, instagram?, youtube? }
+  mediaGallery  Json?    // [{ fileId, url, caption }]
+  videoLinks    Json?    // [{ url, embedType }]
+  logoFileId    String?  @db.Char(36)
+  logoUrl       String?  @db.VarChar(500)
+  createdAt     DateTime @default(now()) @db.DateTime(3)
+  updatedAt     DateTime @updatedAt @db.DateTime(3)
 
   logoFile         UploadedFile?     @relation(fields: [logoFileId], references: [id])
   eventExhibitors  EventExhibitor[]
@@ -694,6 +699,8 @@ model EventExhibitor {
   exhibitorType       String?  @db.VarChar(100)  // maps to WP exhibitor-type taxonomy
   demoTitle           String?  @db.VarChar(255)
   demoDescription     String?  @db.Text          // rich text
+  demoMediaGallery    Json?    // [{ fileId, url, caption }]
+  demoVideoLinks      Json?    // [{ url, embedType }]
   status              String   @default("draft") @db.VarChar(30) // draft | published | archived
   wpPostId            Int?     // synced WordPress exhibitor post ID
   syncedAt            DateTime? @db.DateTime(3)
@@ -703,6 +710,10 @@ model EventExhibitor {
 
   event             Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   exhibitorProfile  ExhibitorProfile  @relation(fields: [exhibitorProfileId], references: [id], onDelete: Cascade)
+  staff             ExhibitorStaff[]
+  boothScans        BoothScan[]
+  boothLeads        BoothLead[]
+  setupRequest      ExhibitorSetupRequest?
 
   @@unique([eventId, exhibitorProfileId])
   @@index([eventId])
@@ -725,4 +736,90 @@ model UploadedFile {
 
   @@index([orgId])
   @@map("uploaded_files")
+}
+
+/// Booth staff member assigned to an event by the exhibitor.
+model ExhibitorStaff {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventExhibitorId    String   @db.Char(36)
+  firstName           String   @db.VarChar(100)
+  lastName            String   @db.VarChar(100)
+  email               String   @db.VarChar(255)
+  phone               String?  @db.VarChar(50)
+  role                String   @default("staff") @db.VarChar(30) // booth_manager | staff | demo_presenter
+  attendeeId          String?  @db.Char(36)  // linked when pass issued/registered
+  passStatus          String   @default("pending") @db.VarChar(30) // pending | invited | registered | checked_in
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+  updatedAt           DateTime @updatedAt @db.DateTime(3)
+
+  eventExhibitor  EventExhibitor @relation(fields: [eventExhibitorId], references: [id], onDelete: Cascade)
+  attendee        Attendee?      @relation(fields: [attendeeId], references: [id])
+
+  @@index([eventExhibitorId])
+  @@index([attendeeId])
+  @@map("exhibitor_staff")
+}
+
+// ============================================================================
+// EXHIBITOR PORTAL — KPIs (Phase 1d)
+// ============================================================================
+
+/// Recorded booth visit from QR scan (by future Event Companion mobile app).
+model BoothScan {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventExhibitorId    String   @db.Char(36)
+  attendeeId          String?  @db.Char(36)
+  scannedAt           DateTime @db.DateTime(3)
+  deviceId            String?  @db.VarChar(100)
+  metadata            Json?
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+
+  eventExhibitor  EventExhibitor @relation(fields: [eventExhibitorId], references: [id], onDelete: Cascade)
+  attendee        Attendee?      @relation(fields: [attendeeId], references: [id])
+
+  @@index([eventExhibitorId])
+  @@index([attendeeId])
+  @@index([scannedAt])
+  @@map("booth_scans")
+}
+
+/// Lead captured at a booth via attendee badge scan.
+model BoothLead {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventExhibitorId    String   @db.Char(36)
+  attendeeId          String   @db.Char(36)
+  scannedAt           DateTime @db.DateTime(3)
+  notes               String?  @db.Text
+  metadata            Json?
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+
+  eventExhibitor  EventExhibitor @relation(fields: [eventExhibitorId], references: [id], onDelete: Cascade)
+  attendee        Attendee       @relation(fields: [attendeeId], references: [id])
+
+  @@index([eventExhibitorId])
+  @@index([attendeeId])
+  @@map("booth_leads")
+}
+
+// ============================================================================
+// EXHIBITOR PORTAL — Logistics (Phase 1e)
+// ============================================================================
+
+/// Setup/logistics request submitted by an exhibitor for an event.
+model ExhibitorSetupRequest {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  eventExhibitorId    String   @unique @db.Char(36)
+  status              String   @default("draft") @db.VarChar(30) // draft | submitted | confirmed | modification_requested
+  data                Json?    // structured selections matching event.meta.setupOptions
+  adminNotes          String?  @db.Text
+  totalExtrasCents    Int      @default(0) // calculated cost of paid add-ons
+  submittedAt         DateTime? @db.DateTime(3)
+  confirmedAt         DateTime? @db.DateTime(3)
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+  updatedAt           DateTime @updatedAt @db.DateTime(3)
+
+  eventExhibitor  EventExhibitor @relation(fields: [eventExhibitorId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("exhibitor_setup_requests")
 }

@@ -20,6 +20,7 @@
   "nav.activityLog": "Activity Log",
   "nav.export": "Export",
   "nav.webhooks": "Webhooks",
+  "nav.exhibitorSetup": "Exhibitor Setup",
   "nav.eventSettings": "Event Settings",
   "nav.signOut": "Sign out",
   "nav.openMenu": "Open menu",
@@ -831,5 +832,23 @@
   "landing.login.forgot": "Forgot password?",
   "landing.login.submit": "Sign In",
   "landing.login.submitting": "Signing in…",
-  "landing.login.close": "Close"
+  "landing.login.close": "Close",
+
+  "exhibitorSetup.title": "Exhibitor Setup Requests",
+  "exhibitorSetup.noRequests": "No setup requests submitted yet.",
+  "exhibitorSetup.loadError": "Failed to load setup requests.",
+  "exhibitorSetup.updated": "Setup request updated.",
+  "exhibitorSetup.updateError": "Failed to update setup request.",
+  "exhibitorSetup.booth": "Booth",
+  "exhibitorSetup.submittedData": "Submitted Data",
+  "exhibitorSetup.noData": "No data submitted.",
+  "exhibitorSetup.adminNotes": "Admin Notes",
+  "exhibitorSetup.adminNotesPlaceholder": "Add notes for the exhibitor…",
+  "exhibitorSetup.confirm": "Confirm",
+  "exhibitorSetup.requestModification": "Request Modification",
+  "exhibitorSetup.confirmedAt": "Confirmed",
+  "exhibitorSetup.statusDraft": "Draft",
+  "exhibitorSetup.statusSubmitted": "Submitted",
+  "exhibitorSetup.statusConfirmed": "Confirmed",
+  "exhibitorSetup.statusModRequested": "Modification Requested"
 }

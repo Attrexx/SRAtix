@@ -2502,12 +2502,32 @@
                   data-tab="profile">${escHtml(t('exhibitorPortal.tabProfile'))}</button>
           <button class="sratix-portal-tab ${activeTab === 'events' ? 'sratix-portal-tab--active' : ''}"
                   data-tab="events">${escHtml(t('exhibitorPortal.tabEvents'))}</button>
+          <button class="sratix-portal-tab ${activeTab === 'staff' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="staff">${escHtml(t('exhibitorPortal.tabStaff'))}</button>
+          <button class="sratix-portal-tab ${activeTab === 'media' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="media">${escHtml(t('exhibitorPortal.tabMedia'))}</button>
+          <button class="sratix-portal-tab ${activeTab === 'analytics' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="analytics">${escHtml(t('exhibitorPortal.tabAnalytics'))}</button>
+          <button class="sratix-portal-tab ${activeTab === 'logistics' ? 'sratix-portal-tab--active' : ''}"
+                  data-tab="logistics">${escHtml(t('exhibitorPortal.tabLogistics'))}</button>
         </div>
         <div class="sratix-portal-panel" id="sratix-panel-profile"
              style="${activeTab !== 'profile' ? 'display:none' : ''}">
         </div>
         <div class="sratix-portal-panel" id="sratix-panel-events"
              style="${activeTab !== 'events' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-staff"
+             style="${activeTab !== 'staff' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-media"
+             style="${activeTab !== 'media' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-analytics"
+             style="${activeTab !== 'analytics' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-logistics"
+             style="${activeTab !== 'logistics' ? 'display:none' : ''}">
         </div>
       </div>
     `;
@@ -2526,6 +2546,10 @@
 
     renderProfilePanel(container.querySelector('#sratix-panel-profile'), profile, authHeaders);
     renderEventsPanel(container.querySelector('#sratix-panel-events'), events, authHeaders);
+    renderStaffPanel(container.querySelector('#sratix-panel-staff'), events, authHeaders);
+    renderMediaPanel(container.querySelector('#sratix-panel-media'), profile, events, authHeaders);
+    renderAnalyticsPanel(container.querySelector('#sratix-panel-analytics'), events, authHeaders);
+    renderLogisticsPanel(container.querySelector('#sratix-panel-logistics'), events, authHeaders);
   }
 
   function renderProfilePanel(panel, profile, authHeaders) {
@@ -2774,6 +2798,754 @@
         }
       });
     });
+  }
+
+  // ─── Staff panel ───────────────────────────────────────────────────────────
+
+  function renderStaffPanel(panel, events, authHeaders) {
+    if (!events || events.length === 0) {
+      panel.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.noEvents'))}</p>`;
+      return;
+    }
+
+    // Staff panel is per-event; show first event with selector if multiple
+    const selectedEventId = events[0].eventId;
+    renderStaffForEvent(panel, selectedEventId, events, authHeaders);
+  }
+
+  async function renderStaffForEvent(panel, eventId, events, authHeaders) {
+    const ev = events.find(e => e.eventId === eventId);
+    const eventName = ev?.event?.name || eventId;
+
+    panel.innerHTML = `
+      <div class="sratix-staff-panel">
+        ${events.length > 1
+          ? `<div class="sratix-field-group">
+               <label class="sratix-label">${escHtml(t('exhibitorPortal.selectEvent'))}</label>
+               <select class="sratix-input" id="sratix-staff-event-select">
+                 ${events.map(e => `<option value="${escAttr(e.eventId)}" ${e.eventId === eventId ? 'selected' : ''}>${escHtml(e.event?.name || e.eventId)}</option>`).join('')}
+               </select>
+             </div>`
+          : `<h3 class="sratix-staff-panel__title">${escHtml(eventName)}</h3>`}
+        <div id="sratix-staff-list">
+          <p class="sratix-info">${escHtml(t('exhibitorPortal.loading'))}</p>
+        </div>
+      </div>
+    `;
+
+    // Event selector handler
+    const eventSelect = panel.querySelector('#sratix-staff-event-select');
+    if (eventSelect) {
+      eventSelect.addEventListener('change', () => {
+        renderStaffForEvent(panel, eventSelect.value, events, authHeaders);
+      });
+    }
+
+    try {
+      const staffList = await apiFetch(`exhibitor-portal/events/${eventId}/staff`, { headers: authHeaders });
+      renderStaffList(panel.querySelector('#sratix-staff-list'), eventId, staffList, authHeaders);
+    } catch (err) {
+      console.error('[SRAtix] Staff load error:', err);
+      panel.querySelector('#sratix-staff-list').innerHTML = `<p class="sratix-error">${escHtml(t('exhibitorPortal.staffLoadError'))}</p>`;
+    }
+  }
+
+  function renderStaffList(container, eventId, staffList, authHeaders) {
+    const passStatusBadge = (status) => {
+      const cls = status === 'registered' || status === 'checked_in' ? 'valid' : (status === 'invited' ? 'pending' : 'default');
+      return `<span class="sratix-badge sratix-badge--${cls}">${escHtml(status)}</span>`;
+    };
+
+    let html = `
+      <div class="sratix-staff-header">
+        <span class="sratix-staff-count">${staffList.length} ${escHtml(t('exhibitorPortal.staffMembers'))}</span>
+        <button type="button" class="sratix-btn sratix-btn--primary sratix-btn--sm" id="sratix-add-staff">
+          + ${escHtml(t('exhibitorPortal.addStaff'))}
+        </button>
+      </div>
+    `;
+
+    if (staffList.length > 0) {
+      html += `<div class="sratix-staff-table-wrap"><table class="sratix-staff-table">
+        <thead>
+          <tr>
+            <th>${escHtml(t('exhibitorPortal.staffName'))}</th>
+            <th>${escHtml(t('exhibitorPortal.staffEmail'))}</th>
+            <th>${escHtml(t('exhibitorPortal.staffRole'))}</th>
+            <th>${escHtml(t('exhibitorPortal.staffPass'))}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${staffList.map(s => `
+            <tr data-staff-id="${escAttr(s.id)}">
+              <td>${escHtml(s.firstName)} ${escHtml(s.lastName)}</td>
+              <td>${escHtml(s.email)}</td>
+              <td>${escHtml(s.role)}</td>
+              <td>${passStatusBadge(s.passStatus)}</td>
+              <td class="sratix-staff-actions">
+                ${s.passStatus === 'pending' ? `<button type="button" class="sratix-btn sratix-btn--outline sratix-btn--xs" data-action="invite">${escHtml(t('exhibitorPortal.inviteStaff'))}</button>` : ''}
+                <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs" data-action="edit">✎</button>
+                <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove">✕</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table></div>`;
+    }
+
+    html += `
+      <div id="sratix-staff-form-area" style="display:none"></div>
+      <span class="sratix-portal-status" id="sratix-staff-status"></span>
+    `;
+
+    container.innerHTML = html;
+
+    // Add staff button
+    container.querySelector('#sratix-add-staff').addEventListener('click', () => {
+      showStaffForm(container, eventId, null, authHeaders);
+    });
+
+    // Per-row actions
+    container.querySelectorAll('tr[data-staff-id]').forEach(row => {
+      const staffId = row.dataset.staffId;
+      const staff = staffList.find(s => s.id === staffId);
+
+      const inviteBtn = row.querySelector('[data-action="invite"]');
+      if (inviteBtn) {
+        inviteBtn.addEventListener('click', async () => {
+          inviteBtn.disabled = true;
+          try {
+            await apiFetch(`exhibitor-portal/events/${eventId}/staff/${staffId}/invite`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({ registrationBaseUrl: window.location.origin + '/register' }),
+            });
+            showStatus(container.querySelector('#sratix-staff-status'), t('exhibitorPortal.staffInvited'), false);
+            // Refresh list
+            const refreshed = await apiFetch(`exhibitor-portal/events/${eventId}/staff`, { headers: authHeaders });
+            renderStaffList(container, eventId, refreshed, authHeaders);
+          } catch (err) {
+            showStatus(container.querySelector('#sratix-staff-status'), err.message || t('exhibitorPortal.staffInviteError'), true);
+            inviteBtn.disabled = false;
+          }
+        });
+      }
+
+      const editBtn = row.querySelector('[data-action="edit"]');
+      if (editBtn) {
+        editBtn.addEventListener('click', () => {
+          showStaffForm(container, eventId, staff, authHeaders);
+        });
+      }
+
+      const removeBtn = row.querySelector('[data-action="remove"]');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+          if (!confirm(t('exhibitorPortal.confirmRemoveStaff'))) return;
+          try {
+            await apiFetch(`exhibitor-portal/events/${eventId}/staff/${staffId}`, {
+              method: 'DELETE',
+              headers: authHeaders,
+            });
+            const refreshed = await apiFetch(`exhibitor-portal/events/${eventId}/staff`, { headers: authHeaders });
+            renderStaffList(container, eventId, refreshed, authHeaders);
+          } catch (err) {
+            showStatus(container.querySelector('#sratix-staff-status'), err.message || t('exhibitorPortal.saveError'), true);
+          }
+        });
+      }
+    });
+  }
+
+  function showStaffForm(container, eventId, existingStaff, authHeaders) {
+    const formArea = container.querySelector('#sratix-staff-form-area');
+    const isEdit = !!existingStaff;
+
+    formArea.style.display = '';
+    formArea.innerHTML = `
+      <form class="sratix-portal-form sratix-staff-form" id="sratix-staff-inline-form">
+        <h4 class="sratix-staff-form__title">${escHtml(isEdit ? t('exhibitorPortal.editStaff') : t('exhibitorPortal.addStaff'))}</h4>
+        <div class="sratix-portal-fields">
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.staffFirstName'))} <span class="sratix-required">*</span></label>
+            <input type="text" name="firstName" value="${escAttr(existingStaff?.firstName || '')}" required class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.staffLastName'))} <span class="sratix-required">*</span></label>
+            <input type="text" name="lastName" value="${escAttr(existingStaff?.lastName || '')}" required class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.staffEmail'))} <span class="sratix-required">*</span></label>
+            <input type="email" name="email" value="${escAttr(existingStaff?.email || '')}" required class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.staffPhone'))}</label>
+            <input type="tel" name="phone" value="${escAttr(existingStaff?.phone || '')}" class="sratix-input" />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.staffRole'))}</label>
+            <select name="role" class="sratix-input">
+              <option value="staff" ${existingStaff?.role === 'staff' || !existingStaff ? 'selected' : ''}>${escHtml(t('exhibitorPortal.roleStaff'))}</option>
+              <option value="booth_manager" ${existingStaff?.role === 'booth_manager' ? 'selected' : ''}>${escHtml(t('exhibitorPortal.roleBoothManager'))}</option>
+              <option value="demo_presenter" ${existingStaff?.role === 'demo_presenter' ? 'selected' : ''}>${escHtml(t('exhibitorPortal.roleDemoPresenter'))}</option>
+            </select>
+          </div>
+        </div>
+        <div class="sratix-portal-actions">
+          <button type="submit" class="sratix-btn sratix-btn--primary sratix-btn--sm">
+            ${escHtml(isEdit ? t('exhibitorPortal.saveEvent') : t('exhibitorPortal.addStaff'))}
+          </button>
+          <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--sm" id="sratix-staff-cancel">
+            ${escHtml(t('exhibitorPortal.cancel'))}
+          </button>
+        </div>
+      </form>
+    `;
+
+    formArea.querySelector('#sratix-staff-cancel').addEventListener('click', () => {
+      formArea.style.display = 'none';
+      formArea.innerHTML = '';
+    });
+
+    formArea.querySelector('#sratix-staff-inline-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+
+      const body = {
+        firstName: form.firstName.value.trim(),
+        lastName: form.lastName.value.trim(),
+        email: form.email.value.trim(),
+        phone: form.phone.value.trim() || undefined,
+        role: form.role.value,
+      };
+
+      try {
+        if (isEdit) {
+          await apiFetch(`exhibitor-portal/events/${eventId}/staff/${existingStaff.id}`, {
+            method: 'PUT',
+            headers: authHeaders,
+            body: JSON.stringify(body),
+          });
+        } else {
+          await apiFetch(`exhibitor-portal/events/${eventId}/staff`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify(body),
+          });
+        }
+        formArea.style.display = 'none';
+        formArea.innerHTML = '';
+        const refreshed = await apiFetch(`exhibitor-portal/events/${eventId}/staff`, { headers: authHeaders });
+        renderStaffList(container, eventId, refreshed, authHeaders);
+      } catch (err) {
+        showStatus(container.querySelector('#sratix-staff-status'), err.message || t('exhibitorPortal.saveError'), true);
+        btn.disabled = false;
+      }
+    });
+
+    // Scroll form into view
+    formArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ─── Media panel ──────────────────────────────────────────────────────────
+
+  function renderMediaPanel(panel, profile, events, authHeaders) {
+    const mediaGallery = (Array.isArray(profile.mediaGallery) ? profile.mediaGallery : []);
+    const videoLinks = (Array.isArray(profile.videoLinks) ? profile.videoLinks : []);
+
+    let html = `
+      <div class="sratix-media-panel">
+        <h3 class="sratix-media-section__title">${escHtml(t('exhibitorPortal.companyMedia'))}</h3>
+        <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.companyMediaDesc'))}</p>
+
+        <div class="sratix-media-gallery" id="sratix-profile-gallery">
+          ${mediaGallery.map((item, i) => `
+            <div class="sratix-media-item" data-index="${i}">
+              <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
+              <button type="button" class="sratix-media-remove" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="sratix-media-add">
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
+            <input type="url" id="sratix-add-image-url" class="sratix-input" placeholder="https://..." />
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
+            <input type="text" id="sratix-add-image-caption" class="sratix-input" maxlength="200" />
+          </div>
+          <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-image-btn">
+            + ${escHtml(t('exhibitorPortal.addImage'))}
+          </button>
+        </div>
+
+        <fieldset class="sratix-portal-fieldset">
+          <legend class="sratix-portal-legend">${escHtml(t('exhibitorPortal.videoLinks'))}</legend>
+          <div id="sratix-video-links-list">
+            ${videoLinks.map((url, i) => `
+              <div class="sratix-video-link-row" data-index="${i}">
+                <input type="url" value="${escAttr(url)}" class="sratix-input sratix-video-link-input" readonly />
+                <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove-video" data-index="${i}">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <div class="sratix-media-add">
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.videoUrl'))}</label>
+              <input type="url" id="sratix-add-video-url" class="sratix-input" placeholder="https://youtube.com/..." />
+            </div>
+            <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-video-btn">
+              + ${escHtml(t('exhibitorPortal.addVideo'))}
+            </button>
+          </div>
+        </fieldset>
+
+        <div class="sratix-portal-actions">
+          <button type="button" class="sratix-btn sratix-btn--primary" id="sratix-save-media">
+            ${escHtml(t('exhibitorPortal.saveMedia'))}
+          </button>
+          <span class="sratix-portal-status" id="sratix-media-status"></span>
+        </div>
+      </div>
+    `;
+
+    panel.innerHTML = html;
+
+    // Local state for profile media
+    let currentGallery = [...mediaGallery];
+    let currentVideos = [...videoLinks];
+
+    // Add image
+    panel.querySelector('#sratix-add-image-btn').addEventListener('click', () => {
+      const urlInput = panel.querySelector('#sratix-add-image-url');
+      const captionInput = panel.querySelector('#sratix-add-image-caption');
+      const url = urlInput.value.trim();
+      if (!url) return;
+      currentGallery.push({ url, caption: captionInput.value.trim() || undefined });
+      urlInput.value = '';
+      captionInput.value = '';
+      refreshMediaDisplay(panel, currentGallery, currentVideos);
+    });
+
+    // Add video
+    panel.querySelector('#sratix-add-video-btn').addEventListener('click', () => {
+      const urlInput = panel.querySelector('#sratix-add-video-url');
+      const url = urlInput.value.trim();
+      if (!url) return;
+      currentVideos.push(url);
+      urlInput.value = '';
+      refreshMediaDisplay(panel, currentGallery, currentVideos);
+    });
+
+    // Remove image/video handlers
+    bindMediaRemoveHandlers(panel, currentGallery, currentVideos);
+
+    // Save
+    panel.querySelector('#sratix-save-media').addEventListener('click', async () => {
+      const btn = panel.querySelector('#sratix-save-media');
+      const statusEl = panel.querySelector('#sratix-media-status');
+      btn.disabled = true;
+      try {
+        await apiFetch('exhibitor-portal/profile/media', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({
+            mediaGallery: currentGallery,
+            videoLinks: currentVideos,
+          }),
+        });
+        showStatus(statusEl, t('exhibitorPortal.saved'), false);
+      } catch (err) {
+        showStatus(statusEl, err.message || t('exhibitorPortal.saveError'), true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  function refreshMediaDisplay(panel, gallery, videos) {
+    const galleryEl = panel.querySelector('#sratix-profile-gallery');
+    galleryEl.innerHTML = gallery.map((item, i) => `
+      <div class="sratix-media-item" data-index="${i}">
+        <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
+        <button type="button" class="sratix-media-remove" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
+      </div>
+    `).join('');
+
+    const videoListEl = panel.querySelector('#sratix-video-links-list');
+    videoListEl.innerHTML = videos.map((url, i) => `
+      <div class="sratix-video-link-row" data-index="${i}">
+        <input type="url" value="${escAttr(url)}" class="sratix-input sratix-video-link-input" readonly />
+        <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove-video" data-index="${i}">✕</button>
+      </div>
+    `).join('');
+
+    bindMediaRemoveHandlers(panel, gallery, videos);
+  }
+
+  function bindMediaRemoveHandlers(panel, gallery, videos) {
+    panel.querySelectorAll('.sratix-media-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        gallery.splice(idx, 1);
+        refreshMediaDisplay(panel, gallery, videos);
+      });
+    });
+
+    panel.querySelectorAll('[data-action="remove-video"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index, 10);
+        videos.splice(idx, 1);
+        refreshMediaDisplay(panel, gallery, videos);
+      });
+    });
+  }
+
+  // ── Analytics Panel (Phase 1d) ──────────────────────────────────────
+
+  function renderAnalyticsPanel(panel, events, authHeaders) {
+    if (!events || events.length === 0) {
+      panel.innerHTML = `<p class="sratix-portal-empty">${escHtml(t('exhibitorPortal.noEvents'))}</p>`;
+      return;
+    }
+
+    let html = `<div class="sratix-analytics-panel">
+      <label class="sratix-label">${escHtml(t('exhibitorPortal.selectEvent'))}</label>
+      <select class="sratix-input" id="sratix-analytics-event-select">
+        <option value="">—</option>
+        ${events.map(ev => `<option value="${escAttr(ev.eventId)}">${escHtml(ev.event?.name || ev.eventId)}</option>`).join('')}
+      </select>
+      <div id="sratix-analytics-content"></div>
+    </div>`;
+    panel.innerHTML = html;
+
+    panel.querySelector('#sratix-analytics-event-select').addEventListener('change', function () {
+      const eventId = this.value;
+      const content = panel.querySelector('#sratix-analytics-content');
+      if (!eventId) { content.innerHTML = ''; return; }
+      loadAnalytics(content, eventId, authHeaders);
+    });
+  }
+
+  async function loadAnalytics(container, eventId, authHeaders) {
+    container.innerHTML = `<p class="sratix-loading">${escHtml(t('common.loading'))}</p>`;
+
+    try {
+      const data = await apiFetch('exhibitor-portal/events/' + eventId + '/kpis', { headers: authHeaders });
+
+      let html = `
+        <div class="sratix-kpi-cards">
+          <div class="sratix-kpi-card">
+            <div class="sratix-kpi-value">${data.summary.totalScans}</div>
+            <div class="sratix-kpi-label">${escHtml(t('exhibitorPortal.totalScans'))}</div>
+          </div>
+          <div class="sratix-kpi-card">
+            <div class="sratix-kpi-value">${data.summary.uniqueVisitors}</div>
+            <div class="sratix-kpi-label">${escHtml(t('exhibitorPortal.uniqueVisitors'))}</div>
+          </div>
+          <div class="sratix-kpi-card">
+            <div class="sratix-kpi-value">${data.summary.totalLeads}</div>
+            <div class="sratix-kpi-label">${escHtml(t('exhibitorPortal.totalLeads'))}</div>
+          </div>
+        </div>
+      `;
+
+      // Booth QR section
+      html += `
+        <div class="sratix-booth-qr-section">
+          <h4>${escHtml(t('exhibitorPortal.boothQrCode'))}</h4>
+          <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.boothQrHint'))}</p>
+          <button class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-show-qr-btn">
+            ${escHtml(t('exhibitorPortal.showQrCode'))}
+          </button>
+          <div id="sratix-qr-display" style="display:none"></div>
+        </div>
+      `;
+
+      // Charts section
+      if (data.timeSeries.scansByDay.length > 0) {
+        html += `<div class="sratix-chart-section">
+          <h4>${escHtml(t('exhibitorPortal.scansByDay'))}</h4>
+          <canvas id="sratix-scans-chart" width="600" height="250"></canvas>
+        </div>`;
+      }
+
+      if (data.timeSeries.leadsByDay.length > 0) {
+        html += `<div class="sratix-chart-section">
+          <h4>${escHtml(t('exhibitorPortal.leadsByDay'))}</h4>
+          <canvas id="sratix-leads-chart" width="600" height="250"></canvas>
+        </div>`;
+      }
+
+      container.innerHTML = html;
+
+      // QR code button
+      const qrBtn = container.querySelector('#sratix-show-qr-btn');
+      if (qrBtn) {
+        qrBtn.addEventListener('click', async function () {
+          const display = container.querySelector('#sratix-qr-display');
+          if (display.style.display !== 'none') {
+            display.style.display = 'none';
+            return;
+          }
+          try {
+            const qrData = await apiFetch('exhibitor-portal/events/' + eventId + '/booth-qr', { headers: authHeaders });
+            display.innerHTML = `<div class="sratix-qr-payload">
+              <code>${escHtml(qrData.qrPayload)}</code>
+              <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.qrPayloadHint'))}</p>
+            </div>`;
+            display.style.display = '';
+          } catch (err) {
+            display.innerHTML = `<p class="sratix-portal-status--error">${escHtml(err.message || t('common.error'))}</p>`;
+            display.style.display = '';
+          }
+        });
+      }
+
+      // Render charts with simple canvas bars (no Chart.js dependency)
+      renderBarChart('sratix-scans-chart', data.timeSeries.scansByDay, 'day', 'count', '#4f8cff');
+      renderBarChart('sratix-leads-chart', data.timeSeries.leadsByDay, 'day', 'count', '#22c55e');
+    } catch (err) {
+      container.innerHTML = `<p class="sratix-portal-status--error">${escHtml(err.message || t('exhibitorPortal.staffLoadError'))}</p>`;
+    }
+  }
+
+  /**
+   * Simple canvas bar chart — no external dependencies.
+   */
+  function renderBarChart(canvasId, dataPoints, labelKey, valueKey, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !dataPoints || dataPoints.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const padding = { top: 20, right: 20, bottom: 50, left: 50 };
+    const chartW = W - padding.left - padding.right;
+    const chartH = H - padding.top - padding.bottom;
+
+    const maxVal = Math.max(...dataPoints.map(d => d[valueKey]), 1);
+    const barW = Math.max(2, (chartW / dataPoints.length) - 4);
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Y-axis gridlines
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + chartH - (chartH * i / 4);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(W - padding.right, y);
+      ctx.stroke();
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(maxVal * i / 4).toString(), padding.left - 8, y + 4);
+    }
+
+    // Bars
+    ctx.fillStyle = color;
+    dataPoints.forEach((d, i) => {
+      const barH = (d[valueKey] / maxVal) * chartH;
+      const x = padding.left + (chartW / dataPoints.length) * i + 2;
+      const y = padding.top + chartH - barH;
+      ctx.fillRect(x, y, barW, barH);
+    });
+
+    // X-axis labels
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    dataPoints.forEach((d, i) => {
+      const x = padding.left + (chartW / dataPoints.length) * i + barW / 2 + 2;
+      const label = d[labelKey].substring(5); // "MM-DD"
+      ctx.save();
+      ctx.translate(x, H - padding.bottom + 14);
+      ctx.rotate(-0.5);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  // ── Logistics Panel (Phase 1e) ───────────────────────────────────
+
+  function renderLogisticsPanel(panel, events, authHeaders) {
+    if (!events || events.length === 0) {
+      panel.innerHTML = `<p class="sratix-portal-empty">${escHtml(t('exhibitorPortal.noEvents'))}</p>`;
+      return;
+    }
+
+    let html = `<div class="sratix-logistics-panel">
+      <label class="sratix-label">${escHtml(t('exhibitorPortal.selectEvent'))}</label>
+      <select class="sratix-input" id="sratix-logistics-event-select">
+        <option value="">—</option>
+        ${events.map(ev => `<option value="${escAttr(ev.eventId)}">${escHtml(ev.event?.name || ev.eventId)}</option>`).join('')}
+      </select>
+      <div id="sratix-logistics-content"></div>
+    </div>`;
+    panel.innerHTML = html;
+
+    panel.querySelector('#sratix-logistics-event-select').addEventListener('change', function () {
+      const eventId = this.value;
+      const content = panel.querySelector('#sratix-logistics-content');
+      if (!eventId) { content.innerHTML = ''; return; }
+      loadLogisticsForm(content, eventId, authHeaders);
+    });
+  }
+
+  async function loadLogisticsForm(container, eventId, authHeaders) {
+    container.innerHTML = `<p class="sratix-loading">${escHtml(t('common.loading'))}</p>`;
+
+    try {
+      const [optionsRes, requestRes] = await Promise.all([
+        apiFetch('exhibitor-portal/events/' + eventId + '/setup-options', { headers: authHeaders }),
+        apiFetch('exhibitor-portal/events/' + eventId + '/setup-request', { headers: authHeaders }),
+      ]);
+
+      const setupOptions = optionsRes.setupOptions;
+      const request = requestRes;
+
+      if (!setupOptions || !Array.isArray(setupOptions) || setupOptions.length === 0) {
+        container.innerHTML = `<p class="sratix-portal-empty">${escHtml(t('exhibitorPortal.noSetupOptions'))}</p>`;
+        return;
+      }
+
+      // Status banner
+      let statusHtml = '';
+      if (request.status === 'confirmed') {
+        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--confirmed">
+          ✓ ${escHtml(t('exhibitorPortal.setupConfirmed'))}
+        </div>`;
+      } else if (request.status === 'modification_requested') {
+        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--mod-requested">
+          ${escHtml(t('exhibitorPortal.setupModificationRequested'))}
+          ${request.adminNotes ? `<p class="sratix-logistics-admin-notes">${escHtml(request.adminNotes)}</p>` : ''}
+        </div>`;
+      } else if (request.status === 'submitted') {
+        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--submitted">
+          ${escHtml(t('exhibitorPortal.setupSubmitted'))}
+        </div>`;
+      }
+
+      const savedData = (request.data && typeof request.data === 'object') ? request.data : {};
+      const isEditable = request.status !== 'confirmed';
+
+      let formHtml = statusHtml + '<form id="sratix-logistics-form" class="sratix-portal-form">';
+
+      // Build form fields from setupOptions config
+      setupOptions.forEach(function (option) {
+        const fieldName = option.key || option.id;
+        const savedVal = savedData[fieldName] || '';
+        const label = option.label || fieldName;
+        const fieldDisabled = isEditable ? '' : 'disabled';
+
+        formHtml += `<div class="sratix-field-group">
+          <label class="sratix-label">${escHtml(label)}`;
+
+        if (option.required) {
+          formHtml += ' <span class="sratix-required">*</span>';
+        }
+        formHtml += '</label>';
+
+        if (option.type === 'select' && Array.isArray(option.options)) {
+          formHtml += `<select name="${escAttr(fieldName)}" class="sratix-input" ${fieldDisabled}>
+            <option value="">—</option>
+            ${option.options.map(function (opt) {
+              const optVal = typeof opt === 'string' ? opt : (opt.value || opt);
+              const optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value);
+              const sel = String(savedVal) === String(optVal) ? 'selected' : '';
+              return `<option value="${escAttr(optVal)}" ${sel}>${escHtml(optLabel)}</option>`;
+            }).join('')}
+          </select>`;
+        } else if (option.type === 'textarea') {
+          formHtml += `<textarea name="${escAttr(fieldName)}" class="sratix-input" rows="3" ${fieldDisabled}>${escHtml(String(savedVal))}</textarea>`;
+        } else if (option.type === 'checkbox') {
+          formHtml += `<label class="sratix-checkbox-label">
+            <input type="checkbox" name="${escAttr(fieldName)}" ${savedVal ? 'checked' : ''} ${fieldDisabled} />
+            ${escHtml(option.checkboxLabel || label)}
+          </label>`;
+        } else if (option.type === 'number') {
+          formHtml += `<input type="number" name="${escAttr(fieldName)}" value="${escAttr(String(savedVal))}" class="sratix-input"
+            min="${option.min != null ? option.min : ''}" max="${option.max != null ? option.max : ''}" ${fieldDisabled} />`;
+        } else {
+          formHtml += `<input type="text" name="${escAttr(fieldName)}" value="${escAttr(String(savedVal))}" class="sratix-input" ${fieldDisabled} />`;
+        }
+
+        if (option.hint) {
+          formHtml += `<p class="sratix-portal-hint">${escHtml(option.hint)}</p>`;
+        }
+
+        formHtml += '</div>';
+      });
+
+      if (isEditable) {
+        formHtml += `<div class="sratix-logistics-actions">
+          <button type="button" class="sratix-btn sratix-btn--outline" data-action="save-draft">
+            ${escHtml(t('exhibitorPortal.saveDraft'))}
+          </button>
+          <button type="button" class="sratix-btn sratix-btn--primary" data-action="submit-setup">
+            ${escHtml(t('exhibitorPortal.submitSetup'))}
+          </button>
+        </div>`;
+      }
+
+      formHtml += '<div class="sratix-portal-status" id="sratix-logistics-status"></div></form>';
+
+      container.innerHTML = formHtml;
+
+      // Bind save/submit
+      if (isEditable) {
+        container.querySelector('[data-action="save-draft"]').addEventListener('click', function () {
+          saveSetupRequest(container, eventId, 'draft', authHeaders, setupOptions);
+        });
+        container.querySelector('[data-action="submit-setup"]').addEventListener('click', function () {
+          saveSetupRequest(container, eventId, 'submitted', authHeaders, setupOptions);
+        });
+      }
+    } catch (err) {
+      container.innerHTML = `<p class="sratix-portal-status--error">${escHtml(err.message || t('exhibitorPortal.staffLoadError'))}</p>`;
+    }
+  }
+
+  async function saveSetupRequest(container, eventId, status, authHeaders, setupOptions) {
+    const form = container.querySelector('#sratix-logistics-form');
+    const statusEl = container.querySelector('#sratix-logistics-status');
+
+    // Gather form data
+    const data = {};
+    setupOptions.forEach(function (option) {
+      const fieldName = option.key || option.id;
+      const el = form.querySelector('[name="' + fieldName + '"]');
+      if (!el) return;
+      if (option.type === 'checkbox') {
+        data[fieldName] = el.checked;
+      } else if (option.type === 'number') {
+        data[fieldName] = el.value ? Number(el.value) : null;
+      } else {
+        data[fieldName] = el.value;
+      }
+    });
+
+    try {
+      await apiFetch('exhibitor-portal/events/' + eventId + '/setup-request', {
+        method: 'PUT',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data, status: status }),
+      });
+      showStatus(statusEl, status === 'submitted' ? t('exhibitorPortal.setupSubmittedSuccess') : t('exhibitorPortal.setupSaved'), false);
+      // Reload form to reflect new status
+      if (status === 'submitted') {
+        setTimeout(function () { loadLogisticsForm(container, eventId, authHeaders); }, 1500);
+      }
+    } catch (err) {
+      showStatus(statusEl, err.message || t('common.error'), true);
+    }
   }
 
   function showStatus(el, message, isError) {
