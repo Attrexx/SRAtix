@@ -276,13 +276,10 @@ class SRAtix_Control_Webhook {
 	 * full attendee data, ticket type metadata (category, membershipTier,
 	 * wpProductId), pricing variants, form submission answers, and event info.
 	 *
-	 * TEST MODE: When the payload contains `testMode: true`, this handler
-	 * skips all WP side-effects (user creation, WC order, ProfileGrid,
-	 * resume creation) and only logs what would have happened. The SRAtix
-	 * Server already handles test mode gating — this is a safety net in case
-	 * the webhook is dispatched despite test mode (e.g. manual retry).
+	 * Test mode orders (isTestOrder flag) are processed identically to live
+	 * orders. Test mode only affects Stripe payment (dummy cards).
 	 *
-	 * Steps (live mode only):
+	 * Steps:
 	 *  1. Extract attendee & ticket data from enriched payload
 	 *  2. Find or create WP user by email
 	 *  3. Assign WP role (candidate/employer) based on ticket category
@@ -298,30 +295,12 @@ class SRAtix_Control_Webhook {
 	private function on_order_paid( $payload ) {
 		$data = $payload['data'] ?? array();
 
-		// ── Test mode guard ───────────────────────────────────────
-		$is_test_mode = ! empty( $data['testMode'] );
-		if ( $is_test_mode ) {
+		// Log test mode orders for traceability, but process them normally.
+		// Test mode only means Stripe used dummy cards — all WP side-effects
+		// (user creation, WC order, ProfileGrid, etc.) run identically.
+		if ( ! empty( $data['isTestOrder'] ) ) {
 			$order_number = $data['orderNumber'] ?? 'unknown';
-			error_log( 'SRAtix Control [order.paid]: TEST MODE — skipping WP side-effects for order ' . $order_number );
-			error_log( 'SRAtix Control [order.paid]: Actions that would have been triggered:' );
-
-			$attendees = $data['attendees'] ?? array();
-			foreach ( $attendees as $attendee ) {
-				$email    = $attendee['email'] ?? 'unknown';
-				$ticket   = $attendee['ticketType'] ?? array();
-				$category = $ticket['category'] ?? 'general';
-				$tier     = $ticket['membershipTier'] ?? '';
-				$product  = $ticket['wpProductId'] ?? 0;
-
-				error_log( sprintf(
-					'  → Attendee %s: category=%s, tier=%s, wpProductId=%d (user creation, role assign, WC order — all SKIPPED)',
-					$email,
-					$category,
-					$tier,
-					$product
-				) );
-			}
-			return;
+			error_log( 'SRAtix Control [order.paid]: Processing test-mode order ' . $order_number . ' with full live workflow.' );
 		}
 
 		// ── 1. Extract data ───────────────────────────────────────

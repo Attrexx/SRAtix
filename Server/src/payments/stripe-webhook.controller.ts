@@ -110,10 +110,9 @@ export class StripeWebhookController {
    * checkout.session.completed — payment succeeded.
    * Mark order as paid, issue tickets, fire attendee webhooks.
    *
-   * In test mode (stripe_mode=test):
-   *  - Real actions: mark paid, issue tickets (tagged), SSE, confirmation email
-   *  - Skipped: outgoing order.paid webhook to WP (no WP user/WC order creation)
-   *  - Instead: simulated actions summary stored in order meta
+   * Test mode (stripe_mode=test) only affects Stripe payment (dummy cards).
+   * All downstream processes run identically: tickets, emails, WP sync webhooks.
+   * Test orders are tagged with isTestOrder in meta for traceability.
    */
   private async handleCheckoutComplete(session: Stripe.Checkout.Session) {
     const orderId = session.metadata?.sratix_order_id;
@@ -149,7 +148,7 @@ export class StripeWebhookController {
     const eventId = session.metadata?.sratix_event_id;
 
     if (isTestOrder) {
-      this.logger.log(`🧪 Test mode order ${orderId} — real tickets will be issued, WP sync will be skipped`);
+      this.logger.log(`🧪 Test mode order ${orderId} — all processes will run as live (Stripe payment was test-mode)`);
     }
 
     // Issue tickets (one Ticket per OrderItem quantity unit)
@@ -298,30 +297,19 @@ export class StripeWebhookController {
     }
 
     // ── WP Sync: outgoing order.paid webhook ─────────────────────
-    if (isTestOrder) {
-      // ── TEST MODE: build simulated actions instead of dispatching webhook ──
-      if (orgId && eventId && paidOrder) {
-        const simulatedActions = await this.buildSimulatedActions(paidOrder, eventId);
-        // Persist simulated actions in order meta so the success page can display them
-        await this.orders.updateMeta(orderId, {
-          isTestOrder: true,
-          simulatedActions,
-        });
-        this.logger.log(
-          `🧪 Test mode — skipped order.paid webhook for order ${orderId}. ` +
-          `${simulatedActions.length} action(s) would have been triggered.`,
+    // Always dispatch the real webhook — test mode only affects Stripe payment
+    // (dummy cards), all downstream processes run identically.
+    if (orgId && eventId && paidOrder) {
+      const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
+      if (isTestOrder) {
+        enrichedPayload.isTestOrder = true;
+        this.logger.log(`🧪 Test mode order ${orderId} — dispatching real order.paid webhook (test flag included in payload)`);
+      }
+      this.outgoingWebhooks
+        .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
+        .catch((err) =>
+          this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
         );
-      }
-    } else {
-      // ── LIVE MODE: fire outgoing webhook to SRAtix Control / Client plugins ──
-      if (orgId && eventId && paidOrder) {
-        const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
-        this.outgoingWebhooks
-          .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
-          .catch((err) =>
-            this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
-          );
-      }
     }
 
     // Increment promo code usage if this order used one

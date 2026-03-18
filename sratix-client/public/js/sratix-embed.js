@@ -2070,16 +2070,14 @@
     banner.setAttribute('role', 'status');
 
     if (isTestMode) {
-      // Test mode banner — show what happened + simulated actions placeholder
+      // Test mode banner — same as live, with a subtle test indicator.
+      // All downstream processes (emails, WP sync, etc.) run identically.
       banner.innerHTML = `
-        <span class="sratix-success-icon sratix-success-icon--test">⚙</span>
+        <span class="sratix-success-icon">✓</span>
         <div class="sratix-success-text">
-          <strong>${escHtml(t('success.testTitle'))}</strong>
+          <strong>${escHtml(t('success.title'))}</strong> <small style="opacity:.6">[TEST]</small>
           ${orderNumber ? `<span> — ${escHtml(t('success.order', { number: orderNumber }))}</span>` : ''}
-          <br>${escHtml(t('success.testDone'))}
-          <div class="sratix-test-actions" id="sratix-test-actions">
-            <em>${escHtml(t('success.testLoading'))}</em>
-          </div>
+          <br>${escHtml(t('success.checkEmail'))}
         </div>
         <button class="sratix-success-close" aria-label="${escAttr(t('success.dismiss'))}">&times;</button>
       `;
@@ -2107,11 +2105,6 @@
       firstWidget.parentNode.insertBefore(banner, firstWidget);
     } else {
       document.body.insertBefore(banner, document.body.firstChild);
-    }
-
-    // Fetch and render simulated actions for test mode
-    if (isTestMode && orderNumber) {
-      fetchTestActions(orderNumber);
     }
 
     // Remove success params from URL without a page reload
