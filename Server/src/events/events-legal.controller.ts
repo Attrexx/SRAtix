@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Res, Header } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import { EventsService } from './events.service';
-import sanitizeHtml from 'sanitize-html';
+import * as sanitizeHtml from 'sanitize-html';
 
 /**
  * Legal Page Controller — serves event legal documents as public HTML pages.

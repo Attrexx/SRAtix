@@ -2782,14 +2782,6 @@
               <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorType'))}</label>
               <input type="text" name="exhibitorType" value="${escAttr(ev.exhibitorType || '')}" class="sratix-input" />
             </div>
-            <div class="sratix-field-group sratix-field-group--full">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.demoTitle'))}</label>
-              <input type="text" name="demoTitle" value="${escAttr(ev.demoTitle || '')}" class="sratix-input" />
-            </div>
-            <div class="sratix-field-group sratix-field-group--full">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.demoDescription'))}</label>
-              <textarea name="demoDescription" rows="3" class="sratix-input">${escHtml(ev.demoDescription || '')}</textarea>
-            </div>
           </div>
           <div class="sratix-portal-actions">
             <button type="submit" class="sratix-btn sratix-btn--primary sratix-btn--sm">
@@ -2817,8 +2809,6 @@
           expoArea: form.expoArea.value.trim() || undefined,
           exhibitorCategory: form.exhibitorCategory.value.trim() || undefined,
           exhibitorType: form.exhibitorType.value.trim() || undefined,
-          demoTitle: form.demoTitle.value.trim() || undefined,
-          demoDescription: form.demoDescription.value.trim() || undefined,
         };
 
         try {

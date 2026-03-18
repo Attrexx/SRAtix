@@ -10,7 +10,7 @@ import {
   ConditionRule,
   evaluateConditions,
 } from '../common/conditions';
-import sanitizeHtml from 'sanitize-html';
+import * as sanitizeHtml from 'sanitize-html';
 
 /**
  * Supported form field types per PRODUCTION-ARCHITECTURE.md §8.
