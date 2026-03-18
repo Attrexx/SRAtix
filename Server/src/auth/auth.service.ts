@@ -140,6 +140,22 @@ export class AuthService implements OnModuleDestroy {
       userId = mapping.sratixEntityId;
       orgId = mapping.orgId ?? undefined;
 
+      // If mapping has no orgId, try to resolve from org-scoped roles
+      if (!orgId) {
+        const orgRole = await this.prisma.userRole.findFirst({
+          where: { userId, orgId: { not: null } },
+          select: { orgId: true },
+        });
+        if (orgRole?.orgId) {
+          orgId = orgRole.orgId;
+          // Persist so future logins don't need this lookup
+          await this.prisma.wpMapping.update({
+            where: { id: mapping.id },
+            data: { orgId },
+          });
+        }
+      }
+
       // Fetch display info from User record
       const user = await this.prisma.user.findUnique({
         where: { id: userId },

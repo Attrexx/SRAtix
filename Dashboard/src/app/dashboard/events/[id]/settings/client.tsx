@@ -416,11 +416,11 @@ export default function EventSettingsPage() {
             {t('events.settings.pagePathsHint')}
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FieldInput label={t('events.settings.pathTickets')} value={pagePathTickets} onChange={setPagePathTickets} placeholder="/tickets/" />
-            <FieldInput label={t('events.settings.pathRegister')} value={pagePathRegister} onChange={setPagePathRegister} placeholder="/register/" />
-            <FieldInput label={t('events.settings.pathMyTickets')} value={pagePathMyTickets} onChange={setPagePathMyTickets} placeholder="/my-tickets/" />
-            <FieldInput label={t('events.settings.pathSchedule')} value={pagePathSchedule} onChange={setPagePathSchedule} placeholder="/schedule/" />
-            <FieldInput label={t('events.settings.pathExhibitorPortal')} value={pagePathExhibitorPortal} onChange={setPagePathExhibitorPortal} placeholder="/exhibitor-portal/" />
+            <FieldInput label={t('events.settings.pathTickets')} hint={t('events.settings.pathTicketsHint')} value={pagePathTickets} onChange={setPagePathTickets} placeholder="/tickets/" />
+            <FieldInput label={t('events.settings.pathRegister')} hint={t('events.settings.pathRegisterHint')} value={pagePathRegister} onChange={setPagePathRegister} placeholder="/complete-registration/" />
+            <FieldInput label={t('events.settings.pathMyTickets')} hint={t('events.settings.pathMyTicketsHint')} value={pagePathMyTickets} onChange={setPagePathMyTickets} placeholder="/my-tickets/" />
+            <FieldInput label={t('events.settings.pathSchedule')} hint={t('events.settings.pathScheduleHint')} value={pagePathSchedule} onChange={setPagePathSchedule} placeholder="/schedule/" />
+            <FieldInput label={t('events.settings.pathExhibitorPortal')} hint={t('events.settings.pathExhibitorPortalHint')} value={pagePathExhibitorPortal} onChange={setPagePathExhibitorPortal} placeholder="/exhibitor-portal/" />
           </div>
         </Section>
 
@@ -672,12 +672,14 @@ function FieldInput({
   onChange,
   placeholder,
   type = 'text',
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  hint?: string;
 }) {
   return (
     <div>
@@ -696,6 +698,7 @@ function FieldInput({
           color: 'var(--color-text)',
         }}
       />
+      {hint && <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>{hint}</p>}
     </div>
   );
 }
