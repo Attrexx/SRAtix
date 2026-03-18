@@ -39,6 +39,9 @@
   // Legal page URLs from event public-info (populated on ticket selection)
   var legalPageUrls = {};
 
+  // Page paths from event settings (populated on ticket load)
+  var pagePaths = {};
+
   // ─── Ticket card icons (self-contained SVG with per-icon viewBox) ─────────────
 
   const TICKET_ICONS = {
@@ -278,6 +281,9 @@
       // Store legal page URLs for consent field rendering
       if (publicInfo.legalPageUrls) {
         legalPageUrls = publicInfo.legalPageUrls;
+      }
+      if (publicInfo.pagePaths) {
+        pagePaths = publicInfo.pagePaths;
       }
 
       if (!ticketTypes || ticketTypes.length === 0) {
@@ -2281,9 +2287,9 @@
   }
 
   function buildSuccessUrl(category) {
-    // Exhibitor purchases → redirect to portal page if configured
-    if (category === 'exhibitor' && config.portalPageUrl) {
-      const url = new URL(config.portalPageUrl, window.location.origin);
+    // Exhibitor purchases → redirect to portal page if configured in event settings
+    if (category === 'exhibitor' && pagePaths.exhibitorPortal) {
+      const url = new URL(pagePaths.exhibitorPortal, window.location.origin);
       url.searchParams.set('sratix_success', '1');
       return url.toString();
     }

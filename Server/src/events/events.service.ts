@@ -167,11 +167,13 @@ export class EventsService {
     exhibitorTicketTitle: string;
     exhibitorTicketIntro: string;
     legalPageUrls: Record<string, string>;
+    pagePaths: Record<string, string>;
   }> {
     const event = await this.prisma.event.findFirst({ where: { id: eventId } });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
 
     const meta = (event.meta as Record<string, unknown>) ?? {};
+    const paths = (meta.pagePaths as Record<string, string>) ?? {};
 
     return {
       ticketTitle: (meta.ticketTitle as string) ?? '',
@@ -180,6 +182,13 @@ export class EventsService {
       exhibitorTicketTitle: (meta.exhibitorTicketTitle as string) ?? '',
       exhibitorTicketIntro: (meta.exhibitorTicketIntro as string) ?? '',
       legalPageUrls: this.getLegalPageUrls(eventId, meta, '/api'),
+      pagePaths: {
+        tickets: paths.tickets ?? '/tickets/',
+        register: paths.register ?? '/register/',
+        myTickets: paths.myTickets ?? '/my-tickets/',
+        schedule: paths.schedule ?? '/schedule/',
+        exhibitorPortal: paths.exhibitorPortal ?? '/exhibitor-portal/',
+      },
     };
   }
 

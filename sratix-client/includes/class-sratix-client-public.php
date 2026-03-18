@@ -80,7 +80,6 @@ class SRAtix_Client_Public {
 			'robotxLogoUrl'    => esc_url( get_option( 'sratix_client_robotx_logo_url', '' ) ),
 			'membershipPrices' => $this->get_membership_product_prices(),
 			'logoutUrl'        => is_user_logged_in() ? wp_logout_url( home_url() ) : '',
-			'portalPageUrl'    => esc_url( get_option( 'sratix_client_portal_page_url', '' ) ),
 		);
 
 		// For logged-in users, provide identity + HMAC token so the JS widget
