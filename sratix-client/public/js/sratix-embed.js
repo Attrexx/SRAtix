@@ -15,6 +15,17 @@
   'use strict';
 
   const config = window.sratixConfig || {};
+
+  // Bridge nested config.user to legacy flat properties used by ticket forms
+  // and My Tickets widget.  PHP now only sets the nested object.
+  if (config.user) {
+    config.userEmail     = config.user.email;
+    config.userFirstName = config.user.firstName;
+    config.userLastName  = config.user.lastName;
+    config.wpUserId      = config.user.wpUserId;
+    config.wpHmacToken   = config.user.signature; // legacy alias
+  }
+
   const t = (typeof sratixI18n !== 'undefined') ? sratixI18n.t : function (k) { return k; };
 
   if (!config.apiUrl || !config.eventId) {
@@ -2151,12 +2162,16 @@
     container.innerHTML = `<p class="sratix-info">${escHtml(t('myTickets.loading'))}</p>`;
 
     try {
-      const authRes = await apiFetch('auth/wp-exchange', {
+      const user = config.user || {};
+      const authRes = await apiFetch('auth/token', {
         method: 'POST',
         body: JSON.stringify({
-          hmacToken: config.wpHmacToken,
-          wpUserId: config.wpUserId,
-          email: config.userEmail,
+          wpUserId: user.wpUserId || config.wpUserId,
+          wpRoles: user.roles || [],
+          signature: user.signature || config.wpHmacToken,
+          sourceSite: user.sourceSite || '',
+          email: user.email || config.userEmail,
+          displayName: ((user.firstName || '') + (user.lastName ? ' ' + user.lastName : '')).trim(),
         }),
       });
 
