@@ -96,7 +96,11 @@ export class AuthService implements OnModuleDestroy {
     }
 
     // Verify the HMAC signature from the WP plugin
-    const secret = this.config.getOrThrow<string>('WP_API_SECRET');
+    const secret = this.config.get<string>('WP_API_SECRET');
+    if (!secret) {
+      this.logger.error('WP_API_SECRET is not configured — cannot verify WP token exchanges');
+      throw new UnauthorizedException('Server misconfigured');
+    }
     // Include timestamp + nonce in HMAC if present (backward-compatible)
     let payload = `${wpUserId}:${wpRoles.sort().join(',')}:${sourceSite}`;
     if (timestamp && nonce) {
@@ -243,10 +247,16 @@ export class AuthService implements OnModuleDestroy {
     // Map WP roles to SRAtix roles
     const sratixRoles = this.mapWpRoles(wpRoles);
 
-    // Sync roles to UserRole table (replace existing global-scope roles)
+    // Sync roles to UserRole table.
+    // Use upsert-style logic: delete existing roles that would collide, then create.
+    // When orgId is set, we must also clean org-scoped roles to avoid unique-constraint
+    // violations (e.g., a seed-created 'exhibitor' role for the same org).
     await this.prisma.$transaction([
       this.prisma.userRole.deleteMany({
-        where: { userId, orgId: null },
+        where: {
+          userId,
+          ...(orgId ? { OR: [{ orgId: null }, { orgId }] } : { orgId: null }),
+        },
       }),
       ...sratixRoles.map((role) =>
         this.prisma.userRole.create({
