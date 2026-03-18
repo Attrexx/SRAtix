@@ -2517,23 +2517,58 @@
   /** Max video file-upload size (50 MB) — used in UI hints only; backend enforces. */
   var VIDEO_MAX_SIZE_MB = 50;
 
+  // ─── Portal tab SVG icons (16×16, currentColor) ─────────────────────────────
+  var PORTAL_ICONS = {
+    profile: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 22V12h6v10"/><path d="M9 12V8l3-2 3 2v4"/></svg>',
+    events: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>',
+    staff: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    media: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>',
+    analytics: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    logistics: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+    booth: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18l-2 9H5L3 3Z"/><path d="M5 12v8h14v-8"/><path d="M12 12v8"/><path d="M1 3h22"/></svg>',
+    institution: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 .856l10 5.556V9H2V6.412L12 .856ZM5.06 7h13.88L12 3.144L5.06 7ZM7 11v8H5v-8h2Zm6 0v8h-2v-8h2Zm6 0v8h-2v-8h2ZM2 21h20v2H2v-2Z"/></svg>',
+    tip: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 1 4 12.7V17H8v-2.3A7 7 0 0 1 12 2Z"/></svg>',
+  };
+
+  // ─── SRAtix brand logo SVG (inline, white, for portal header) ──────────────
+  var SRATIX_BRAND_SVG = '<svg width="80" height="28" viewBox="0 0 120 42" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<text x="0" y="30" font-family="Outfit,system-ui,sans-serif" font-size="28" font-weight="700" fill="#e8edf4">SRAtix</text>' +
+    '</svg>';
+
   function renderExhibitorPortal(container, profile, events, authHeaders) {
     const activeTab = sessionStorage.getItem('sratix_exhibitor_tab') || 'profile';
 
     const tabs = [
-      { key: 'profile',    icon: '🏢', label: t('exhibitorPortal.tabProfile') },
-      { key: 'events',     icon: '📋', label: t('exhibitorPortal.tabEvents') },
-      { key: 'staff',      icon: '👥', label: t('exhibitorPortal.tabStaff') },
-      { key: 'media',      icon: '🎬', label: t('exhibitorPortal.tabMedia') },
-      { key: 'analytics',  icon: '📊', label: t('exhibitorPortal.tabAnalytics') },
-      { key: 'logistics',  icon: '🚚', label: t('exhibitorPortal.tabLogistics') },
+      { key: 'profile',    icon: PORTAL_ICONS.profile,   label: t('exhibitorPortal.tabProfile') },
+      { key: 'events',     icon: PORTAL_ICONS.events,    label: t('exhibitorPortal.tabEvents') },
+      { key: 'staff',      icon: PORTAL_ICONS.staff,     label: t('exhibitorPortal.tabStaff') },
+      { key: 'media',      icon: PORTAL_ICONS.media,     label: t('exhibitorPortal.tabMedia') },
+      { key: 'analytics',  icon: PORTAL_ICONS.analytics, label: t('exhibitorPortal.tabAnalytics') },
+      { key: 'logistics',  icon: PORTAL_ICONS.logistics, label: t('exhibitorPortal.tabLogistics') },
     ];
+
+    const hasLogo = !!profile.logoUrl;
 
     container.innerHTML = `
       <div class="sratix-exhibitor-portal">
         <div class="sratix-portal-header">
-          <h1 class="sratix-portal-title">${escHtml(t('exhibitorPortal.portalTitle'))}</h1>
-          <p class="sratix-portal-welcome">${escHtml(t('exhibitorPortal.portalWelcome', { name: profile.companyName || '' }))}</p>
+          <div class="sratix-portal-header__logo">
+            ${hasLogo
+              ? `<label class="sratix-portal-header__logo-wrap sratix-portal-header__logo-wrap--has-img" tabindex="0" title="${escAttr(t('exhibitorPortal.changeLogo'))}">
+                  <img src="${escAttr(profile.logoUrl)}" alt="${escAttr(profile.companyName || '')}" class="sratix-portal-header__logo-img" />
+                  <span class="sratix-portal-header__logo-overlay">${escHtml(t('exhibitorPortal.changeLogo'))}</span>
+                  <input type="file" accept="image/*" class="sratix-header-logo-input" hidden />
+                </label>`
+              : `<label class="sratix-portal-header__logo-wrap sratix-portal-header__logo-wrap--empty" tabindex="0">
+                  <span class="sratix-portal-header__logo-ph">${escHtml(t('exhibitorPortal.uploadLogo'))}</span>
+                  <input type="file" accept="image/*" class="sratix-header-logo-input" hidden />
+                </label>`}
+          </div>
+          <div class="sratix-portal-header__text">
+            <h1 class="sratix-portal-title">${escHtml(t('exhibitorPortal.portalTitle'))}</h1>
+            <p class="sratix-portal-welcome">${escHtml(t('exhibitorPortal.portalWelcome', { name: profile.companyName || '' }))}</p>
+          </div>
+          <div class="sratix-portal-header__brand">${SRATIX_BRAND_SVG}</div>
         </div>
         <nav class="sratix-portal-tabs" role="tablist">
           ${tabs.map(tab => `
@@ -2581,6 +2616,28 @@
         document.getElementById('sratix-panel-' + tab).style.display = '';
       });
     });
+
+    // Header logo upload handler
+    const headerLogoInput = container.querySelector('.sratix-header-logo-input');
+    if (headerLogoInput) {
+      headerLogoInput.addEventListener('change', async function () {
+        const file = headerLogoInput.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          await fetch(API_BASE + '/exhibitor-portal/profile/logo', {
+            method: 'POST',
+            headers: { Authorization: authHeaders.Authorization },
+            body: formData,
+          });
+          const refreshed = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
+          renderExhibitorPortal(container, refreshed, events, authHeaders);
+        } catch (err) {
+          console.error('[SRAtix] Header logo upload error:', err);
+        }
+      });
+    }
 
     renderProfilePanel(container.querySelector('#sratix-panel-profile'), profile, authHeaders);
     renderEventsPanel(container.querySelector('#sratix-panel-events'), events, authHeaders);
@@ -3098,10 +3155,10 @@
         <!-- ═══ SECTION 1: BOOTH DEMO ═══ -->
         <section class="sratix-media-section">
           <div class="sratix-media-section__header">
-            <h3 class="sratix-media-section__title">🎪 ${escHtml(t('exhibitorPortal.demoMediaTitle'))}</h3>
+            <h3 class="sratix-media-section__title"><span class="sratix-media-section__icon">${PORTAL_ICONS.booth}</span> ${escHtml(t('exhibitorPortal.demoMediaTitle'))}</h3>
             <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.demoMediaDesc'))}</p>
             <div class="sratix-media-tip">
-              <span class="sratix-media-tip__icon">💡</span>
+              <span class="sratix-media-tip__icon">${PORTAL_ICONS.tip}</span>
               <span>${escHtml(t('exhibitorPortal.demoMediaTip'))}</span>
             </div>
           </div>
@@ -3166,7 +3223,7 @@
         <!-- ═══ SECTION 2: EXHIBITOR MEDIA ═══ -->
         <section class="sratix-media-section">
           <div class="sratix-media-section__header">
-            <h3 class="sratix-media-section__title">🏛️ ${escHtml(t('exhibitorPortal.exhibitorMediaTitle'))}</h3>
+            <h3 class="sratix-media-section__title"><span class="sratix-media-section__icon">${PORTAL_ICONS.institution}</span> ${escHtml(t('exhibitorPortal.exhibitorMediaTitle'))}</h3>
             <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.exhibitorMediaDesc'))}</p>
           </div>
 
