@@ -161,18 +161,52 @@ export class AuthService implements OnModuleDestroy {
         else if (!displayName) displayName = user.displayName;
       }
     } else {
-      // First login — create User + WpMapping
-      // Generate a stable user ID from WP site + user ID
-      const user = await this.prisma.user.create({
-        data: {
-          email: wpEmail ?? `wp-${wpUserId}@${sourceSite}`,
-          displayName: wpDisplayName ?? `WP User ${wpUserId}`,
-          wpUserId,
-          lastLoginAt: new Date(),
+      // First login — link to existing User (by email or wpUserId) or create new
+      const resolvedEmail = wpEmail ?? `wp-${wpUserId}@${sourceSite}`;
+      let user = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            ...(wpEmail ? [{ email: wpEmail }] : []),
+            { wpUserId },
+          ],
         },
       });
-      userId = user.id;
-      email = user.email;
+
+      if (user) {
+        // Existing user found by email/wpUserId — link, don't duplicate
+        userId = user.id;
+        email = user.email;
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            wpUserId,
+            lastLoginAt: new Date(),
+            ...(wpEmail ? { email: wpEmail } : {}),
+            ...(wpDisplayName ? { displayName: wpDisplayName } : {}),
+          },
+        });
+        if (wpEmail) email = wpEmail;
+      } else {
+        user = await this.prisma.user.create({
+          data: {
+            email: resolvedEmail,
+            displayName: wpDisplayName ?? `WP User ${wpUserId}`,
+            wpUserId,
+            lastLoginAt: new Date(),
+          },
+        });
+        userId = user.id;
+        email = user.email;
+      }
+
+      // Resolve orgId from existing org-scoped role (e.g., seed-created exhibitor role)
+      if (!orgId) {
+        const orgRole = await this.prisma.userRole.findFirst({
+          where: { userId, orgId: { not: null } },
+          select: { orgId: true },
+        });
+        if (orgRole?.orgId) orgId = orgRole.orgId;
+      }
 
       // Create bidirectional mapping
       await this.prisma.wpMapping.create({
@@ -181,6 +215,7 @@ export class AuthService implements OnModuleDestroy {
           wpEntityId: wpUserId,
           sratixEntityType: 'user',
           sratixEntityId: userId,
+          orgId: orgId ?? null,
         },
       });
 
