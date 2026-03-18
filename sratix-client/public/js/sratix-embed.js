@@ -2507,25 +2507,44 @@
     }
   }
 
+  /** Parse any YouTube/Shorts URL → embeddable URL, or null. */
+  function parseYouTubeUrl(url) {
+    if (!url) return null;
+    var m = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+    return m ? 'https://www.youtube-nocookie.com/embed/' + m[1] : null;
+  }
+
+  /** Max video file-upload size (50 MB) — used in UI hints only; backend enforces. */
+  var VIDEO_MAX_SIZE_MB = 50;
+
   function renderExhibitorPortal(container, profile, events, authHeaders) {
     const activeTab = sessionStorage.getItem('sratix_exhibitor_tab') || 'profile';
 
+    const tabs = [
+      { key: 'profile',    icon: '🏢', label: t('exhibitorPortal.tabProfile') },
+      { key: 'events',     icon: '📋', label: t('exhibitorPortal.tabEvents') },
+      { key: 'staff',      icon: '👥', label: t('exhibitorPortal.tabStaff') },
+      { key: 'media',      icon: '🎬', label: t('exhibitorPortal.tabMedia') },
+      { key: 'analytics',  icon: '📊', label: t('exhibitorPortal.tabAnalytics') },
+      { key: 'logistics',  icon: '🚚', label: t('exhibitorPortal.tabLogistics') },
+    ];
+
     container.innerHTML = `
       <div class="sratix-exhibitor-portal">
-        <div class="sratix-portal-tabs">
-          <button class="sratix-portal-tab ${activeTab === 'profile' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="profile">${escHtml(t('exhibitorPortal.tabProfile'))}</button>
-          <button class="sratix-portal-tab ${activeTab === 'events' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="events">${escHtml(t('exhibitorPortal.tabEvents'))}</button>
-          <button class="sratix-portal-tab ${activeTab === 'staff' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="staff">${escHtml(t('exhibitorPortal.tabStaff'))}</button>
-          <button class="sratix-portal-tab ${activeTab === 'media' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="media">${escHtml(t('exhibitorPortal.tabMedia'))}</button>
-          <button class="sratix-portal-tab ${activeTab === 'analytics' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="analytics">${escHtml(t('exhibitorPortal.tabAnalytics'))}</button>
-          <button class="sratix-portal-tab ${activeTab === 'logistics' ? 'sratix-portal-tab--active' : ''}"
-                  data-tab="logistics">${escHtml(t('exhibitorPortal.tabLogistics'))}</button>
+        <div class="sratix-portal-header">
+          <h1 class="sratix-portal-title">${escHtml(t('exhibitorPortal.portalTitle'))}</h1>
+          <p class="sratix-portal-welcome">${escHtml(t('exhibitorPortal.portalWelcome', { name: profile.companyName || '' }))}</p>
         </div>
+        <nav class="sratix-portal-tabs" role="tablist">
+          ${tabs.map(tab => `
+            <button class="sratix-portal-tab ${activeTab === tab.key ? 'sratix-portal-tab--active' : ''}"
+                    data-tab="${tab.key}" role="tab" aria-selected="${activeTab === tab.key}"
+                    aria-controls="sratix-panel-${tab.key}">
+              <span class="sratix-portal-tab__icon">${tab.icon}</span>
+              <span class="sratix-portal-tab__label">${escHtml(tab.label)}</span>
+            </button>
+          `).join('')}
+        </nav>
         <div class="sratix-portal-panel" id="sratix-panel-profile"
              style="${activeTab !== 'profile' ? 'display:none' : ''}">
         </div>
@@ -2552,8 +2571,12 @@
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
         sessionStorage.setItem('sratix_exhibitor_tab', tab);
-        container.querySelectorAll('.sratix-portal-tab').forEach(b => b.classList.remove('sratix-portal-tab--active'));
+        container.querySelectorAll('.sratix-portal-tab').forEach(b => {
+          b.classList.remove('sratix-portal-tab--active');
+          b.setAttribute('aria-selected', 'false');
+        });
         btn.classList.add('sratix-portal-tab--active');
+        btn.setAttribute('aria-selected', 'true');
         container.querySelectorAll('.sratix-portal-panel').forEach(p => p.style.display = 'none');
         document.getElementById('sratix-panel-' + tab).style.display = '';
       });
@@ -3068,155 +3091,299 @@
   // ─── Media panel ──────────────────────────────────────────────────────────
 
   function renderMediaPanel(panel, profile, events, authHeaders) {
-    const mediaGallery = (Array.isArray(profile.mediaGallery) ? profile.mediaGallery : []);
-    const videoLinks = (Array.isArray(profile.videoLinks) ? profile.videoLinks : []);
+    // ── Section 1: Booth Demo (event-scoped) ──
+    // ── Section 2: Exhibitor Media (profile-scoped) ──
 
-    let html = `
+    const profileGallery = Array.isArray(profile.mediaGallery) ? profile.mediaGallery : [];
+    const profileVideos  = Array.isArray(profile.videoLinks) ? profile.videoLinks : [];
+
+    // Use first event with demo data (or first event)
+    const ev = events && events.length > 0 ? events[0] : null;
+    const demoGallery = ev && Array.isArray(ev.demoMediaGallery) ? ev.demoMediaGallery : [];
+    const demoVideos  = ev && Array.isArray(ev.demoVideoLinks)  ? ev.demoVideoLinks  : [];
+
+    panel.innerHTML = `
       <div class="sratix-media-panel">
-        <h3 class="sratix-media-section__title">${escHtml(t('exhibitorPortal.companyMedia'))}</h3>
-        <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.companyMediaDesc'))}</p>
 
-        <div class="sratix-media-gallery" id="sratix-profile-gallery">
-          ${mediaGallery.map((item, i) => `
-            <div class="sratix-media-item" data-index="${i}">
-              <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
-              <button type="button" class="sratix-media-remove" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
+        <!-- ═══ SECTION 1: BOOTH DEMO ═══ -->
+        <section class="sratix-media-section">
+          <div class="sratix-media-section__header">
+            <h3 class="sratix-media-section__title">🎪 ${escHtml(t('exhibitorPortal.demoMediaTitle'))}</h3>
+            <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.demoMediaDesc'))}</p>
+            <div class="sratix-media-tip">
+              <span class="sratix-media-tip__icon">💡</span>
+              <span>${escHtml(t('exhibitorPortal.demoMediaTip'))}</span>
             </div>
-          `).join('')}
-        </div>
-
-        <div class="sratix-media-add">
-          <div class="sratix-field-group">
-            <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
-            <input type="url" id="sratix-add-image-url" class="sratix-input" placeholder="https://..." />
           </div>
-          <div class="sratix-field-group">
-            <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
-            <input type="text" id="sratix-add-image-caption" class="sratix-input" maxlength="200" />
-          </div>
-          <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-image-btn">
-            + ${escHtml(t('exhibitorPortal.addImage'))}
-          </button>
-        </div>
 
-        <fieldset class="sratix-portal-fieldset">
-          <legend class="sratix-portal-legend">${escHtml(t('exhibitorPortal.videoLinks'))}</legend>
-          <div id="sratix-video-links-list">
-            ${videoLinks.map((url, i) => `
-              <div class="sratix-video-link-row" data-index="${i}">
-                <input type="url" value="${escAttr(url)}" class="sratix-input sratix-video-link-input" readonly />
-                <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove-video" data-index="${i}">✕</button>
+          ${ev ? `
+          <div class="sratix-field-group sratix-field-group--full">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.demoTitle'))}</label>
+            <input type="text" id="sratix-demo-title" value="${escAttr(ev.demoTitle || '')}" class="sratix-input" maxlength="255" />
+          </div>
+          <div class="sratix-field-group sratix-field-group--full">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.demoDescription'))}</label>
+            <textarea id="sratix-demo-desc" rows="3" class="sratix-input" maxlength="10000">${escHtml(ev.demoDescription || '')}</textarea>
+          </div>
+
+          <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.demoImages'))}</h4>
+          <div class="sratix-media-gallery" id="sratix-demo-gallery">
+            ${demoGallery.map((item, i) => `
+              <div class="sratix-media-item" data-index="${i}">
+                <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
+                <button type="button" class="sratix-media-remove" data-scope="demo" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
               </div>
             `).join('')}
           </div>
           <div class="sratix-media-add">
             <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.videoUrl'))}</label>
-              <input type="url" id="sratix-add-video-url" class="sratix-input" placeholder="https://youtube.com/..." />
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
+              <input type="url" id="sratix-add-demo-image-url" class="sratix-input" placeholder="https://..." />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
+              <input type="text" id="sratix-add-demo-image-caption" class="sratix-input" maxlength="200" />
+            </div>
+            <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-demo-image-btn">
+              + ${escHtml(t('exhibitorPortal.addImage'))}
+            </button>
+          </div>
+
+          <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.demoVideos'))}</h4>
+          <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.videoHint', { maxMb: VIDEO_MAX_SIZE_MB }))}</p>
+          <div id="sratix-demo-video-list">
+            ${demoVideos.map((url, i) => renderVideoRow('demo', url, i)).join('')}
+          </div>
+          <div class="sratix-media-add">
+            <div class="sratix-field-group sratix-field-group--grow">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.videoUrlOrYt'))}</label>
+              <input type="url" id="sratix-add-demo-video-url" class="sratix-input" placeholder="https://youtube.com/watch?v=... or https://..." />
+            </div>
+            <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-demo-video-btn">
+              + ${escHtml(t('exhibitorPortal.addVideo'))}
+            </button>
+          </div>
+
+          <div class="sratix-portal-actions">
+            <button type="button" class="sratix-btn sratix-btn--primary" id="sratix-save-demo-media">
+              ${escHtml(t('exhibitorPortal.saveDemoMedia'))}
+            </button>
+            <span class="sratix-portal-status" id="sratix-demo-media-status"></span>
+          </div>
+          ` : `<p class="sratix-info">${escHtml(t('exhibitorPortal.noEvents'))}</p>`}
+        </section>
+
+        <!-- ═══ SECTION 2: EXHIBITOR MEDIA ═══ -->
+        <section class="sratix-media-section">
+          <div class="sratix-media-section__header">
+            <h3 class="sratix-media-section__title">🏛️ ${escHtml(t('exhibitorPortal.exhibitorMediaTitle'))}</h3>
+            <p class="sratix-media-section__desc">${escHtml(t('exhibitorPortal.exhibitorMediaDesc'))}</p>
+          </div>
+
+          <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.companyImages'))}</h4>
+          <div class="sratix-media-gallery" id="sratix-profile-gallery">
+            ${profileGallery.map((item, i) => `
+              <div class="sratix-media-item" data-index="${i}">
+                <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
+                <button type="button" class="sratix-media-remove" data-scope="profile" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <div class="sratix-media-add">
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
+              <input type="url" id="sratix-add-image-url" class="sratix-input" placeholder="https://..." />
+            </div>
+            <div class="sratix-field-group">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
+              <input type="text" id="sratix-add-image-caption" class="sratix-input" maxlength="200" />
+            </div>
+            <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-image-btn">
+              + ${escHtml(t('exhibitorPortal.addImage'))}
+            </button>
+          </div>
+
+          <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.companyVideos'))}</h4>
+          <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.videoHint', { maxMb: VIDEO_MAX_SIZE_MB }))}</p>
+          <div id="sratix-video-links-list">
+            ${profileVideos.map((url, i) => renderVideoRow('profile', url, i)).join('')}
+          </div>
+          <div class="sratix-media-add">
+            <div class="sratix-field-group sratix-field-group--grow">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.videoUrlOrYt'))}</label>
+              <input type="url" id="sratix-add-video-url" class="sratix-input" placeholder="https://youtube.com/watch?v=... or https://..." />
             </div>
             <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-video-btn">
               + ${escHtml(t('exhibitorPortal.addVideo'))}
             </button>
           </div>
-        </fieldset>
 
-        <div class="sratix-portal-actions">
-          <button type="button" class="sratix-btn sratix-btn--primary" id="sratix-save-media">
-            ${escHtml(t('exhibitorPortal.saveMedia'))}
-          </button>
-          <span class="sratix-portal-status" id="sratix-media-status"></span>
-        </div>
+          <div class="sratix-portal-actions">
+            <button type="button" class="sratix-btn sratix-btn--primary" id="sratix-save-media">
+              ${escHtml(t('exhibitorPortal.saveMedia'))}
+            </button>
+            <span class="sratix-portal-status" id="sratix-media-status"></span>
+          </div>
+        </section>
       </div>
     `;
 
-    panel.innerHTML = html;
+    // ── Local state ──
+    let currentDemoGallery = [...demoGallery];
+    let currentDemoVideos  = [...demoVideos];
+    let currentGallery     = [...profileGallery];
+    let currentVideos      = [...profileVideos];
 
-    // Local state for profile media
-    let currentGallery = [...mediaGallery];
-    let currentVideos = [...videoLinks];
+    // ── Demo section handlers ──
+    if (ev) {
+      panel.querySelector('#sratix-add-demo-image-btn').addEventListener('click', () => {
+        const urlInput = panel.querySelector('#sratix-add-demo-image-url');
+        const capInput = panel.querySelector('#sratix-add-demo-image-caption');
+        const url = urlInput.value.trim();
+        if (!url) return;
+        currentDemoGallery.push({ url, caption: capInput.value.trim() || undefined });
+        urlInput.value = ''; capInput.value = '';
+        refreshGalleryDisplay(panel.querySelector('#sratix-demo-gallery'), currentDemoGallery, 'demo');
+        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+      });
 
-    // Add image
+      panel.querySelector('#sratix-add-demo-video-btn').addEventListener('click', () => {
+        const urlInput = panel.querySelector('#sratix-add-demo-video-url');
+        const raw = urlInput.value.trim();
+        if (!raw) return;
+        currentDemoVideos.push(raw);
+        urlInput.value = '';
+        refreshVideoDisplay(panel.querySelector('#sratix-demo-video-list'), currentDemoVideos, 'demo');
+        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+      });
+
+      panel.querySelector('#sratix-save-demo-media').addEventListener('click', async () => {
+        const btn = panel.querySelector('#sratix-save-demo-media');
+        const statusEl = panel.querySelector('#sratix-demo-media-status');
+        btn.disabled = true;
+        try {
+          const body = {
+            demoTitle: panel.querySelector('#sratix-demo-title').value.trim() || undefined,
+            demoDescription: panel.querySelector('#sratix-demo-desc').value.trim() || undefined,
+          };
+          // Save event details (demo title/desc)
+          await apiFetch('exhibitor-portal/events/' + ev.eventId + '/details', {
+            method: 'PUT', headers: authHeaders, body: JSON.stringify(body),
+          });
+          // Save event media (demo gallery/videos)
+          await apiFetch('exhibitor-portal/events/' + ev.eventId + '/media', {
+            method: 'PUT', headers: authHeaders,
+            body: JSON.stringify({ mediaGallery: currentDemoGallery, videoLinks: currentDemoVideos }),
+          });
+          showStatus(statusEl, t('exhibitorPortal.saved'), false);
+        } catch (err) {
+          showStatus(statusEl, err.message || t('exhibitorPortal.saveError'), true);
+        } finally { btn.disabled = false; }
+      });
+    }
+
+    // ── Profile media handlers ──
     panel.querySelector('#sratix-add-image-btn').addEventListener('click', () => {
       const urlInput = panel.querySelector('#sratix-add-image-url');
       const captionInput = panel.querySelector('#sratix-add-image-caption');
       const url = urlInput.value.trim();
       if (!url) return;
       currentGallery.push({ url, caption: captionInput.value.trim() || undefined });
-      urlInput.value = '';
-      captionInput.value = '';
-      refreshMediaDisplay(panel, currentGallery, currentVideos);
+      urlInput.value = ''; captionInput.value = '';
+      refreshGalleryDisplay(panel.querySelector('#sratix-profile-gallery'), currentGallery, 'profile');
+      bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
     });
 
-    // Add video
     panel.querySelector('#sratix-add-video-btn').addEventListener('click', () => {
       const urlInput = panel.querySelector('#sratix-add-video-url');
-      const url = urlInput.value.trim();
-      if (!url) return;
-      currentVideos.push(url);
+      const raw = urlInput.value.trim();
+      if (!raw) return;
+      currentVideos.push(raw);
       urlInput.value = '';
-      refreshMediaDisplay(panel, currentGallery, currentVideos);
+      refreshVideoDisplay(panel.querySelector('#sratix-video-links-list'), currentVideos, 'profile');
+      bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
     });
 
-    // Remove image/video handlers
-    bindMediaRemoveHandlers(panel, currentGallery, currentVideos);
-
-    // Save
     panel.querySelector('#sratix-save-media').addEventListener('click', async () => {
       const btn = panel.querySelector('#sratix-save-media');
       const statusEl = panel.querySelector('#sratix-media-status');
       btn.disabled = true;
       try {
         await apiFetch('exhibitor-portal/profile/media', {
-          method: 'PUT',
-          headers: authHeaders,
-          body: JSON.stringify({
-            mediaGallery: currentGallery,
-            videoLinks: currentVideos,
-          }),
+          method: 'PUT', headers: authHeaders,
+          body: JSON.stringify({ mediaGallery: currentGallery, videoLinks: currentVideos }),
         });
         showStatus(statusEl, t('exhibitorPortal.saved'), false);
       } catch (err) {
         showStatus(statusEl, err.message || t('exhibitorPortal.saveError'), true);
-      } finally {
-        btn.disabled = false;
-      }
+      } finally { btn.disabled = false; }
     });
+
+    bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
   }
 
-  function refreshMediaDisplay(panel, gallery, videos) {
-    const galleryEl = panel.querySelector('#sratix-profile-gallery');
-    galleryEl.innerHTML = gallery.map((item, i) => `
+  /** Render a single video row with YouTube embed preview when applicable. */
+  function renderVideoRow(scope, url, index) {
+    const embedUrl = parseYouTubeUrl(url);
+    let preview = '';
+    if (embedUrl) {
+      preview = `<div class="sratix-video-embed-preview">
+        <iframe src="${escAttr(embedUrl)}" width="280" height="158" frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen loading="lazy" title="Video preview"></iframe>
+      </div>`;
+    }
+    return `<div class="sratix-video-link-row" data-scope="${scope}" data-index="${index}">
+      <div class="sratix-video-link-content">
+        <input type="url" value="${escAttr(url)}" class="sratix-input sratix-video-link-input" readonly />
+        ${embedUrl ? '<span class="sratix-badge sratix-badge--valid sratix-badge--xs">YouTube</span>' : ''}
+      </div>
+      <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove-video" data-scope="${scope}" data-index="${index}">✕</button>
+      ${preview}
+    </div>`;
+  }
+
+  function refreshGalleryDisplay(container, gallery, scope) {
+    container.innerHTML = gallery.map((item, i) => `
       <div class="sratix-media-item" data-index="${i}">
         <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
-        <button type="button" class="sratix-media-remove" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
+        <button type="button" class="sratix-media-remove" data-scope="${scope}" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
       </div>
     `).join('');
-
-    const videoListEl = panel.querySelector('#sratix-video-links-list');
-    videoListEl.innerHTML = videos.map((url, i) => `
-      <div class="sratix-video-link-row" data-index="${i}">
-        <input type="url" value="${escAttr(url)}" class="sratix-input sratix-video-link-input" readonly />
-        <button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--xs sratix-btn--danger" data-action="remove-video" data-index="${i}">✕</button>
-      </div>
-    `).join('');
-
-    bindMediaRemoveHandlers(panel, gallery, videos);
   }
 
-  function bindMediaRemoveHandlers(panel, gallery, videos) {
+  function refreshVideoDisplay(container, videos, scope) {
+    container.innerHTML = videos.map((url, i) => renderVideoRow(scope, url, i)).join('');
+  }
+
+  function bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos) {
     panel.querySelectorAll('.sratix-media-remove').forEach(btn => {
       btn.addEventListener('click', () => {
+        const scope = btn.dataset.scope;
         const idx = parseInt(btn.dataset.index, 10);
-        gallery.splice(idx, 1);
-        refreshMediaDisplay(panel, gallery, videos);
+        if (scope === 'demo') {
+          demoGallery.splice(idx, 1);
+          refreshGalleryDisplay(panel.querySelector('#sratix-demo-gallery'), demoGallery, 'demo');
+        } else {
+          profileGallery.splice(idx, 1);
+          refreshGalleryDisplay(panel.querySelector('#sratix-profile-gallery'), profileGallery, 'profile');
+        }
+        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos);
       });
     });
 
     panel.querySelectorAll('[data-action="remove-video"]').forEach(btn => {
       btn.addEventListener('click', () => {
+        const scope = btn.dataset.scope;
         const idx = parseInt(btn.dataset.index, 10);
-        videos.splice(idx, 1);
-        refreshMediaDisplay(panel, gallery, videos);
+        if (scope === 'demo') {
+          demoVideos.splice(idx, 1);
+          refreshVideoDisplay(panel.querySelector('#sratix-demo-video-list'), demoVideos, 'demo');
+        } else {
+          profileVideos.splice(idx, 1);
+          refreshVideoDisplay(panel.querySelector('#sratix-video-links-list'), profileVideos, 'profile');
+        }
+        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos);
       });
     });
   }

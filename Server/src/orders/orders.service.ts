@@ -1,6 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
+
+/** Max retries when an order-number collision occurs (race condition / deleted orders). */
+const ORDER_NUMBER_MAX_RETRIES = 5;
 
 @Injectable()
 export class OrdersService {
@@ -29,13 +32,31 @@ export class OrdersService {
   }
 
   /**
-   * Generate a human-readable order number like SRD-2026-0042.
+   * Generate the next order number by finding the current max sequence.
+   * Uses MAX(orderNumber) instead of COUNT to be resilient to deleted orders.
    */
   private async generateOrderNumber(eventId: string): Promise<string> {
-    const count = await this.prisma.order.count({ where: { eventId } });
     const year = new Date().getFullYear();
-    const seq = String(count + 1).padStart(4, '0');
-    return `TIX-${year}-${seq}`;
+    const prefix = `TIX-${year}-`;
+
+    // Find the highest existing sequence for this year
+    const latest = await this.prisma.order.findFirst({
+      where: {
+        eventId,
+        orderNumber: { startsWith: prefix },
+      },
+      orderBy: { orderNumber: 'desc' },
+      select: { orderNumber: true },
+    });
+
+    let nextSeq = 1;
+    if (latest?.orderNumber) {
+      const seqPart = latest.orderNumber.slice(prefix.length);
+      const parsed = parseInt(seqPart, 10);
+      if (!isNaN(parsed)) nextSeq = parsed + 1;
+    }
+
+    return `${prefix}${String(nextSeq).padStart(4, '0')}`;
   }
 
   async create(data: {
@@ -50,38 +71,54 @@ export class OrdersService {
       unitPriceCents: number;
     }>;
   }) {
-    const orderNumber = await this.generateOrderNumber(data.eventId);
+    // Retry loop: on rare race conditions two concurrent checkouts may
+    // generate the same order number.  Bump the sequence and retry.
+    for (let attempt = 0; attempt < ORDER_NUMBER_MAX_RETRIES; attempt++) {
+      const orderNumber = await this.generateOrderNumber(data.eventId);
 
-    const order = await this.prisma.order.create({
-      data: {
-        eventId: data.eventId,
-        orgId: data.orgId,
-        attendeeId: data.attendeeId,
-        orderNumber,
-        totalCents: data.totalCents,
-        currency: data.currency,
-        status: 'pending',
-        items: {
-          create: data.items.map((item) => ({
-            ticketTypeId: item.ticketTypeId,
-            quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents,
-            subtotalCents: item.quantity * item.unitPriceCents,
-          })),
-        },
-      },
-      include: { items: true },
-    });
+      try {
+        const order = await this.prisma.order.create({
+          data: {
+            eventId: data.eventId,
+            orgId: data.orgId,
+            attendeeId: data.attendeeId,
+            orderNumber,
+            totalCents: data.totalCents,
+            currency: data.currency,
+            status: 'pending',
+            items: {
+              create: data.items.map((item) => ({
+                ticketTypeId: item.ticketTypeId,
+                quantity: item.quantity,
+                unitPriceCents: item.unitPriceCents,
+                subtotalCents: item.quantity * item.unitPriceCents,
+              })),
+            },
+          },
+          include: { items: true },
+        });
 
-    this.audit.log({
-      eventId: data.eventId,
-      action: AuditAction.ORDER_CREATED,
-      entity: 'order',
-      entityId: order.id,
-      detail: { orderNumber, totalCents: data.totalCents, currency: data.currency },
-    });
+        this.audit.log({
+          eventId: data.eventId,
+          action: AuditAction.ORDER_CREATED,
+          entity: 'order',
+          entityId: order.id,
+          detail: { orderNumber, totalCents: data.totalCents, currency: data.currency },
+        });
 
-    return order;
+        return order;
+      } catch (err: any) {
+        // P2002 = Prisma unique constraint violation
+        if (err?.code === 'P2002' && err?.meta?.target?.includes?.('orderNumber')) {
+          this.logger.warn(`Order number collision (${orderNumber}), retrying (${attempt + 1}/${ORDER_NUMBER_MAX_RETRIES})`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    this.logger.error(`Failed to generate unique order number after ${ORDER_NUMBER_MAX_RETRIES} attempts`);
+    throw new InternalServerErrorException('Unable to create order — please try again');
   }
 
   async updateStatus(id: string, status: string) {
