@@ -492,18 +492,16 @@ export class PublicCheckoutController {
         console.error('[PublicCheckout] Failed to issue tickets for free order:', err);
       }
 
-      // Append test mode flag to success URL so the client can display simulated actions
-      let successUrl = dto.successUrl;
-      if (isTestMode) {
-        const sep = successUrl.includes('?') ? '&' : '?';
-        successUrl = `${successUrl}${sep}sratix_test=1`;
-      }
+      // Build success URL with order number (and test flag if applicable)
+      const successUrlObj = new URL(dto.successUrl);
+      successUrlObj.searchParams.set('sratix_order', order.orderNumber);
+      if (isTestMode) successUrlObj.searchParams.set('sratix_test', '1');
 
       return {
         free: true,
         orderNumber: order.orderNumber,
         orderId: order.id,
-        successUrl,
+        successUrl: successUrlObj.toString(),
         testMode: isTestMode || undefined,
       };
     }
@@ -523,9 +521,12 @@ export class PublicCheckoutController {
           quantity: dto.quantity,
         },
       ],
-      successUrl: isTestMode
-        ? `${dto.successUrl}${dto.successUrl.includes('?') ? '&' : '?'}sratix_test=1`
-        : dto.successUrl,
+      successUrl: (() => {
+        const u = new URL(dto.successUrl);
+        u.searchParams.set('sratix_order', order.orderNumber);
+        if (isTestMode) u.searchParams.set('sratix_test', '1');
+        return u.toString();
+      })(),
       cancelUrl: dto.cancelUrl,
       metadata,
       discountAmountCents: discountCents > 0 ? discountCents : undefined,
@@ -552,15 +553,15 @@ export class PublicCheckoutController {
   }
 
   /**
-   * GET /api/payments/checkout/public/test-actions/:orderId
+   * GET /api/payments/checkout/public/test-actions/:orderNumber
    *
    * Public endpoint that returns the simulated actions for a test-mode order.
    * Only returns data if the order has `isTestOrder: true` in its meta.
    * Used by the success banner in sratix-embed.js to show what would have happened.
    */
-  @Get('test-actions/:orderId')
-  async getTestActions(@Param('orderId') orderId: string) {
-    const order = await this.orders.findOne(orderId);
+  @Get('test-actions/:orderNumber')
+  async getTestActions(@Param('orderNumber') orderNumber: string) {
+    const order = await this.orders.findByOrderNumber(orderNumber);
     const meta = (order.meta as Record<string, unknown>) ?? {};
 
     if (!meta.isTestOrder) {

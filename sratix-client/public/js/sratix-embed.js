@@ -213,6 +213,13 @@
     return body;
   }
 
+  /** Resolve a relative URL (e.g. /uploads/...) against API_BASE. */
+  function resolveApiUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return API_BASE + (path.startsWith('/') ? '' : '/') + path;
+  }
+
   // ─── Ticket widget ────────────────────────────────────────────────────────────
 
   async function initTicketsWidget() {
@@ -1490,7 +1497,7 @@
       submitBtn.textContent = t('reg.pleaseWait');
 
       try {
-        var successUrl = buildSuccessUrl();
+        var successUrl = buildSuccessUrl(tt.category);
         var payload = {
           eventId: eventId,
           ticketTypeId: tt.id,
@@ -1976,7 +1983,7 @@
       }
 
       try {
-        var successUrl = buildSuccessUrl();
+        var successUrl = buildSuccessUrl('exhibitor');
         var payload = {
           eventId: eventId,
           ticketTypeId: tt.id,
@@ -2129,10 +2136,11 @@
       let html = `<p class="sratix-test-actions-heading">${escHtml(t('success.testActionsHeading'))}</p>`;
       html += '<ul class="sratix-test-actions-list">';
       for (const item of actions) {
+        const detailStr = item.detail ? JSON.stringify(item.detail, null, 2) : '';
         html += `<li>
           <strong>${escHtml(item.action)}</strong>
           <span>${escHtml(item.description)}</span>
-          ${item.detail ? `<code>${escHtml(item.detail)}</code>` : ''}
+          ${detailStr ? `<code>${escHtml(detailStr)}</code>` : ''}
         </li>`;
       }
       html += '</ul>';
@@ -2272,7 +2280,13 @@
     if (existing) existing.remove();
   }
 
-  function buildSuccessUrl() {
+  function buildSuccessUrl(category) {
+    // Exhibitor purchases → redirect to portal page if configured
+    if (category === 'exhibitor' && config.portalPageUrl) {
+      const url = new URL(config.portalPageUrl, window.location.origin);
+      url.searchParams.set('sratix_success', '1');
+      return url.toString();
+    }
     const url = new URL(window.location.href);
     url.searchParams.set('sratix_success', '1');
     return url.toString();
@@ -2555,7 +2569,7 @@
           <div class="sratix-portal-header__logo">
             ${hasLogo
               ? `<label class="sratix-portal-header__logo-wrap sratix-portal-header__logo-wrap--has-img" tabindex="0" title="${escAttr(t('exhibitorPortal.changeLogo'))}">
-                  <img src="${escAttr(profile.logoUrl)}" alt="${escAttr(profile.companyName || '')}" class="sratix-portal-header__logo-img" />
+                  <img src="${escAttr(resolveApiUrl(profile.logoUrl))}" alt="${escAttr(profile.companyName || '')}" class="sratix-portal-header__logo-img" />
                   <span class="sratix-portal-header__logo-overlay">${escHtml(t('exhibitorPortal.changeLogo'))}</span>
                   <input type="file" accept="image/*" class="sratix-header-logo-input" hidden />
                 </label>`
@@ -2568,7 +2582,13 @@
             <h1 class="sratix-portal-title">${escHtml(t('exhibitorPortal.portalTitle'))}</h1>
             <p class="sratix-portal-welcome">${escHtml(t('exhibitorPortal.portalWelcome', { name: profile.companyName || '' }))}</p>
           </div>
-          <div class="sratix-portal-header__brand">${SRATIX_BRAND_SVG}</div>
+          <div class="sratix-portal-header__brand">
+            ${SRATIX_BRAND_SVG}
+            <button type="button" class="sratix-portal-logout" id="sratix-portal-logout" title="${escAttr(t('exhibitorPortal.logout'))}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              <span>${escHtml(t('exhibitorPortal.logout'))}</span>
+            </button>
+          </div>
         </div>
         <nav class="sratix-portal-tabs" role="tablist">
           ${tabs.map(tab => `
@@ -2639,6 +2659,25 @@
       });
     }
 
+    // Logout handler
+    const logoutBtn = container.querySelector('#sratix-portal-logout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async function () {
+        try {
+          await fetch(API_BASE + '/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { Authorization: authHeaders.Authorization },
+          });
+        } catch (_) { /* best-effort */ }
+        if (config.logoutUrl) {
+          window.location.href = config.logoutUrl;
+        } else {
+          window.location.reload();
+        }
+      });
+    }
+
     renderProfilePanel(container.querySelector('#sratix-panel-profile'), profile, authHeaders);
     renderEventsPanel(container.querySelector('#sratix-panel-events'), events, authHeaders);
     renderStaffPanel(container.querySelector('#sratix-panel-staff'), events, authHeaders);
@@ -2655,7 +2694,7 @@
         <div class="sratix-portal-logo-section">
           <div class="sratix-portal-logo-preview">
             ${profile.logoUrl
-              ? `<img src="${escAttr(profile.logoUrl)}" alt="Company logo" class="sratix-portal-logo-img" />`
+              ? `<img src="${escAttr(resolveApiUrl(profile.logoUrl))}" alt="Company logo" class="sratix-portal-logo-img" />`
               : `<div class="sratix-portal-logo-placeholder">${escHtml(t('exhibitorPortal.noLogo'))}</div>`}
           </div>
           <div class="sratix-portal-logo-actions">

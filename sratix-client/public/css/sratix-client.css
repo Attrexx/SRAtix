@@ -1569,8 +1569,42 @@ label.sratix-checkbox-label {
 
 .sratix-portal-header__brand {
 	flex-shrink: 0;
-	opacity: 0.6;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 10px;
 	line-height: 1;
+}
+
+.sratix-portal-header__brand > svg {
+	opacity: 0.6;
+}
+
+.sratix-portal-logout {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 5px 10px;
+	font-size: 0.75em;
+	font-weight: 500;
+	color: var(--sratix-text-muted);
+	background: transparent;
+	border: 1px solid var(--sratix-border-h);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: color 0.15s, border-color 0.15s, background 0.15s;
+	white-space: nowrap;
+}
+
+.sratix-portal-logout:hover {
+	color: var(--sratix-text);
+	border-color: var(--sratix-red);
+	background: rgba(224, 32, 32, 0.08);
+}
+
+.sratix-portal-logout svg {
+	width: 14px;
+	height: 14px;
 }
 
 .sratix-portal-title {
@@ -1659,7 +1693,7 @@ label.sratix-checkbox-label {
 		height: 48px;
 		border-radius: 10px;
 	}
-	.sratix-portal-header__brand {
+	.sratix-portal-header__brand > svg {
 		display: none;
 	}
 	.sratix-portal-tab {

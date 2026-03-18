@@ -31,6 +31,15 @@ export class OrdersService {
     return order;
   }
 
+  async findByOrderNumber(orderNumber: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { orderNumber },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundException(`Order ${orderNumber} not found`);
+    return order;
+  }
+
   /**
    * Generate the next order number by finding the current max sequence.
    * Uses MAX(orderNumber) instead of COUNT to be resilient to deleted orders.
