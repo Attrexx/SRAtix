@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api, type AppUser, type RoleDefinition, type UserStats } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Icons } from '@/components/icons';
@@ -23,6 +23,51 @@ export default function UsersPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'inactive'>('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchQuery]);
+
+  // Filter users client-side
+  const filteredUsers = useMemo(() => {
+    let result = users;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter(
+        (u) => u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+      );
+    }
+    if (filterRole) {
+      result = result.filter((u) => u.roles.includes(filterRole));
+    }
+    if (filterStatus === 'active') {
+      result = result.filter((u) => u.active);
+    } else if (filterStatus === 'inactive') {
+      result = result.filter((u) => !u.active);
+    }
+    return result;
+  }, [users, debouncedSearch, filterRole, filterStatus]);
+
+  const hasActiveFilters = !!searchQuery || !!filterRole || !!filterStatus;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setFilterRole('');
+    setFilterStatus('');
+  };
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -127,6 +172,81 @@ export default function UsersPage() {
         />
       )}
 
+      {/* Search & Filter Bar */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Search */}
+        <div className="relative flex-1">
+          <span
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            <Icons.Search size={16} />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('users.search.placeholder')}
+            className="w-full rounded-lg py-2 pl-9 pr-3 text-sm"
+            style={{
+              background: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+          />
+        </div>
+
+        {/* Role filter */}
+        <select
+          value={filterRole}
+          onChange={(e) => setFilterRole(e.target.value)}
+          className="rounded-lg px-3 py-2 text-sm"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text)',
+            minWidth: '150px',
+          }}
+        >
+          <option value="">{t('users.filter.allRoles')}</option>
+          {roles.map((role) => (
+            <option key={role.value} value={role.value}>
+              {role.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Status filter */}
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as '' | 'active' | 'inactive')}
+          className="rounded-lg px-3 py-2 text-sm"
+          style={{
+            background: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text)',
+            minWidth: '130px',
+          }}
+        >
+          <option value="">{t('users.filter.allStatuses')}</option>
+          <option value="active">{t('users.filter.active')}</option>
+          <option value="inactive">{t('users.filter.inactive')}</option>
+        </select>
+
+        {/* Clear filters */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="rounded-lg px-3 py-2 text-sm transition-colors"
+            style={{ color: 'var(--color-text-secondary)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg-muted)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            {t('users.filter.clear')}
+          </button>
+        )}
+      </div>
+
       {/* Users Table */}
       <div
         className="overflow-x-auto rounded-xl"
@@ -146,7 +266,7 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <UserRow
                 key={user.id}
                 user={user}
@@ -171,6 +291,12 @@ export default function UsersPage() {
         {users.length === 0 && (
           <div className="px-4 py-12 text-center">
             <p style={{ color: 'var(--color-text-muted)' }}>{t('users.noUsersYet')}</p>
+          </div>
+        )}
+
+        {users.length > 0 && filteredUsers.length === 0 && (
+          <div className="px-4 py-12 text-center">
+            <p style={{ color: 'var(--color-text-muted)' }}>{t('users.noResults')}</p>
           </div>
         )}
       </div>
