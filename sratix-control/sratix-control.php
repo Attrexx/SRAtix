@@ -43,6 +43,14 @@ require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-webhook.php';
  * Bootstrap
  *────────────────────────────────────────────────────────────*/
 function sratix_control_init() {
+	// Ensure exhibitor role exists (idempotent — needed after plugin update)
+	if ( ! get_role( 'exhibitor' ) ) {
+		add_role( 'exhibitor', __( 'Exhibitor', 'sratix-control' ), array(
+			'read'         => true,
+			'upload_files' => true,
+		) );
+	}
+
 	$plugin = new SRAtix_Control();
 	$plugin->run();
 }
@@ -77,6 +85,14 @@ register_activation_hook( __FILE__, function () {
 	add_option( 'sratix_api_url', 'https://tix.swiss-robotics.org/api' );
 	add_option( 'sratix_api_secret', '' );
 	add_option( 'sratix_webhook_secret', '' );
+
+	// Register exhibitor role (idempotent — only creates if missing)
+	if ( ! get_role( 'exhibitor' ) ) {
+		add_role( 'exhibitor', __( 'Exhibitor', 'sratix-control' ), array(
+			'read'         => true,
+			'upload_files' => true,
+		) );
+	}
 });
 
 register_deactivation_hook( __FILE__, function () {

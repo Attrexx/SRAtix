@@ -263,6 +263,31 @@ export class StripeWebhookController {
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
           eventVenue: event?.venue ?? '',
         });
+
+        // Send exhibitor welcome email with portal setup instructions
+        const ticketTypeIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
+        if (ticketTypeIds.length > 0) {
+          const ticketTypes = await this.prisma.ticketType.findMany({
+            where: { id: { in: ticketTypeIds } },
+            select: { category: true },
+          });
+          const isExhibitor = ticketTypes.some((tt) => tt.category === 'exhibitor');
+          if (isExhibitor && event) {
+            const portalBaseUrl = await this.settings.resolve('exhibitor_portal_url', 'https://swiss-robotics.org/exhibitor-portal');
+            this.email.sendExhibitorWelcome(paidOrder.customerEmail, {
+              contactName: paidOrder.customerName ?? 'Guest',
+              companyName: (orderMeta.companyName as string) ?? paidOrder.customerName ?? 'Your Company',
+              eventName: event.name ?? 'Event',
+              eventDate: event.startDate?.toISOString().split('T')[0] ?? '',
+              eventVenue: event.venue ?? '',
+              orderNumber: paidOrder.orderNumber,
+              portalUrl: portalBaseUrl,
+            }).catch((err) =>
+              this.logger.error(`Exhibitor welcome email failed for order ${orderId}: ${err}`),
+            );
+            this.logger.log(`Exhibitor welcome email sent for order ${orderId}`);
+          }
+        }
       } catch (err) {
         this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);
       }
@@ -530,6 +555,24 @@ export class StripeWebhookController {
       (sum: number, item: any) => sum + (item.quantity ?? 0),
       0,
     );
+
+    // ── Build attendees[] array ─────────────────────────────────
+    // The WP handler expects an array of attendees, each with embedded
+    // ticketType and formSubmission. For single-ticket orders, there's
+    // one entry; for multi-ticket, we include the primary purchaser.
+    const ticketTypesArr = (payload.ticketTypes ?? []) as any[];
+    const primaryTicketType = ticketTypesArr[0] ?? {};
+    const attendeeEntry: Record<string, unknown> = {
+      ...(payload.attendee as Record<string, unknown> ?? {}),
+      ticketType: {
+        name: primaryTicketType.name,
+        category: primaryTicketType.category,
+        membershipTier: primaryTicketType.membershipTier,
+        wpProductId: primaryTicketType.wpProductId,
+      },
+      formSubmission: (payload.formData as Record<string, unknown>) ?? {},
+    };
+    payload.attendees = [attendeeEntry];
 
     return payload;
   }

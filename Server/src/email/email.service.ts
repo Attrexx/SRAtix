@@ -404,6 +404,91 @@ export class EmailService {
   }
 
   /**
+   * Send exhibitor welcome email with portal setup instructions.
+   */
+  async sendExhibitorWelcome(
+    to: string,
+    data: {
+      contactName: string;
+      companyName: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      orderNumber: string;
+      portalUrl: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.publicWrapper('Exhibitor Registration Confirmed', `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.contactName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        Thank you for registering <strong>${data.companyName}</strong> as an exhibitor
+        at <strong>${data.eventName}</strong>!
+      </p>
+
+      <div style="background: #e8f4fd; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
+        <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
+        <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+        <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
+        <p style="margin: 4px 0;"><strong>Order:</strong> #${data.orderNumber}</p>
+      </div>
+
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 12px; color: #333;">🏢 Set Up Your Exhibitor Portal</h3>
+        <p style="margin: 0 0 12px; font-size: 14px;">
+          Your exhibitor portal is ready. Use it to:
+        </p>
+        <ul style="margin: 0 0 16px; padding-left: 20px; font-size: 14px;">
+          <li style="margin-bottom: 6px;">Upload your company logo and description</li>
+          <li style="margin-bottom: 6px;">Add booth staff and send them their passes</li>
+          <li style="margin-bottom: 6px;">Manage your demo details and media gallery</li>
+          <li style="margin-bottom: 6px;">View your booth assignment and event info</li>
+        </ul>
+        <div style="text-align: center;">
+          <a href="${data.portalUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Open Exhibitor Portal</a>
+        </div>
+      </div>
+
+      <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
+        If you have questions about your booth or the event, please contact us at
+        <a href="mailto:events@swiss-robotics.org">events@swiss-robotics.org</a>.
+      </p>
+    `);
+
+    const text = `Exhibitor Registration Confirmed
+
+Hi ${data.contactName},
+
+Thank you for registering ${data.companyName} as an exhibitor at ${data.eventName}!
+
+Event: ${data.eventName}
+Date: ${data.eventDate}
+Venue: ${data.eventVenue}
+Order: #${data.orderNumber}
+
+Set Up Your Exhibitor Portal
+-----------------------------
+Your exhibitor portal is ready. Use it to:
+- Upload your company logo and description
+- Add booth staff and send them their passes
+- Manage your demo details and media gallery
+- View your booth assignment and event info
+
+Portal: ${data.portalUrl}
+
+Questions? Contact events@swiss-robotics.org
+
+— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `🏢 Exhibitor confirmed — Set up your portal for ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
    * Low-level send — delegates to transport.
    */
   private async send(message: EmailMessage): Promise<DeliveryResult> {

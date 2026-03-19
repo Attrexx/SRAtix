@@ -48,7 +48,10 @@ class SRAtix_Control_Webhook {
 		$body    = $request->get_body();
 		$expected = hash_hmac( 'sha256', $body, $secret );
 
-		if ( ! hash_equals( $expected, $signature ) ) {
+		// Server sends "sha256=HASH" — strip prefix for comparison.
+		$sig_clean = preg_replace( '/^sha256=/', '', $signature );
+
+		if ( ! hash_equals( $expected, $sig_clean ) ) {
 			return new \WP_Error(
 				'sratix_webhook_invalid_signature',
 				'Invalid webhook signature',
@@ -86,7 +89,10 @@ class SRAtix_Control_Webhook {
 		$body      = $request->get_body();
 		$expected  = hash_hmac( 'sha256', $body, $secret );
 
-		if ( ! $signature || ! hash_equals( $expected, $signature ) ) {
+		// Strip optional sha256= prefix for consistent comparison.
+		$sig_clean = preg_replace( '/^sha256=/', '', $signature ?? '' );
+
+		if ( ! $sig_clean || ! hash_equals( $expected, $sig_clean ) ) {
 			return new \WP_REST_Response( array(
 				'valid' => false,
 				'error' => 'unauthorized',
@@ -390,7 +396,13 @@ class SRAtix_Control_Webhook {
 		}
 
 		// ── 3. Assign WP role ─────────────────────────────────────
-		if ( $category !== 'general' && $mapped_product_id ) {
+		if ( 'exhibitor' === $category ) {
+			// Exhibitor tickets get the 'exhibitor' role directly.
+			if ( ! in_array( 'exhibitor', (array) $wp_user->roles, true ) ) {
+				$wp_user->add_role( 'exhibitor' );
+				error_log( "SRAtix Control [order.paid]: Added exhibitor role to user {$user_id}" );
+			}
+		} elseif ( $category !== 'general' && $mapped_product_id ) {
 			$role = $this->get_wp_role_for_product( $mapped_product_id );
 			if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
 				$wp_user->set_role( $role );
