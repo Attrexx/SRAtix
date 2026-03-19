@@ -17,6 +17,7 @@ interface OrderConfirmationData {
     quantity: number;
     qrPayload: string;
   }>;
+  ticketCodes?: string[];
   eventName: string;
   eventDate: string;
   eventVenue: string;
@@ -140,10 +141,17 @@ export class EmailService {
       ticketCount: number;
       eventName: string;
       eventDate: string;
+      ticketBreakdown?: Array<{ name: string; quantity: number }>;
+      isExhibitor?: boolean;
+      companyName?: string;
+      staffNames?: string[];
     },
   ): Promise<void> {
     const html = this.renderAdminNewOrder(data);
-    const text = `New Order: ${data.orderNumber}\n\nCustomer: ${data.customerName} (${data.customerEmail})\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nTickets: ${data.ticketCount}\nTotal: ${data.totalFormatted} ${data.currency}\n\n— SRAtix`;
+    const ticketLines = (data.ticketBreakdown ?? [])
+      .map((t) => `  ${t.name} x${t.quantity}`)
+      .join('\n');
+    const text = `New Order: ${data.orderNumber}\n\nCustomer: ${data.customerName} (${data.customerEmail})\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nTickets: ${data.ticketCount}${ticketLines ? '\n' + ticketLines : ''}\nTotal: ${data.totalFormatted} ${data.currency}${data.isExhibitor ? '\nType: Exhibitor' : ''}${data.companyName ? '\nCompany: ' + data.companyName : ''}\n\n-- SRAtix`;
 
     for (const to of recipients) {
       this.send({
@@ -668,6 +676,14 @@ Questions? Contact events@swiss-robotics.org
               </p>
             </div>
 
+            ${data.ticketCodes && data.ticketCodes.length > 0 ? `
+            <!-- Ticket Codes -->
+            <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
+              <h3 style="margin: 0 0 8px; color: #333;">Your Ticket Code${data.ticketCodes.length > 1 ? 's' : ''}</h3>
+              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present ${data.ticketCodes.length > 1 ? 'these codes' : 'this code'} at the event entrance for check-in.</p>
+              ${data.ticketCodes.map((code) => `<div style="display: inline-block; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; margin: 4px 4px 4px 0; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div>`).join('')}
+            </div>` : ''}
+
             <!-- Event Info -->
             <div style="background: #e8f4fd; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
               <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
@@ -711,7 +727,7 @@ Tickets:
 ${tickets}
 
 Total: ${data.totalFormatted} ${data.currency}
-
+${data.ticketCodes && data.ticketCodes.length > 0 ? `\nTicket Code${data.ticketCodes.length > 1 ? 's' : ''}:\n${data.ticketCodes.map((c) => '  ' + c).join('\n')}\n` : ''}
 Event: ${data.eventName}
 Date: ${data.eventDate}
 Venue: ${data.eventVenue}
@@ -883,14 +899,27 @@ Your ticket QR codes will be available in your account.
     ticketCount: number;
     eventName: string;
     eventDate: string;
+    ticketBreakdown?: Array<{ name: string; quantity: number }>;
+    isExhibitor?: boolean;
+    companyName?: string;
+    staffNames?: string[];
   }): string {
+    const ticketInfo = (data.ticketBreakdown ?? [])
+      .map((t) => `${t.name} x${t.quantity}`)
+      .join(', ') || `${data.ticketCount} ticket(s)`;
+
     const rows = [
       this.adminInfoRow('Order', `#${data.orderNumber}`),
       this.adminInfoRow('Customer', `${data.customerName}`),
       this.adminInfoRow('Email', `<a href="mailto:${data.customerEmail}" style="color: #4f46e5; text-decoration: none;">${data.customerEmail}</a>`),
       this.adminInfoRow('Event', data.eventName),
       this.adminInfoRow('Date', data.eventDate),
-      this.adminInfoRow('Tickets', `${data.ticketCount}`),
+      this.adminInfoRow('Tickets', ticketInfo),
+      ...(data.isExhibitor ? [this.adminInfoRow('Type', 'Exhibitor')] : []),
+      ...(data.companyName ? [this.adminInfoRow('Company', data.companyName)] : []),
+      ...(data.staffNames && data.staffNames.length > 0
+        ? [this.adminInfoRow('Staff', data.staffNames.join(', '))]
+        : []),
     ].join('');
 
     return this.adminWrapper('New Ticket Order', `

@@ -161,7 +161,7 @@ export default function ExhibitorSetupPage() {
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
                   style={{ background: ex.staffCount > 0 ? '#dbeafe' : '#f3f4f6', color: ex.staffCount > 0 ? '#1d4ed8' : '#6b7280' }}
                 >
-                  👤 {ex.staffSubmitted}/{ex.maxStaff > 0 ? ex.maxStaff : '∞'}
+                  👤 {ex.staffCount}/{ex.maxStaff > 0 ? ex.maxStaff : '∞'}
                 </span>
 
                 {/* Demo indicator */}

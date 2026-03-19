@@ -185,7 +185,7 @@ export class PublicCheckoutController {
     // ── 1. Find event ────────────────────────────────────────────────────
     const event = await this.prisma.event.findUnique({
       where: { id: dto.eventId },
-      select: { id: true, orgId: true, currency: true, status: true, name: true, endDate: true, startDate: true, venue: true },
+      select: { id: true, orgId: true, currency: true, status: true, name: true, endDate: true, startDate: true, venue: true, meta: true },
     });
     if (!event) throw new NotFoundException('Event not found');
     if (event.status !== 'published') {
@@ -343,7 +343,9 @@ export class PublicCheckoutController {
       if (recipientAttendees.length > 0) {
         orderMeta.recipientAttendees = recipientAttendees;
         orderMeta.includeTicketForSelf = includeTicketForSelf;
-        orderMeta.registrationBaseUrl = new URL(dto.successUrl).origin + '/register';
+        const eventMeta = (event.meta as Record<string, any>) ?? {};
+        const registerPath = eventMeta.pagePaths?.register ?? '/complete-registration';
+        orderMeta.registrationBaseUrl = new URL(dto.successUrl).origin + registerPath;
       }
       if (Object.keys(orderMeta).length > 0) {
         await this.orders.updateMeta(order.id, orderMeta);
@@ -464,7 +466,9 @@ export class PublicCheckoutController {
           }
 
           // Send gift notification emails to recipients
-          const registrationBaseUrl = new URL(dto.successUrl).origin + '/register';
+          const eventMetaFree = (event.meta as Record<string, any>) ?? {};
+          const registerPathFree = eventMetaFree.pagePaths?.register ?? '/complete-registration';
+          const registrationBaseUrl = new URL(dto.successUrl).origin + registerPathFree;
           const purchaserName = `${dto.attendeeData.firstName} ${dto.attendeeData.lastName}`;
           for (const recipient of recipientAttendees) {
             this.emailService

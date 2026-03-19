@@ -228,7 +228,7 @@ export default function EventOverviewPage() {
           trendUp
         />
         <StatCard
-          icon={<Icons.DollarSign size={20} />}
+          icon={<Icons.Coins size={20} />}
           label={t('events.overview.revenue')}
           value={`${((stats.totalRevenue ?? 0) / 100).toLocaleString('de-CH', {
             minimumFractionDigits: 2,
@@ -248,7 +248,7 @@ export default function EventOverviewPage() {
         <StatCard
           icon={<Icons.Calendar size={20} />}
           label="Event Date"
-          value={daysUntil > 0 ? `D-${daysUntil}` : daysUntil === 0 ? 'Today' : 'Past'}
+          value={daysUntil > 0 ? `${daysUntil} days` : daysUntil === 0 ? 'Today' : 'Past'}
           trend={startDate.toLocaleDateString('en-CH', { month: 'short', day: 'numeric', year: 'numeric' })}
           trendUp={daysUntil >= 0}
         />

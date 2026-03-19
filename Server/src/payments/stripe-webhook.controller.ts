@@ -149,6 +149,17 @@ export class StripeWebhookController {
     const orgId = session.metadata?.sratix_org_id;
     const eventId = session.metadata?.sratix_event_id;
 
+    // ── Resolve registration name (prefer attendee name over Stripe card name) ──
+    const orderAttendee = orderForMeta.attendeeId
+      ? await this.prisma.attendee.findUnique({
+          where: { id: orderForMeta.attendeeId },
+          select: { firstName: true, lastName: true },
+        })
+      : null;
+    const registrationName = orderAttendee
+      ? `${orderAttendee.firstName} ${orderAttendee.lastName}`
+      : orderForMeta.customerName ?? 'Guest';
+
     if (isTestOrder) {
       this.logger.log(`🧪 Test mode order ${orderId} — all processes will run as live (Stripe payment was test-mode)`);
     }
@@ -195,7 +206,7 @@ export class StripeWebhookController {
       const registrationBaseUrl = orderMeta.registrationBaseUrl as string;
       if (registrationBaseUrl) {
         const eventForGift = await this.orders.findEventForOrder(orderId);
-        const purchaserName = orderForMeta.customerName ?? 'Someone';
+        const purchaserName = registrationName;
 
         // Get ticket type name
         const ttIds = (orderForMeta.items ?? []).map((item: any) => item.ticketTypeId);
@@ -250,17 +261,28 @@ export class StripeWebhookController {
     const event = await this.orders.findEventForOrder(orderId);
     if (paidOrder && paidOrder.customerEmail) {
       try {
+        // Resolve ticket type names (avoid showing raw UUIDs)
+        const ttIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
+        const ticketTypes = ttIds.length > 0
+          ? await this.prisma.ticketType.findMany({
+              where: { id: { in: ttIds } },
+              select: { id: true, name: true },
+            })
+          : [];
+        const ttNameMap = new Map(ticketTypes.map((tt) => [tt.id, tt.name]));
+
         const ticketDetails = paidOrder.items.map((item: { ticketTypeId: string; quantity: number }) => ({
-          typeName: item.ticketTypeId, // Will be resolved to name by service
+          typeName: ttNameMap.get(item.ticketTypeId) ?? 'Ticket',
           quantity: item.quantity,
           qrPayload: '',
         }));
         await this.email.sendOrderConfirmation(paidOrder.customerEmail, {
-          customerName: paidOrder.customerName ?? 'Guest',
+          customerName: registrationName,
           orderNumber: paidOrder.orderNumber,
           totalFormatted: (paidOrder.totalCents / 100).toFixed(2),
           currency: paidOrder.currency,
           tickets: ticketDetails,
+          ticketCodes: issued.map((t) => t.code),
           eventName: event?.name ?? 'Event',
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
           eventVenue: event?.venue ?? '',
@@ -284,8 +306,8 @@ export class StripeWebhookController {
           if (isExhibitor && event && orgId) {
             await this.provisionExhibitor(
               paidOrder.customerEmail,
-              paidOrder.customerName ?? 'Guest',
-              (orderMeta.companyName as string) ?? paidOrder.customerName ?? 'Your Company',
+              registrationName,
+              (orderMeta.companyName as string) ?? registrationName,
               orgId,
               eventId!,
               event,
@@ -310,15 +332,41 @@ export class StripeWebhookController {
           const ticketCount = paidOrder.items.reduce(
             (sum: number, item: { quantity: number }) => sum + item.quantity, 0,
           );
+
+          // Resolve ticket type names for breakdown
+          const adminTtIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
+          const adminTts = adminTtIds.length > 0
+            ? await this.prisma.ticketType.findMany({
+                where: { id: { in: adminTtIds } },
+                select: { id: true, name: true, category: true },
+              })
+            : [];
+          const adminTtMap = new Map(adminTts.map((tt) => [tt.id, tt]));
+          const isExhibitor = adminTts.some((tt) => tt.category === 'exhibitor');
+
+          const ticketBreakdown = paidOrder.items.map((item: any) => ({
+            name: adminTtMap.get(item.ticketTypeId)?.name ?? 'Ticket',
+            quantity: item.quantity,
+          }));
+
+          // Collect staff names from order meta
+          const staffNames = (recipientAttendees ?? []).map(
+            (r: { firstName: string; lastName: string }) => `${r.firstName} ${r.lastName}`,
+          );
+
           await this.email.sendNewOrderNotification(recipients, {
             orderNumber: paidOrder.orderNumber,
-            customerName: paidOrder.customerName ?? 'Guest',
+            customerName: registrationName,
             customerEmail: paidOrder.customerEmail ?? '',
             totalFormatted: (paidOrder.totalCents / 100).toFixed(2),
             currency: paidOrder.currency,
             ticketCount,
             eventName: event?.name ?? 'Event',
             eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+            ticketBreakdown,
+            isExhibitor,
+            companyName: (orderMeta.companyName as string) ?? undefined,
+            staffNames: staffNames.length > 0 ? staffNames : undefined,
           });
           this.logger.log(`Admin notification sent for order ${orderId}`);
         }

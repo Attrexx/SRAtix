@@ -216,6 +216,12 @@ export class TicketsService {
           qrPayload: this.buildQrPayload(ticket.code, order.eventId),
         });
       }
+
+      // Increment sold counter on the ticket type
+      await this.prisma.ticketType.update({
+        where: { id: item.ticketTypeId },
+        data: { sold: { increment: item.quantity } },
+      });
     }
 
     this.logger.log(
@@ -346,10 +352,29 @@ export class TicketsService {
   }
 
   async voidByOrder(orderId: string) {
+    // Get ticket counts per ticket type before voiding (to decrement sold)
+    const ticketsToVoid = await this.prisma.ticket.findMany({
+      where: { orderId, status: { not: 'voided' } },
+      select: { ticketTypeId: true },
+    });
+
     const result = await this.prisma.ticket.updateMany({
       where: { orderId, status: { not: 'voided' } },
       data: { status: 'voided' },
     });
+
+    // Decrement sold counters per ticket type
+    const countByType = new Map<string, number>();
+    for (const t of ticketsToVoid) {
+      countByType.set(t.ticketTypeId, (countByType.get(t.ticketTypeId) ?? 0) + 1);
+    }
+    for (const [ttId, count] of countByType) {
+      await this.prisma.ticketType.update({
+        where: { id: ttId },
+        data: { sold: { decrement: count } },
+      });
+    }
+
     this.logger.log(`Voided ${result.count} ticket(s) for order ${orderId}`);
     return result;
   }
