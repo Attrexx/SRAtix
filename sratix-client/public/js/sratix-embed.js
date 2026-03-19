@@ -2597,10 +2597,13 @@
    * Authenticates directly against the SRAtix API (POST /auth/login).
    */
   function renderPortalLoginForm(container) {
+    var isPostPurchase = new URLSearchParams(window.location.search).get('sratix_success') === '1';
+
     container.innerHTML = `
       <div class="sratix-portal-login">
         <div class="sratix-portal-login__card">
           <h2 class="sratix-portal-login__title">${escHtml(t('exhibitorPortal.portalTitle'))}</h2>
+          ${isPostPurchase ? '<div class="sratix-portal-login__notice">' + escHtml(t('exhibitorPortal.loginAfterPurchase')) + '</div>' : ''}
           <p class="sratix-portal-login__desc">${escHtml(t('exhibitorPortal.loginPrompt'))}</p>
           <form class="sratix-portal-login__form" autocomplete="on">
             <div class="sratix-form-field">

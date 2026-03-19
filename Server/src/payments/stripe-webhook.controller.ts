@@ -160,6 +160,12 @@ export class StripeWebhookController {
       ? `${orderAttendee.firstName} ${orderAttendee.lastName}`
       : orderForMeta.customerName ?? 'Guest';
 
+    // Persist the resolved registration name so all future DB reads
+    // (refund emails, webhook payloads, etc.) use it instead of Stripe card name
+    if (orderAttendee && registrationName !== orderForMeta.customerName) {
+      await this.orders.update(orderId, { customerName: registrationName });
+    }
+
     if (isTestOrder) {
       this.logger.log(`🧪 Test mode order ${orderId} — all processes will run as live (Stripe payment was test-mode)`);
     }
