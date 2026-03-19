@@ -2258,3 +2258,175 @@ label.sratix-checkbox-label {
 	font-size: 0.9rem;
 	cursor: pointer;
 }
+
+/* ── Set Password Widget ── */
+.sratix-set-password {
+	display: flex;
+	justify-content: center;
+	padding: 40px 0;
+}
+
+.sratix-set-password__card {
+	max-width: 420px;
+	width: 100%;
+	background: var(--sratix-navy-mid);
+	border: 1px solid var(--sratix-border);
+	border-radius: 12px;
+	padding: 32px;
+}
+
+.sratix-set-password__title {
+	font-size: 1.3em;
+	font-weight: 700;
+	margin: 0 0 8px;
+	color: var(--sratix-text);
+}
+
+.sratix-set-password__desc {
+	color: var(--sratix-text-muted);
+	font-size: 0.95em;
+	margin: 0 0 24px;
+}
+
+.sratix-set-password__form .sratix-form-field {
+	margin-bottom: 16px;
+}
+
+.sratix-set-password__form label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 0.9em;
+	font-weight: 600;
+	color: var(--sratix-text);
+}
+
+.sratix-set-password__form input[type="password"] {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--sratix-border-h);
+	border-radius: 10px;
+	font-size: 1em;
+	font-family: 'Outfit', sans-serif;
+	box-sizing: border-box;
+	background: var(--sratix-navy);
+	color: var(--sratix-text);
+	transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.sratix-set-password__form input[type="password"]:focus {
+	outline: none;
+	border-color: var(--sratix-red);
+	box-shadow: 0 0 0 3px rgba(224, 32, 32, 0.15);
+}
+
+.sratix-set-password__error {
+	color: #f87171;
+	background: rgba(220, 38, 38, 0.1);
+	border: 1px solid rgba(220, 38, 38, 0.2);
+	border-radius: 6px;
+	padding: 10px 14px;
+	font-size: 0.9em;
+	margin-bottom: 16px;
+}
+
+.sratix-set-password__submit {
+	width: 100%;
+	margin-top: 4px;
+}
+
+.sratix-set-password__success {
+	text-align: center;
+	padding: 20px 0;
+}
+
+.sratix-set-password__success h2 {
+	color: #4ade80;
+	font-size: 1.2em;
+	margin: 0 0 8px;
+}
+
+.sratix-set-password__success p {
+	color: var(--sratix-text-muted);
+	margin: 0 0 12px;
+}
+
+.sratix-set-password__redirect {
+	font-size: 0.85em;
+	font-style: italic;
+}
+
+/* ── Portal Login Form ── */
+.sratix-portal-login {
+	display: flex;
+	justify-content: center;
+	padding: 40px 0;
+}
+
+.sratix-portal-login__card {
+	max-width: 420px;
+	width: 100%;
+	background: var(--sratix-navy-mid);
+	border: 1px solid var(--sratix-border);
+	border-radius: 12px;
+	padding: 32px;
+}
+
+.sratix-portal-login__title {
+	font-size: 1.3em;
+	font-weight: 700;
+	margin: 0 0 8px;
+	color: var(--sratix-text);
+}
+
+.sratix-portal-login__desc {
+	color: var(--sratix-text-muted);
+	font-size: 0.95em;
+	margin: 0 0 24px;
+}
+
+.sratix-portal-login__form .sratix-form-field {
+	margin-bottom: 16px;
+}
+
+.sratix-portal-login__form label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 0.9em;
+	font-weight: 600;
+	color: var(--sratix-text);
+}
+
+.sratix-portal-login__form input[type="email"],
+.sratix-portal-login__form input[type="password"] {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--sratix-border-h);
+	border-radius: 10px;
+	font-size: 1em;
+	font-family: 'Outfit', sans-serif;
+	box-sizing: border-box;
+	background: var(--sratix-navy);
+	color: var(--sratix-text);
+	transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.sratix-portal-login__form input:focus {
+	outline: none;
+	border-color: var(--sratix-red);
+	box-shadow: 0 0 0 3px rgba(224, 32, 32, 0.15);
+}
+
+.sratix-portal-login__error {
+	color: #f87171;
+	background: rgba(220, 38, 38, 0.1);
+	border: 1px solid rgba(220, 38, 38, 0.2);
+	border-radius: 6px;
+	padding: 10px 14px;
+	font-size: 0.9em;
+	margin-bottom: 16px;
+}
+
+.sratix-portal-login__submit {
+	width: 100%;
+	margin-top: 4px;
+}

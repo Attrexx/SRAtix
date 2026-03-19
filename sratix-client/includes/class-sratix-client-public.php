@@ -18,6 +18,7 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_schedule',   array( $this, 'render_schedule' ) );
 		add_shortcode( 'sratix_register',   array( $this, 'render_register' ) );
 		add_shortcode( 'sratix_exhibitor_portal', array( $this, 'render_exhibitor_portal' ) );
+		add_shortcode( 'sratix_set_password',     array( $this, 'render_set_password' ) );
 	}
 
 	/**
@@ -33,7 +34,8 @@ class SRAtix_Client_Public {
 			|| has_shortcode( $post->post_content, 'sratix_my_tickets' )
 			|| has_shortcode( $post->post_content, 'sratix_schedule' )
 			|| has_shortcode( $post->post_content, 'sratix_register' )
-			|| has_shortcode( $post->post_content, 'sratix_exhibitor_portal' );
+			|| has_shortcode( $post->post_content, 'sratix_exhibitor_portal' )
+			|| has_shortcode( $post->post_content, 'sratix_set_password' );
 
 		if ( ! $has_shortcode ) {
 			return;
@@ -353,38 +355,54 @@ class SRAtix_Client_Public {
 			return $this->render_maintenance_screen( $maint['message'] );
 		}
 
-		if ( ! is_user_logged_in() ) {
-			$current_url = ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) );
+		$event_id = get_option( 'sratix_client_event_id', '' );
 
-			if ( class_exists( 'SRD_Auth' ) ) {
-				$login_url    = SRD_Auth::login_url( $current_url );
-				$register_url = SRD_Auth::register_url();
-			} else {
-				$login_url    = wp_login_url( $current_url );
-				$register_url = wp_registration_url();
-			}
+		// Logged-in WP users: use WP identity exchange (original flow)
+		if ( is_user_logged_in() ) {
+			return sprintf(
+				'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<div id="sratix-exhibitor-portal-widget" data-event-id="%s"></div>'
+				. '</div></div>',
+				esc_attr( $event_id )
+			);
+		}
 
+		// Not logged in: render portal widget with app-native login form
+		// The JS widget will show an email+password login that authenticates
+		// directly against the SRAtix API (POST /auth/login), bypassing WP.
+		return sprintf(
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-exhibitor-portal-widget" data-event-id="%s" data-auth-mode="app"></div>'
+			. '</div></div>',
+			esc_attr( $event_id )
+		);
+	}
+
+	/**
+	 * [sratix_set_password] — Password setup page for exhibitors.
+	 *
+	 * Reads ?token= and &setup=1 from the URL and renders a password
+	 * setup form via the JS widget. No WP login required — this is for
+	 * new SRAtix users (exhibitors/staff) who have a one-time token.
+	 */
+	public function render_set_password( $atts ) {
+		$api_url = get_option( 'sratix_client_api_url', '' );
+		if ( empty( $api_url ) ) {
 			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
-				. '<div class="sratix-auth-prompt">'
-				. '<p class="sratix-auth-prompt__text">'
-				. esc_html__( 'Sign in to access the Exhibitor Portal.', 'sratix-client' )
-				. '</p>'
-				. '<div class="sratix-auth-prompt__buttons">'
-				. '<a href="' . esc_url( $login_url ) . '" class="sratix-btn sratix-btn--primary">'
-				. esc_html__( 'Sign In', 'sratix-client' ) . '</a>'
-				. '<a href="' . esc_url( $register_url ) . '" class="sratix-btn sratix-btn--outline">'
-				. esc_html__( 'Create Account', 'sratix-client' ) . '</a>'
-				. '</div>'
-				. '</div>'
+				. '<p class="sratix-error">' . esc_html__( 'SRAtix API not configured.', 'sratix-client' ) . '</p>'
 				. '</div></div>';
 		}
 
-		$event_id = get_option( 'sratix_client_event_id', '' );
+		// Pass portal path so JS can redirect after password setup
+		$portal_path = '/exhibitor-portal/';
+		$event_id    = get_option( 'sratix_client_event_id', '' );
 
 		return sprintf(
 			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
-			. '<div id="sratix-exhibitor-portal-widget" data-event-id="%s"></div>'
+			. '<div id="sratix-set-password-widget" data-api-url="%s" data-portal-path="%s" data-event-id="%s"></div>'
 			. '</div></div>',
+			esc_attr( rtrim( $api_url, '/' ) ),
+			esc_attr( $portal_path ),
 			esc_attr( $event_id )
 		);
 	}

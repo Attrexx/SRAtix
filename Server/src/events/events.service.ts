@@ -188,6 +188,7 @@ export class EventsService {
         myTickets: paths.myTickets ?? '/my-tickets/',
         schedule: paths.schedule ?? '/schedule/',
         exhibitorPortal: paths.exhibitorPortal ?? '/exhibitor-portal/',
+        setPassword: paths.setPassword ?? '/set-password/',
       },
     };
   }

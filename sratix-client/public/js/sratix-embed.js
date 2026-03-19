@@ -2475,20 +2475,188 @@
     }
   }
 
+  // ─── Set Password widget ─────────────────────────────────────────────────────
+
+  async function initSetPasswordWidget() {
+    const container = document.getElementById('sratix-set-password-widget');
+    if (!container) return;
+
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    var isSetup = params.get('setup') === '1';
+    var portalPath = container.dataset.portalPath || '/exhibitor-portal/';
+
+    if (!token) {
+      container.innerHTML = `
+        <div class="sratix-set-password">
+          <div class="sratix-set-password__card">
+            <p class="sratix-error">${escHtml(t('setPassword.invalidLink'))}</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="sratix-set-password">
+        <div class="sratix-set-password__card">
+          <h2 class="sratix-set-password__title">${escHtml(isSetup ? t('setPassword.setupTitle') : t('setPassword.resetTitle'))}</h2>
+          <p class="sratix-set-password__desc">${escHtml(isSetup ? t('setPassword.setupDesc') : t('setPassword.resetDesc'))}</p>
+          <form class="sratix-set-password__form" autocomplete="off">
+            <div class="sratix-form-field">
+              <label for="sratix-new-password">${escHtml(t('setPassword.newPassword'))}</label>
+              <input id="sratix-new-password" type="password" required minlength="8" autocomplete="new-password" />
+            </div>
+            <div class="sratix-form-field">
+              <label for="sratix-confirm-password">${escHtml(t('setPassword.confirmPassword'))}</label>
+              <input id="sratix-confirm-password" type="password" required minlength="8" autocomplete="new-password" />
+            </div>
+            <div class="sratix-set-password__error" style="display:none;"></div>
+            <button type="submit" class="sratix-btn sratix-btn--primary sratix-set-password__submit">
+              ${escHtml(isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn'))}
+            </button>
+          </form>
+        </div>
+      </div>`;
+
+    var form = container.querySelector('.sratix-set-password__form');
+    var errorEl = container.querySelector('.sratix-set-password__error');
+    var submitBtn = container.querySelector('.sratix-set-password__submit');
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var pw = container.querySelector('#sratix-new-password').value;
+      var pw2 = container.querySelector('#sratix-confirm-password').value;
+      errorEl.style.display = 'none';
+
+      if (pw.length < 8) {
+        errorEl.textContent = t('setPassword.tooShort');
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (pw !== pw2) {
+        errorEl.textContent = t('setPassword.mismatch');
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('setPassword.saving');
+
+      try {
+        await apiFetch('auth/reset-password', {
+          method: 'POST',
+          body: JSON.stringify({ token: token, password: pw }),
+        });
+
+        container.querySelector('.sratix-set-password__card').innerHTML = `
+          <div class="sratix-set-password__success">
+            <h2>${escHtml(t('setPassword.successTitle'))}</h2>
+            <p>${escHtml(t('setPassword.successMsg'))}</p>
+            <p class="sratix-set-password__redirect">${escHtml(t('setPassword.redirecting'))}</p>
+          </div>`;
+
+        setTimeout(function() {
+          window.location.href = portalPath;
+        }, 3000);
+      } catch (err) {
+        errorEl.textContent = err.message || t('setPassword.failed');
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn');
+      }
+    });
+  }
+
   // ─── Exhibitor Portal widget ──────────────────────────────────────────────────
 
   async function initExhibitorPortalWidget() {
     const container = document.getElementById('sratix-exhibitor-portal-widget');
     if (!container) return;
 
+    const authMode = container.dataset.authMode || 'wp';
     const user = config.user;
-    if (!user || !user.email) {
-      if (!container.querySelector('.sratix-auth-prompt')) {
-        container.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.login'))}</p>`;
-      }
-      return;
+
+    // If WP user available, use identity exchange (original flow)
+    if (user && user.email) {
+      return loadPortalWithWpAuth(container, user);
     }
 
+    // No WP user — show app-native email+password login form
+    if (authMode === 'app') {
+      return renderPortalLoginForm(container);
+    }
+
+    // Fallback: old "please log in" message
+    if (!container.querySelector('.sratix-auth-prompt')) {
+      container.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.login'))}</p>`;
+    }
+  }
+
+  /**
+   * Render an email+password login form for the exhibitor portal.
+   * Authenticates directly against the SRAtix API (POST /auth/login).
+   */
+  function renderPortalLoginForm(container) {
+    container.innerHTML = `
+      <div class="sratix-portal-login">
+        <div class="sratix-portal-login__card">
+          <h2 class="sratix-portal-login__title">${escHtml(t('exhibitorPortal.portalTitle'))}</h2>
+          <p class="sratix-portal-login__desc">${escHtml(t('exhibitorPortal.loginPrompt'))}</p>
+          <form class="sratix-portal-login__form" autocomplete="on">
+            <div class="sratix-form-field">
+              <label for="sratix-portal-email">${escHtml(t('exhibitorPortal.emailLabel'))}</label>
+              <input id="sratix-portal-email" type="email" required autocomplete="email" />
+            </div>
+            <div class="sratix-form-field">
+              <label for="sratix-portal-password">${escHtml(t('exhibitorPortal.passwordLabel'))}</label>
+              <input id="sratix-portal-password" type="password" required autocomplete="current-password" />
+            </div>
+            <div class="sratix-portal-login__error" style="display:none;"></div>
+            <button type="submit" class="sratix-btn sratix-btn--primary sratix-portal-login__submit">
+              ${escHtml(t('exhibitorPortal.loginBtn'))}
+            </button>
+          </form>
+        </div>
+      </div>`;
+
+    const form = container.querySelector('.sratix-portal-login__form');
+    const errorEl = container.querySelector('.sratix-portal-login__error');
+    const submitBtn = container.querySelector('.sratix-portal-login__submit');
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var email = container.querySelector('#sratix-portal-email').value.trim();
+      var password = container.querySelector('#sratix-portal-password').value;
+      errorEl.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('exhibitorPortal.loggingIn');
+
+      try {
+        var authRes = await apiFetch('auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: email, password: password }),
+        });
+
+        var authHeaders = { Authorization: 'Bearer ' + authRes.accessToken };
+
+        // Fetch portal data
+        var profile = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
+        var events = await apiFetch('exhibitor-portal/events', { headers: authHeaders });
+
+        renderExhibitorPortal(container, profile, events, authHeaders);
+      } catch (err) {
+        errorEl.textContent = err.message || t('exhibitorPortal.loginFailed');
+        errorEl.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = t('exhibitorPortal.loginBtn');
+      }
+    });
+  }
+
+  /**
+   * Original WP identity exchange flow for portal authentication.
+   */
+  async function loadPortalWithWpAuth(container, user) {
     container.innerHTML = `<p class="sratix-info">${escHtml(t('exhibitorPortal.loading'))}</p>`;
 
     try {
@@ -3832,6 +4000,7 @@
     initMyTicketsWidget();
     initScheduleWidget();
     initRegisterWidget();
+    initSetPasswordWidget();
     initExhibitorPortalWidget();
   }
 

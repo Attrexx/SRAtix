@@ -9,7 +9,7 @@
 
 | # | Title | Severity | Phase | Status |
 |---|-------|----------|-------|--------|
-| 1 | Exhibitor portal "Unable to load" | CRITICAL | 1 | TODO |
+| 1 | Exhibitor portal "Unable to load" | CRITICAL | 1 | DONE |
 | 2 | Admin notification email needs richer data | MEDIUM | 3 | DONE |
 | 3 | Ticket codes/QR in emails | LOW | 3 | DONE |
 | 4 | Registration URL uses hardcoded `/register` instead of event page paths | HIGH | 2 | DONE |
@@ -22,8 +22,8 @@
 | 9a | Exhibitor name shows Stripe card name | HIGH | 2 | DONE |
 | 9b | Staff count shows 0/3 instead of 1/3 | MEDIUM | 2 | DONE |
 | 10 | Order confirmation email shows UUID instead of ticket type name | HIGH | 2 | DONE |
-| 11 | Password setup link goes to SRAtix Dashboard | CRITICAL | 1 | TODO |
-| 12 | Portal login fails / redirects wrong | CRITICAL | 1 | TODO |
+| 11 | Password setup link goes to SRAtix Dashboard | CRITICAL | 1 | DONE |
+| 12 | Portal login fails / redirects wrong | CRITICAL | 1 | DONE |
 
 ---
 

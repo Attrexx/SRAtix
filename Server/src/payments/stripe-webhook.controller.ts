@@ -535,7 +535,20 @@ export class StripeWebhookController {
       let passwordSetupUrl: string | undefined;
       if (isNewUser || !user.passwordHash) {
         const rawToken = await this.auth.initiatePasswordSetup(user.id);
-        passwordSetupUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}&setup=1`;
+
+        // Build password setup URL from event site (not Dashboard)
+        const portalBaseUrl = await this.settings.resolve(
+          'exhibitor_portal_url',
+          'https://swiss-robotics.org/exhibitor-portal',
+        );
+        const siteOrigin = new URL(portalBaseUrl).origin;
+        const eventRecord = await this.prisma.event.findUnique({
+          where: { id: eventId },
+          select: { meta: true },
+        });
+        const eventMeta = (eventRecord?.meta as Record<string, any>) ?? {};
+        const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
+        passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
       }
 
       // 6. Send welcome email with portal + password setup links

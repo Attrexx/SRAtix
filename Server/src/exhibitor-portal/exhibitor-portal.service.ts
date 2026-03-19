@@ -544,7 +544,7 @@ export class ExhibitorPortalService {
     // Load event for email details and the exhibitor ticket type
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, orgId: true, name: true, startDate: true, endDate: true, venue: true, currency: true },
+      select: { id: true, orgId: true, name: true, startDate: true, endDate: true, venue: true, currency: true, meta: true },
     });
     if (!event) throw new NotFoundException('Event not found');
 
@@ -623,13 +623,17 @@ export class ExhibitorPortalService {
     });
 
     // Generate password setup token + send portal invite email
+    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swiss-robotics.org/exhibitor-portal';
     let passwordSetupUrl: string | undefined;
     if (isNewStaffUser || !staffUser.passwordHash) {
       const rawToken = await this.auth.initiatePasswordSetup(staffUser.id);
-      passwordSetupUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}&setup=1`;
+      // Build password setup URL from event site (not Dashboard)
+      const eventMeta = (event.meta as Record<string, any>) ?? {};
+      const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
+      const siteOrigin = new URL(portalBaseUrl).origin;
+      passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
     }
 
-    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swiss-robotics.org/exhibitor-portal';
     const profile = await this.prisma.exhibitorProfile.findUnique({
       where: { orgId },
       select: { companyName: true },
