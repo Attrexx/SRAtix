@@ -148,6 +148,7 @@ class SRAtix_Client_Admin {
 					<tr><td><code>[sratix_register]</code></td><td><?php esc_html_e( 'Token-based registration — ticket recipients complete their details', 'sratix-client' ); ?></td></tr>
 					<tr><td><code>[sratix_schedule]</code></td><td><?php esc_html_e( 'Event schedule / sessions grid', 'sratix-client' ); ?></td></tr>
 					<tr><td><code>[sratix_exhibitor_portal]</code></td><td><?php esc_html_e( 'Exhibitor self-service portal — company profile, staff, media, analytics & logistics', 'sratix-client' ); ?></td></tr>
+					<tr><td><code>[sratix_set_password]</code></td><td><?php esc_html_e( 'Password setup page for exhibitors — link from provisioning email', 'sratix-client' ); ?></td></tr>
 				</tbody>
 			</table>
 
