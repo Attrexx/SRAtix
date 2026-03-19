@@ -404,7 +404,7 @@ export class EmailService {
   }
 
   /**
-   * Send exhibitor welcome email with portal setup instructions.
+   * Send exhibitor welcome email with portal setup instructions and password setup link.
    */
   async sendExhibitorWelcome(
     to: string,
@@ -416,8 +416,22 @@ export class EmailService {
       eventVenue: string;
       orderNumber: string;
       portalUrl: string;
+      passwordSetupUrl?: string;
     },
   ): Promise<DeliveryResult> {
+    const passwordSection = data.passwordSetupUrl ? `
+      <div style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">🔑 Set Up Your Password</h3>
+        <p style="margin: 0 0 12px; font-size: 14px;">
+          Your exhibitor account has been created. Set your password to access the portal:
+        </p>
+        <div style="text-align: center;">
+          <a href="${data.passwordSetupUrl}" style="display: inline-block; background: #d97706; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Set Password</a>
+        </div>
+        <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">This link expires in 7 days.</p>
+      </div>
+    ` : '';
+
     const html = this.publicWrapper('Exhibitor Registration Confirmed', `
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.contactName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
@@ -433,8 +447,10 @@ export class EmailService {
         <p style="margin: 4px 0;"><strong>Order:</strong> #${data.orderNumber}</p>
       </div>
 
+      ${passwordSection}
+
       <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
-        <h3 style="margin: 0 0 12px; color: #333;">🏢 Set Up Your Exhibitor Portal</h3>
+        <h3 style="margin: 0 0 12px; color: #333;">🏢 Your Exhibitor Portal</h3>
         <p style="margin: 0 0 12px; font-size: 14px;">
           Your exhibitor portal is ready. Use it to:
         </p>
@@ -455,6 +471,10 @@ export class EmailService {
       </p>
     `);
 
+    const passwordText = data.passwordSetupUrl
+      ? `\nSet Up Your Password\n-----------------------------\n${data.passwordSetupUrl}\n(Expires in 7 days)\n`
+      : '';
+
     const text = `Exhibitor Registration Confirmed
 
 Hi ${data.contactName},
@@ -465,8 +485,8 @@ Event: ${data.eventName}
 Date: ${data.eventDate}
 Venue: ${data.eventVenue}
 Order: #${data.orderNumber}
-
-Set Up Your Exhibitor Portal
+${passwordText}
+Your Exhibitor Portal
 -----------------------------
 Your exhibitor portal is ready. Use it to:
 - Upload your company logo and description
@@ -483,6 +503,93 @@ Questions? Contact events@swiss-robotics.org
     return this.send({
       to,
       subject: `🏢 Exhibitor confirmed — Set up your portal for ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send staff portal invitation email with password setup link.
+   */
+  async sendStaffPortalInvite(
+    to: string,
+    data: {
+      staffName: string;
+      companyName: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      role: string;
+      portalUrl: string;
+      passwordSetupUrl: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.publicWrapper('Exhibitor Staff Invitation', `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.staffName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        You have been added as <strong>${data.role}</strong> for
+        <strong>${data.companyName}</strong> at <strong>${data.eventName}</strong>.
+      </p>
+
+      <div style="background: #e8f4fd; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
+        <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
+        <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
+        <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
+      </div>
+
+      <div style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">🔑 Set Up Your Account</h3>
+        <p style="margin: 0 0 12px; font-size: 14px;">
+          Set your password to access the exhibitor portal:
+        </p>
+        <div style="text-align: center;">
+          <a href="${data.passwordSetupUrl}" style="display: inline-block; background: #d97706; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Set Password &amp; Access Portal</a>
+        </div>
+        <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">This link expires in 7 days.</p>
+      </div>
+
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 12px; color: #333;">🏢 Exhibitor Portal</h3>
+        <p style="margin: 0 0 12px; font-size: 14px;">
+          Once your password is set, use the portal to:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+          <li style="margin-bottom: 6px;">View your booth staff pass and event details</li>
+          <li style="margin-bottom: 6px;">Help manage the company's exhibitor profile</li>
+          <li style="margin-bottom: 6px;">Access demo and media management</li>
+        </ul>
+      </div>
+
+      <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
+        Questions? Contact <a href="mailto:events@swiss-robotics.org">events@swiss-robotics.org</a>.
+      </p>
+    `);
+
+    const text = `Exhibitor Staff Invitation
+
+Hi ${data.staffName},
+
+You have been added as ${data.role} for ${data.companyName} at ${data.eventName}.
+
+Event: ${data.eventName}
+Date: ${data.eventDate}
+Venue: ${data.eventVenue}
+
+Set Up Your Account
+-----------------------------
+${data.passwordSetupUrl}
+(Expires in 7 days)
+
+Portal: ${data.portalUrl}
+
+Questions? Contact events@swiss-robotics.org
+
+— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `🎪 You're booth staff for ${data.companyName} at ${data.eventName}`,
       html,
       text,
     });

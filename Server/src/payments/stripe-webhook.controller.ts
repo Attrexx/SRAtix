@@ -22,6 +22,7 @@ import { SettingsService } from '../settings/settings.service';
 import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
+import { AuthService } from '../auth/auth.service';
 
 /**
  * Stripe Webhook Controller.
@@ -50,6 +51,7 @@ export class StripeWebhookController {
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly registrationReminder: RegistrationReminderWorker,
+    private readonly auth: AuthService,
   ) {}
 
   @Post()
@@ -264,7 +266,7 @@ export class StripeWebhookController {
           eventVenue: event?.venue ?? '',
         });
 
-        // Send exhibitor welcome email with portal setup instructions
+        // ── Exhibitor provisioning: auto-create account, profile, event link ──
         const ticketTypeIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
         if (ticketTypeIds.length > 0) {
           const ticketTypes = await this.prisma.ticketType.findMany({
@@ -272,20 +274,16 @@ export class StripeWebhookController {
             select: { category: true },
           });
           const isExhibitor = ticketTypes.some((tt) => tt.category === 'exhibitor');
-          if (isExhibitor && event) {
-            const portalBaseUrl = await this.settings.resolve('exhibitor_portal_url', 'https://swiss-robotics.org/exhibitor-portal');
-            this.email.sendExhibitorWelcome(paidOrder.customerEmail, {
-              contactName: paidOrder.customerName ?? 'Guest',
-              companyName: (orderMeta.companyName as string) ?? paidOrder.customerName ?? 'Your Company',
-              eventName: event.name ?? 'Event',
-              eventDate: event.startDate?.toISOString().split('T')[0] ?? '',
-              eventVenue: event.venue ?? '',
-              orderNumber: paidOrder.orderNumber,
-              portalUrl: portalBaseUrl,
-            }).catch((err) =>
-              this.logger.error(`Exhibitor welcome email failed for order ${orderId}: ${err}`),
+          if (isExhibitor && event && orgId) {
+            await this.provisionExhibitor(
+              paidOrder.customerEmail,
+              paidOrder.customerName ?? 'Guest',
+              (orderMeta.companyName as string) ?? paidOrder.customerName ?? 'Your Company',
+              orgId,
+              eventId!,
+              event,
+              paidOrder.orderNumber,
             );
-            this.logger.log(`Exhibitor welcome email sent for order ${orderId}`);
           }
         }
       } catch (err) {
@@ -406,6 +404,105 @@ export class StripeWebhookController {
           this.logger.error(`Failed to send refund email for order ${order.id}: ${err}`);
         }
       }
+    }
+  }
+
+  // ─── Exhibitor Provisioning ─────────────────────────────────
+
+  /**
+   * Provision exhibitor account on ticket purchase:
+   * 1. Find/create User (no password — setup via email link)
+   * 2. Assign exhibitor UserRole scoped to org
+   * 3. Create ExhibitorProfile for the org
+   * 4. Create EventExhibitor linking org to event
+   * 5. Generate password setup token
+   * 6. Send welcome email with password setup link
+   */
+  private async provisionExhibitor(
+    email: string,
+    displayName: string,
+    companyName: string,
+    orgId: string,
+    eventId: string,
+    event: { name?: string; startDate?: Date; venue?: string | null },
+    orderNumber: string,
+  ): Promise<void> {
+    try {
+      // 1. Find or create User
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true, passwordHash: true },
+      });
+
+      const isNewUser = !user;
+      if (!user) {
+        user = await this.prisma.user.create({
+          data: { email, displayName },
+          select: { id: true, passwordHash: true },
+        });
+        this.logger.log(`Created exhibitor user ${user.id} for ${email}`);
+      }
+
+      // 2. Assign exhibitor role scoped to org (idempotent)
+      await this.prisma.userRole.upsert({
+        where: { userId_orgId_role: { userId: user.id, orgId, role: 'exhibitor' } },
+        update: {},
+        create: { userId: user.id, orgId, role: 'exhibitor' },
+      });
+
+      // 3. Create ExhibitorProfile if not exists
+      const existingProfile = await this.prisma.exhibitorProfile.findUnique({
+        where: { orgId },
+        select: { id: true },
+      });
+      const profile = existingProfile ?? await this.prisma.exhibitorProfile.create({
+        data: {
+          orgId,
+          companyName,
+          contactEmail: email,
+        },
+        select: { id: true },
+      });
+
+      // 4. Create EventExhibitor if not exists, storing buyer info in meta
+      await this.prisma.eventExhibitor.upsert({
+        where: { eventId_exhibitorProfileId: { eventId, exhibitorProfileId: profile.id } },
+        update: {},
+        create: {
+          eventId,
+          exhibitorProfileId: profile.id,
+          meta: { buyerName: displayName, buyerEmail: email, orderNumber },
+        },
+      });
+
+      // 5. Generate password setup token (only for new users or users without password)
+      let passwordSetupUrl: string | undefined;
+      if (isNewUser || !user.passwordHash) {
+        const rawToken = await this.auth.initiatePasswordSetup(user.id);
+        passwordSetupUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}&setup=1`;
+      }
+
+      // 6. Send welcome email with portal + password setup links
+      const portalBaseUrl = await this.settings.resolve(
+        'exhibitor_portal_url',
+        'https://swiss-robotics.org/exhibitor-portal',
+      );
+      await this.email.sendExhibitorWelcome(email, {
+        contactName: displayName,
+        companyName,
+        eventName: event.name ?? 'Event',
+        eventDate: event.startDate?.toISOString().split('T')[0] ?? '',
+        eventVenue: event.venue ?? '',
+        orderNumber,
+        portalUrl: portalBaseUrl,
+        passwordSetupUrl,
+      });
+
+      this.logger.log(
+        `Exhibitor provisioned for order ${orderNumber}: user=${user.id}, profile=${profile.id}, event=${eventId}${isNewUser ? ' [NEW USER]' : ''}`,
+      );
+    } catch (err) {
+      this.logger.error(`Exhibitor provisioning failed for ${email}: ${err}`);
     }
   }
 

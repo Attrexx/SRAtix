@@ -704,6 +704,37 @@ export class AuthService implements OnModuleDestroy {
     });
   }
 
+  // ─── Password Setup (new accounts without password) ────────────
+
+  /**
+   * Generate a password setup token for a newly created account.
+   * Unlike requestPasswordReset(), this does NOT require an existing passwordHash.
+   * Returns the raw token (caller is responsible for building the URL and sending the email).
+   * Expiry: 7 days (longer than reset since it's a first-time setup).
+   */
+  async initiatePasswordSetup(userId: string): Promise<string> {
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetToken: hashedToken,
+        resetTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    });
+
+    this.audit.log({
+      userId,
+      action: AuditAction.AUTH_PASSWORD_RESET_REQUESTED,
+      entity: 'user',
+      entityId: userId,
+      detail: { reason: 'initial_password_setup' },
+    });
+
+    return rawToken;
+  }
+
   /**
    * Render password reset email HTML.
    */

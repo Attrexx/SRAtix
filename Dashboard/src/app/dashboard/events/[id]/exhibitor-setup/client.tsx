@@ -2,15 +2,21 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type SetupRequest } from '@/lib/api';
+import { api, type EventExhibitorCard } from '@/lib/api';
 import { useI18n } from '@/i18n/i18n-provider';
 import { toast } from 'sonner';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: '#94a3b8',
-  submitted: '#3b82f6',
-  confirmed: '#22c55e',
-  modification_requested: '#f59e0b',
+  published: '#22c55e',
+  archived: '#6b7280',
+};
+
+const PASS_STATUS_COLORS: Record<string, string> = {
+  pending: '#94a3b8',
+  invited: '#3b82f6',
+  registered: '#22c55e',
+  checked_in: '#8b5cf6',
 };
 
 export default function ExhibitorSetupPage() {
@@ -18,10 +24,9 @@ export default function ExhibitorSetupPage() {
   const { t } = useI18n();
   const abortRef = useRef<AbortController | null>(null);
 
-  const [requests, setRequests] = useState<SetupRequest[]>([]);
+  const [exhibitors, setExhibitors] = useState<EventExhibitorCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!eventId) return;
@@ -31,11 +36,11 @@ export default function ExhibitorSetupPage() {
 
     try {
       setLoading(true);
-      const data = await api.getSetupRequests(eventId, ctrl.signal);
-      setRequests(data);
+      const data = await api.getExhibitors(eventId, ctrl.signal);
+      setExhibitors(data);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return;
-      toast.error(t('exhibitorSetup.loadError'));
+      toast.error(t('exhibitors.loadError'));
     } finally {
       setLoading(false);
     }
@@ -46,43 +51,20 @@ export default function ExhibitorSetupPage() {
     return () => abortRef.current?.abort();
   }, [load]);
 
-  const handleStatusUpdate = async (requestId: string, status: string) => {
-    try {
-      await api.adminUpdateSetupRequest(requestId, {
-        status,
-        adminNotes: adminNotes || undefined,
-      });
-      toast.success(t('exhibitorSetup.updated'));
-      setExpandedId(null);
-      setAdminNotes('');
-      load();
-    } catch {
-      toast.error(t('exhibitorSetup.updateError'));
-    }
-  };
-
   const formatDate = (d: string | null) => {
     if (!d) return '—';
-    return new Date(d).toLocaleString();
+    return new Date(d).toLocaleDateString();
   };
 
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      draft: t('exhibitorSetup.statusDraft'),
-      submitted: t('exhibitorSetup.statusSubmitted'),
-      confirmed: t('exhibitorSetup.statusConfirmed'),
-      modification_requested: t('exhibitorSetup.statusModRequested'),
-    };
-    return labels[status] || status;
-  };
+  const selected = exhibitors.find((e) => e.id === selectedId) ?? null;
 
   if (loading) {
     return (
       <div>
-        <h2 className="text-xl font-semibold mb-4">{t('exhibitorSetup.title')}</h2>
-        <div className="animate-pulse space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded" />
+        <h2 className="text-xl font-semibold mb-4">{t('exhibitors.title')}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -91,128 +73,226 @@ export default function ExhibitorSetupPage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">{t('exhibitorSetup.title')}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">{t('exhibitors.title')}</h2>
+        <span className="text-sm text-gray-500">{exhibitors.length} {t('exhibitors.total')}</span>
+      </div>
 
-      {requests.length === 0 ? (
-        <p className="text-gray-500">{t('exhibitorSetup.noRequests')}</p>
+      {exhibitors.length === 0 ? (
+        <p className="text-gray-500">{t('exhibitors.none')}</p>
       ) : (
-        <div className="space-y-3">
-          {requests.map((req) => {
-            const isExpanded = expandedId === req.id;
-            const companyName = req.eventExhibitor?.exhibitorProfile?.companyName || '—';
-            const booth = req.eventExhibitor?.boothNumber || '';
-
-            return (
-              <div
-                key={req.id}
-                className="border rounded-lg overflow-hidden"
-                style={{ borderColor: 'var(--color-border, #e5e7eb)' }}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {exhibitors.map((ex) => (
+            <div
+              key={ex.id}
+              className="relative border rounded-lg p-4 hover:shadow-md transition-shadow cursor-default"
+              style={{ borderColor: 'var(--color-border, #e5e7eb)' }}
+            >
+              {/* Eye icon — detail modal trigger */}
+              <button
+                className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setSelectedId(ex.id)}
+                title={t('exhibitors.viewDetails')}
               >
-                {/* Header row */}
-                <button
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  onClick={() => {
-                    setExpandedId(isExpanded ? null : req.id);
-                    setAdminNotes(req.adminNotes || '');
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full"
-                      style={{ background: STATUS_COLORS[req.status] || '#94a3b8' }}
-                    />
-                    <span className="font-medium">{companyName}</span>
-                    {booth && (
-                      <span className="text-xs text-gray-500">
-                        {t('exhibitorSetup.booth')} {booth}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full"
-                      style={{
-                        background: STATUS_COLORS[req.status] + '20',
-                        color: STATUS_COLORS[req.status],
-                      }}
-                    >
-                      {getStatusLabel(req.status)}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {formatDate(req.submittedAt || req.createdAt)}
-                    </span>
-                  </div>
-                </button>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
 
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="border-t px-4 py-4 space-y-4" style={{ borderColor: 'var(--color-border, #e5e7eb)' }}>
-                    {/* Submitted data */}
-                    <div>
-                      <h4 className="text-sm font-semibold mb-2">{t('exhibitorSetup.submittedData')}</h4>
-                      {req.data && Object.keys(req.data).length > 0 ? (
-                        <pre className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto max-h-60">
-                          {JSON.stringify(req.data, null, 2)}
-                        </pre>
-                      ) : (
-                        <p className="text-sm text-gray-400">{t('exhibitorSetup.noData')}</p>
-                      )}
-                    </div>
-
-                    {/* Admin notes */}
-                    <div>
-                      <label className="block text-sm font-semibold mb-1">
-                        {t('exhibitorSetup.adminNotes')}
-                      </label>
-                      <textarea
-                        className="w-full border rounded px-3 py-2 text-sm"
-                        rows={3}
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder={t('exhibitorSetup.adminNotesPlaceholder')}
-                        style={{ borderColor: 'var(--color-border, #e5e7eb)' }}
-                      />
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      {req.status === 'submitted' && (
-                        <>
-                          <button
-                            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                            onClick={() => handleStatusUpdate(req.id, 'confirmed')}
-                          >
-                            {t('exhibitorSetup.confirm')}
-                          </button>
-                          <button
-                            className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded transition-colors"
-                            onClick={() => handleStatusUpdate(req.id, 'modification_requested')}
-                          >
-                            {t('exhibitorSetup.requestModification')}
-                          </button>
-                        </>
-                      )}
-                      {req.status === 'modification_requested' && (
-                        <button
-                          className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
-                          onClick={() => handleStatusUpdate(req.id, 'confirmed')}
-                        >
-                          {t('exhibitorSetup.confirm')}
-                        </button>
-                      )}
-                      {req.status === 'confirmed' && (
-                        <span className="text-sm text-green-600 font-medium">
-                          ✓ {t('exhibitorSetup.confirmedAt')} {formatDate(req.confirmedAt)}
-                        </span>
-                      )}
-                    </div>
+              {/* Logo + Company Name */}
+              <div className="flex items-center gap-3 mb-3 pr-8">
+                {ex.logoUrl ? (
+                  <img
+                    src={ex.logoUrl}
+                    alt=""
+                    className="w-10 h-10 rounded object-contain bg-gray-50 dark:bg-gray-800 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 text-xs font-bold text-gray-400">
+                    {ex.companyName.charAt(0).toUpperCase()}
                   </div>
                 )}
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{ex.companyName}</p>
+                  {ex.exhibitorCategory && (
+                    <span className="text-xs text-gray-500">{ex.exhibitorCategory}</span>
+                  )}
+                </div>
               </div>
-            );
-          })}
+
+              {/* Buyer info */}
+              {ex.buyerEmail && (
+                <div className="text-xs text-gray-500 mb-3 truncate">
+                  {ex.buyerName && <span className="font-medium">{ex.buyerName}</span>}
+                  {ex.buyerName && ' · '}
+                  <span>{ex.buyerEmail}</span>
+                </div>
+              )}
+
+              {/* Stats row */}
+              <div className="flex items-center gap-3 text-xs">
+                {/* Staff count */}
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                  style={{ background: ex.staffCount > 0 ? '#dbeafe' : '#f3f4f6', color: ex.staffCount > 0 ? '#1d4ed8' : '#6b7280' }}
+                >
+                  👤 {ex.staffSubmitted}/{ex.maxStaff > 0 ? ex.maxStaff : '∞'}
+                </span>
+
+                {/* Demo indicator */}
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                  style={{ background: ex.hasDemo ? '#dcfce7' : '#f3f4f6', color: ex.hasDemo ? '#166534' : '#6b7280' }}
+                >
+                  {ex.hasDemo ? '✓' : '✗'} {t('exhibitors.demo')}
+                </span>
+
+                {/* Booth */}
+                {ex.boothNumber && (
+                  <span className="text-gray-400">#{ex.boothNumber}</span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
+
+      {/* ── Detail Modal ──────────────────────────────────────── */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setSelectedId(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--color-border, #e5e7eb)' }}>
+              <div className="flex items-center gap-3">
+                {selected.logoUrl ? (
+                  <img src={selected.logoUrl} alt="" className="w-12 h-12 rounded object-contain bg-gray-50 dark:bg-gray-800" />
+                ) : (
+                  <div className="w-12 h-12 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-gray-400">
+                    {selected.companyName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-lg font-semibold">{selected.companyName}</h3>
+                  {selected.profile.legalName && selected.profile.legalName !== selected.companyName && (
+                    <p className="text-xs text-gray-500">{selected.profile.legalName}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedId(null)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Purchase Info */}
+              <Section title={t('exhibitors.purchaseInfo')}>
+                <InfoRow label={t('exhibitors.buyer')} value={selected.buyerName ? `${selected.buyerName} (${selected.buyerEmail})` : selected.buyerEmail} />
+                {selected.order?.orderNumber && <InfoRow label={t('exhibitors.orderNumber')} value={`#${selected.order.orderNumber}`} />}
+                <InfoRow label={t('exhibitors.purchaseDate')} value={formatDate(selected.order?.purchaseDate ?? selected.createdAt)} />
+                {selected.exhibitorCategory && <InfoRow label={t('exhibitors.category')} value={selected.exhibitorCategory} />}
+                {selected.boothNumber && <InfoRow label={t('exhibitors.booth')} value={`#${selected.boothNumber}${selected.expoArea ? ` (${selected.expoArea})` : ''}`} />}
+                <InfoRow label={t('exhibitors.status')} value={selected.status} />
+              </Section>
+
+              {/* Company Profile */}
+              <Section title={t('exhibitors.companyProfile')}>
+                {selected.profile.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2" dangerouslySetInnerHTML={{ __html: selected.profile.description }} />
+                )}
+                {selected.profile.website && <InfoRow label={t('exhibitors.website')} value={selected.profile.website} />}
+                {selected.profile.contactEmail && <InfoRow label={t('exhibitors.contactEmail')} value={selected.profile.contactEmail} />}
+                {selected.profile.contactPhone && <InfoRow label={t('exhibitors.contactPhone')} value={selected.profile.contactPhone} />}
+                {selected.profile.socialLinks && Object.entries(selected.profile.socialLinks).map(([key, url]) => (
+                  url ? <InfoRow key={key} label={key} value={url} /> : null
+                ))}
+              </Section>
+
+              {/* Demo */}
+              <Section title={t('exhibitors.demoDetails')}>
+                {selected.demo.title ? (
+                  <>
+                    <InfoRow label={t('exhibitors.demoTitle')} value={selected.demo.title} />
+                    {selected.demo.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1" dangerouslySetInnerHTML={{ __html: selected.demo.description }} />
+                    )}
+                    <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                      <span>{selected.demo.mediaCount} {t('exhibitors.media')}</span>
+                      <span>{selected.demo.videoCount} {t('exhibitors.videos')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400">{t('exhibitors.noDemo')}</p>
+                )}
+              </Section>
+
+              {/* Staff */}
+              <Section title={`${t('exhibitors.staff')} (${selected.staffCount}/${selected.maxStaff > 0 ? selected.maxStaff : '∞'})`}>
+                {selected.staff.length > 0 ? (
+                  <div className="space-y-2">
+                    {selected.staff.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between text-sm">
+                        <div>
+                          <span className="font-medium">{s.firstName} {s.lastName}</span>
+                          <span className="text-gray-500 ml-2">{s.email}</span>
+                          <span className="text-xs text-gray-400 ml-2">({s.role})</span>
+                        </div>
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: (PASS_STATUS_COLORS[s.passStatus] ?? '#94a3b8') + '20', color: PASS_STATUS_COLORS[s.passStatus] ?? '#94a3b8' }}
+                        >
+                          {s.passStatus}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">{t('exhibitors.noStaff')}</p>
+                )}
+              </Section>
+
+              {/* Setup Request */}
+              {selected.setupRequest && (
+                <Section title={t('exhibitors.setupRequest')}>
+                  <InfoRow label={t('exhibitors.setupStatus')} value={selected.setupRequest.status} />
+                  {selected.setupRequest.submittedAt && <InfoRow label={t('exhibitors.submittedAt')} value={formatDate(selected.setupRequest.submittedAt)} />}
+                  {selected.setupRequest.confirmedAt && <InfoRow label={t('exhibitors.confirmedAt')} value={formatDate(selected.setupRequest.confirmedAt)} />}
+                </Section>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pb-1 border-b" style={{ borderColor: 'var(--color-border, #e5e7eb)' }}>
+        {title}
+      </h4>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex text-sm">
+      <span className="text-gray-500 w-32 flex-shrink-0">{label}</span>
+      <span className="text-gray-800 dark:text-gray-200 break-all">{value}</span>
     </div>
   );
 }

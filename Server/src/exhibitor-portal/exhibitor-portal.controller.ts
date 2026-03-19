@@ -274,7 +274,7 @@ export class ExhibitorPortalPublicController {
 
 // ─── Admin Controller ─────────────────────────────────────────────────
 /**
- * Admin endpoints for managing exhibitor setup requests.
+ * Admin endpoints for managing exhibitors and setup requests.
  * Requires event_admin, admin, or super_admin role.
  */
 @Controller('admin/exhibitor-portal')
@@ -283,6 +283,12 @@ export class ExhibitorPortalAdminController {
   constructor(
     private readonly portalService: ExhibitorPortalService,
   ) {}
+
+  @Get('events/:eventId/exhibitors')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async listExhibitors(@Param('eventId') eventId: string) {
+    return this.portalService.listExhibitorsForEvent(eventId);
+  }
 
   @Get('events/:eventId/setup-requests')
   @Roles('event_admin', 'admin', 'super_admin')

@@ -535,6 +535,57 @@ export interface SetupRequest {
   };
 }
 
+export interface EventExhibitorCard {
+  id: string;
+  companyName: string;
+  logoUrl: string | null;
+  buyerName: string | null;
+  buyerEmail: string | null;
+  exhibitorCategory: string | null;
+  boothNumber: string | null;
+  expoArea: string | null;
+  staffCount: number;
+  staffSubmitted: number;
+  maxStaff: number;
+  hasDemo: boolean;
+  status: string;
+  createdAt: string;
+  profile: {
+    companyName: string;
+    legalName: string | null;
+    website: string | null;
+    description: string | null;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    socialLinks: Record<string, string> | null;
+    logoUrl: string | null;
+  };
+  demo: {
+    title: string | null;
+    description: string | null;
+    mediaCount: number;
+    videoCount: number;
+  };
+  staff: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    passStatus: string;
+  }>;
+  setupRequest: {
+    id: string;
+    status: string;
+    submittedAt: string | null;
+    confirmedAt: string | null;
+  } | null;
+  order: {
+    orderNumber: string | null;
+    purchaseDate: string;
+  } | null;
+}
+
 export interface FieldDefinition {
   id: string;
   slug: string;
@@ -1001,7 +1052,13 @@ export const api = {
       { signal },
     ),
 
-  // ─── Exhibitor Setup Requests (Admin) ──────────────────────────
+  // ─── Exhibitor Portal (Admin) ───────────────────────────────────
+
+  getExhibitors: (eventId: string, signal?: AbortSignal) =>
+    request<EventExhibitorCard[]>(
+      `/admin/exhibitor-portal/events/${eventId}/exhibitors`,
+      { signal },
+    ),
 
   getSetupRequests: (eventId: string, signal?: AbortSignal) =>
     request<SetupRequest[]>(

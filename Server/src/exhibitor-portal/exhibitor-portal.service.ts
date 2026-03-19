@@ -12,6 +12,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { AttendeesService } from '../attendees/attendees.service';
 import { EmailService } from '../email/email.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { AuthService } from '../auth/auth.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateEventDetailsDto } from './dto/update-event-details.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
@@ -36,6 +37,7 @@ export class ExhibitorPortalService {
     private readonly email: EmailService,
     private readonly outgoingWebhooks: OutgoingWebhooksService,
     private readonly config: ConfigService,
+    private readonly auth: AuthService,
   ) {}
 
   // ── Profile ──────────────────────────────────────────────────────────────
@@ -597,30 +599,81 @@ export class ExhibitorPortalService {
       data: { attendeeId: attendee.id, passStatus: 'invited' },
     });
 
-    // Send invitation email (fire-and-forget)
-    const registrationUrl = `${registrationBaseUrl}?token=${registrationToken}`;
+    // ── Staff portal access: create User + exhibitor role + password setup ──
+    let staffUser = await this.prisma.user.findUnique({
+      where: { email: staff.email },
+      select: { id: true, passwordHash: true },
+    });
+    const isNewStaffUser = !staffUser;
+    if (!staffUser) {
+      staffUser = await this.prisma.user.create({
+        data: {
+          email: staff.email,
+          displayName: `${staff.firstName} ${staff.lastName}`,
+        },
+        select: { id: true, passwordHash: true },
+      });
+    }
+
+    // Assign exhibitor role scoped to the same org
+    await this.prisma.userRole.upsert({
+      where: { userId_orgId_role: { userId: staffUser.id, orgId: event.orgId, role: 'exhibitor' } },
+      update: {},
+      create: { userId: staffUser.id, orgId: event.orgId, role: 'exhibitor' },
+    });
+
+    // Generate password setup token + send portal invite email
+    let passwordSetupUrl: string | undefined;
+    if (isNewStaffUser || !staffUser.passwordHash) {
+      const rawToken = await this.auth.initiatePasswordSetup(staffUser.id);
+      passwordSetupUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}&setup=1`;
+    }
+
+    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swiss-robotics.org/exhibitor-portal';
+    const profile = await this.prisma.exhibitorProfile.findUnique({
+      where: { orgId },
+      select: { companyName: true },
+    });
+
     const eventDate = event.startDate.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
     });
 
-    this.email.sendTicketGiftNotification(staff.email, {
-      recipientName: `${staff.firstName} ${staff.lastName}`,
-      purchaserName: 'Your exhibitor company',
-      eventName: event.name,
-      eventDate,
-      eventVenue: event.venue ?? '',
-      ticketTypeName: ticketType.name,
-      registrationUrl,
-    }).catch((err) => {
-      this.logger.error(`Failed to send staff invitation email to ${staff.email}: ${err}`);
-    });
+    if (passwordSetupUrl) {
+      // New user: send staff portal invite with password setup
+      this.email.sendStaffPortalInvite(staff.email, {
+        staffName: `${staff.firstName} ${staff.lastName}`,
+        companyName: profile?.companyName ?? 'Your Company',
+        eventName: event.name,
+        eventDate,
+        eventVenue: event.venue ?? '',
+        role: staff.role,
+        portalUrl: portalBaseUrl,
+        passwordSetupUrl,
+      }).catch((err) => {
+        this.logger.error(`Failed to send staff portal invite to ${staff.email}: ${err}`);
+      });
+    } else {
+      // Existing user with password: send simpler notification
+      this.email.sendTicketGiftNotification(staff.email, {
+        recipientName: `${staff.firstName} ${staff.lastName}`,
+        purchaserName: profile?.companyName ?? 'Your exhibitor company',
+        eventName: event.name,
+        eventDate,
+        eventVenue: event.venue ?? '',
+        ticketTypeName: ticketType.name,
+        registrationUrl: portalBaseUrl,
+      }).catch((err) => {
+        this.logger.error(`Failed to send staff notification to ${staff.email}: ${err}`);
+      });
+    }
 
     this.audit.log({
       userId,
       action: 'exhibitor_staff.invited',
       entity: 'exhibitor_staff',
       entityId: staffId,
-      detail: { eventId, email: staff.email, attendeeId: attendee.id, ticketId: ticket.id },
+      detail: { eventId, email: staff.email, attendeeId: attendee.id, ticketId: ticket.id, staffUserId: staffUser.id, newUser: isNewStaffUser },
     });
 
     return { success: true, passStatus: 'invited', attendeeId: attendee.id };
@@ -1035,6 +1088,92 @@ export class ExhibitorPortalService {
     });
 
     return result;
+  }
+
+  /**
+   * Admin: list all exhibitors for an event with card-level data.
+   * Returns enriched data for the dashboard exhibitor cards.
+   */
+  async listExhibitorsForEvent(eventId: string) {
+    const eventExhibitors = await this.prisma.eventExhibitor.findMany({
+      where: { eventId },
+      include: {
+        exhibitorProfile: true,
+        staff: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            role: true,
+            passStatus: true,
+          },
+        },
+        setupRequest: {
+          select: { id: true, status: true, submittedAt: true, confirmedAt: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Get the maxStaff from the exhibitor ticket type for this event
+    const exhibitorTicketType = await this.prisma.ticketType.findFirst({
+      where: { eventId, category: 'exhibitor', status: 'active' },
+      select: { maxStaff: true },
+    });
+    const maxStaff = exhibitorTicketType?.maxStaff ?? 0;
+
+    return eventExhibitors.map((ee) => {
+      const meta = (ee.meta as Record<string, unknown>) ?? {};
+      const staffSubmitted = ee.staff.filter((s) => s.passStatus !== 'pending').length;
+      const hasDemo = !!(ee.demoTitle && ee.demoDescription);
+      const demoMediaCount = Array.isArray(ee.demoMediaGallery)
+        ? (ee.demoMediaGallery as unknown[]).length
+        : 0;
+      const demoVideoCount = Array.isArray(ee.demoVideoLinks)
+        ? (ee.demoVideoLinks as unknown[]).length
+        : 0;
+
+      return {
+        id: ee.id,
+        companyName: ee.exhibitorProfile.companyName,
+        logoUrl: ee.exhibitorProfile.logoUrl,
+        buyerName: (meta.buyerName as string) ?? null,
+        buyerEmail: (meta.buyerEmail as string) ?? ee.exhibitorProfile.contactEmail,
+        exhibitorCategory: ee.exhibitorCategory,
+        boothNumber: ee.boothNumber,
+        expoArea: ee.expoArea,
+        staffCount: ee.staff.length,
+        staffSubmitted,
+        maxStaff,
+        hasDemo,
+        status: ee.status,
+        createdAt: ee.createdAt,
+        // Detail modal data
+        profile: {
+          companyName: ee.exhibitorProfile.companyName,
+          legalName: ee.exhibitorProfile.legalName,
+          website: ee.exhibitorProfile.website,
+          description: ee.exhibitorProfile.description,
+          contactEmail: ee.exhibitorProfile.contactEmail,
+          contactPhone: ee.exhibitorProfile.contactPhone,
+          socialLinks: ee.exhibitorProfile.socialLinks,
+          logoUrl: ee.exhibitorProfile.logoUrl,
+        },
+        demo: {
+          title: ee.demoTitle,
+          description: ee.demoDescription,
+          mediaCount: demoMediaCount,
+          videoCount: demoVideoCount,
+        },
+        staff: ee.staff,
+        setupRequest: ee.setupRequest,
+        order: {
+          orderNumber: (meta.orderNumber as string) ?? null,
+          purchaseDate: ee.createdAt,
+        },
+      };
+    });
   }
 
   /**
