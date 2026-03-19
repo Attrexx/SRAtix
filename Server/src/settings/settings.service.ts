@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
@@ -97,11 +97,21 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     required: false,
   },
   {
-    key: 'stripe_webhook_secret',
-    envVar: 'STRIPE_WEBHOOK_SECRET',
-    label: 'Stripe Webhook Secret',
+    key: 'stripe_test_webhook_secret',
+    envVar: 'STRIPE_TEST_WEBHOOK_SECRET',
+    label: 'Test Webhook Secret',
     group: 'Stripe',
-    description: 'Stripe webhook endpoint signing secret (starts with whsec_)',
+    description: 'Signing secret for the TEST-mode webhook endpoint in Stripe (starts with whsec_)',
+    type: 'secret',
+    sensitive: true,
+    required: false,
+  },
+  {
+    key: 'stripe_live_webhook_secret',
+    envVar: 'STRIPE_LIVE_WEBHOOK_SECRET',
+    label: 'Live Webhook Secret',
+    group: 'Stripe',
+    description: 'Signing secret for the LIVE-mode webhook endpoint in Stripe (starts with whsec_)',
     type: 'secret',
     sensitive: true,
     required: false,
@@ -304,7 +314,7 @@ const RESTART_REQUIRED_KEYS = new Set([
 ]);
 
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit {
   private readonly logger = new Logger(SettingsService.name);
 
   /** AES-256-GCM key derived from JWT_SECRET. Null if JWT_SECRET is not set. */
@@ -319,6 +329,32 @@ export class SettingsService {
     this.encKey = secret
       ? createHash('sha256').update(secret).digest() // 32 bytes = AES-256
       : null;
+  }
+
+  /**
+   * One-time migration: rename old `stripe_webhook_secret` to the new
+   * `stripe_live_webhook_secret` key so the existing value is preserved.
+   */
+  async onModuleInit() {
+    const old = await this.prisma.setting.findFirst({
+      where: { scope: 'global', orgId: null, eventId: null, key: 'stripe_webhook_secret' },
+    });
+    if (!old) return;
+
+    // Copy raw (encrypted) value to the new live key if it doesn't exist yet
+    const existing = await this.prisma.setting.findFirst({
+      where: { scope: 'global', orgId: null, eventId: null, key: 'stripe_live_webhook_secret' },
+    });
+    if (!existing) {
+      await this.prisma.setting.create({
+        data: { scope: 'global', orgId: null, eventId: null, key: 'stripe_live_webhook_secret', value: old.value as string },
+      });
+      this.logger.log('Migrated stripe_webhook_secret → stripe_live_webhook_secret');
+    }
+
+    // Remove the old key
+    await this.prisma.setting.delete({ where: { id: old.id } });
+    this.logger.log('Deleted legacy stripe_webhook_secret setting');
   }
 
   /** Encrypt a plaintext value with AES-256-GCM. Returns `enc:v1:<iv>:<authTag>:<ciphertext>`. */

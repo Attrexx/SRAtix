@@ -200,17 +200,41 @@ export class StripeService implements OnModuleInit {
     rawBody: Buffer,
     signature: string,
   ): Promise<Stripe.Event> {
-    const [stripe, webhookSecret] = await Promise.all([
+    const [stripe, mode, testSecret, rawLiveSecret] = await Promise.all([
       this.ensureStripe(),
-      this.settings.resolve('stripe_webhook_secret', ''),
+      this.settings.resolve('stripe_mode', 'test'),
+      this.settings.resolve('stripe_test_webhook_secret', ''),
+      this.settings.resolve('stripe_live_webhook_secret', ''),
     ]);
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET not configured');
+
+    // Legacy fallback: accept the old STRIPE_WEBHOOK_SECRET env var
+    const liveSecret =
+      rawLiveSecret || this.config.get<string>('STRIPE_WEBHOOK_SECRET') || '';
+
+    // Try the active-mode secret first, then the other as fallback.
+    // This allows both Test and Live Stripe webhooks to share one endpoint.
+    const primary = mode === 'live' ? liveSecret : testSecret;
+    const fallback = mode === 'live' ? testSecret : liveSecret;
+
+    if (!primary && !fallback) {
+      throw new Error(
+        'No Stripe webhook secret configured — set Test and/or Live webhook secret in Settings',
+      );
     }
-    return stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      webhookSecret,
-    );
+
+    if (primary) {
+      try {
+        return stripe.webhooks.constructEvent(rawBody, signature, primary);
+      } catch {
+        // Primary failed — try fallback if available
+      }
+    }
+
+    if (fallback) {
+      return stripe.webhooks.constructEvent(rawBody, signature, fallback);
+    }
+
+    // Only primary was set and it failed
+    throw new Error('Webhook signature verification failed');
   }
 }
