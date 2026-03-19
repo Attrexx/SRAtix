@@ -742,6 +742,9 @@ export const api = {
   }) =>
     request<Attendee>(`/attendees/${id}`, { method: 'PATCH', body: data }),
 
+  deleteAttendee: (id: string) =>
+    request<{ success: boolean }>(`/attendees/${id}`, { method: 'DELETE' }),
+
   getAttendeeSubmissions: (attendeeId: string, eventId: string, signal?: AbortSignal) =>
     request<FormSubmission[]>(`/attendees/${attendeeId}/submissions/${eventId}`, { signal }),
 
@@ -1073,6 +1076,12 @@ export const api = {
     request<SetupRequest>(
       `/admin/exhibitor-portal/setup-requests/${requestId}`,
       { method: 'PUT', body: data },
+    ),
+
+  deleteExhibitor: (id: string) =>
+    request<{ success: boolean }>(
+      `/admin/exhibitor-portal/exhibitors/${id}`,
+      { method: 'DELETE' },
     ),
 };
 

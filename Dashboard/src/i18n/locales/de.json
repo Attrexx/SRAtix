@@ -328,6 +328,8 @@
   "attendees.column.registered": "Registriert",
   "attendees.empty": "Noch keine Teilnehmer registriert.",
   "attendees.failedToSave": "Teilnehmer konnte nicht gespeichert werden",
+  "attendees.confirmDelete": "Möchten Sie {name} wirklich dauerhaft löschen? Dies kann nicht rückgängig gemacht werden.",
+  "attendees.failedToDelete": "Teilnehmer konnte nicht gelöscht werden.",
   "attendees.form.firstName": "Vorname *",
   "attendees.form.firstNamePlaceholder": "Anna",
   "attendees.form.lastName": "Nachname *",
@@ -851,5 +853,7 @@
   "exhibitors.setupRequest": "Setup-Anfrage",
   "exhibitors.setupStatus": "Status",
   "exhibitors.submittedAt": "Eingereicht",
-  "exhibitors.confirmedAt": "Best\u00e4tigt"
+  "exhibitors.confirmedAt": "Best\u00e4tigt",
+  "exhibitors.confirmDelete": "M\u00f6chten Sie {name} wirklich dauerhaft l\u00f6schen? Personal, Demos und Setup-Anfragen werden ebenfalls entfernt. Dies kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+  "exhibitors.failedToDelete": "Aussteller konnte nicht gel\u00f6scht werden."
 }

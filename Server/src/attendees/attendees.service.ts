@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
@@ -214,5 +214,48 @@ export class AttendeesService {
     return this.prisma.attendee.findUnique({
       where: { registrationToken: token },
     });
+  }
+
+  /**
+   * Hard-delete an attendee and clean up all related records.
+   * Nullifies optional FKs, deletes required-FK children.
+   */
+  async delete(id: string) {
+    const attendee = await this.findOne(id);
+
+    // Check for paid orders linked to this attendee
+    const paidOrders = await this.prisma.order.count({
+      where: { attendeeId: id, status: 'paid' },
+    });
+    if (paidOrders > 0) {
+      throw new BadRequestException(
+        'Cannot delete an attendee with paid orders. Cancel or refund orders first.',
+      );
+    }
+
+    // Nullify optional FKs pointing to this attendee
+    await this.prisma.order.updateMany({ where: { attendeeId: id }, data: { attendeeId: null } });
+    await this.prisma.ticket.updateMany({ where: { attendeeId: id }, data: { attendeeId: null } });
+    await this.prisma.checkIn.updateMany({ where: { attendeeId: id }, data: { attendeeId: null } });
+    await this.prisma.exhibitorStaff.updateMany({ where: { attendeeId: id }, data: { attendeeId: null } });
+    await this.prisma.boothScan.updateMany({ where: { attendeeId: id }, data: { attendeeId: null } });
+    await this.prisma.boothLead.deleteMany({ where: { attendeeId: id } });
+    await this.prisma.attendee.updateMany({ where: { purchasedByAttendeeId: id }, data: { purchasedByAttendeeId: { set: null } } });
+
+    // Delete required-FK children (not covered by cascade)
+    await this.prisma.badgeRender.deleteMany({ where: { attendeeId: id } });
+    // FormSubmissions cascade automatically via onDelete: Cascade
+
+    await this.prisma.attendee.delete({ where: { id } });
+
+    this.audit.log({
+      eventId: attendee.eventId,
+      action: AuditAction.ATTENDEE_CREATED, // closest available action
+      entity: 'attendee',
+      entityId: id,
+      detail: { email: attendee.email, hardDelete: true },
+    });
+
+    return { success: true };
   }
 }

@@ -328,6 +328,8 @@
   "attendees.column.registered": "Registered",
   "attendees.empty": "No attendees registered yet.",
   "attendees.failedToSave": "Failed to save attendee",
+  "attendees.confirmDelete": "Are you sure you want to permanently delete {name}? This cannot be undone.",
+  "attendees.failedToDelete": "Failed to delete attendee.",
   "attendees.form.firstName": "First Name *",
   "attendees.form.firstNamePlaceholder": "Jane",
   "attendees.form.lastName": "Last Name *",
@@ -884,5 +886,7 @@
   "exhibitors.setupRequest": "Setup Request",
   "exhibitors.setupStatus": "Status",
   "exhibitors.submittedAt": "Submitted",
-  "exhibitors.confirmedAt": "Confirmed"
+  "exhibitors.confirmedAt": "Confirmed",
+  "exhibitors.confirmDelete": "Are you sure you want to permanently delete {name}? This will also remove all staff, demos, and setup requests. This cannot be undone.",
+  "exhibitors.failedToDelete": "Failed to delete exhibitor."
 }

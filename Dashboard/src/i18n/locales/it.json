@@ -328,6 +328,8 @@
   "attendees.column.registered": "Registrato",
   "attendees.empty": "Nessun partecipante registrato.",
   "attendees.failedToSave": "Impossibile salvare il partecipante",
+  "attendees.confirmDelete": "Eliminare definitivamente {name}? Questa azione non può essere annullata.",
+  "attendees.failedToDelete": "Impossibile eliminare il partecipante.",
   "attendees.form.firstName": "Nome *",
   "attendees.form.firstNamePlaceholder": "Maria",
   "attendees.form.lastName": "Cognome *",
@@ -723,5 +725,7 @@
   "exhibitors.setupRequest": "Richiesta di configurazione",
   "exhibitors.setupStatus": "Stato",
   "exhibitors.submittedAt": "Inviato",
-  "exhibitors.confirmedAt": "Confermato"
+  "exhibitors.confirmedAt": "Confermato",
+  "exhibitors.confirmDelete": "Eliminare definitivamente {name}? Personale, demo e richieste di allestimento verranno rimossi. Questa azione non può essere annullata.",
+  "exhibitors.failedToDelete": "Impossibile eliminare l'espositore."
 }

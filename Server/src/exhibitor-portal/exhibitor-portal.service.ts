@@ -1228,4 +1228,30 @@ export class ExhibitorPortalService {
         this.logger.error(`Webhook dispatch failed for exhibitor.updated: ${err}`),
       );
   }
+
+  /**
+   * Admin: hard-delete an EventExhibitor and its cascading children
+   * (staff, booth scans, booth leads, setup request).
+   * Does NOT delete the ExhibitorProfile (shared across events).
+   */
+  async deleteEventExhibitor(id: string) {
+    const ee = await this.prisma.eventExhibitor.findUnique({
+      where: { id },
+      include: { exhibitorProfile: { select: { companyName: true } } },
+    });
+    if (!ee) throw new NotFoundException(`EventExhibitor ${id} not found`);
+
+    // Children cascade via onDelete: Cascade in schema
+    await this.prisma.eventExhibitor.delete({ where: { id } });
+
+    this.audit.log({
+      eventId: ee.eventId,
+      action: 'exhibitor.deleted',
+      entity: 'event_exhibitor',
+      entityId: id,
+      detail: { companyName: ee.exhibitorProfile.companyName, hardDelete: true },
+    });
+
+    return { success: true };
+  }
 }

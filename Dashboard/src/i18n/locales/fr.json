@@ -328,6 +328,8 @@
   "attendees.column.registered": "Inscription",
   "attendees.empty": "Aucun participant inscrit.",
   "attendees.failedToSave": "Impossible d'enregistrer le participant",
+  "attendees.confirmDelete": "Voulez-vous vraiment supprimer définitivement {name} ? Cette action est irréversible.",
+  "attendees.failedToDelete": "Impossible de supprimer le participant.",
   "attendees.form.firstName": "Prénom *",
   "attendees.form.firstNamePlaceholder": "Marie",
   "attendees.form.lastName": "Nom *",
@@ -853,5 +855,7 @@
   "exhibitors.setupRequest": "Demande de configuration",
   "exhibitors.setupStatus": "Statut",
   "exhibitors.submittedAt": "Soumis",
-  "exhibitors.confirmedAt": "Confirm\u00e9"
+  "exhibitors.confirmedAt": "Confirm\u00e9",
+  "exhibitors.confirmDelete": "Voulez-vous vraiment supprimer d\u00e9finitivement {name} ? Le personnel, les d\u00e9mos et les demandes d'installation seront \u00e9galement supprim\u00e9s. Cette action est irr\u00e9versible.",
+  "exhibitors.failedToDelete": "Impossible de supprimer l'exposant."
 }

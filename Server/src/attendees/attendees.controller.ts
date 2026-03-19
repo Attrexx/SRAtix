@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -136,5 +137,11 @@ export class AttendeesController {
     @Body() dto: UpdateAttendeeDto,
   ) {
     return this.attendeesService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles('super_admin', 'admin')
+  delete(@Param('id') id: string) {
+    return this.attendeesService.delete(id);
   }
 }

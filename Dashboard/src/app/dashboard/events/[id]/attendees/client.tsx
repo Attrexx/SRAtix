@@ -76,6 +76,17 @@ export default function AttendeesPage() {
     setShowModal(true);
   };
 
+  const handleDelete = async (a: Attendee) => {
+    const msg = t('attendees.confirmDelete').replace('{name}', `${a.firstName} ${a.lastName}`);
+    if (!confirm(msg)) return;
+    try {
+      await api.deleteAttendee(a.id);
+      await loadData();
+    } catch {
+      alert(t('attendees.failedToDelete'));
+    }
+  };
+
   const openEdit = async (a: Attendee) => {
     setFFirst(a.firstName);
     setFLast(a.lastName);
@@ -283,13 +294,23 @@ export default function AttendeesPage() {
             key: 'id',
             header: '',
             render: (row) => (
-              <button
-                onClick={() => openEdit(row as Attendee)}
-                className="rounded px-2 py-1 text-xs"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                <Icons.Edit size={14} />
-              </button>
+              <span className="inline-flex items-center gap-1">
+                <button
+                  onClick={() => openEdit(row as Attendee)}
+                  className="rounded px-2 py-1 text-xs"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  <Icons.Edit size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(row as Attendee)}
+                  className="rounded px-2 py-1 text-xs hover:text-red-600"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  title={t('common.delete')}
+                >
+                  <Icons.Trash size={14} />
+                </button>
+              </span>
             ),
           },
         ]}

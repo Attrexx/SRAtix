@@ -305,4 +305,10 @@ export class ExhibitorPortalAdminController {
   ) {
     return this.portalService.adminUpdateSetupRequest(user.sub, requestId, dto);
   }
+
+  @Delete('exhibitors/:id')
+  @Roles('super_admin', 'admin')
+  async deleteExhibitor(@Param('id') id: string) {
+    return this.portalService.deleteEventExhibitor(id);
+  }
 }

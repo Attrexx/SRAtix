@@ -326,6 +326,8 @@
   "attendees.column.registered": "登記時間",
   "attendees.empty": "尚無參加者登記。",
   "attendees.failedToSave": "無法儲存參加者",
+  "attendees.confirmDelete": "確定要永久刪除 {name} 嗎？此操作無法撤銷。",
+  "attendees.failedToDelete": "無法刪除參加者。",
   "attendees.form.firstName": "名字 *",
   "attendees.form.firstNamePlaceholder": "小明",
   "attendees.form.lastName": "姓氏 *",
@@ -721,5 +723,7 @@
   "exhibitors.setupRequest": "設定請求",
   "exhibitors.setupStatus": "狀態",
   "exhibitors.submittedAt": "已提交",
-  "exhibitors.confirmedAt": "已確認"
+  "exhibitors.confirmedAt": "已確認",
+  "exhibitors.confirmDelete": "確定要永久刪除 {name} 嗎？相關人員、展示和佈置申請也將一併移除。此操作無法撤銷。",
+  "exhibitors.failedToDelete": "無法刪除參展商。"
 }
