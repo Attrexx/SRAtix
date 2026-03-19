@@ -335,10 +335,11 @@ export class PublicCheckoutController {
       ],
     });
 
-    // Tag test orders and store recipient data in order meta
+    // Tag test orders and store recipient/company data in order meta
     {
       const orderMeta: Record<string, unknown> = {};
       if (isTestMode) orderMeta.isTestOrder = true;
+      if (dto.attendeeData.company) orderMeta.companyName = dto.attendeeData.company;
       if (recipientAttendees.length > 0) {
         orderMeta.recipientAttendees = recipientAttendees;
         orderMeta.includeTicketForSelf = includeTicketForSelf;

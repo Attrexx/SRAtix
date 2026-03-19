@@ -136,7 +136,7 @@ export class StripeWebhookController {
     await this.orders.markPaid(orderId, {
       stripeSessionId: session.id,
       stripePaymentId: paymentIntentId ?? null,
-      customerEmail: session.customer_details?.email ?? null,
+      customerEmail: session.customer_details?.email ?? session.customer_email ?? null,
       customerName: session.customer_details?.name ?? null,
     });
 
@@ -247,9 +247,9 @@ export class StripeWebhookController {
     }
 
     // Send order confirmation email (real in both modes — user needs their ticket)
+    const event = await this.orders.findEventForOrder(orderId);
     if (paidOrder && paidOrder.customerEmail) {
       try {
-        const event = await this.orders.findEventForOrder(orderId);
         const ticketDetails = paidOrder.items.map((item: { ticketTypeId: string; quantity: number }) => ({
           typeName: item.ticketTypeId, // Will be resolved to name by service
           quantity: item.quantity,
@@ -265,8 +265,15 @@ export class StripeWebhookController {
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
           eventVenue: event?.venue ?? '',
         });
+      } catch (err) {
+        this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);
+      }
+    }
 
-        // ── Exhibitor provisioning: auto-create account, profile, event link ──
+    // ── Exhibitor provisioning: auto-create account, profile, event link ──
+    // Runs independently of confirmation email — must not be blocked by null email
+    if (paidOrder && paidOrder.customerEmail) {
+      try {
         const ticketTypeIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
         if (ticketTypeIds.length > 0) {
           const ticketTypes = await this.prisma.ticketType.findMany({
@@ -287,8 +294,10 @@ export class StripeWebhookController {
           }
         }
       } catch (err) {
-        this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);
+        this.logger.error(`Exhibitor provisioning failed for order ${orderId}: ${err}`);
       }
+    } else if (paidOrder) {
+      this.logger.warn(`Order ${orderId} has no customer email — skipping confirmation email and exhibitor provisioning`);
     }
 
     // Send admin notification for new order (real in both modes)
@@ -298,7 +307,6 @@ export class StripeWebhookController {
         const recipientStr = await this.settings.resolve('notification_emails');
         const recipients = recipientStr.split(',').map((e) => e.trim()).filter(Boolean);
         if (recipients.length > 0 && paidOrder) {
-          const event = await this.orders.findEventForOrder(orderId);
           const ticketCount = paidOrder.items.reduce(
             (sum: number, item: { quantity: number }) => sum + item.quantity, 0,
           );
