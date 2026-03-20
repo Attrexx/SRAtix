@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
@@ -217,20 +217,38 @@ export class AttendeesService {
   }
 
   /**
-   * Hard-delete an attendee and clean up all related records.
-   * Nullifies optional FKs, deletes required-FK children.
+   * Delete an attendee. If the attendee has paid orders their status is set
+   * to 'cancelled' and their tickets are voided (soft-delete). Otherwise the
+   * attendee record is hard-deleted along with all related child records.
    */
   async delete(id: string) {
     const attendee = await this.findOne(id);
 
-    // Check for paid orders linked to this attendee
+    // Soft-delete path: attendee has paid orders → cancel + void tickets
     const paidOrders = await this.prisma.order.count({
       where: { attendeeId: id, status: 'paid' },
     });
     if (paidOrders > 0) {
-      throw new BadRequestException(
-        'Cannot delete an attendee with paid orders. Cancel or refund orders first.',
-      );
+      await this.prisma.attendee.update({
+        where: { id },
+        data: { status: 'cancelled' },
+      });
+
+      // Void all non-voided tickets belonging to this attendee
+      await this.prisma.ticket.updateMany({
+        where: { attendeeId: id, status: { not: 'voided' } },
+        data: { status: 'voided' },
+      });
+
+      this.audit.log({
+        eventId: attendee.eventId,
+        action: AuditAction.ATTENDEE_DELETED,
+        entity: 'attendee',
+        entityId: id,
+        detail: { email: attendee.email, softDelete: true, paidOrders },
+      });
+
+      return { success: true, softDeleted: true };
     }
 
     // Nullify optional FKs pointing to this attendee
@@ -250,7 +268,7 @@ export class AttendeesService {
 
     this.audit.log({
       eventId: attendee.eventId,
-      action: AuditAction.ATTENDEE_CREATED, // closest available action
+      action: AuditAction.ATTENDEE_DELETED,
       entity: 'attendee',
       entityId: id,
       detail: { email: attendee.email, hardDelete: true },

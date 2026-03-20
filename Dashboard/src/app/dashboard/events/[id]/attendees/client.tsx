@@ -133,7 +133,7 @@ export default function AttendeesPage() {
     const payload = {
       firstName: fFirst.trim(),
       lastName: fLast.trim(),
-      email: fEmail.trim(),
+      ...(!editAttendee && { email: fEmail.trim() }),
       phone: fPhone.trim() || undefined,
       company: fCompany.trim() || undefined,
     };
@@ -368,7 +368,7 @@ export default function AttendeesPage() {
                   <FieldInput label={t('attendees.form.firstName')} value={fFirst} onChange={setFFirst} placeholder={t('attendees.form.firstNamePlaceholder')} />
                   <FieldInput label={t('attendees.form.lastName')} value={fLast} onChange={setFLast} placeholder={t('attendees.form.lastNamePlaceholder')} />
                 </div>
-                <FieldInput label={t('attendees.form.email')} value={fEmail} onChange={setFEmail} placeholder={t('attendees.form.emailPlaceholder')} type="email" />
+                <FieldInput label={t('attendees.form.email')} value={fEmail} onChange={setFEmail} placeholder={t('attendees.form.emailPlaceholder')} type="email" disabled={!!editAttendee} />
                 <FieldInput label={t('attendees.form.phone')} value={fPhone} onChange={setFPhone} placeholder={t('attendees.form.phonePlaceholder')} type="tel" />
                 <FieldInput label={t('attendees.form.company')} value={fCompany} onChange={setFCompany} placeholder={t('attendees.form.companyPlaceholder')} />
               </div>
@@ -491,12 +491,14 @@ function FieldInput({
   onChange,
   placeholder,
   type = 'text',
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   type?: string;
+  disabled?: boolean;
 }) {
   return (
     <div>
@@ -508,11 +510,13 @@ function FieldInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         className="w-full rounded-lg px-3 py-2 text-sm"
         style={{
-          background: 'var(--color-bg-subtle)',
+          background: disabled ? 'var(--color-bg-muted, #e5e7eb)' : 'var(--color-bg-subtle)',
           border: '1px solid var(--color-border)',
-          color: 'var(--color-text)',
+          color: disabled ? 'var(--color-text-muted, #9ca3af)' : 'var(--color-text)',
+          cursor: disabled ? 'not-allowed' : undefined,
         }}
       />
     </div>

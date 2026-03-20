@@ -725,7 +725,7 @@ Tickets:
 ${tickets}
 
 Total: ${data.totalFormatted} ${data.currency}
-${data.ticketCodes && data.ticketCodes.length > 0 ? `\nTicket Code${data.ticketCodes.length > 1 ? 's' : ''}:\n${data.ticketCodes.map((c) => '  ' + c).join('\n')}\n` : ''}
+${data.ticketCodes && data.ticketCodes.length > 0 ? `\nTicket Code${data.ticketCodes.length > 1 ? 's' : ''}:\n${data.ticketCodes.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
 Event: ${data.eventName}
 Date: ${data.eventDate}
 Venue: ${data.eventVenue}

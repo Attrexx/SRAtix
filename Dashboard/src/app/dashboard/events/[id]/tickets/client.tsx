@@ -11,6 +11,7 @@ import {
   type FormSchema,
   type Event,
   type SraDiscount,
+  type MembershipPartner,
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
@@ -172,12 +173,11 @@ export default function TicketsPage() {
   const [formTemplateId, setFormTemplateId] = useState('');
   const [formSchemaId, setFormSchemaId] = useState('');
 
-  // ── SRA/RobotX Discount state ──
+  // ── SRA/Partner Discount state ──
   const [sraDiscountsEnabled, setSraDiscountsEnabled] = useState(false);
   const [sraDiscounts, setSraDiscounts] = useState<Record<string, { type: string; value: string }>>({});
-  const [robotxDiscountEnabled, setRobotxDiscountEnabled] = useState(false);
-  const [robotxDiscountType, setRobotxDiscountType] = useState('percentage');
-  const [robotxDiscountValue, setRobotxDiscountValue] = useState('');
+  const [eventPartners, setEventPartners] = useState<MembershipPartner[]>([]);
+  const [partnerDiscounts, setPartnerDiscounts] = useState<Record<string, { enabled: boolean; type: string; value: string }>>({});
   const [formIcon, setFormIcon] = useState('');
 
   // Track existing early-bird variant id for edits
@@ -245,6 +245,12 @@ export default function TicketsPage() {
           setFormTemplates(templates);
         } catch { /* no templates yet */ }
       }
+
+      // Load membership partners for this event
+      try {
+        const partners = await api.getEventPartners(eventId);
+        setEventPartners(partners);
+      } catch { /* no partners yet */ }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('tickets.failedToLoad'));
     } finally {
@@ -276,9 +282,7 @@ export default function TicketsPage() {
     setExistingEbVariantId(null);
     setSraDiscountsEnabled(false);
     setSraDiscounts({});
-    setRobotxDiscountEnabled(false);
-    setRobotxDiscountType('percentage');
-    setRobotxDiscountValue('');
+    setPartnerDiscounts({});
     setFormIcon('');
     setError(null);
     setEditId(null);
@@ -353,19 +357,24 @@ export default function TicketsPage() {
         .catch(() => { /* no discounts yet */ });
     }
 
-    // Load RobotX discount from ticket type fields
-    if (tt.robotxDiscountType && tt.robotxDiscountValue != null) {
-      setRobotxDiscountEnabled(true);
-      setRobotxDiscountType(tt.robotxDiscountType);
-      setRobotxDiscountValue(
-        tt.robotxDiscountType === 'percentage'
-          ? String(tt.robotxDiscountValue)
-          : (tt.robotxDiscountValue / 100).toFixed(2),
-      );
-    } else {
-      setRobotxDiscountEnabled(false);
-      setRobotxDiscountType('percentage');
-      setRobotxDiscountValue('');
+    // Load RobotX discount from ticket type fields (deprecated — now loading partner discounts)
+    setPartnerDiscounts({});
+    if (tt.id) {
+      api.getPartnerDiscounts(eventId, tt.id)
+        .then((discounts) => {
+          const map: Record<string, { enabled: boolean; type: string; value: string }> = {};
+          for (const d of discounts) {
+            map[d.partnerId] = {
+              enabled: true,
+              type: d.discountType,
+              value: d.discountType === 'percentage'
+                ? String(d.discountValue)
+                : (d.discountValue / 100).toFixed(2),
+            };
+          }
+          setPartnerDiscounts(map);
+        })
+        .catch(() => { /* no partner discounts yet */ });
     }
     setFormIcon(((tt.meta ?? {}) as Record<string, unknown>).icon as string ?? '');
   };
@@ -514,13 +523,6 @@ export default function TicketsPage() {
         membershipTier: formKind === 'membership' ? formTier : null,
         wpProductId: formKind === 'membership' ? derivedWpProductId ?? null : null,
         formSchemaId: resolvedSchemaId || null,
-        // RobotX discount fields
-        robotxDiscountType: robotxDiscountEnabled ? robotxDiscountType : null,
-        robotxDiscountValue: robotxDiscountEnabled && robotxDiscountValue
-          ? (robotxDiscountType === 'percentage'
-            ? parseInt(robotxDiscountValue, 10)
-            : Math.round(parseFloat(robotxDiscountValue) * 100))
-          : null,
         // Icon (stored in meta)
         meta: {
           ...((editId ? (tickets.find((t) => t.id === editId)?.meta as Record<string, unknown> ?? {}) : {}) as Record<string, unknown>),
@@ -546,12 +548,6 @@ export default function TicketsPage() {
           formSchemaId: resolvedSchemaId || undefined,
           maxStaff: formMaxStaff ? Math.max(0, parseInt(formMaxStaff, 10)) : undefined,
           meta: formIcon ? { icon: formIcon } : undefined,
-          robotxDiscountType: robotxDiscountEnabled ? robotxDiscountType : undefined,
-          robotxDiscountValue: robotxDiscountEnabled && robotxDiscountValue
-            ? (robotxDiscountType === 'percentage'
-              ? parseInt(robotxDiscountValue, 10)
-              : Math.round(parseFloat(robotxDiscountValue) * 100))
-            : undefined,
         });
         ticketId = created.id;
       }
@@ -611,6 +607,20 @@ export default function TicketsPage() {
           // Discounts were disabled — clear them
           await api.setSraDiscounts(eventId, ticketId, []);
         }
+      }
+
+      // ── Save partner discounts ──
+      if (ticketId && eventPartners.length > 0) {
+        const partnerPayload = Object.entries(partnerDiscounts)
+          .filter(([, v]) => v.enabled && v.value && parseFloat(v.value) > 0)
+          .map(([partnerId, v]) => ({
+            partnerId,
+            discountType: v.type,
+            discountValue: v.type === 'percentage'
+              ? parseInt(v.value, 10)
+              : Math.round(parseFloat(v.value) * 100),
+          }));
+        await api.setPartnerDiscounts(eventId, ticketId, partnerPayload);
       }
 
       setShowModal(false);
@@ -1228,43 +1238,72 @@ export default function TicketsPage() {
                   </div>
                 )}
 
-                {/* ── Section: RobotX Member Discount ── */}
-                <SectionHeader label="RobotX Member Discount" />
-                <div>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    <input
-                      type="checkbox"
-                      checked={robotxDiscountEnabled}
-                      onChange={(e) => setRobotxDiscountEnabled(e.target.checked)}
-                      className="accent-[var(--color-primary)]"
-                    />
-                    Enable RobotX member discount for this ticket
-                  </label>
-                </div>
-                {robotxDiscountEnabled && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                        Discount Type
-                      </label>
-                      <select
-                        value={robotxDiscountType}
-                        onChange={(e) => setRobotxDiscountType(e.target.value)}
-                        className="w-full rounded-lg px-3 py-2 text-sm"
-                        style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                      >
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed_amount">Fixed Amount (CHF)</option>
-                      </select>
+                {/* ── Section: Partner Member Discounts ── */}
+                {eventPartners.length > 0 && (
+                  <>
+                    <SectionHeader label={t('tickets.form.partnerDiscountsSection')} />
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('tickets.form.partnerDiscountsHint')}
+                    </p>
+                    <div className="space-y-3">
+                      {eventPartners.filter((p) => p.active).map((partner) => {
+                        const pd = partnerDiscounts[partner.id] ?? { enabled: false, type: 'percentage', value: '' };
+                        return (
+                          <div key={partner.id} className="space-y-2">
+                            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                              <input
+                                type="checkbox"
+                                checked={pd.enabled}
+                                onChange={(e) => {
+                                  setPartnerDiscounts((prev) => ({
+                                    ...prev,
+                                    [partner.id]: { ...pd, enabled: e.target.checked },
+                                  }));
+                                }}
+                                className="accent-[var(--color-primary)]"
+                              />
+                              {partner.name}
+                            </label>
+                            {pd.enabled && (
+                              <div className="ml-6 grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                                    {t('tickets.form.discountType')}
+                                  </label>
+                                  <select
+                                    value={pd.type}
+                                    onChange={(e) => {
+                                      setPartnerDiscounts((prev) => ({
+                                        ...prev,
+                                        [partner.id]: { ...pd, type: e.target.value },
+                                      }));
+                                    }}
+                                    className="w-full rounded-lg px-3 py-2 text-sm"
+                                    style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                                  >
+                                    <option value="percentage">{t('tickets.form.discountPercent')}</option>
+                                    <option value="fixed_amount">{t('tickets.form.discountFixed')}</option>
+                                  </select>
+                                </div>
+                                <Field
+                                  label={pd.type === 'percentage' ? t('tickets.form.discountValuePercent') : t('tickets.form.discountValueFixed')}
+                                  value={pd.value}
+                                  onChange={(v) => {
+                                    setPartnerDiscounts((prev) => ({
+                                      ...prev,
+                                      [partner.id]: { ...pd, value: v },
+                                    }));
+                                  }}
+                                  placeholder={pd.type === 'percentage' ? '10' : '15.00'}
+                                  type="number"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <Field
-                      label={robotxDiscountType === 'percentage' ? 'Discount (%)' : 'Discount (CHF)'}
-                      value={robotxDiscountValue}
-                      onChange={setRobotxDiscountValue}
-                      placeholder={robotxDiscountType === 'percentage' ? '10' : '15.00'}
-                      type="number"
-                    />
-                  </div>
+                  </>
                 )}
 
                 {/* ── Section: Registration Form ── */}
