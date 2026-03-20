@@ -457,6 +457,23 @@ export class EmailService {
 
       ${passwordSection}
 
+      ${data.passwordSetupUrl ? `
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 12px; color: #333;">🏢 Your Exhibitor Portal</h3>
+        <p style="margin: 0 0 12px; font-size: 14px;">
+          After setting your password, you can log in to manage your booth:
+        </p>
+        <ul style="margin: 0 0 16px; padding-left: 20px; font-size: 14px;">
+          <li style="margin-bottom: 6px;">Upload your company logo and description</li>
+          <li style="margin-bottom: 6px;">Add booth staff and send them their passes</li>
+          <li style="margin-bottom: 6px;">Manage your demo details and media gallery</li>
+          <li style="margin-bottom: 6px;">View your booth assignment and event info</li>
+        </ul>
+        <p style="margin: 0; font-size: 14px;">
+          Portal: <a href="${data.portalUrl}" style="color: #4f46e5;">${data.portalUrl}</a>
+        </p>
+      </div>
+      ` : `
       <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
         <h3 style="margin: 0 0 12px; color: #333;">🏢 Your Exhibitor Portal</h3>
         <p style="margin: 0 0 12px; font-size: 14px;">
@@ -469,9 +486,10 @@ export class EmailService {
           <li style="margin-bottom: 6px;">View your booth assignment and event info</li>
         </ul>
         <div style="text-align: center;">
-          <a href="${data.passwordSetupUrl || data.portalUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Open Exhibitor Portal</a>
+          <a href="${data.portalUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Open Exhibitor Portal</a>
         </div>
       </div>
+      `}
 
       <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
         If you have questions about your booth or the event, please contact us at
@@ -482,6 +500,26 @@ export class EmailService {
     const passwordText = data.passwordSetupUrl
       ? `\nSet Up Your Password\n-----------------------------\n${data.passwordSetupUrl}\n(Expires in 7 days)\n`
       : '';
+
+    const portalText = data.passwordSetupUrl
+      ? `Your Exhibitor Portal
+-----------------------------
+After setting your password, log in to manage your booth:
+- Upload your company logo and description
+- Add booth staff and send them their passes
+- Manage your demo details and media gallery
+- View your booth assignment and event info
+
+Portal: ${data.portalUrl}`
+      : `Your Exhibitor Portal
+-----------------------------
+Your exhibitor portal is ready. Use it to:
+- Upload your company logo and description
+- Add booth staff and send them their passes
+- Manage your demo details and media gallery
+- View your booth assignment and event info
+
+Portal: ${data.portalUrl}`;
 
     const text = `Exhibitor Registration Confirmed
 
@@ -494,15 +532,7 @@ Date: ${data.eventDate}
 Venue: ${data.eventVenue}
 Order: #${data.orderNumber}
 ${passwordText}
-Your Exhibitor Portal
------------------------------
-Your exhibitor portal is ready. Use it to:
-- Upload your company logo and description
-- Add booth staff and send them their passes
-- Manage your demo details and media gallery
-- View your booth assignment and event info
-
-Portal: ${data.portalUrl}
+${portalText}
 
 Questions? Contact contact@swissroboticsday.ch
 

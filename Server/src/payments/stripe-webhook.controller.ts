@@ -23,6 +23,7 @@ import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ti
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 import { AuthService } from '../auth/auth.service';
+import { randomBytes } from 'crypto';
 
 /**
  * Stripe Webhook Controller.
@@ -486,7 +487,7 @@ export class StripeWebhookController {
     email: string,
     displayName: string,
     companyName: string,
-    orgId: string,
+    eventOrgId: string,
     eventId: string,
     event: { name?: string; startDate?: Date; venue?: string | null },
     orderNumber: string,
@@ -508,28 +509,58 @@ export class StripeWebhookController {
         this.logger.log(`Created exhibitor user ${user.id} for ${email}`);
       }
 
-      // 2. Assign exhibitor role scoped to org (idempotent)
-      await this.prisma.userRole.upsert({
-        where: { userId_orgId_role: { userId: user.id, orgId, role: 'exhibitor' } },
-        update: {},
-        create: { userId: user.id, orgId, role: 'exhibitor' },
+      // 2. Resolve or create exhibitor Organization.
+      //    Each exhibiting company gets its own org (type='exhibitor').
+      //    Reuse an existing exhibitor org if this user already has one.
+      let exhibitorOrgId: string;
+      const existingRole = await this.prisma.userRole.findFirst({
+        where: { userId: user.id, role: 'exhibitor' },
+        select: { orgId: true },
       });
 
-      // 3. Create ExhibitorProfile if not exists
+      if (existingRole?.orgId) {
+        exhibitorOrgId = existingRole.orgId;
+      } else {
+        const baseSlug = companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80);
+        const slug = `exhibitor-${baseSlug}-${randomBytes(4).toString('hex')}`;
+        const org = await this.prisma.organization.create({
+          data: {
+            name: companyName,
+            slug,
+            type: 'exhibitor',
+            contactEmail: email,
+          },
+        });
+        exhibitorOrgId = org.id;
+        this.logger.log(`Created exhibitor org ${org.id} (${slug}) for ${email}`);
+      }
+
+      // 3. Assign exhibitor role scoped to exhibitor org (idempotent)
+      await this.prisma.userRole.upsert({
+        where: { userId_orgId_role: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' } },
+        update: {},
+        create: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' },
+      });
+
+      // 4. Create ExhibitorProfile if not exists
       const existingProfile = await this.prisma.exhibitorProfile.findUnique({
-        where: { orgId },
+        where: { orgId: exhibitorOrgId },
         select: { id: true },
       });
       const profile = existingProfile ?? await this.prisma.exhibitorProfile.create({
         data: {
-          orgId,
+          orgId: exhibitorOrgId,
           companyName,
           contactEmail: email,
         },
         select: { id: true },
       });
 
-      // 4. Create EventExhibitor if not exists, storing buyer info in meta
+      // 5. Create EventExhibitor if not exists, storing buyer info in meta
       await this.prisma.eventExhibitor.upsert({
         where: { eventId_exhibitorProfileId: { eventId, exhibitorProfileId: profile.id } },
         update: {},
@@ -540,7 +571,7 @@ export class StripeWebhookController {
         },
       });
 
-      // 5. Generate password setup token (only for new users or users without password)
+      // 6. Generate password setup token (only for new users or users without password)
       let passwordSetupUrl: string | undefined;
       if (isNewUser || !user.passwordHash) {
         const rawToken = await this.auth.initiatePasswordSetup(user.id);
@@ -563,7 +594,7 @@ export class StripeWebhookController {
         await this.orders.updateMeta(orderId, { exhibitorSetupToken: rawToken });
       }
 
-      // 6. Send welcome email with portal + password setup links
+      // 7. Send welcome email with portal + password setup links
       const portalBaseUrl = await this.settings.resolve(
         'exhibitor_portal_url',
         'https://swiss-robotics.org/exhibitor-portal',
@@ -580,7 +611,7 @@ export class StripeWebhookController {
       });
 
       this.logger.log(
-        `Exhibitor provisioned for order ${orderNumber}: user=${user.id}, profile=${profile.id}, event=${eventId}${isNewUser ? ' [NEW USER]' : ''}`,
+        `Exhibitor provisioned for order ${orderNumber}: user=${user.id}, org=${exhibitorOrgId}, profile=${profile.id}, event=${eventId}${isNewUser ? ' [NEW USER]' : ''}`,
       );
     } catch (err) {
       this.logger.error(`Exhibitor provisioning failed for ${email}: ${err}`);
