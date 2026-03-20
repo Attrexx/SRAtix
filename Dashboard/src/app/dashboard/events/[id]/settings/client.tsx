@@ -72,13 +72,13 @@ export default function EventSettingsPage() {
   const [partnersLoading, setPartnersLoading] = useState(false);
   const [partnerSaving, setPartnerSaving] = useState<string | null>(null); // partnerId being saved
   const [newPartnerName, setNewPartnerName] = useState('');
-  const [newPartnerLogo, setNewPartnerLogo] = useState('');
   const [newPartnerWebsite, setNewPartnerWebsite] = useState('');
   const [addingPartner, setAddingPartner] = useState(false);
   const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
   const [editPartnerName, setEditPartnerName] = useState('');
   const [editPartnerLogo, setEditPartnerLogo] = useState('');
   const [editPartnerWebsite, setEditPartnerWebsite] = useState('');
+  const [uploadingPartnerLogo, setUploadingPartnerLogo] = useState(false);
   const [ticketTitle, setTicketTitle] = useState('');
   const [ticketTitleSize, setTicketTitleSize] = useState('1.75');
   const [ticketIntro, setTicketIntro] = useState('');
@@ -457,7 +457,7 @@ export default function EventSettingsPage() {
                   {editingPartnerId === p.id ? (
                     /* ── Inline edit form ── */
                     <div className="space-y-3">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                           <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
                             {t('events.settings.partnerName')}
@@ -466,19 +466,6 @@ export default function EventSettingsPage() {
                             type="text"
                             value={editPartnerName}
                             onChange={(e) => setEditPartnerName(e.target.value)}
-                            className="w-full rounded-lg px-3 py-2 text-sm"
-                            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                            {t('events.settings.partnerLogoUrl')}
-                          </label>
-                          <input
-                            type="url"
-                            value={editPartnerLogo}
-                            onChange={(e) => setEditPartnerLogo(e.target.value)}
-                            placeholder="https://..."
                             className="w-full rounded-lg px-3 py-2 text-sm"
                             style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
                           />
@@ -497,6 +484,53 @@ export default function EventSettingsPage() {
                           />
                         </div>
                       </div>
+                      {/* Partner logo upload */}
+                      <div>
+                        <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                          {t('events.settings.partnerLogo')}
+                        </label>
+                        <div className="flex items-center gap-3">
+                          {editPartnerLogo && (
+                            <div
+                              className="inline-block rounded-lg p-1.5"
+                              style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+                            >
+                              <img src={editPartnerLogo} alt="" className="max-h-10 max-w-[80px] rounded object-contain" />
+                            </div>
+                          )}
+                          <label
+                            htmlFor={`partner-logo-${p.id}`}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+                            style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+                          >
+                            <Icons.Upload size={14} />
+                            {uploadingPartnerLogo ? t('common.uploading') : (editPartnerLogo ? t('events.settings.logoReplace') : t('events.settings.logoUpload'))}
+                          </label>
+                          <input
+                            id={`partner-logo-${p.id}`}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingPartnerLogo}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              e.target.value = '';
+                              setUploadingPartnerLogo(true);
+                              try {
+                                const updated = await api.uploadPartnerLogo(id, p.id, file);
+                                setEditPartnerLogo(updated.logoUrl ?? '');
+                                setPartners((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
+                                toast.success(t('events.settings.logoUploaded'));
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : t('events.settings.logoUploadFailed'));
+                              } finally {
+                                setUploadingPartnerLogo(false);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           disabled={partnerSaving === p.id}
@@ -506,7 +540,6 @@ export default function EventSettingsPage() {
                             try {
                               const updated = await api.updateEventPartner(id, p.id, {
                                 name: editPartnerName.trim(),
-                                logoUrl: editPartnerLogo.trim() || null,
                                 websiteUrl: editPartnerWebsite.trim() || null,
                               });
                               setPartners((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
@@ -667,7 +700,7 @@ export default function EventSettingsPage() {
               className="rounded-lg p-4 space-y-3"
               style={{ background: 'var(--color-bg-subtle)', border: '1px dashed var(--color-border)' }}
             >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
                     {t('events.settings.partnerName')} *
@@ -677,19 +710,6 @@ export default function EventSettingsPage() {
                     value={newPartnerName}
                     onChange={(e) => setNewPartnerName(e.target.value)}
                     placeholder="e.g. ETH RobotX"
-                    className="w-full rounded-lg px-3 py-2 text-sm"
-                    style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
-                    {t('events.settings.partnerLogoUrl')}
-                  </label>
-                  <input
-                    type="url"
-                    value={newPartnerLogo}
-                    onChange={(e) => setNewPartnerLogo(e.target.value)}
-                    placeholder="https://..."
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
                   />
@@ -708,6 +728,9 @@ export default function EventSettingsPage() {
                   />
                 </div>
               </div>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {t('events.settings.partnerLogoAfterCreate')}
+              </p>
               <div className="flex gap-2">
                 <button
                   disabled={partnersLoading}
@@ -717,13 +740,11 @@ export default function EventSettingsPage() {
                     try {
                       const created = await api.createEventPartner(id, {
                         name: newPartnerName.trim(),
-                        logoUrl: newPartnerLogo.trim() || undefined,
                         websiteUrl: newPartnerWebsite.trim() || undefined,
                         sortOrder: partners.length,
                       });
                       setPartners((prev) => [...prev, created]);
                       setNewPartnerName('');
-                      setNewPartnerLogo('');
                       setNewPartnerWebsite('');
                       setAddingPartner(false);
                       toast.success(t('events.settings.partnerCreated'));
@@ -739,7 +760,7 @@ export default function EventSettingsPage() {
                   {partnersLoading ? t('common.saving') : t('events.settings.partnerAdd')}
                 </button>
                 <button
-                  onClick={() => { setAddingPartner(false); setNewPartnerName(''); setNewPartnerLogo(''); setNewPartnerWebsite(''); }}
+                  onClick={() => { setAddingPartner(false); setNewPartnerName(''); setNewPartnerWebsite(''); }}
                   className="rounded-lg px-3 py-1.5 text-xs"
                   style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
                 >

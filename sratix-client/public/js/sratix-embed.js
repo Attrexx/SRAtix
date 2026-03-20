@@ -473,9 +473,13 @@
           const logo = p.logoUrl
             ? `<img src="${escAttr(p.logoUrl)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
             : '<span class="sratix-member-btn__icon">🤝</span>';
+          const website = p.websiteUrl
+            ? `<a href="${escAttr(p.websiteUrl)}" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))} ↗</a>`
+            : '';
           return `<button class="sratix-member-btn sratix-member-btn--partner" data-member="partner" data-partner-id="${escAttr(p.id)}" data-partner-name="${escAttr(p.name)}" data-partner-logo="${escAttr(p.logoUrl || '')}">
             ${logo}
             <span class="sratix-member-btn__label">${escHtml(p.name)}</span>
+            ${website}
           </button>`;
         }).join('');
       }
@@ -494,6 +498,7 @@
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
               ${sraLogo}
               <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
+              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))} ↗</a>
             </button>
             ${partnerButtonsHtml}
             ${hasPartners ? '' : regularBtnHtml}

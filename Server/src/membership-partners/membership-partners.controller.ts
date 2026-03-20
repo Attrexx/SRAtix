@@ -9,6 +9,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -22,6 +25,10 @@ import {
   IsNotEmpty,
   IsUrl,
 } from 'class-validator';
+import { FastifyRequest } from 'fastify';
+import { resolve, join } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
+import * as sharp from 'sharp';
 
 // ─── DTOs ───────────────────────────────────────────────────────
 
@@ -66,6 +73,8 @@ class UpdatePartnerDto {
 
 @Controller('events/:eventId/membership-partners')
 export class MembershipPartnersController {
+  private readonly logger = new Logger(MembershipPartnersController.name);
+
   constructor(private readonly service: MembershipPartnersService) {}
 
   // ── Public (no auth) ───────────────────────────────────────────
@@ -163,5 +172,49 @@ export class MembershipPartnersController {
     @Param('id') id: string,
   ) {
     return this.service.regenerateCode(id, eventId);
+  }
+
+  /**
+   * POST /api/events/:eventId/membership-partners/:id/logo
+   * Upload and optimize a partner logo image.
+   */
+  @Post(':id/logo')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('event_admin', 'admin', 'super_admin')
+  async uploadLogo(
+    @Param('eventId') eventId: string,
+    @Param('id') id: string,
+    @Req() req: FastifyRequest,
+  ) {
+    const partner = await this.service.findById(id, eventId);
+
+    const data = await req.file();
+    if (!data) {
+      throw new BadRequestException('No file uploaded');
+    }
+    if (!data.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+
+    const buffer = await data.toBuffer();
+
+    const optimized = await sharp(buffer)
+      .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const uploadsBase = resolve(__dirname, '..', '..', 'uploads', 'partners', id);
+    mkdirSync(uploadsBase, { recursive: true });
+
+    const filename = 'logo.webp';
+    writeFileSync(join(uploadsBase, filename), optimized);
+
+    const logoUrl = `/uploads/partners/${id}/${filename}?v=${Date.now()}`;
+
+    const updated = await this.service.update(id, eventId, { logoUrl });
+
+    this.logger.log(`Partner logo uploaded for ${partner.name} (${id})`);
+
+    return updated;
   }
 }

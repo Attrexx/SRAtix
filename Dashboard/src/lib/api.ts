@@ -785,6 +785,24 @@ export const api = {
   regeneratePartnerCode: (eventId: string, partnerId: string) =>
     request<MembershipPartner>(`/events/${eventId}/membership-partners/${partnerId}/regenerate-code`, { method: 'POST' }),
 
+  uploadPartnerLogo: async (eventId: string, partnerId: string, file: File) => {
+    let token = getApiToken();
+    if (!token) token = await refreshAccessToken();
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/api/events/${eventId}/membership-partners/${partnerId}/logo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new ApiError(res.status, data?.message ?? `HTTP ${res.status}`, data);
+    }
+    return res.json() as Promise<MembershipPartner>;
+  },
+
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>
     request<Attendee[]>(`/attendees/event/${eventId}`, { signal }),

@@ -28,7 +28,7 @@ export class MembershipPartnersService {
   async findPublicByEvent(eventId: string) {
     return this.prisma.membershipPartner.findMany({
       where: { eventId, active: true },
-      select: { id: true, name: true, slug: true, logoUrl: true },
+      select: { id: true, name: true, slug: true, logoUrl: true, websiteUrl: true },
       orderBy: { sortOrder: 'asc' },
     });
   }
