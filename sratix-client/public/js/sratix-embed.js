@@ -4064,7 +4064,7 @@
           '<span class="sratix-confirmation-icon">✓</span>' +
           '<h2>' + escHtml(t('exhibitorConfirmation.title')) + '</h2>' +
           '<p>' + escHtml(t('exhibitorConfirmation.subtitle')) +
-            (orderNumber ? ' <strong>' + escHtml(orderNumber) + '</strong>' : '') +
+            (orderNumber ? ' ' + escHtml(t('exhibitorConfirmation.orderNumber')) + ' <strong>' + escHtml(orderNumber) + '</strong>' : '') +
           '</p>' +
         '</div>' +
         '<div id="sratix-confirmation-body">' +
@@ -4140,21 +4140,15 @@
     if (data && data.passwordSetupUrl) {
       body.innerHTML =
         '<div class="sratix-confirmation-ready">' +
-          '<h3>🎉 ' + escHtml(t('exhibitorConfirmation.ready')) + '</h3>' +
-          '<div class="sratix-confirmation-features">' +
-            '<p><strong>' + escHtml(t('exhibitorConfirmation.features.title')) + '</strong></p>' +
-            '<ul>' +
-              '<li>' + escHtml(t('exhibitorConfirmation.features.profile')) + '</li>' +
-              '<li>' + escHtml(t('exhibitorConfirmation.features.media')) + '</li>' +
-              '<li>' + escHtml(t('exhibitorConfirmation.features.staff')) + '</li>' +
-              '<li>' + escHtml(t('exhibitorConfirmation.features.demos')) + '</li>' +
-            '</ul>' +
-          '</div>' +
-          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
+          '<h3>' + escHtml(t('exhibitorConfirmation.ready')) + '</h3>' +
+          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.passwordHint')) + '</p>' +
           '<div class="sratix-confirmation-actions">' +
             '<a href="' + escAttr(data.passwordSetupUrl) + '" class="sratix-btn sratix-btn-primary">' +
               escHtml(t('exhibitorConfirmation.setupNow')) +
             '</a>' +
+          '</div>' +
+          '<div class="sratix-confirmation-later">' +
+            '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
             '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
               escHtml(t('exhibitorConfirmation.setupLater')) +
             '</button>' +
@@ -4183,9 +4177,13 @@
 
   function init() {
     var params = new URLSearchParams(window.location.search);
-    if (params.get('sratix_success') === '1') {
+    var isPostPurchase = params.get('sratix_success') === '1';
+    if (isPostPurchase) {
       if (params.get('sratix_type') === 'exhibitor') {
         renderExhibitorConfirmation();
+        // Hide the portal login widget — the confirmation card handles the flow
+        var portalWidget = document.getElementById('sratix-exhibitor-portal-widget');
+        if (portalWidget) portalWidget.style.display = 'none';
       } else {
         injectSuccessBanner();
       }
@@ -4195,7 +4193,9 @@
     initScheduleWidget();
     initRegisterWidget();
     initSetPasswordWidget();
-    initExhibitorPortalWidget();
+    if (!isPostPurchase || params.get('sratix_type') !== 'exhibitor') {
+      initExhibitorPortalWidget();
+    }
   }
 
   if (document.readyState === 'loading') {

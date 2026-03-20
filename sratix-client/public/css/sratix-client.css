@@ -2529,6 +2529,20 @@ text-align: center;
 padding: 40px 24px;
 }
 
+.sratix-spinner {
+display: inline-block;
+width: 36px;
+height: 36px;
+border: 3px solid rgba(255,255,255,0.15);
+border-top-color: #4f46e5;
+border-radius: 50%;
+animation: sratix-spin 0.8s linear infinite;
+}
+
+@keyframes sratix-spin {
+to { transform: rotate(360deg); }
+}
+
 .sratix-confirmation-loading p {
 margin: 16px 0 0;
 color: #94a3b8;
@@ -2607,4 +2621,11 @@ font-size: 0.9em;
 cursor: pointer;
 text-decoration: underline;
 padding: 4px;
+}
+
+.sratix-confirmation-later {
+margin-top: 20px;
+padding-top: 16px;
+border-top: 1px solid var(--sratix-border, rgba(255,255,255,0.1));
+text-align: center;
 }

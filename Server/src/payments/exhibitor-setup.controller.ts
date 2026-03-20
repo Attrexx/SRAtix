@@ -33,8 +33,8 @@ export class ExhibitorSetupController {
       throw new BadRequestException('email query parameter is required');
     }
 
-    // Validate order number format (ORD-XXXXXX)
-    if (!/^ORD-[A-Z0-9]+$/.test(orderNumber)) {
+    // Validate order number format (TIX-YYYY-NNNN)
+    if (!/^TIX-\d{4}-\d+$/.test(orderNumber)) {
       throw new NotFoundException('Order not found');
     }
 
