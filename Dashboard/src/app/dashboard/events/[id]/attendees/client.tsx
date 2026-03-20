@@ -130,19 +130,23 @@ export default function AttendeesPage() {
     setSaving(true);
     setError(null);
 
-    const payload = {
-      firstName: fFirst.trim(),
-      lastName: fLast.trim(),
-      ...(!editAttendee && { email: fEmail.trim() }),
-      phone: fPhone.trim() || undefined,
-      company: fCompany.trim() || undefined,
-    };
-
     try {
       if (editAttendee) {
-        await api.updateAttendee(editAttendee.id, payload);
+        await api.updateAttendee(editAttendee.id, {
+          firstName: fFirst.trim(),
+          lastName: fLast.trim(),
+          phone: fPhone.trim() || undefined,
+          company: fCompany.trim() || undefined,
+        });
       } else {
-        await api.createAttendee({ ...payload, eventId });
+        await api.createAttendee({
+          eventId,
+          email: fEmail.trim(),
+          firstName: fFirst.trim(),
+          lastName: fLast.trim(),
+          phone: fPhone.trim() || undefined,
+          company: fCompany.trim() || undefined,
+        });
       }
       setShowModal(false);
       resetForm();

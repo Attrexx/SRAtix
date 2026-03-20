@@ -469,7 +469,7 @@ export class EmailService {
           <li style="margin-bottom: 6px;">View your booth assignment and event info</li>
         </ul>
         <div style="text-align: center;">
-          <a href="${data.portalUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Open Exhibitor Portal</a>
+          <a href="${data.passwordSetupUrl || data.portalUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Open Exhibitor Portal</a>
         </div>
       </div>
 
