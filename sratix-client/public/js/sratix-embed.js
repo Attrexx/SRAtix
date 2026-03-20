@@ -361,20 +361,25 @@
 
   function renderWelcomeBanner(session, ticketTypes) {
     const isSra = session.memberGroup === 'sra';
-    const isRobotx = session.memberGroup === 'robotx';
+    const isPartner = session.memberGroup === 'partner' || session.memberGroup === 'robotx';
 
     // Logo
-    const logoUrl = isSra ? config.sraLogoUrl : (isRobotx ? config.robotxLogoUrl : null);
+    let logoUrl = null;
+    if (isSra) logoUrl = config.sraLogoUrl;
+    else if (isPartner && session.partnerLogoUrl) logoUrl = session.partnerLogoUrl;
     const logoHtml = logoUrl
       ? `<img src="${escAttr(logoUrl)}" alt="" class="sratix-welcome-logo" />`
       : '';
+
+    // Partner display name
+    const partnerName = session.partnerName || 'Partner';
 
     // Greeting line
     let greeting = '';
     if (isSra && session.firstName) {
       greeting = t('memberGate.welcomeGreeting', { name: '<strong>' + escHtml(session.firstName) + '</strong>' });
-    } else if (isRobotx) {
-      greeting = escHtml(t('memberGate.welcomeRobotxGreeting'));
+    } else if (isPartner) {
+      greeting = escHtml(t('memberGate.welcomePartnerGreeting', { partnerName }));
     }
 
     // Tier label (SRA only)
@@ -398,9 +403,9 @@
       ? `<p class="sratix-welcome-disclaimer">${escHtml(t('memberGate.welcomeDisclaimer'))}</p>`
       : '';
 
-    // For RobotX: discount pill goes inline with greeting; for SRA: in meta row
+    // For partner: discount pill goes inline with greeting; for SRA: in meta row
     const metaHtml = isSra ? `<div class="sratix-welcome-meta">${tierHtml}${discountHtml}</div>` : '';
-    const inlineDiscount = isRobotx && discountHtml ? ' ' + discountHtml : '';
+    const inlineDiscount = isPartner && discountHtml ? ' ' + discountHtml : '';
 
     return `<div class="sratix-welcome-banner">
       <div class="sratix-welcome-left">
@@ -453,45 +458,68 @@
     const sraLogo = config.sraLogoUrl
       ? `<img src="${escAttr(config.sraLogoUrl)}" alt="SRA" class="sratix-member-btn__logo" />`
       : '<span class="sratix-member-btn__icon">🔵</span>';
-    const robotxLogo = config.robotxLogoUrl
-      ? `<img src="${escAttr(config.robotxLogoUrl)}" alt="RobotX" class="sratix-member-btn__logo" />`
-      : '<span class="sratix-member-btn__icon">🔴</span>';
 
-    container.innerHTML = `
-      <div class="sratix-member-gate">
-        <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
-        <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
-        <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
-        <div class="sratix-member-gate__buttons">
-          <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
-            ${sraLogo}
-            <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
-          </button>
-          <button class="sratix-member-btn sratix-member-btn--robotx" data-member="robotx">
-            ${robotxLogo}
-            <span class="sratix-member-btn__label">${escHtml(t('memberGate.robotxLabel'))}</span>
+    // Fetch partners from API (cached for this page load)
+    if (!renderMemberGate._partnersCache) {
+      renderMemberGate._partnersCache = apiFetch(`events/${eventId}/membership-partners/public`).catch(function () { return []; });
+    }
+
+    renderMemberGate._partnersCache.then(function (partners) {
+      let partnerButtonsHtml = '';
+      if (partners && partners.length > 0) {
+        partnerButtonsHtml = partners.map(function (p) {
+          const logo = p.logoUrl
+            ? `<img src="${escAttr(p.logoUrl)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
+            : '<span class="sratix-member-btn__icon">🤝</span>';
+          return `<button class="sratix-member-btn sratix-member-btn--partner" data-member="partner" data-partner-id="${escAttr(p.id)}" data-partner-name="${escAttr(p.name)}" data-partner-logo="${escAttr(p.logoUrl || '')}">
+            ${logo}
+            <span class="sratix-member-btn__label">${escHtml(p.name)}</span>
+          </button>`;
+        }).join('');
+      }
+
+      container.innerHTML = `
+        <div class="sratix-member-gate">
+          <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
+          <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
+          <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
+          <div class="sratix-member-gate__buttons">
+            <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
+              ${sraLogo}
+              <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
+            </button>
+            ${partnerButtonsHtml}
+          </div>
+          <button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
+            ${escHtml(t('memberGate.regularLabel'))}
           </button>
         </div>
-        <button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
-          ${escHtml(t('memberGate.regularLabel'))}
-        </button>
-      </div>
-    `;
+      `;
 
-    container.querySelector('[data-member="sra"]').addEventListener('click', function () {
-      renderSraLoginForm(container, eventId, layout);
-    });
-    container.querySelector('[data-member="robotx"]').addEventListener('click', function () {
-      renderRobotxCodeForm(container, eventId, layout);
-    });
-    container.querySelector('[data-member="none"]').addEventListener('click', function () {
-      setMemberSession({ memberGroup: 'none' });
-      loadAndRenderTickets(container, eventId, layout, null);
-    });
-    container.querySelector('#sratix-back-to-role').addEventListener('click', function (e) {
-      e.preventDefault();
-      clearRole();
-      renderRoleChoice(container, eventId, layout);
+      container.querySelector('[data-member="sra"]').addEventListener('click', function () {
+        renderSraLoginForm(container, eventId, layout);
+      });
+
+      // Attach event listeners for each partner button
+      container.querySelectorAll('[data-member="partner"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          renderPartnerCodeForm(container, eventId, layout, {
+            id: btn.dataset.partnerId,
+            name: btn.dataset.partnerName,
+            logoUrl: btn.dataset.partnerLogo || null,
+          });
+        });
+      });
+
+      container.querySelector('[data-member="none"]').addEventListener('click', function () {
+        setMemberSession({ memberGroup: 'none' });
+        loadAndRenderTickets(container, eventId, layout, null);
+      });
+      container.querySelector('#sratix-back-to-role').addEventListener('click', function (e) {
+        e.preventDefault();
+        clearRole();
+        renderRoleChoice(container, eventId, layout);
+      });
     });
   }
 
@@ -583,30 +611,30 @@
     });
   }
 
-  // ─── RobotX code entry form ──────────────────────────────────────────────────
+  // ─── Partner code entry form ───────────────────────────────────────────────
 
-  function renderRobotxCodeForm(container, eventId, layout) {
-    const robotxLogo = config.robotxLogoUrl
-      ? `<img src="${escAttr(config.robotxLogoUrl)}" alt="RobotX" class="sratix-login-form__logo" />`
+  function renderPartnerCodeForm(container, eventId, layout, partner) {
+    const partnerLogo = partner.logoUrl
+      ? `<img src="${escAttr(partner.logoUrl)}" alt="${escAttr(partner.name)}" class="sratix-login-form__logo" />`
       : '';
 
     container.innerHTML = `
       <div class="sratix-login-form">
         <a href="#" class="sratix-login-form__back" id="sratix-gate-back">&larr; ${escHtml(t('memberGate.back'))}</a>
         <div class="sratix-login-form__header">
-          ${robotxLogo}
+          ${partnerLogo}
           <div>
-            <h2 class="sratix-login-form__title">${escHtml(t('memberGate.robotxTitle'))}</h2>
-            <p class="sratix-login-form__hint">${escHtml(t('memberGate.robotxHint'))}</p>
+            <h2 class="sratix-login-form__title">${escHtml(t('memberGate.partnerTitle', { partnerName: partner.name }))}</h2>
+            <p class="sratix-login-form__hint">${escHtml(t('memberGate.partnerHint', { partnerName: partner.name }))}</p>
           </div>
         </div>
         <div class="sratix-field">
-          <label class="sratix-label" for="sratix-robotx-code">${escHtml(t('memberGate.robotxCodeLabel'))}</label>
-          <input class="sratix-input" id="sratix-robotx-code" type="text" autocomplete="off" />
+          <label class="sratix-label" for="sratix-partner-code">${escHtml(t('memberGate.partnerCodeLabel'))}</label>
+          <input class="sratix-input" id="sratix-partner-code" type="text" autocomplete="off" />
         </div>
-        <p class="sratix-error-msg" id="sratix-robotx-error" style="display:none"></p>
-        <button class="sratix-btn sratix-btn--primary sratix-login-form__submit" id="sratix-robotx-submit">
-          ${escHtml(t('memberGate.robotxSubmit'))}
+        <p class="sratix-error-msg" id="sratix-partner-error" style="display:none"></p>
+        <button class="sratix-btn sratix-btn--primary sratix-login-form__submit" id="sratix-partner-submit">
+          ${escHtml(t('memberGate.partnerSubmit'))}
         </button>
       </div>
     `;
@@ -616,15 +644,15 @@
       renderMemberGate(container, eventId, layout);
     });
 
-    const submitBtn = container.querySelector('#sratix-robotx-submit');
-    const errorEl = container.querySelector('#sratix-robotx-error');
+    const submitBtn = container.querySelector('#sratix-partner-submit');
+    const errorEl = container.querySelector('#sratix-partner-error');
 
     submitBtn.addEventListener('click', async function () {
       errorEl.style.display = 'none';
-      const code = container.querySelector('#sratix-robotx-code').value.trim();
+      const code = container.querySelector('#sratix-partner-code').value.trim();
 
       if (!code) {
-        errorEl.textContent = t('memberGate.robotxFieldRequired');
+        errorEl.textContent = t('memberGate.partnerFieldRequired');
         errorEl.style.display = '';
         return;
       }
@@ -633,31 +661,34 @@
       submitBtn.textContent = t('reg.pleaseWait');
 
       try {
-        const res = await apiFetch('auth/robotx-verify', {
+        const res = await apiFetch('auth/partner-verify', {
           method: 'POST',
-          body: JSON.stringify({ eventId, code }),
+          body: JSON.stringify({ eventId, partnerId: partner.id, code }),
         });
 
         if (res.valid) {
           setMemberSession({
-            memberGroup: 'robotx',
+            memberGroup: 'partner',
+            partnerId: partner.id,
+            partnerName: partner.name,
+            partnerLogoUrl: partner.logoUrl || null,
             sessionToken: res.sessionToken,
           });
           loadAndRenderTickets(container, eventId, layout, getMemberSession());
         } else {
-          errorEl.textContent = t('memberGate.robotxInvalid');
+          errorEl.textContent = t('memberGate.partnerInvalid', { partnerName: partner.name });
           errorEl.style.display = '';
         }
       } catch (err) {
-        errorEl.textContent = err.message || t('memberGate.robotxError');
+        errorEl.textContent = err.message || t('memberGate.partnerError');
         errorEl.style.display = '';
       }
 
       submitBtn.disabled = false;
-      submitBtn.textContent = t('memberGate.robotxSubmit');
+      submitBtn.textContent = t('memberGate.partnerSubmit');
     });
 
-    container.querySelector('#sratix-robotx-code').addEventListener('keydown', function (e) {
+    container.querySelector('#sratix-partner-code').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); }
     });
   }
@@ -3997,11 +4028,148 @@
     setTimeout(() => { el.textContent = ''; el.className = 'sratix-portal-status'; }, 4000);
   }
 
+  // ─── Exhibitor Confirmation (post-purchase polling) ──────────────────────────
+
+  function renderExhibitorConfirmation() {
+    var params = new URLSearchParams(window.location.search);
+    var orderNumber = params.get('sratix_order') || '';
+    var email = params.get('sratix_email') || '';
+
+    // Create confirmation container
+    var container = document.createElement('div');
+    container.className = 'sratix-exhibitor-confirmation';
+    container.setAttribute('role', 'status');
+    container.innerHTML =
+      '<div class="sratix-confirmation-card">' +
+        '<div class="sratix-confirmation-header">' +
+          '<span class="sratix-confirmation-icon">✓</span>' +
+          '<h2>' + escHtml(t('exhibitorConfirmation.title')) + '</h2>' +
+          '<p>' + escHtml(t('exhibitorConfirmation.subtitle')) +
+            (orderNumber ? ' <strong>' + escHtml(orderNumber) + '</strong>' : '') +
+          '</p>' +
+        '</div>' +
+        '<div id="sratix-confirmation-body">' +
+          '<div class="sratix-confirmation-loading">' +
+            '<div class="sratix-spinner"></div>' +
+            '<p>' + escHtml(t('exhibitorConfirmation.loading')) + '</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // Insert at first widget or top of body
+    var target = document.getElementById('sratix-tickets-widget') ||
+      document.getElementById('sratix-exhibitor-portal-widget') ||
+      document.body.firstChild;
+    if (target && target.parentNode) {
+      target.parentNode.insertBefore(container, target);
+    } else {
+      document.body.insertBefore(container, document.body.firstChild);
+    }
+
+    // Clean URL params
+    var cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('sratix_success');
+    cleanUrl.searchParams.delete('sratix_order');
+    cleanUrl.searchParams.delete('sratix_test');
+    cleanUrl.searchParams.delete('sratix_type');
+    cleanUrl.searchParams.delete('sratix_email');
+    window.history.replaceState(null, '', cleanUrl.toString());
+
+    // Poll for exhibitor setup completion
+    if (!orderNumber || !email) {
+      showConfirmationReady(container, null);
+      return;
+    }
+
+    var attempts = 0;
+    var maxAttempts = 40; // 40 × 3s = 2 minutes max
+    var pollTimer = setInterval(async function () {
+      attempts++;
+      try {
+        var resp = await fetch(
+          apiUrl + '/api/public/exhibitor-setup/' + encodeURIComponent(orderNumber) +
+          '?email=' + encodeURIComponent(email)
+        );
+        if (!resp.ok) {
+          if (attempts >= maxAttempts) {
+            clearInterval(pollTimer);
+            showConfirmationReady(container, null);
+          }
+          return;
+        }
+        var data = await resp.json();
+        if (data.ready) {
+          clearInterval(pollTimer);
+          showConfirmationReady(container, data);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollTimer);
+          showConfirmationReady(container, null);
+        }
+      } catch (e) {
+        if (attempts >= maxAttempts) {
+          clearInterval(pollTimer);
+          showConfirmationReady(container, null);
+        }
+      }
+    }, 3000);
+  }
+
+  function showConfirmationReady(container, data) {
+    var body = container.querySelector('#sratix-confirmation-body');
+    if (!body) return;
+
+    if (data && data.passwordSetupUrl) {
+      body.innerHTML =
+        '<div class="sratix-confirmation-ready">' +
+          '<h3>🎉 ' + escHtml(t('exhibitorConfirmation.ready')) + '</h3>' +
+          '<div class="sratix-confirmation-features">' +
+            '<p><strong>' + escHtml(t('exhibitorConfirmation.features.title')) + '</strong></p>' +
+            '<ul>' +
+              '<li>' + escHtml(t('exhibitorConfirmation.features.profile')) + '</li>' +
+              '<li>' + escHtml(t('exhibitorConfirmation.features.media')) + '</li>' +
+              '<li>' + escHtml(t('exhibitorConfirmation.features.staff')) + '</li>' +
+              '<li>' + escHtml(t('exhibitorConfirmation.features.demos')) + '</li>' +
+            '</ul>' +
+          '</div>' +
+          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
+          '<div class="sratix-confirmation-actions">' +
+            '<a href="' + escAttr(data.passwordSetupUrl) + '" class="sratix-btn sratix-btn-primary">' +
+              escHtml(t('exhibitorConfirmation.setupNow')) +
+            '</a>' +
+            '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
+              escHtml(t('exhibitorConfirmation.setupLater')) +
+            '</button>' +
+          '</div>' +
+        '</div>';
+    } else {
+      // Timeout or no data — show generic success with email note
+      body.innerHTML =
+        '<div class="sratix-confirmation-ready">' +
+          '<p>' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
+          '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
+            escHtml(t('exhibitorConfirmation.setupLater')) +
+          '</button>' +
+        '</div>';
+    }
+
+    var dismissBtn = body.querySelector('.sratix-confirmation-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function () {
+        container.remove();
+      });
+    }
+  }
+
   // ─── Boot ─────────────────────────────────────────────────────────────────────
 
   function init() {
-    if (new URLSearchParams(window.location.search).get('sratix_success') === '1') {
-      injectSuccessBanner();
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('sratix_success') === '1') {
+      if (params.get('sratix_type') === 'exhibitor') {
+        renderExhibitorConfirmation();
+      } else {
+        injectSuccessBanner();
+      }
     }
     initTicketsWidget();
     initMyTicketsWidget();

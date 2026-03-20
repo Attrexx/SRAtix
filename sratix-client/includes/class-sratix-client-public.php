@@ -79,7 +79,6 @@ class SRAtix_Client_Public {
 			'locale'           => $this->detect_locale(),
 			'memberGateEnabled' => (bool) get_option( 'sratix_client_member_gate_enabled', false ),
 			'sraLogoUrl'       => esc_url( get_option( 'sratix_client_sra_logo_url', '' ) ),
-			'robotxLogoUrl'    => esc_url( get_option( 'sratix_client_robotx_logo_url', '' ) ),
 			'membershipPrices' => $this->get_membership_product_prices(),
 			'logoutUrl'        => is_user_logged_in() ? wp_logout_url( home_url() ) : '',
 		);
