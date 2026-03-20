@@ -447,10 +447,11 @@ export default function EventSettingsPage() {
               {partners.map((p) => (
                 <div
                   key={p.id}
-                  className="rounded-lg p-4"
+                  className="rounded-lg p-4 transition-opacity"
                   style={{
                     background: 'var(--color-bg-subtle)',
                     border: '1px solid var(--color-border)',
+                    opacity: p.active ? 1 : 0.55,
                   }}
                 >
                   {editingPartnerId === p.id ? (
@@ -607,6 +608,29 @@ export default function EventSettingsPage() {
                           title={t('common.edit')}
                         >
                           <Icons.Edit size={14} />
+                        </button>
+                        <button
+                          disabled={partnerSaving === p.id}
+                          onClick={async () => {
+                            setPartnerSaving(p.id);
+                            try {
+                              const updated = await api.updateEventPartner(id, p.id, { active: !p.active });
+                              setPartners((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
+                              toast.success(p.active ? t('events.settings.partnerDeactivated') : t('events.settings.partnerActivated'));
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : t('events.settings.partnerSaveFailed'));
+                            } finally {
+                              setPartnerSaving(null);
+                            }
+                          }}
+                          className="rounded-lg p-1.5 text-xs"
+                          style={{
+                            color: p.active ? 'var(--color-text-secondary)' : 'var(--color-warning, #f59e0b)',
+                            border: `1px solid ${p.active ? 'var(--color-border)' : 'var(--color-warning, #f59e0b)'}`,
+                          }}
+                          title={p.active ? t('events.settings.partnerDeactivate') : t('events.settings.partnerActivate')}
+                        >
+                          {p.active ? <Icons.Eye size={14} /> : <Icons.EyeOff size={14} />}
                         </button>
                         <button
                           disabled={partnerSaving === p.id}

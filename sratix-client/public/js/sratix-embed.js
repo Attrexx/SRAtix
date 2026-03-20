@@ -465,8 +465,10 @@
     }
 
     renderMemberGate._partnersCache.then(function (partners) {
-      let partnerButtonsHtml = '';
-      if (partners && partners.length > 0) {
+      var hasPartners = partners && partners.length > 0;
+      var gateModifier = hasPartners ? '' : ' sratix-member-gate--no-partners';
+      var partnerButtonsHtml = '';
+      if (hasPartners) {
         partnerButtonsHtml = partners.map(function (p) {
           const logo = p.logoUrl
             ? `<img src="${escAttr(p.logoUrl)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
@@ -478,8 +480,13 @@
         }).join('');
       }
 
+      // When no partners, "no membership" becomes a card inside the grid next to SRA
+      var regularBtnHtml = `<button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
+          ${escHtml(t('memberGate.regularLabel'))}
+        </button>`;
+
       container.innerHTML = `
-        <div class="sratix-member-gate">
+        <div class="sratix-member-gate${gateModifier}">
           <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
           <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
           <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
@@ -489,10 +496,9 @@
               <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
             </button>
             ${partnerButtonsHtml}
+            ${hasPartners ? '' : regularBtnHtml}
           </div>
-          <button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
-            ${escHtml(t('memberGate.regularLabel'))}
-          </button>
+          ${hasPartners ? regularBtnHtml : ''}
         </div>
       `;
 

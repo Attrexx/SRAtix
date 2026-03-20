@@ -855,11 +855,19 @@ label.sratix-checkbox-label {
 }
 
 .sratix-member-gate__buttons {
-	display: flex;
-	justify-content: center;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 	gap: 20px;
 	margin-bottom: 20px;
-	flex-wrap: wrap;
+	max-width: 680px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+/* When only 2 cards (SRA + no-membership), cap at 50/50 */
+.sratix-member-gate--no-partners .sratix-member-gate__buttons {
+	grid-template-columns: repeat(2, 1fr);
+	max-width: 440px;
 }
 
 .sratix-member-btn {
@@ -868,7 +876,6 @@ label.sratix-checkbox-label {
 	align-items: center;
 	justify-content: center;
 	gap: 18px;
-	width: 200px;
 	min-height: 150px;
 	padding: 24px 16px;
 	border: 2px solid var(--sratix-border);
@@ -893,13 +900,14 @@ label.sratix-checkbox-label {
 	border-color: #3b82f6;
 }
 
-.sratix-member-btn--robotx:hover {
-	border-color: var(--sratix-red);
+.sratix-member-btn--partner:hover {
+	border-color: var(--sratix-accent, #6366f1);
 }
 
+/* "Continue without membership" — full-width dashed row below the grid */
 .sratix-member-btn--regular {
 	width: 100%;
-	max-width: 420px;
+	max-width: 680px;
 	min-height: auto;
 	flex-direction: row;
 	justify-content: center;
@@ -914,6 +922,19 @@ label.sratix-checkbox-label {
 
 .sratix-member-btn--regular:hover {
 	opacity: 1;
+}
+
+/* When no partners: "no membership" becomes a card inside the grid */
+.sratix-member-gate--no-partners .sratix-member-btn--regular {
+	width: auto;
+	max-width: none;
+	min-height: 150px;
+	flex-direction: column;
+	padding: 24px 16px;
+	margin: 0;
+	opacity: 0.85;
+	font-size: 0.95em;
+	font-weight: 600;
 }
 
 .sratix-member-btn__logo {
