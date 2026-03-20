@@ -327,6 +327,7 @@ export interface Order {
   createdAt: string;
   items: OrderItem[];
   meta?: Record<string, unknown> | null;
+  attendee?: { firstName: string; lastName: string };
 }
 
 export interface OrderItem {

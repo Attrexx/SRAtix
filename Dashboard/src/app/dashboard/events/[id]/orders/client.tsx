@@ -281,7 +281,7 @@ export default function OrdersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
-                  <InfoField label={t('orders.column.customer')} value={selectedOrder.customerName ?? selectedOrder.attendee ? `${selectedOrder.attendee?.firstName} ${selectedOrder.attendee?.lastName}` : '—'} />
+                  <InfoField label={t('orders.column.customer')} value={selectedOrder.attendee ? `${selectedOrder.attendee.firstName} ${selectedOrder.attendee.lastName}` : selectedOrder.customerName ?? '—'} />
                   <InfoField label={t('orders.column.email')} value={selectedOrder.customerEmail ?? selectedOrder.attendee?.email ?? '—'} />
                   {selectedOrder.attendee?.company && (
                     <InfoField label={t('attendees.column.company')} value={selectedOrder.attendee.company} />
@@ -475,7 +475,16 @@ export default function OrdersPage() {
               </span>
             ),
           },
-          { key: 'customerName', header: t('orders.column.customer') },
+          {
+            key: 'customerName',
+            header: t('orders.column.customer'),
+            render: (row) => {
+              const o = row as Order;
+              return o.attendee
+                ? `${o.attendee.firstName} ${o.attendee.lastName}`
+                : o.customerName ?? '—';
+            },
+          },
           { key: 'customerEmail', header: t('orders.column.email') },
           {
             key: 'totalCents',

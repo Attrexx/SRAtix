@@ -17,7 +17,10 @@ export class OrdersService {
   async findByEvent(eventId: string) {
     return this.prisma.order.findMany({
       where: { eventId },
-      include: { items: true },
+      include: {
+        items: true,
+        attendee: { select: { firstName: true, lastName: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
