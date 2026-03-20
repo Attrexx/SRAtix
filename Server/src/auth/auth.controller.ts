@@ -8,12 +8,16 @@ import {
   Get,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService, TokenPair } from './auth.service';
 import { IsNumber, IsArray, IsString, IsOptional, IsEmail, MinLength, IsNotEmpty } from 'class-validator';
 import { RateLimit } from '../common/guards/rate-limit.guard';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtPayload } from './auth.service';
 
 // ── Response shape returned to the SPA ─────────────────────────────────────
 // The refresh token is NOT included here; it is set as an httpOnly cookie.
@@ -389,5 +393,30 @@ export class AuthController {
       userAgent: req.headers['user-agent'],
     });
     return { success: true };
+  }
+
+  // ─── Demo / Impersonation ──────────────────────────────────────
+
+  /**
+   * POST /api/auth/demo-exhibitor
+   * Generate an exhibitor-scoped JWT for demo purposes.
+   * Creates all necessary demo data (org, event, profile, staff) idempotently.
+   * Requires super_admin JWT. Disabled in production.
+   */
+  @Post('demo-exhibitor')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'))
+  @RateLimit({ limit: 5, windowSec: 60 })
+  async demoExhibitor(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const result = await this.authService.generateDemoExhibitorSession(user.sub);
+    this.setRefreshCookie(reply, result.refreshToken);
+    return {
+      ...this.buildClientResponse(result),
+      demoOrgId: result.demoOrgId,
+      demoEventId: result.demoEventId,
+    };
   }
 }

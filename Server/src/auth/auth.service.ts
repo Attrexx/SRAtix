@@ -981,6 +981,282 @@ export class AuthService implements OnModuleDestroy {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // Demo / Impersonation (non-production only)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Generate an exhibitor-scoped JWT for the calling super_admin.
+   * Creates a demo Organization, Event, ExhibitorProfile, EventExhibitor,
+   * TicketType (category=exhibitor), Attendee, and Ticket — all idempotent.
+   *
+   * Only available when NODE_ENV !== 'production'.
+   */
+  async generateDemoExhibitorSession(
+    callerUserId: string,
+  ): Promise<TokenPair & { demoOrgId: string; demoEventId: string }> {
+    if (this.config.get<string>('NODE_ENV') === 'production') {
+      throw new UnauthorizedException('Demo access disabled in production');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: callerUserId },
+      include: { roles: true },
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const isSuperAdmin = user.roles.some((r) => r.role === 'super_admin');
+    if (!isSuperAdmin) {
+      throw new UnauthorizedException('Only super_admin may use demo access');
+    }
+
+    const DEMO_SLUG = '_demo-exhibitor';
+
+    // ── Org ────────────────────────────────────────────────────
+    let org = await this.prisma.organization.findUnique({ where: { slug: DEMO_SLUG } });
+    if (!org) {
+      org = await this.prisma.organization.create({
+        data: {
+          name: 'Demo Robotics AG',
+          slug: DEMO_SLUG,
+          type: 'exhibitor',
+          contactEmail: user.email,
+          meta: { demo: true },
+        },
+      });
+      this.logger.log(`Created demo org ${org.id}`);
+    }
+
+    // ── Event ──────────────────────────────────────────────────
+    let event = await this.prisma.event.findFirst({
+      where: { orgId: org.id, slug: 'srd-demo-2026' },
+    });
+    if (!event) {
+      // Find the real SRD org event if exists, otherwise create a standalone demo event
+      event = await this.prisma.event.create({
+        data: {
+          orgId: org.id,
+          name: 'Swiss Robotics Day 2026 (Demo)',
+          slug: 'srd-demo-2026',
+          description: 'Demo event for exhibitor portal testing',
+          venue: 'SwissTech Convention Center',
+          venueAddress: 'Route Louis-Favre 2, 1024 Ecublens, Switzerland',
+          startDate: new Date('2026-10-22T08:00:00+02:00'),
+          endDate: new Date('2026-10-22T18:00:00+02:00'),
+          doorsOpen: new Date('2026-10-22T07:30:00+02:00'),
+          status: 'published',
+          currency: 'CHF',
+          maxCapacity: 2000,
+          meta: {
+            demo: true,
+            pagePaths: {
+              exhibitorPortal: '/exhibitor-portal',
+            },
+            setupOptions: [
+              {
+                id: 'electricity',
+                label: 'Extra Power Outlet (230V)',
+                priceCents: 5000,
+                category: 'infrastructure',
+              },
+              {
+                id: 'wifi',
+                label: 'Dedicated Wi-Fi Access Point',
+                priceCents: 8000,
+                category: 'infrastructure',
+              },
+              {
+                id: 'monitor-24',
+                label: '24" Monitor on Stand',
+                priceCents: 15000,
+                category: 'equipment',
+              },
+              {
+                id: 'table-extra',
+                label: 'Extra Table (120×60cm)',
+                priceCents: 3500,
+                category: 'furniture',
+              },
+            ],
+          },
+        },
+      });
+      this.logger.log(`Created demo event ${event.id}`);
+    }
+
+    // ── TicketType (exhibitor category) ────────────────────────
+    let ticketType = await this.prisma.ticketType.findFirst({
+      where: { eventId: event.id, category: 'exhibitor' },
+    });
+    if (!ticketType) {
+      ticketType = await this.prisma.ticketType.create({
+        data: {
+          eventId: event.id,
+          name: 'Exhibitor Pass (Demo)',
+          priceCents: 0,
+          category: 'exhibitor',
+          status: 'active',
+          maxStaff: 5,
+        },
+      });
+    }
+
+    // ── Attendee ───────────────────────────────────────────────
+    let attendee = await this.prisma.attendee.findUnique({
+      where: { eventId_email: { eventId: event.id, email: user.email } },
+    });
+    if (!attendee) {
+      attendee = await this.prisma.attendee.create({
+        data: {
+          eventId: event.id,
+          orgId: org.id,
+          email: user.email,
+          firstName: user.displayName.split(' ')[0] || 'Demo',
+          lastName: user.displayName.split(' ').slice(1).join(' ') || 'Admin',
+          company: 'Demo Robotics AG',
+          status: 'confirmed',
+        },
+      });
+    }
+
+    // ── Ticket ─────────────────────────────────────────────────
+    let ticket = await this.prisma.ticket.findFirst({
+      where: { eventId: event.id, attendeeId: attendee.id, ticketTypeId: ticketType.id },
+    });
+    if (!ticket) {
+      const code = `DEMO-EX-${randomBytes(4).toString('hex').toUpperCase()}`;
+      ticket = await this.prisma.ticket.create({
+        data: {
+          eventId: event.id,
+          orgId: org.id,
+          ticketTypeId: ticketType.id,
+          attendeeId: attendee.id,
+          code,
+          status: 'valid',
+        },
+      });
+    }
+
+    // ── ExhibitorProfile ───────────────────────────────────────
+    let profile = await this.prisma.exhibitorProfile.findUnique({
+      where: { orgId: org.id },
+    });
+    if (!profile) {
+      profile = await this.prisma.exhibitorProfile.create({
+        data: {
+          orgId: org.id,
+          companyName: 'Demo Robotics AG',
+          legalName: 'Demo Robotics AG',
+          website: 'https://demo-robotics.example.com',
+          description:
+            '<p>Leading provider of collaborative robotic arms for manufacturing and research. ' +
+            'Our cobots combine Swiss precision engineering with cutting-edge AI to deliver ' +
+            'safe, intuitive automation solutions.</p>',
+          contactEmail: user.email,
+          contactPhone: '+41 21 555 0100',
+          socialLinks: {
+            linkedin: 'https://linkedin.com/company/demo-robotics',
+            twitter: 'https://twitter.com/demorobotics',
+          },
+        },
+      });
+      this.logger.log(`Created demo ExhibitorProfile ${profile.id}`);
+    }
+
+    // ── EventExhibitor ─────────────────────────────────────────
+    let eventExhibitor = await this.prisma.eventExhibitor.findUnique({
+      where: {
+        eventId_exhibitorProfileId: {
+          eventId: event.id,
+          exhibitorProfileId: profile.id,
+        },
+      },
+    });
+    if (!eventExhibitor) {
+      eventExhibitor = await this.prisma.eventExhibitor.create({
+        data: {
+          eventId: event.id,
+          exhibitorProfileId: profile.id,
+          boothNumber: 'A-12',
+          expoArea: 'Hall 1 — Collaborative Robotics',
+          exhibitorCategory: 'industry',
+          exhibitorType: 'Premium Exhibitor',
+          demoTitle: 'CoBot X3: AI-Powered Pick & Place',
+          demoDescription:
+            '<p>Live demonstration of our flagship CoBot X3 performing high-speed ' +
+            'bin-picking with real-time object recognition. See how our AI adapts to ' +
+            'unseen objects in under 200ms.</p>',
+          status: 'published',
+          meta: {
+            buyerName: user.displayName,
+            orderNumber: 'DEMO-001',
+          },
+        },
+      });
+      this.logger.log(`Created demo EventExhibitor ${eventExhibitor.id}`);
+    }
+
+    // ── ExhibitorStaff (2 demo members) ────────────────────────
+    const existingStaff = await this.prisma.exhibitorStaff.count({
+      where: { eventExhibitorId: eventExhibitor.id },
+    });
+    if (existingStaff === 0) {
+      await this.prisma.exhibitorStaff.createMany({
+        data: [
+          {
+            eventExhibitorId: eventExhibitor.id,
+            firstName: 'Alice',
+            lastName: 'Meier',
+            email: 'alice.meier@demo-robotics.example.com',
+            role: 'booth_manager',
+            passStatus: 'registered',
+          },
+          {
+            eventExhibitorId: eventExhibitor.id,
+            firstName: 'Bruno',
+            lastName: 'Keller',
+            email: 'bruno.keller@demo-robotics.example.com',
+            phone: '+41 79 555 0201',
+            role: 'demo_presenter',
+            passStatus: 'pending',
+          },
+        ],
+      });
+    }
+
+    // ── UserRole (exhibitor, org-scoped) ───────────────────────
+    const hasExhibitorRole = await this.prisma.userRole.findFirst({
+      where: { userId: user.id, role: 'exhibitor', orgId: org.id },
+    });
+    if (!hasExhibitorRole) {
+      await this.prisma.userRole.create({
+        data: { userId: user.id, role: 'exhibitor', orgId: org.id },
+      });
+    }
+
+    // ── Issue JWT ──────────────────────────────────────────────
+    const tokens = await this.generateTokenPair(
+      {
+        sub: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        roles: ['exhibitor'],
+        orgId: org.id,
+      },
+      user.tokenVersion,
+    );
+
+    this.audit.log({
+      userId: user.id,
+      action: AuditAction.AUTH_LOGIN,
+      entity: 'user',
+      entityId: user.id,
+      detail: { method: 'demo_exhibitor', orgId: org.id, eventId: event.id },
+    });
+
+    return { ...tokens, demoOrgId: org.id, demoEventId: event.id };
+  }
+
   /**
    * Resolve the SRA WordPress site URL for API calls.
    */

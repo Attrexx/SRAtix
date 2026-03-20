@@ -59,7 +59,7 @@ const sratixI18n = (function () {
       'reg.nameRequired':        'First and last name are required.',
       'reg.emailInvalid':        'Please enter a valid email address.',
       'reg.pleaseWait':          'Please wait…',
-      'reg.genericError':        'An error occurred. Please try again.'
+      'reg.genericError':        'An error occurred. Please try again.',
       'reg.completeRegistration':'Complete Registration',
       'reg.continueToPayment':   'Continue to Payment →',
       'reg.back':                '← Back',
@@ -332,7 +332,7 @@ const sratixI18n = (function () {
       'reg.nameRequired':        'Le prénom et le nom sont obligatoires.',
       'reg.emailInvalid':        'Veuillez entrer une adresse e-mail valide.',
       'reg.pleaseWait':          'Veuillez patienter…',
-      'reg.genericError':        'Une erreur est survenue. Veuillez réessayer.'
+      'reg.genericError':        'Une erreur est survenue. Veuillez réessayer.',
       'reg.completeRegistration':'Finaliser l\'inscription',
       'reg.continueToPayment':   'Continuer vers le paiement →',
       'reg.back':                '← Retour',
@@ -595,7 +595,7 @@ const sratixI18n = (function () {
       'reg.nameRequired':        'Vor- und Nachname sind erforderlich.',
       'reg.emailInvalid':        'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
       'reg.pleaseWait':          'Bitte warten…',
-      'reg.genericError':        'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.'
+      'reg.genericError':        'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
       'reg.completeRegistration':'Anmeldung abschliessen',
       'reg.continueToPayment':   'Weiter zur Zahlung →',
       'reg.back':                '← Zurück',
@@ -858,7 +858,7 @@ const sratixI18n = (function () {
       'reg.nameRequired':        'Nome e cognome sono obbligatori.',
       'reg.emailInvalid':        'Inserisci un indirizzo e-mail valido.',
       'reg.pleaseWait':          'Attendere…',
-      'reg.genericError':        'Si è verificato un errore. Riprova.'
+      'reg.genericError':        'Si è verificato un errore. Riprova.',
       'reg.completeRegistration':'Completare la registrazione',
       'reg.continueToPayment':   'Continua al pagamento →',
       'reg.back':                '← Indietro',
@@ -1118,7 +1118,7 @@ const sratixI18n = (function () {
       'reg.nameRequired':        '名字和姓氏為必填。',
       'reg.emailInvalid':        '請輸入有效的電子信箱。',
       'reg.pleaseWait':          '請稍候…',
-      'reg.genericError':        '發生錯誤，請重試。'
+      'reg.genericError':        '發生錯誤，請重試。',
       'reg.completeRegistration':'完成報名',
       'reg.continueToPayment':   '前往付款 →',
       'reg.back':                '← 返回',
