@@ -33,8 +33,8 @@ export class ExhibitorSetupController {
       throw new BadRequestException('email query parameter is required');
     }
 
-    // Validate order number format (ORD-XXXXXX)
-    if (!/^ORD-[A-Z0-9]+$/.test(orderNumber)) {
+    // Validate order number format (TIX-YYYY-NNNN or ORD-XXXXXX)
+    if (!/^[A-Z]{2,4}-[A-Z0-9-]+$/.test(orderNumber)) {
       throw new NotFoundException('Order not found');
     }
 
@@ -49,7 +49,7 @@ export class ExhibitorSetupController {
       },
     });
 
-    if (!order || order.customerEmail !== email) {
+    if (!order || order.customerEmail?.toLowerCase() !== email.toLowerCase()) {
       throw new NotFoundException('Order not found');
     }
 

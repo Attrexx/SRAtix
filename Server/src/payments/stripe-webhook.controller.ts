@@ -311,6 +311,8 @@ export class StripeWebhookController {
             select: { category: true },
           });
           const isExhibitor = ticketTypes.some((tt) => tt.category === 'exhibitor');
+          if (isExhibitor && !event) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: event not resolved`);
+          if (isExhibitor && !orgId) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: orgId missing from Stripe metadata`);
           if (isExhibitor && event && orgId) {
             await this.provisionExhibitor(
               paidOrder.customerEmail,
