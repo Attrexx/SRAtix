@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
@@ -401,17 +402,38 @@ export class AuthController {
    * POST /api/auth/demo-exhibitor
    * Generate an exhibitor-scoped JWT for demo purposes.
    * Creates all necessary demo data (org, event, profile, staff) idempotently.
-   * Requires super_admin JWT. Disabled in production.
+   * Disabled in production.
+   *
+   * Auth: JWT (super_admin) OR X-Demo-Secret header matching WP_API_SECRET.
    */
   @Post('demo-exhibitor')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt'))
   @RateLimit({ limit: 5, windowSec: 60 })
   async demoExhibitor(
-    @CurrentUser() user: JwtPayload,
+    @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const result = await this.authService.generateDemoExhibitorSession(user.sub);
+    // Allow auth via X-Demo-Secret header (uses WP_API_SECRET)
+    const demoSecret = (req.headers as Record<string, string>)['x-demo-secret'];
+    const wpSecret = this.config.get<string>('WP_API_SECRET');
+
+    let userId: string;
+
+    if (demoSecret && wpSecret && demoSecret === wpSecret) {
+      // Secret-based auth — resolve super_admin user
+      const admin = await this.authService.findSuperAdmin();
+      userId = admin.id;
+    } else {
+      // Fall back to JWT auth
+      const authHeader = (req.headers as Record<string, string>).authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        throw new UnauthorizedException('Provide X-Demo-Secret header or Bearer token');
+      }
+      const payload = await this.authService.validateToken(authHeader.slice(7));
+      userId = payload.sub;
+    }
+
+    const result = await this.authService.generateDemoExhibitorSession(userId);
     this.setRefreshCookie(reply, result.refreshToken);
     return {
       ...this.buildClientResponse(result),

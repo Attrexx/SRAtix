@@ -986,6 +986,18 @@ export class AuthService implements OnModuleDestroy {
   // ═══════════════════════════════════════════════════════════════
 
   /**
+   * Find the first super_admin user (for secret-based demo auth).
+   */
+  async findSuperAdmin(): Promise<{ id: string; email: string }> {
+    const role = await this.prisma.userRole.findFirst({
+      where: { role: 'super_admin' },
+      select: { userId: true, user: { select: { id: true, email: true } } },
+    });
+    if (!role?.user) throw new UnauthorizedException('No super_admin account exists');
+    return role.user;
+  }
+
+  /**
    * Generate an exhibitor-scoped JWT for the calling super_admin.
    * Creates a demo Organization, Event, ExhibitorProfile, EventExhibitor,
    * TicketType (category=exhibitor), Attendee, and Ticket — all idempotent.
