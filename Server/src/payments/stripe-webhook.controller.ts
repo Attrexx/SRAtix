@@ -319,6 +319,7 @@ export class StripeWebhookController {
               eventId!,
               event,
               paidOrder.orderNumber,
+              orderId,
             );
           }
         }
@@ -489,6 +490,7 @@ export class StripeWebhookController {
     eventId: string,
     event: { name?: string; startDate?: Date; venue?: string | null },
     orderNumber: string,
+    orderId: string,
   ): Promise<void> {
     try {
       // 1. Find or create User
@@ -556,6 +558,9 @@ export class StripeWebhookController {
         const eventMeta = (eventRecord?.meta as Record<string, any>) ?? {};
         const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
         passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
+
+        // Store token in order meta so the confirmation page can retrieve it via polling
+        await this.orders.updateMeta(orderId, { exhibitorSetupToken: rawToken });
       }
 
       // 6. Send welcome email with portal + password setup links

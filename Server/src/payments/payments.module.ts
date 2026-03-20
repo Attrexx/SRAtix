@@ -3,6 +3,7 @@ import { StripeService } from './stripe.service';
 import { PaymentsController } from './payments.controller';
 import { PublicCheckoutController } from './public-checkout.controller';
 import { StripeWebhookController } from './stripe-webhook.controller';
+import { ExhibitorSetupController } from './exhibitor-setup.controller';
 import { OrdersModule } from '../orders/orders.module';
 import { TicketsModule } from '../tickets/tickets.module';
 import { SseModule } from '../sse/sse.module';
@@ -17,7 +18,7 @@ import { TicketTypesModule } from '../ticket-types/ticket-types.module';
 
 @Module({
   imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule],
-  controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController],
+  controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController, ExhibitorSetupController],
   providers: [StripeService],
   exports: [StripeService],
 })

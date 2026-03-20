@@ -1503,7 +1503,7 @@
       submitBtn.textContent = t('reg.pleaseWait');
 
       try {
-        var successUrl = buildSuccessUrl(tt.category);
+        var successUrl = buildSuccessUrl(tt.category, email);
         var payload = {
           eventId: eventId,
           ticketTypeId: tt.id,
@@ -1987,7 +1987,7 @@
       }
 
       try {
-        var successUrl = buildSuccessUrl('exhibitor');
+        var successUrl = buildSuccessUrl('exhibitor', purchaserData.email);
         var payload = {
           eventId: eventId,
           ticketTypeId: tt.id,
@@ -2277,15 +2277,21 @@
     if (existing) existing.remove();
   }
 
-  function buildSuccessUrl(category) {
+  function buildSuccessUrl(category, email) {
     // Exhibitor purchases → redirect to portal page if configured in event settings
     if (category === 'exhibitor' && pagePaths.exhibitorPortal) {
       const url = new URL(pagePaths.exhibitorPortal, window.location.origin);
       url.searchParams.set('sratix_success', '1');
+      url.searchParams.set('sratix_type', 'exhibitor');
+      if (email) url.searchParams.set('sratix_email', email);
       return url.toString();
     }
     const url = new URL(window.location.href);
     url.searchParams.set('sratix_success', '1');
+    if (category === 'exhibitor') {
+      url.searchParams.set('sratix_type', 'exhibitor');
+      if (email) url.searchParams.set('sratix_email', email);
+    }
     return url.toString();
   }
 
