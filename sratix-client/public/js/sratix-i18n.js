@@ -164,7 +164,6 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.setupLater':     'I\'ll do it later',
       'exhibitorConfirmation.emailNote':      'You can also set up your portal later via the link in your confirmation email.',
 
-      'exhibitorPortal.portalTitle':     'Exhibitor Portal',
       'exhibitorPortal.portalWelcome':   'Welcome, {name}! Manage your exhibitor profile, booth details, staff, and media from here.',
       'exhibitorPortal.login':           'Please log in to access the Exhibitor Portal.',
       'exhibitorPortal.loading':         'Loading exhibitor portal…',
@@ -299,6 +298,7 @@ const sratixI18n = (function () {
       'tickets.sraMembership':   'Adhésion SRA',
       'tickets.includesMembership': 'Incl. {price} adhésion {tier} (1 an)',
 
+      'qty.title':               '{name}',
       'qty.quantity':            'Quantité',
       'qty.decrease':            'Diminuer',
       'qty.increase':            'Augmenter',
@@ -431,7 +431,6 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.setupLater':     'Je le ferai plus tard',
       'exhibitorConfirmation.emailNote':      'Vous pouvez aussi configurer votre portail plus tard via le lien dans votre e-mail de confirmation.',
 
-      'exhibitorPortal.portalTitle':     'Portail Exposant',
       'exhibitorPortal.portalWelcome':   'Bienvenue, {name} ! Gérez votre profil exposant, votre stand, votre équipe et vos médias ici.',
       'exhibitorPortal.login':           'Veuillez vous connecter pour accéder au Portail Exposant.',
       'exhibitorPortal.loading':         'Chargement du portail exposant…',
@@ -562,6 +561,7 @@ const sratixI18n = (function () {
       'tickets.sraMembership':   'SRA-Mitgliedschaft',
       'tickets.includesMembership': 'Inkl. {price} {tier}-Mitgliedschaft (1 Jahr)',
 
+      'qty.title':               '{name}',
       'qty.quantity':            'Anzahl',
       'qty.decrease':            'Verringern',
       'qty.increase':            'Erhöhen',
@@ -694,7 +694,6 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.setupLater':     'Ich mache es später',
       'exhibitorConfirmation.emailNote':      'Sie können Ihr Portal auch später über den Link in Ihrer Bestätigungs-E-Mail einrichten.',
 
-      'exhibitorPortal.portalTitle':     'Aussteller-Portal',
       'exhibitorPortal.portalWelcome':   'Willkommen, {name}! Verwalten Sie hier Ihr Ausstellerprofil, Standdetails, Team und Medien.',
       'exhibitorPortal.login':           'Bitte melden Sie sich an, um auf das Aussteller-Portal zuzugreifen.',
       'exhibitorPortal.loading':         'Aussteller-Portal wird geladen…',
@@ -825,6 +824,7 @@ const sratixI18n = (function () {
       'tickets.sraMembership':   'Adesione SRA',
       'tickets.includesMembership': 'Incl. {price} adesione {tier} (1 anno)',
 
+      'qty.title':               '{name}',
       'qty.quantity':            'Quantità',
       'qty.decrease':            'Diminuisci',
       'qty.increase':            'Aumenta',
@@ -916,6 +916,7 @@ const sratixI18n = (function () {
       'memberGate.welcomeTier':    'Iscrizione: {tier}',
       'memberGate.welcomeDisclaimer': 'Se è attivo uno sconto maggiore (es. tariffa anticipata), verrà applicato quello.',
       'memberGate.changeType':     'Cambia iscrizione \u21bb',
+      'memberGate.backToMembership': '\u2190 Sei membro? Accedi per gli sconti',
 
       // Role choice
       'roleChoice.title':          'Come partecipate allo Swiss Robotics Day?',
@@ -956,7 +957,6 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.setupLater':     'Lo farò più tardi',
       'exhibitorConfirmation.emailNote':      'Potete anche configurare il vostro portale più tardi tramite il link nell\'e-mail di conferma.',
 
-      'exhibitorPortal.portalTitle':     'Portale Espositore',
       'exhibitorPortal.portalWelcome':   'Benvenuto, {name}! Gestisci il tuo profilo espositore, i dettagli dello stand, il team e i media da qui.',
       'exhibitorPortal.login':           'Accedi per accedere al Portale Espositore.',
       'exhibitorPortal.loading':         'Caricamento del portale espositore…',
@@ -1084,7 +1084,10 @@ const sratixI18n = (function () {
       'tickets.soldOut':         '已售罄',
       'tickets.earlyBird':       '早鳥優惠',
       'tickets.select':          '選擇',
+      'tickets.sraMembership':   'SRA 會員',
+      'tickets.includesMembership': '含 {price} {tier} 會籍 (1 年)',
 
+      'qty.title':               '{name}',
       'qty.quantity':            '數量',
       'qty.decrease':            '減少',
       'qty.increase':            '增加',
@@ -1217,7 +1220,6 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.setupLater':     '稍後再說',
       'exhibitorConfirmation.emailNote':      '您也可以稍後透過確認電子郵件中的連結設定您的入口。',
 
-      'exhibitorPortal.portalTitle':     '展商入口',
       'exhibitorPortal.portalWelcome':   '歡迎，{name}！在此管理您的展商檔案、攝位詳情、團隊和媒體。',
       'exhibitorPortal.login':           '請登入以存取展商入口。',
       'exhibitorPortal.loading':         '正在載入展商入口…',
