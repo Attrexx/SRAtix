@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AttendeesService } from './attendees.service';
 import { FormsService } from '../forms/forms.service';
 import { EmailService } from '../email/email.service';
+import { AuthService } from '../auth/auth.service';
 
 // ─── DTO ──────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,18 @@ class RegistrationDto {
   @IsString()
   @IsOptional()
   company?: string;
+
+  @IsString()
+  @IsOptional()
+  firstName?: string;
+
+  @IsString()
+  @IsOptional()
+  lastName?: string;
+
+  @IsString()
+  @IsOptional()
+  password?: string;
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -53,6 +66,7 @@ export class PublicRegistrationController {
     private readonly attendees: AttendeesService,
     private readonly forms: FormsService,
     private readonly email: EmailService,
+    private readonly auth: AuthService,
   ) {}
 
   /**
@@ -163,8 +177,31 @@ export class PublicRegistrationController {
     const updateData: Record<string, string> = {};
     if (dto.phone) updateData.phone = dto.phone;
     if (dto.company) updateData.company = dto.company;
+    if (dto.firstName) updateData.firstName = dto.firstName;
+    if (dto.lastName) updateData.lastName = dto.lastName;
     if (Object.keys(updateData).length > 0) {
       await this.attendees.update(attendee.id, updateData);
+    }
+
+    // Create or update User account with password if provided
+    if (dto.password) {
+      const passwordHash = await this.auth.hashPassword(dto.password);
+      const email = attendee.email.toLowerCase();
+      const existingUser = await this.prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        await this.prisma.user.update({
+          where: { id: existingUser.id },
+          data: { passwordHash },
+        });
+      } else {
+        await this.prisma.user.create({
+          data: {
+            email,
+            displayName: `${dto.firstName ?? attendee.firstName} ${dto.lastName ?? attendee.lastName}`.trim(),
+            passwordHash,
+          },
+        });
+      }
     }
 
     // Mark registered and clear token (direct Prisma — status isn't in update() interface)
@@ -177,11 +214,15 @@ export class PublicRegistrationController {
       },
     });
 
+    // Use updated names for emails and response
+    const finalFirstName = dto.firstName ?? attendee.firstName;
+    const finalLastName = dto.lastName ?? attendee.lastName;
+
     // Send confirmation email to recipient
     if (ticket?.event) {
       this.email
         .sendRecipientRegistrationConfirmation(attendee.email, {
-          recipientName: attendee.firstName,
+          recipientName: finalFirstName,
           eventName: ticket.event.name,
           eventDate: ticket.event.startDate.toISOString().split('T')[0],
           eventVenue: ticket.event.venue ?? '',
@@ -199,7 +240,7 @@ export class PublicRegistrationController {
         this.email
           .sendRecipientRegisteredNotification(purchaser.email, {
             purchaserName: purchaser.firstName,
-            recipientName: `${attendee.firstName} ${attendee.lastName}`,
+            recipientName: `${finalFirstName} ${finalLastName}`,
             recipientEmail: attendee.email,
             eventName: ticket?.event?.name ?? 'Event',
           })
@@ -211,8 +252,8 @@ export class PublicRegistrationController {
       success: true,
       message: 'Registration completed successfully',
       attendee: {
-        firstName: attendee.firstName,
-        lastName: attendee.lastName,
+        firstName: finalFirstName,
+        lastName: finalLastName,
         email: attendee.email,
       },
     };

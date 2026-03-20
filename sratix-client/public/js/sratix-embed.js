@@ -2411,23 +2411,23 @@
       // ── Build form body ──
       var formBodyHtml = '';
 
-      // Read-only identity fields
+      // Editable name fields (pre-filled from attendee record)
       formBodyHtml += '<div class="sratix-field-row">'
         + '<div class="sratix-field">'
-        +   '<label class="sratix-label" for="sratix-reg-first-name">First name</label>'
-        +   '<input class="sratix-input" id="sratix-reg-first-name" type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" readonly />'
+        +   '<label class="sratix-label" for="sratix-reg-first-name">' + escHtml(t('reg.firstName')) + '</label>'
+        +   '<input class="sratix-input" id="sratix-reg-first-name" type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" required />'
         + '</div>'
         + '<div class="sratix-field">'
-        +   '<label class="sratix-label" for="sratix-reg-last-name">Last name</label>'
-        +   '<input class="sratix-input" id="sratix-reg-last-name" type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" readonly />'
+        +   '<label class="sratix-label" for="sratix-reg-last-name">' + escHtml(t('reg.lastName')) + '</label>'
+        +   '<input class="sratix-input" id="sratix-reg-last-name" type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" required />'
         + '</div>'
         + '</div>'
         + '<div class="sratix-field">'
-        +   '<label class="sratix-label" for="sratix-reg-email">Email</label>'
+        +   '<label class="sratix-label" for="sratix-reg-email">' + escHtml(t('reg.email')) + '</label>'
         +   '<input class="sratix-input" id="sratix-reg-email" type="email" name="email" value="' + escAttr(attendee.email || '') + '" readonly />'
         + '</div>';
 
-      // Custom form fields from schema, or default phone + company
+      // Custom form fields from schema, or default phone + password
       if (useCustomForm) {
         var sorted = schemaFields.slice();
         sorted.sort(function (a, b) {
@@ -2438,16 +2438,22 @@
         });
         formBodyHtml += '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
       } else {
-        formBodyHtml += '<div class="sratix-field-row">'
-          + '<div class="sratix-field">'
-          +   '<label class="sratix-label" for="sratix-reg-phone">Phone</label>'
+        // ─── DEFAULT: Phone + Set Password ──────────────────────────────
+        formBodyHtml += '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-reg-phone">' + escHtml(t('reg.phone')) + '</label>'
           +   '<input class="sratix-input" id="sratix-reg-phone" type="tel" name="phone" placeholder="+41 ..." autocomplete="tel" />'
           + '</div>'
+          + '<div class="sratix-field-row">'
           + '<div class="sratix-field">'
-          +   '<label class="sratix-label" for="sratix-reg-company">Company / Organization</label>'
-          +   '<input class="sratix-input" id="sratix-reg-company" type="text" name="company" autocomplete="organization" />'
+          +   '<label class="sratix-label" for="sratix-reg-password">' + escHtml(t('reg.password')) + '</label>'
+          +   '<input class="sratix-input" id="sratix-reg-password" type="password" name="password" minlength="8" required autocomplete="new-password" />'
           + '</div>'
-          + '</div>';
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-reg-password-confirm">' + escHtml(t('reg.passwordConfirm')) + '</label>'
+          +   '<input class="sratix-input" id="sratix-reg-password-confirm" type="password" name="passwordConfirm" minlength="8" required autocomplete="new-password" />'
+          + '</div>'
+          + '</div>'
+          + '<p class="sratix-field-hint">' + escHtml(t('reg.passwordHint')) + '</p>';
       }
 
       var formHtml = ''
@@ -2485,8 +2491,38 @@
         var errorEl = container.querySelector('#sratix-reg-error');
         errorEl.style.display = 'none';
         var submitBtn = e.target.querySelector('button[type="submit"]');
+
+        // Collect name fields (always editable)
+        var firstName = (container.querySelector('#sratix-reg-first-name').value || '').trim();
+        var lastName = (container.querySelector('#sratix-reg-last-name').value || '').trim();
+        if (!firstName || !lastName) {
+          errorEl.textContent = t('reg.nameRequired');
+          errorEl.style.display = '';
+          return;
+        }
+
+        // Password validation (default form only)
+        var password = null;
+        if (!useCustomForm) {
+          var pwEl = container.querySelector('#sratix-reg-password');
+          var pwConfirmEl = container.querySelector('#sratix-reg-password-confirm');
+          if (pwEl && pwConfirmEl) {
+            password = pwEl.value;
+            if (!password || password.length < 8) {
+              errorEl.textContent = t('reg.passwordTooShort');
+              errorEl.style.display = '';
+              return;
+            }
+            if (password !== pwConfirmEl.value) {
+              errorEl.textContent = t('reg.passwordMismatch');
+              errorEl.style.display = '';
+              return;
+            }
+          }
+        }
+
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting…';
+        submitBtn.textContent = t('reg.pleaseWait');
 
         var formDataObj = {};
         if (useCustomForm) {
@@ -2494,17 +2530,19 @@
         } else {
           var inputs = e.target.querySelectorAll('input, select, textarea');
           inputs.forEach(function(inp) {
-            if (inp.name && !inp.readOnly) {
+            if (inp.name && !inp.readOnly && inp.type !== 'password') {
               formDataObj[inp.name] = inp.value;
             }
           });
         }
 
         try {
+          var postBody = { formData: formDataObj, firstName: firstName, lastName: lastName };
+          if (password) postBody.password = password;
           var postRes = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ formData: formDataObj }),
+            body: JSON.stringify(postBody),
           });
           var postData = await postRes.json().catch(function() { return {}; });
           if (!postRes.ok) {
