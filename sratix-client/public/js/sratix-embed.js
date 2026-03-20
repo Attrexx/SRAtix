@@ -366,7 +366,7 @@
     // Logo
     let logoUrl = null;
     if (isSra) logoUrl = config.sraLogoUrl;
-    else if (isPartner && session.partnerLogoUrl) logoUrl = session.partnerLogoUrl;
+    else if (isPartner && session.partnerLogoUrl) logoUrl = resolveUrl(session.partnerLogoUrl);
     const logoHtml = logoUrl
       ? `<img src="${escAttr(logoUrl)}" alt="" class="sratix-welcome-logo" />`
       : '';
@@ -470,13 +470,14 @@
       var partnerButtonsHtml = '';
       if (hasPartners) {
         partnerButtonsHtml = partners.map(function (p) {
-          const logo = p.logoUrl
-            ? `<img src="${escAttr(p.logoUrl)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
+          const resolvedLogo = resolveUrl(p.logoUrl);
+          const logo = resolvedLogo
+            ? `<img src="${escAttr(resolvedLogo)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
             : '<span class="sratix-member-btn__icon">🤝</span>';
           const website = p.websiteUrl
-            ? `<a href="${escAttr(p.websiteUrl)}" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))} ↗</a>`
+            ? `<a href="${escAttr(p.websiteUrl)}" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>`
             : '';
-          return `<button class="sratix-member-btn sratix-member-btn--partner" data-member="partner" data-partner-id="${escAttr(p.id)}" data-partner-name="${escAttr(p.name)}" data-partner-logo="${escAttr(p.logoUrl || '')}">
+          return `<button class="sratix-member-btn sratix-member-btn--partner" data-member="partner" data-partner-id="${escAttr(p.id)}" data-partner-name="${escAttr(p.name)}" data-partner-logo="${escAttr(resolvedLogo || '')}">
             ${logo}
             <span class="sratix-member-btn__label">${escHtml(p.name)}</span>
             ${website}
@@ -498,7 +499,7 @@
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
               ${sraLogo}
               <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
-              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))} ↗</a>
+              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>
             </button>
             ${partnerButtonsHtml}
             ${hasPartners ? '' : regularBtnHtml}
@@ -2347,6 +2348,13 @@
 
   function escAttr(str) {
     return String(str ?? '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /** Resolve a potentially relative URL (e.g. /uploads/…) against API_BASE. */
+  function resolveUrl(url) {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    return API_BASE.replace(/\/api$/, '') + url;
   }
 
   function formatPrice(cents, currency) {
