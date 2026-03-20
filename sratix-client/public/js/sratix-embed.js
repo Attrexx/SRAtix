@@ -1703,8 +1703,6 @@
       if (wantsStaffNow()) {
         staffHtml += '<p class="sratix-wizard-subtitle">'
           + escHtml(t('exhibitorForm.staffSubtitle').replace('{max}', maxStaff)) + '</p>';
-        staffHtml += '<p class="sratix-field-help">'
-          + escHtml(t('exhibitorForm.staffOptionalNote')) + '</p>';
         staffHtml += '<div class="sratix-field" style="margin-bottom:16px">'
           + '<label class="sratix-label" for="sratix-ex-staff-count">'
           + escHtml(t('exhibitorForm.staffCount')) + '</label>'

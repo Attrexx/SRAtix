@@ -18,6 +18,7 @@ interface OrderConfirmationData {
     qrPayload: string;
   }>;
   ticketCodes?: string[];
+  apiBaseUrl?: string;
   eventName: string;
   eventDate: string;
   eventVenue: string;
@@ -245,9 +246,8 @@ export class EmailService {
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
         You are receiving this email because <strong>${data.purchaserName}</strong> has purchased
-        a ticket on your behalf for an upcoming event organized by the
-        <strong>Swiss Robotics Association</strong>. Your attendance has been reserved and a ticket
-        has been assigned to you.
+        a ticket on your behalf for <strong>${data.eventName}</strong>. Your attendance has been
+        reserved and a ticket has been assigned to you.
       </p>
 
       <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
@@ -293,7 +293,7 @@ export class EmailService {
         If you believe you received this email in error, you can safely ignore it.
       </p>
     `);
-    const text = `You've Been Gifted a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has purchased a ticket on your behalf for an upcoming event organized by the Swiss Robotics Association.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+    const text = `You've Been Gifted a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has purchased a ticket on your behalf for ${data.eventName}.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
 
     return this.send({
       to,
@@ -475,7 +475,7 @@ export class EmailService {
 
       <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
         If you have questions about your booth or the event, please contact us at
-        <a href="mailto:events@swiss-robotics.org">events@swiss-robotics.org</a>.
+        <a href="mailto:contact@swissroboticsday.ch">contact@swissroboticsday.ch</a>.
       </p>
     `);
 
@@ -504,7 +504,7 @@ Your exhibitor portal is ready. Use it to:
 
 Portal: ${data.portalUrl}
 
-Questions? Contact events@swiss-robotics.org
+Questions? Contact contact@swissroboticsday.ch
 
 — Swiss Robotics Association / SRAtix`;
 
@@ -570,7 +570,7 @@ Questions? Contact events@swiss-robotics.org
       </div>
 
       <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
-        Questions? Contact <a href="mailto:events@swiss-robotics.org">events@swiss-robotics.org</a>.
+        Questions? Contact <a href="mailto:contact@swissroboticsday.ch">contact@swissroboticsday.ch</a>.
       </p>
     `);
 
@@ -591,7 +591,7 @@ ${data.passwordSetupUrl}
 
 Portal: ${data.portalUrl}
 
-Questions? Contact events@swiss-robotics.org
+Questions? Contact contact@swissroboticsday.ch
 
 — Swiss Robotics Association / SRAtix`;
 
@@ -681,7 +681,10 @@ Questions? Contact events@swiss-robotics.org
             <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
               <h3 style="margin: 0 0 8px; color: #333;">Your Ticket Code${data.ticketCodes.length > 1 ? 's' : ''}</h3>
               <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present ${data.ticketCodes.length > 1 ? 'these codes' : 'this code'} at the event entrance for check-in.</p>
-              ${data.ticketCodes.map((code) => `<div style="display: inline-block; background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; margin: 4px 4px 4px 0; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div>`).join('')}
+              ${data.ticketCodes.map((code) => `<table cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0;"><tr>
+                <td style="vertical-align: middle; padding-right: 12px;">${data.apiBaseUrl ? `<img src="${data.apiBaseUrl}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
+                <td style="vertical-align: middle;"><div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div></td>
+              </tr></table>`).join('')}
             </div>` : ''}
 
             <!-- Event Info -->
@@ -691,11 +694,6 @@ Questions? Contact events@swiss-robotics.org
               <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
               <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
             </div>
-
-            <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
-              Your ticket QR codes will be available in your account. Present them at the event entrance
-              for check-in.
-            </p>
           </td>
         </tr>
 
@@ -731,8 +729,6 @@ ${data.ticketCodes && data.ticketCodes.length > 0 ? `\nTicket Code${data.ticketC
 Event: ${data.eventName}
 Date: ${data.eventDate}
 Venue: ${data.eventVenue}
-
-Your ticket QR codes will be available in your account.
 
 — Swiss Robotics Association / SRAtix
     `.trim();

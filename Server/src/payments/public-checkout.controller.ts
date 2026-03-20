@@ -379,6 +379,7 @@ export class PublicCheckoutController {
     let memberDiscountLabel = '';
     let validatedMemberGroup: string | undefined;
     let validatedMemberTier: string | undefined;
+    let validatedPartnerId: string | undefined;
 
     if (dto.memberSessionToken && dto.memberGroup) {
       const session = this.authService.decodeMemberSession(dto.memberSessionToken);
@@ -389,11 +390,15 @@ export class PublicCheckoutController {
 
       validatedMemberGroup = session.memberGroup;
       validatedMemberTier = session.tier;
+      validatedPartnerId = session.partnerId;
 
-      // Load ticket type with SRA discounts for calculation
+      // Load ticket type with SRA discounts + partner discounts for calculation
       const ttWithDiscounts = await this.prisma.ticketType.findUnique({
         where: { id: dto.ticketTypeId },
-        include: { sraDiscounts: true },
+        include: {
+          sraDiscounts: true,
+          partnerDiscounts: { include: { partner: { select: { name: true } } } },
+        },
       });
 
       if (ttWithDiscounts) {
@@ -402,6 +407,7 @@ export class PublicCheckoutController {
           tt.priceCents, // use resolved base price
           validatedMemberGroup,
           validatedMemberTier,
+          validatedPartnerId,
         );
         if (discount) {
           memberDiscountCents = discount.discountCents * dto.quantity;
@@ -437,6 +443,7 @@ export class PublicCheckoutController {
     if (appliedPromoCodeId) metadata.sratix_promo_code_id = appliedPromoCodeId;
     if (validatedMemberGroup) metadata.sratix_member_group = validatedMemberGroup;
     if (validatedMemberTier) metadata.sratix_member_tier = validatedMemberTier;
+    if (validatedPartnerId) metadata.sratix_partner_id = validatedPartnerId;
     if (isTestMode) metadata.sratix_test_mode = '1';
 
     const finalTotal = totalCents - discountCents;

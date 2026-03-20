@@ -32,6 +32,7 @@ export class TicketTypesPublicController {
     // Validate member session token if member pricing is requested
     let validatedGroup: string | undefined;
     let validatedTier: string | undefined;
+    let validatedPartnerId: string | undefined;
 
     if (memberGroup && authHeader) {
       const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -39,6 +40,7 @@ export class TicketTypesPublicController {
       if (session && session.eventId === eventId && session.memberGroup === memberGroup) {
         validatedGroup = session.memberGroup;
         validatedTier = session.tier;
+        validatedPartnerId = session.partnerId;
       }
       // If token is invalid/expired, silently fall back to regular pricing
     }
@@ -51,6 +53,7 @@ export class TicketTypesPublicController {
       validatedGroup,
       validatedTier,
       validatedRole,
+      validatedPartnerId,
     );
   }
 }

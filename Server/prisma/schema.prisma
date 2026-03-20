@@ -78,6 +78,7 @@ model Event {
   badgeTemplates BadgeTemplate[]
   webhookEndpoints WebhookEndpoint[]
   eventExhibitors  EventExhibitor[]
+  membershipPartners MembershipPartner[]
 
   @@unique([orgId, slug])
   @@index([orgId])
@@ -109,9 +110,10 @@ model TicketType {
   // ── Ticket category & membership linkage ──────────────────
   category      String   @default("general") @db.VarChar(30) // general | individual | legal
   membershipTier String? @db.VarChar(50) // student | individual | retired | industry_small | industry_medium | industry_large | academic | startup
-  wpProductId   Int?     // WooCommerce product ID to create on SRA for membership-inclusive tickets  // ── RobotX flat discount ──────────────────────────────────────
-  robotxDiscountType   String? @db.VarChar(20) // percentage | fixed_amount
-  robotxDiscountValue  Int?    // 1–100 for percentage, or cents for fixed_amount  // ──────────────────────────────────────────────────────────
+  wpProductId   Int?     // WooCommerce product ID to create on SRA for membership-inclusive tickets  // ── RobotX flat discount (DEPRECATED — use partnerDiscounts) ──
+  robotxDiscountType   String? @db.VarChar(20) // @deprecated — percentage | fixed_amount
+  robotxDiscountValue  Int?    // @deprecated — 1–100 for percentage, or cents for fixed_amount
+  // ──────────────────────────────────────────────────────────
   meta          Json?    // badge template ref, visibility rules, etc.
   createdAt     DateTime @default(now()) @db.DateTime(3)
   updatedAt     DateTime @updatedAt @db.DateTime(3)
@@ -120,8 +122,9 @@ model TicketType {
   formSchema      FormSchema?      @relation(fields: [formSchemaId], references: [id])
   orderItems      OrderItem[]
   tickets         Ticket[]
-  pricingVariants PricingVariant[]
-  sraDiscounts    TicketTypeSraDiscount[]
+  pricingVariants  PricingVariant[]
+  sraDiscounts     TicketTypeSraDiscount[]
+  partnerDiscounts TicketTypePartnerDiscount[]
 
   @@index([eventId])
   @@index([status])
@@ -147,6 +150,53 @@ model TicketTypeSraDiscount {
   @@unique([ticketTypeId, membershipTier])
   @@index([ticketTypeId])
   @@map("ticket_type_sra_discounts")
+}
+
+// ============================================================================
+// MEMBERSHIP PARTNERS (replaces hardcoded RobotX)
+// ============================================================================
+
+model MembershipPartner {
+  id          String   @id @default(uuid()) @db.Char(36)
+  eventId     String   @db.Char(36)
+  name        String   @db.VarChar(255)
+  slug        String   @db.VarChar(100) // auto-generated from name, used in JWT memberGroup
+  logoUrl     String?  @db.VarChar(500)
+  websiteUrl  String?  @db.VarChar(500)
+  accessCode  String   @db.VarChar(100) // shared secret code for member verification
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  event           Event                      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketDiscounts TicketTypePartnerDiscount[]
+
+  @@unique([eventId, slug])
+  @@index([eventId])
+  @@map("membership_partners")
+}
+
+// ============================================================================
+// PARTNER DISCOUNTS (per ticket type × membership partner)
+// ============================================================================
+
+model TicketTypePartnerDiscount {
+  id            String @id @default(uuid()) @db.Char(36)
+  ticketTypeId  String @db.Char(36)
+  partnerId     String @db.Char(36)
+  discountType  String @db.VarChar(20) // percentage | fixed_amount
+  discountValue Int    // 1–100 for percentage, or cents for fixed_amount
+  createdAt     DateTime @default(now()) @db.DateTime(3)
+  updatedAt     DateTime @updatedAt @db.DateTime(3)
+
+  ticketType TicketType         @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  partner    MembershipPartner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketTypeId, partnerId])
+  @@index([ticketTypeId])
+  @@index([partnerId])
+  @@map("ticket_type_partner_discounts")
 }
 
 // ============================================================================

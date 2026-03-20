@@ -882,7 +882,8 @@ export class AuthService implements OnModuleDestroy {
 
   /**
    * Verify a RobotX access code against the Event's meta.robotxAccessCode.
-   * Returns a short-lived session token on success.
+   * @deprecated Use verifyPartnerCode() instead.
+   * Kept for backward compatibility during transition.
    */
   async verifyRobotxCode(
     eventId: string,
@@ -923,16 +924,54 @@ export class AuthService implements OnModuleDestroy {
   }
 
   /**
+   * Verify a membership partner's shared access code for a given event.
+   * Returns a short-lived session token encoding the partner ID on success.
+   */
+  async verifyPartnerCode(
+    eventId: string,
+    partnerId: string,
+    code: string,
+  ): Promise<{ valid: boolean; sessionToken?: string; partnerName?: string }> {
+    const partner = await this.prisma.membershipPartner.findFirst({
+      where: { id: partnerId, eventId, active: true },
+      select: { accessCode: true, name: true },
+    });
+
+    if (!partner || !code) {
+      return { valid: false };
+    }
+
+    // Timing-safe comparison (case-insensitive)
+    const a = Buffer.from(partner.accessCode.toLowerCase(), 'utf8');
+    const b = Buffer.from(code.toLowerCase(), 'utf8');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return { valid: false };
+    }
+
+    const sessionToken = this.jwt.sign(
+      {
+        memberGroup: 'partner',
+        partnerId,
+        eventId,
+      },
+      { expiresIn: '2h' },
+    );
+
+    return { valid: true, sessionToken, partnerName: partner.name };
+  }
+
+  /**
    * Decode and validate a member session token.
    * Returns the decoded payload or null if invalid/expired.
    */
   decodeMemberSession(
     token: string,
-  ): { memberGroup: string; tier?: string; eventId: string } | null {
+  ): { memberGroup: string; tier?: string; partnerId?: string; eventId: string } | null {
     try {
       const payload = this.jwt.verify(token) as {
         memberGroup: string;
         tier?: string;
+        partnerId?: string;
         eventId: string;
       };
       if (!payload.memberGroup || !payload.eventId) return null;

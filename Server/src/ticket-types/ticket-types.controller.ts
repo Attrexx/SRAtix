@@ -222,4 +222,29 @@ export class TicketTypesController {
   ) {
     return this.ticketTypesService.setSraDiscounts(ticketTypeId, eventId, discounts);
   }
+
+  // ─── Partner Discount CRUD ─────────────────────────────────────
+
+  @Get(':id/partner-discounts')
+  @Roles('event_admin', 'admin', 'super_admin')
+  getPartnerDiscounts(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+  ) {
+    return this.ticketTypesService.getPartnerDiscounts(ticketTypeId);
+  }
+
+  @Put(':id/partner-discounts')
+  @Roles('event_admin', 'admin', 'super_admin')
+  setPartnerDiscounts(
+    @Param('eventId') eventId: string,
+    @Param('id') ticketTypeId: string,
+    @Body() discounts: Array<{
+      partnerId: string;
+      discountType: string;
+      discountValue: number;
+    }>,
+  ) {
+    return this.ticketTypesService.setPartnerDiscounts(ticketTypeId, eventId, discounts);
+  }
 }

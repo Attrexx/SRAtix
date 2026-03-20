@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Event } from '@/lib/api';
+import { api, type Event, type MembershipPartner } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
 import { RichTextEditor } from '@/components/rich-text-editor';
@@ -67,7 +67,18 @@ export default function EventSettingsPage() {
   const [maxCapacity, setMaxCapacity] = useState('');
   const [currency, setCurrency] = useState('CHF');
   const [status, setStatus] = useState('draft');
-  const [robotxCode, setRobotxCode] = useState('');
+  // Membership Partners state
+  const [partners, setPartners] = useState<MembershipPartner[]>([]);
+  const [partnersLoading, setPartnersLoading] = useState(false);
+  const [partnerSaving, setPartnerSaving] = useState<string | null>(null); // partnerId being saved
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerLogo, setNewPartnerLogo] = useState('');
+  const [newPartnerWebsite, setNewPartnerWebsite] = useState('');
+  const [addingPartner, setAddingPartner] = useState(false);
+  const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
+  const [editPartnerName, setEditPartnerName] = useState('');
+  const [editPartnerLogo, setEditPartnerLogo] = useState('');
+  const [editPartnerWebsite, setEditPartnerWebsite] = useState('');
   const [ticketTitle, setTicketTitle] = useState('');
   const [ticketTitleSize, setTicketTitleSize] = useState('1.75');
   const [ticketIntro, setTicketIntro] = useState('');
@@ -105,7 +116,6 @@ export default function EventSettingsPage() {
     setCurrency(ev.currency);
     setStatus(ev.status);
     const meta = (ev.meta ?? {}) as Record<string, unknown>;
-    setRobotxCode((meta.robotxAccessCode as string) ?? '');
     setTicketTitle((meta.ticketTitle as string) ?? '');
     setTicketTitleSize((meta.ticketTitleSize as string) ?? '1.75');
     setTicketIntro((meta.ticketIntro as string) ?? '');
@@ -127,11 +137,13 @@ export default function EventSettingsPage() {
     Promise.all([
       api.getEvent(id, ac.signal),
       api.getLegalPages(id, ac.signal).catch(() => ({})),
+      api.getEventPartners(id, ac.signal).catch(() => [] as MembershipPartner[]),
     ])
-      .then(([ev, pages]) => {
+      .then(([ev, pages, eventPartners]) => {
         setEvent(ev);
         populateForm(ev);
         setLegalPages(pages);
+        setPartners(eventPartners);
       })
       .catch(() => {
         toast.error(t('events.settings.failedToLoad'));
@@ -159,7 +171,6 @@ export default function EventSettingsPage() {
         status,
         meta: {
           ...((event.meta ?? {}) as Record<string, unknown>),
-          robotxAccessCode: robotxCode.trim() || undefined,
           ticketTitle: ticketTitle.trim() || undefined,
           ticketTitleSize,
           ticketIntro: ticketIntro.trim() || undefined,
@@ -424,49 +435,307 @@ export default function EventSettingsPage() {
           </div>
         </Section>
 
-        {/* ── RobotX Access Code ── */}
-        <Section title={t('events.settings.robotxAccessCode')}>
+        {/* ── Membership Partners ── */}
+        <Section title={t('events.settings.membershipPartners')}>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {t('events.settings.robotxAccessCodeHint')}
+            {t('events.settings.membershipPartnersHint')}
           </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={robotxCode}
-              onChange={(e) => setRobotxCode(e.target.value.toUpperCase())}
-              placeholder="e.g. ROBOTX2026"
-              className="flex-1 rounded-lg px-3 py-2 text-sm font-mono"
-              style={{
-                background: 'var(--color-bg-subtle)',
-                border: '1px solid var(--color-border)',
-                color: 'var(--color-text)',
-              }}
-            />
-            <button
-              onClick={() => {
-                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-                let result = '';
-                const rnd = new Uint8Array(8);
-                crypto.getRandomValues(rnd);
-                for (let i = 0; i < 8; i++) result += chars[rnd[i] % chars.length];
-                setRobotxCode(result);
-              }}
-              className="rounded-lg px-3 py-2 text-xs font-medium"
-              style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
+
+          {/* Existing partners list */}
+          {partners.length > 0 && (
+            <div className="space-y-3">
+              {partners.map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-lg p-4"
+                  style={{
+                    background: 'var(--color-bg-subtle)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  {editingPartnerId === p.id ? (
+                    /* ── Inline edit form ── */
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            {t('events.settings.partnerName')}
+                          </label>
+                          <input
+                            type="text"
+                            value={editPartnerName}
+                            onChange={(e) => setEditPartnerName(e.target.value)}
+                            className="w-full rounded-lg px-3 py-2 text-sm"
+                            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            {t('events.settings.partnerLogoUrl')}
+                          </label>
+                          <input
+                            type="url"
+                            value={editPartnerLogo}
+                            onChange={(e) => setEditPartnerLogo(e.target.value)}
+                            placeholder="https://..."
+                            className="w-full rounded-lg px-3 py-2 text-sm"
+                            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                            {t('events.settings.partnerWebsite')}
+                          </label>
+                          <input
+                            type="url"
+                            value={editPartnerWebsite}
+                            onChange={(e) => setEditPartnerWebsite(e.target.value)}
+                            placeholder="https://..."
+                            className="w-full rounded-lg px-3 py-2 text-sm"
+                            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={partnerSaving === p.id}
+                          onClick={async () => {
+                            if (!editPartnerName.trim()) return;
+                            setPartnerSaving(p.id);
+                            try {
+                              const updated = await api.updateEventPartner(id, p.id, {
+                                name: editPartnerName.trim(),
+                                logoUrl: editPartnerLogo.trim() || null,
+                                websiteUrl: editPartnerWebsite.trim() || null,
+                              });
+                              setPartners((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
+                              setEditingPartnerId(null);
+                              toast.success(t('events.settings.partnerUpdated'));
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : t('events.settings.partnerSaveFailed'));
+                            } finally {
+                              setPartnerSaving(null);
+                            }
+                          }}
+                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-white"
+                          style={{ background: 'var(--color-primary)' }}
+                        >
+                          {partnerSaving === p.id ? t('common.saving') : t('common.saveChanges')}
+                        </button>
+                        <button
+                          onClick={() => setEditingPartnerId(null)}
+                          className="rounded-lg px-3 py-1.5 text-xs"
+                          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── Display row ── */
+                    <div className="flex items-center gap-3">
+                      {p.logoUrl && (
+                        <img
+                          src={p.logoUrl}
+                          alt={p.name}
+                          className="h-8 w-8 rounded object-contain"
+                          style={{ background: 'var(--color-bg-card)' }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
+                            {p.name}
+                          </span>
+                          {!p.active && (
+                            <span className="rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-muted)' }}>
+                              {t('common.inactive')}
+                            </span>
+                          )}
+                        </div>
+                        {p.websiteUrl && (
+                          <span className="text-xs truncate block" style={{ color: 'var(--color-text-muted)' }}>
+                            {p.websiteUrl}
+                          </span>
+                        )}
+                      </div>
+                      {/* Access code + actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <code
+                          className="rounded px-2 py-1 text-xs font-mono"
+                          style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                        >
+                          {p.accessCode}
+                        </code>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(p.accessCode); toast.success(t('events.settings.partnerCodeCopied')); }}
+                          className="rounded-lg p-1.5 text-xs"
+                          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                          title={t('events.settings.partnerCopyCode')}
+                        >
+                          <Icons.Copy size={14} />
+                        </button>
+                        <button
+                          disabled={partnerSaving === p.id}
+                          onClick={async () => {
+                            setPartnerSaving(p.id);
+                            try {
+                              const updated = await api.regeneratePartnerCode(id, p.id);
+                              setPartners((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
+                              toast.success(t('events.settings.partnerCodeRegenerated'));
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : t('events.settings.partnerSaveFailed'));
+                            } finally {
+                              setPartnerSaving(null);
+                            }
+                          }}
+                          className="rounded-lg p-1.5 text-xs"
+                          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                          title={t('events.settings.partnerRegenerateCode')}
+                        >
+                          <Icons.RefreshCw size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingPartnerId(p.id);
+                            setEditPartnerName(p.name);
+                            setEditPartnerLogo(p.logoUrl ?? '');
+                            setEditPartnerWebsite(p.websiteUrl ?? '');
+                          }}
+                          className="rounded-lg p-1.5 text-xs"
+                          style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                          title={t('common.edit')}
+                        >
+                          <Icons.Edit size={14} />
+                        </button>
+                        <button
+                          disabled={partnerSaving === p.id}
+                          onClick={async () => {
+                            if (!window.confirm(t('events.settings.partnerDeleteConfirm').replace('{name}', p.name))) return;
+                            setPartnerSaving(p.id);
+                            try {
+                              await api.deleteEventPartner(id, p.id);
+                              setPartners((prev) => prev.filter((x) => x.id !== p.id));
+                              toast.success(t('events.settings.partnerDeleted'));
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : t('events.settings.partnerDeleteFailed'));
+                            } finally {
+                              setPartnerSaving(null);
+                            }
+                          }}
+                          className="rounded-lg p-1.5 text-xs"
+                          style={{ color: 'var(--color-danger, #ef4444)', border: '1px solid var(--color-danger, #ef4444)' }}
+                          title={t('common.delete')}
+                        >
+                          <Icons.Trash size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new partner form */}
+          {addingPartner ? (
+            <div
+              className="rounded-lg p-4 space-y-3"
+              style={{ background: 'var(--color-bg-subtle)', border: '1px dashed var(--color-border)' }}
             >
-              {t('events.settings.robotxGenerate')}
-            </button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                    {t('events.settings.partnerName')} *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPartnerName}
+                    onChange={(e) => setNewPartnerName(e.target.value)}
+                    placeholder="e.g. ETH RobotX"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                    {t('events.settings.partnerLogoUrl')}
+                  </label>
+                  <input
+                    type="url"
+                    value={newPartnerLogo}
+                    onChange={(e) => setNewPartnerLogo(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                    {t('events.settings.partnerWebsite')}
+                  </label>
+                  <input
+                    type="url"
+                    value={newPartnerWebsite}
+                    onChange={(e) => setNewPartnerWebsite(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={partnersLoading}
+                  onClick={async () => {
+                    if (!newPartnerName.trim()) return;
+                    setPartnersLoading(true);
+                    try {
+                      const created = await api.createEventPartner(id, {
+                        name: newPartnerName.trim(),
+                        logoUrl: newPartnerLogo.trim() || undefined,
+                        websiteUrl: newPartnerWebsite.trim() || undefined,
+                        sortOrder: partners.length,
+                      });
+                      setPartners((prev) => [...prev, created]);
+                      setNewPartnerName('');
+                      setNewPartnerLogo('');
+                      setNewPartnerWebsite('');
+                      setAddingPartner(false);
+                      toast.success(t('events.settings.partnerCreated'));
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : t('events.settings.partnerSaveFailed'));
+                    } finally {
+                      setPartnersLoading(false);
+                    }
+                  }}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-white"
+                  style={{ background: 'var(--color-primary)' }}
+                >
+                  {partnersLoading ? t('common.saving') : t('events.settings.partnerAdd')}
+                </button>
+                <button
+                  onClick={() => { setAddingPartner(false); setNewPartnerName(''); setNewPartnerLogo(''); setNewPartnerWebsite(''); }}
+                  className="rounded-lg px-3 py-1.5 text-xs"
+                  style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
-              onClick={() => { navigator.clipboard.writeText(robotxCode); toast.success('Copied!'); }}
-              className="rounded-lg px-3 py-2 text-xs font-medium"
-              style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
-              disabled={!robotxCode}
+              onClick={() => setAddingPartner(true)}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90"
+              style={{ border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)' }}
             >
-              {t('events.settings.robotxCopy')}
+              <Icons.Plus size={16} />
+              {t('events.settings.partnerAddNew')}
             </button>
-          </div>
+          )}
+
           <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            {t('events.settings.robotxSaveNote')}
+            {t('events.settings.partnerCodeNote')}
           </p>
         </Section>
 

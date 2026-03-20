@@ -249,11 +249,14 @@ export interface TicketType {
   category?: string;
   membershipTier?: string | null;
   wpProductId?: number | null;
+  /** @deprecated Use partnerDiscounts instead */
   robotxDiscountType?: string | null;
+  /** @deprecated Use partnerDiscounts instead */
   robotxDiscountValue?: number | null;
   meta?: Record<string, unknown> | null;
   pricingVariants?: PricingVariant[];
   sraDiscounts?: SraDiscount[];
+  partnerDiscounts?: PartnerDiscount[];
   createdAt: string;
   updatedAt: string;
 }
@@ -264,6 +267,29 @@ export interface SraDiscount {
   membershipTier: string;
   discountType: string;
   discountValue: number;
+}
+
+export interface MembershipPartner {
+  id: string;
+  eventId: string;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  websiteUrl?: string | null;
+  accessCode: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerDiscount {
+  id: string;
+  ticketTypeId: string;
+  partnerId: string;
+  discountType: string;
+  discountValue: number;
+  partner?: { id: string; name: string };
 }
 
 export interface TicketTypeMeta {
@@ -720,6 +746,44 @@ export const api = {
     discountValue: number;
   }>) =>
     request<SraDiscount[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/sra-discounts`, { method: 'PUT', body: discounts }),
+
+  // Partner Discounts (per ticket type)
+  getPartnerDiscounts: (eventId: string, ticketTypeId: string, signal?: AbortSignal) =>
+    request<PartnerDiscount[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/partner-discounts`, { signal }),
+
+  setPartnerDiscounts: (eventId: string, ticketTypeId: string, discounts: Array<{
+    partnerId: string;
+    discountType: string;
+    discountValue: number;
+  }>) =>
+    request<PartnerDiscount[]>(`/events/${eventId}/ticket-types/${ticketTypeId}/partner-discounts`, { method: 'PUT', body: discounts }),
+
+  // Membership Partners
+  getEventPartners: (eventId: string, signal?: AbortSignal) =>
+    request<MembershipPartner[]>(`/events/${eventId}/membership-partners`, { signal }),
+
+  createEventPartner: (eventId: string, data: {
+    name: string;
+    logoUrl?: string;
+    websiteUrl?: string;
+    sortOrder?: number;
+  }) =>
+    request<MembershipPartner>(`/events/${eventId}/membership-partners`, { method: 'POST', body: data }),
+
+  updateEventPartner: (eventId: string, partnerId: string, data: {
+    name?: string;
+    logoUrl?: string | null;
+    websiteUrl?: string | null;
+    sortOrder?: number;
+    active?: boolean;
+  }) =>
+    request<MembershipPartner>(`/events/${eventId}/membership-partners/${partnerId}`, { method: 'PATCH', body: data }),
+
+  deleteEventPartner: (eventId: string, partnerId: string) =>
+    request<void>(`/events/${eventId}/membership-partners/${partnerId}`, { method: 'DELETE' }),
+
+  regeneratePartnerCode: (eventId: string, partnerId: string) =>
+    request<MembershipPartner>(`/events/${eventId}/membership-partners/${partnerId}/regenerate-code`, { method: 'POST' }),
 
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>

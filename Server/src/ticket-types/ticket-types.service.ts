@@ -583,6 +583,64 @@ export class TicketTypesService {
   }
 
   /**
+   * Batch upsert partner discounts for a ticket type.
+   * Replaces all existing partner discounts with the provided set.
+   */
+  async setPartnerDiscounts(
+    ticketTypeId: string,
+    eventId: string,
+    discounts: Array<{
+      partnerId: string;
+      discountType: string;
+      discountValue: number;
+    }>,
+  ) {
+    await this.findOne(ticketTypeId, eventId); // ownership check
+
+    // Validate values
+    for (const d of discounts) {
+      if (!['percentage', 'fixed_amount'].includes(d.discountType)) {
+        throw new BadRequestException(`Invalid discount type: ${d.discountType}`);
+      }
+      if (d.discountValue < 0) {
+        throw new BadRequestException('Discount value must be non-negative');
+      }
+      if (d.discountType === 'percentage' && d.discountValue > 100) {
+        throw new BadRequestException('Percentage discount cannot exceed 100');
+      }
+    }
+
+    // Delete existing, then create new
+    await this.prisma.ticketTypePartnerDiscount.deleteMany({
+      where: { ticketTypeId },
+    });
+
+    if (discounts.length === 0) return [];
+
+    await this.prisma.ticketTypePartnerDiscount.createMany({
+      data: discounts.map((d) => ({
+        ticketTypeId,
+        partnerId: d.partnerId,
+        discountType: d.discountType,
+        discountValue: d.discountValue,
+      })),
+    });
+
+    return this.getPartnerDiscounts(ticketTypeId);
+  }
+
+  /**
+   * Get all partner discounts for a ticket type.
+   */
+  async getPartnerDiscounts(ticketTypeId: string) {
+    return this.prisma.ticketTypePartnerDiscount.findMany({
+      where: { ticketTypeId },
+      include: { partner: { select: { id: true, name: true, slug: true } } },
+      orderBy: { partner: { sortOrder: 'asc' } },
+    });
+  }
+
+  /**
    * Calculate the discounted price in cents for a given member context.
    * Returns { discountCents, discountLabel } or null if no discount applies.
    */
@@ -596,10 +654,18 @@ export class TicketTypesService {
         discountType: string;
         discountValue: number;
       }>;
+      partnerDiscounts?: Array<{
+        partnerId: string;
+        discountType: string;
+        discountValue: number;
+        partner?: { name: string };
+      }>;
     },
     resolvedPriceCents: number,
     memberGroup: string,
     memberTier?: string,
+    partnerId?: string,
+    partnerName?: string,
   ): { discountCents: number; discountLabel: string } | null {
     if (memberGroup === 'sra' && memberTier) {
       const discount = ticketType.sraDiscounts?.find(
@@ -620,6 +686,28 @@ export class TicketTypesService {
       return { discountCents, discountLabel };
     }
 
+    // Dynamic partner discount (new system)
+    if (memberGroup === 'partner' && partnerId) {
+      const discount = ticketType.partnerDiscounts?.find(
+        (d) => d.partnerId === partnerId,
+      );
+      if (!discount) return null;
+
+      const label = partnerName ?? discount.partner?.name ?? 'Partner';
+      const discountCents =
+        discount.discountType === 'percentage'
+          ? Math.round((resolvedPriceCents * discount.discountValue) / 100)
+          : Math.min(discount.discountValue, resolvedPriceCents);
+
+      const discountLabel =
+        discount.discountType === 'percentage'
+          ? `${label} Member -${discount.discountValue}%`
+          : `${label} Member -${(discount.discountValue / 100).toFixed(2)} CHF`;
+
+      return { discountCents, discountLabel };
+    }
+
+    // Legacy RobotX discount (deprecated — for backward compat during transition)
     if (memberGroup === 'robotx') {
       if (!ticketType.robotxDiscountType || ticketType.robotxDiscountValue == null) {
         return null;
@@ -649,6 +737,7 @@ export class TicketTypesService {
     memberGroup?: string,
     memberTier?: string,
     role?: 'visitor' | 'exhibitor',
+    partnerId?: string,
   ) {
     const now = new Date();
     const ticketTypes = await this.prisma.ticketType.findMany({
@@ -660,14 +749,15 @@ export class TicketTypesService {
       include: {
         pricingVariants: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
         sraDiscounts: true,
+        partnerDiscounts: { include: { partner: { select: { name: true } } } },
       },
       orderBy: { sortOrder: 'asc' },
     });
 
     // ── Cross-membership visibility rules ──────────────────────────
-    // RobotX members don't see tickets that bundle SRA membership (and vice versa in future)
+    // Partner members don't see tickets that bundle SRA membership (and vice versa in future)
     const filtered = ticketTypes.filter((tt) => {
-      if (memberGroup === 'robotx' && tt.membershipTier) return false;
+      if ((memberGroup === 'robotx' || memberGroup === 'partner') && tt.membershipTier) return false;
       // Role-based filtering: visitor sees non-exhibitor, exhibitor sees only exhibitor
       if (role === 'visitor' && tt.category === 'exhibitor') return false;
       if (role === 'exhibitor' && tt.category !== 'exhibitor') return false;
@@ -684,7 +774,7 @@ export class TicketTypesService {
       // It only applies if the resulting price is lower than the early bird price.
       let memberDiscount: { discountCents: number; discountLabel: string; discountedPriceCents: number } | undefined;
       if (memberGroup) {
-        const discount = this.calculateMemberDiscount(tt, tt.priceCents, memberGroup, memberTier);
+        const discount = this.calculateMemberDiscount(tt, tt.priceCents, memberGroup, memberTier, partnerId);
         if (discount) {
           const memberPrice = tt.priceCents - discount.discountCents;
           // Only show member discount if it beats the resolved (early bird) price
@@ -709,6 +799,18 @@ export class TicketTypesService {
         discountType: tt.robotxDiscountType,
         discountValue: tt.robotxDiscountValue!,
       } : undefined;
+
+      // Build partner discount summary (for the specific partner member)
+      const partnerDiscount = memberGroup === 'partner' && partnerId
+        ? tt.partnerDiscounts
+            .filter((d) => d.partnerId === partnerId)
+            .map((d) => ({
+              partnerId: d.partnerId,
+              partnerName: d.partner?.name,
+              discountType: d.discountType,
+              discountValue: d.discountValue,
+            }))[0] ?? undefined
+        : undefined;
 
       return {
         id: tt.id,
@@ -739,6 +841,7 @@ export class TicketTypesService {
         memberDiscount,
         sraDiscounts,
         robotxDiscount,
+        partnerDiscount,
       };
     });
   }

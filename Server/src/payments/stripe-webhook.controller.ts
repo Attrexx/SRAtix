@@ -289,6 +289,7 @@ export class StripeWebhookController {
           currency: paidOrder.currency,
           tickets: ticketDetails,
           ticketCodes: issued.map((t) => t.code),
+          apiBaseUrl: 'https://tix.swiss-robotics.org',
           eventName: event?.name ?? 'Event',
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
           eventVenue: event?.venue ?? '',

@@ -120,6 +120,20 @@ class RobotxVerifyDto {
   code!: string;
 }
 
+class PartnerVerifyDto {
+  @IsString()
+  @IsNotEmpty()
+  eventId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  partnerId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+}
+
 @Controller('auth')
 export class AuthController {
   private readonly isProduction: boolean;
@@ -313,13 +327,30 @@ export class AuthController {
 
   /**
    * POST /api/auth/robotx-verify
-   * Verify a RobotX shared access code for a given event.
+   * @deprecated Use POST /api/auth/partner-verify instead.
+   * Kept for backward compatibility during transition.
    */
   @Post('robotx-verify')
   @HttpCode(HttpStatus.OK)
   @RateLimit({ limit: 20, windowSec: 60 })
   async robotxVerify(@Body() dto: RobotxVerifyDto) {
     return this.authService.verifyRobotxCode(dto.eventId, dto.code);
+  }
+
+  /**
+   * POST /api/auth/partner-verify
+   * Verify a membership partner’s shared access code for a given event.
+   * Returns a short-lived session token encoding the partner ID.
+   */
+  @Post('partner-verify')
+  @HttpCode(HttpStatus.OK)
+  @RateLimit({ limit: 20, windowSec: 60 })
+  async partnerVerify(@Body() dto: PartnerVerifyDto) {
+    return this.authService.verifyPartnerCode(
+      dto.eventId,
+      dto.partnerId,
+      dto.code,
+    );
   }
 
   // ─── Password Reset ────────────────────────────────────────────
