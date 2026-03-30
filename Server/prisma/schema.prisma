@@ -942,6 +942,7 @@ model LogisticsOrderItem {
   logisticsOrderId String @db.Char(36)
   logisticsItemId  String @db.Char(36)
   quantity         Int
+  fulfilledQty     Int    @default(0)
   unitPriceCents   Int
   subtotalCents    Int
   meta             Json?

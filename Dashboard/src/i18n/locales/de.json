@@ -962,5 +962,17 @@
   "logistics.invalidPrice": "Bitte geben Sie einen gültigen Preis ein.",
   "logistics.invalidStock": "Bitte geben Sie eine gültige Lagermenge ein.",
   "logistics.itemUpdated": "Artikel aktualisiert.",
-  "logistics.itemCreated": "Artikel erstellt."
+  "logistics.itemCreated": "Artikel erstellt.",
+  "logistics.fulfill": "Ausliefern",
+  "logistics.fulfillItem": "Artikel ausliefern",
+  "logistics.ordered": "Bestellt",
+  "logistics.alreadyFulfilled": "Ausgeliefert",
+  "logistics.qtyToFulfill": "Auszuliefernde Menge",
+  "logistics.fulfillAll": "Alle ausliefern",
+  "logistics.notes": "Notizen",
+  "logistics.addNote": "Notiz hinzufügen",
+  "logistics.editNote": "Notiz bearbeiten",
+  "logistics.notePlaceholder": "Interne Notiz zu dieser Bestellung hinzufügen...",
+  "logistics.notesSaved": "Notiz gespeichert.",
+  "logistics.partial": "Teilweise"
 }

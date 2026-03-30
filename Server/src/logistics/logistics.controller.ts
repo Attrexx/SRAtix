@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -20,6 +21,8 @@ import {
   UpdateLogisticsItemDto,
   LogisticsCheckoutDto,
   UpdateFulfillmentDto,
+  FulfillItemDto,
+  UpdateOrderNotesDto,
 } from './dto';
 
 // ─── Exhibitor endpoints (own org only) ─────────────────────────────────
@@ -129,6 +132,27 @@ export class LogisticsAdminController {
     @Body() dto: UpdateFulfillmentDto,
   ) {
     return this.logistics.updateFulfillment(eventId, orderId, dto.fulfillmentStatus, dto.notes);
+  }
+
+  @Patch('orders/:orderId/items/:itemId/fulfill')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async fulfillItem(
+    @Param('eventId') eventId: string,
+    @Param('orderId') orderId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: FulfillItemDto,
+  ) {
+    return this.logistics.fulfillOrderItem(eventId, orderId, itemId, dto.quantity);
+  }
+
+  @Patch('orders/:orderId/notes')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async updateNotes(
+    @Param('eventId') eventId: string,
+    @Param('orderId') orderId: string,
+    @Body() dto: UpdateOrderNotesDto,
+  ) {
+    return this.logistics.updateOrderNotes(eventId, orderId, dto.notes);
   }
 
   // ── Overview ──────────────────────────────────────────────────────

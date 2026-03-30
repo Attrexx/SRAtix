@@ -834,5 +834,17 @@
   "logistics.invalidPrice": "請輸入有效的價格。",
   "logistics.invalidStock": "請輸入有效的庫存數量。",
   "logistics.itemUpdated": "品項已更新。",
-  "logistics.itemCreated": "品項已建立。"
+  "logistics.itemCreated": "品項已建立。",
+  "logistics.fulfill": "出貨",
+  "logistics.fulfillItem": "出貨品項",
+  "logistics.ordered": "已訂購",
+  "logistics.alreadyFulfilled": "已出貨",
+  "logistics.qtyToFulfill": "出貨數量",
+  "logistics.fulfillAll": "全部出貨",
+  "logistics.notes": "備註",
+  "logistics.addNote": "新增備註",
+  "logistics.editNote": "編輯備註",
+  "logistics.notePlaceholder": "新增此訂單的內部備註...",
+  "logistics.notesSaved": "備註已儲存。",
+  "logistics.partial": "部分"
 }

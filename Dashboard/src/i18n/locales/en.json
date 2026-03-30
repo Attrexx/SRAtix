@@ -995,5 +995,17 @@
   "logistics.invalidPrice": "Please enter a valid price.",
   "logistics.invalidStock": "Please enter a valid stock quantity.",
   "logistics.itemUpdated": "Item updated.",
-  "logistics.itemCreated": "Item created."
+  "logistics.itemCreated": "Item created.",
+  "logistics.fulfill": "Fulfill",
+  "logistics.fulfillItem": "Fulfill Item",
+  "logistics.ordered": "Ordered",
+  "logistics.alreadyFulfilled": "Fulfilled",
+  "logistics.qtyToFulfill": "Quantity to fulfill",
+  "logistics.fulfillAll": "Fulfill All",
+  "logistics.notes": "Notes",
+  "logistics.addNote": "Add note",
+  "logistics.editNote": "Edit note",
+  "logistics.notePlaceholder": "Add an internal note about this order...",
+  "logistics.notesSaved": "Note saved.",
+  "logistics.partial": "Partial"
 }

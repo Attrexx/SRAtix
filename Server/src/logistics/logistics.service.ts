@@ -119,7 +119,7 @@ export class LogisticsService {
     return this.prisma.logisticsOrder.findMany({
       where: { eventId },
       include: {
-        items: { include: { item: { select: { name: true } } } },
+        items: { include: { item: { select: { name: true } } }, orderBy: { item: { name: 'asc' } } },
         org: { select: { name: true, contactEmail: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -144,6 +144,73 @@ export class LogisticsService {
       entity: 'logistics_order',
       entityId: orderId,
       detail: { fulfillmentStatus, notes },
+    });
+
+    return updated;
+  }
+
+  async fulfillOrderItem(eventId: string, orderId: string, orderItemId: string, quantity: number) {
+    const order = await this.prisma.logisticsOrder.findFirst({
+      where: { id: orderId, eventId },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundException('Logistics order not found');
+
+    const orderItem = order.items.find((i) => i.id === orderItemId);
+    if (!orderItem) throw new NotFoundException('Order item not found');
+
+    if (quantity > orderItem.quantity) {
+      throw new BadRequestException(`Cannot fulfill more than ordered quantity (${orderItem.quantity})`);
+    }
+
+    await this.prisma.logisticsOrderItem.update({
+      where: { id: orderItemId },
+      data: { fulfilledQty: quantity },
+    });
+
+    // Recompute order-level fulfillment status
+    const updatedItems = order.items.map((i) =>
+      i.id === orderItemId ? { ...i, fulfilledQty: quantity } : i,
+    );
+    const allFulfilled = updatedItems.every((i) => i.fulfilledQty >= i.quantity);
+    const noneFulfilled = updatedItems.every((i) => i.fulfilledQty === 0);
+    const newStatus = allFulfilled
+      ? 'fulfilled'
+      : noneFulfilled
+        ? 'pending'
+        : 'partial';
+
+    await this.prisma.logisticsOrder.update({
+      where: { id: orderId },
+      data: { fulfillmentStatus: newStatus },
+    });
+
+    this.audit.log({
+      eventId,
+      action: 'logistics_order_item.fulfilled',
+      entity: 'logistics_order_item',
+      entityId: orderItemId,
+      detail: { orderId, quantity, orderFulfillmentStatus: newStatus },
+    });
+
+    return { fulfilledQty: quantity, orderFulfillmentStatus: newStatus };
+  }
+
+  async updateOrderNotes(eventId: string, orderId: string, notes: string) {
+    const order = await this.prisma.logisticsOrder.findFirst({ where: { id: orderId, eventId } });
+    if (!order) throw new NotFoundException('Logistics order not found');
+
+    const updated = await this.prisma.logisticsOrder.update({
+      where: { id: orderId },
+      data: { notes },
+    });
+
+    this.audit.log({
+      eventId,
+      action: 'logistics_order.notes_updated',
+      entity: 'logistics_order',
+      entityId: orderId,
+      detail: { notes },
     });
 
     return updated;

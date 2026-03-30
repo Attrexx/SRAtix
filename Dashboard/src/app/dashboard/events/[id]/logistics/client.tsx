@@ -184,6 +184,8 @@ function RequestsTab({ eventId }: { eventId: string }) {
   const { t } = useI18n();
   const [orders, setOrders] = useState<LogisticsOrderAdmin[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fulfillModal, setFulfillModal] = useState<{ orderId: string; item: LogisticsOrderAdmin['items'][0] } | null>(null);
+  const [noteModal, setNoteModal] = useState<{ orderId: string; currentNotes: string | null } | null>(null);
 
   const load = useCallback(async () => {
     if (!eventId) return;
@@ -198,16 +200,6 @@ function RequestsTab({ eventId }: { eventId: string }) {
   }, [eventId, t]);
 
   useEffect(() => { load(); }, [load]);
-
-  const updateFulfillment = async (orderId: string, fulfillmentStatus: string) => {
-    try {
-      await api.updateLogisticsFulfillment(eventId, orderId, { fulfillmentStatus });
-      toast.success(t('logistics.fulfillmentUpdated'));
-      load();
-    } catch {
-      toast.error(t('logistics.fulfillmentError'));
-    }
-  };
 
   if (loading) return <p style={{ color: 'var(--color-text-muted)' }}>{t('common.loading')}</p>;
 
@@ -226,13 +218,13 @@ function RequestsTab({ eventId }: { eventId: string }) {
             <th className="py-2 pr-4 text-right">{t('logistics.total')}</th>
             <th className="py-2 pr-4">{t('logistics.paymentStatus')}</th>
             <th className="py-2 pr-4">{t('logistics.fulfillment')}</th>
+            <th className="py-2 pr-4">{t('logistics.notes')}</th>
             <th className="py-2 pr-4">{t('logistics.date')}</th>
-            <th className="py-2">{t('logistics.actions')}</th>
           </tr>
         </thead>
         <tbody>
           {orders.map((order) => (
-            <tr key={order.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <tr key={order.id} style={{ borderBottom: '1px solid var(--color-border)', verticalAlign: 'top' }}>
               <td className="py-2 pr-4 font-mono text-xs" style={{ color: 'var(--color-text)' }}>{order.orderNumber}</td>
               <td className="py-2 pr-4">
                 <div className="font-medium" style={{ color: 'var(--color-text)' }}>{order.org.name}</div>
@@ -242,8 +234,24 @@ function RequestsTab({ eventId }: { eventId: string }) {
               </td>
               <td className="py-2 pr-4">
                 {order.items.map((li) => (
-                  <div key={li.id} className="text-xs" style={{ color: 'var(--color-text)' }}>
-                    {li.quantity}× {li.item.name}
+                  <div key={li.id} className="flex items-center gap-2 mb-1">
+                    <span className="text-xs" style={{ color: 'var(--color-text)' }}>
+                      {li.quantity}× {li.item.name}
+                    </span>
+                    <ItemFulfillmentBadge quantity={li.quantity} fulfilledQty={li.fulfilledQty} />
+                    {order.status === 'paid' && (
+                      <button
+                        onClick={() => setFulfillModal({ orderId: order.id, item: li })}
+                        className="text-xs px-2 py-0.5 rounded font-medium"
+                        style={{
+                          background: li.fulfilledQty >= li.quantity ? 'rgba(34,197,94,0.15)' : 'var(--color-primary)',
+                          color: li.fulfilledQty >= li.quantity ? '#16a34a' : '#fff',
+                          border: li.fulfilledQty >= li.quantity ? '1px solid rgba(34,197,94,0.3)' : 'none',
+                        }}
+                      >
+                        {li.fulfilledQty >= li.quantity ? '✓ ' : ''}{t('logistics.fulfill')}
+                      </button>
+                    )}
                   </div>
                 ))}
               </td>
@@ -256,26 +264,78 @@ function RequestsTab({ eventId }: { eventId: string }) {
               <td className="py-2 pr-4">
                 <FulfillmentBadge status={order.fulfillmentStatus} />
               </td>
+              <td className="py-2 pr-4" style={{ maxWidth: '200px' }}>
+                {order.notes ? (
+                  <button
+                    onClick={() => setNoteModal({ orderId: order.id, currentNotes: order.notes })}
+                    className="text-xs text-left cursor-pointer hover:underline"
+                    style={{ color: 'var(--color-text-secondary)', wordBreak: 'break-word' }}
+                    title={t('logistics.editNote')}
+                  >
+                    {order.notes.length > 80 ? order.notes.slice(0, 80) + '…' : order.notes}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setNoteModal({ orderId: order.id, currentNotes: null })}
+                    className="text-xs hover:underline"
+                    style={{ color: 'var(--color-primary)' }}
+                  >
+                    + {t('logistics.addNote')}
+                  </button>
+                )}
+              </td>
               <td className="py-2 pr-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                 {new Date(order.createdAt).toLocaleDateString()}
-              </td>
-              <td className="py-2">
-                <FulfillmentActions
-                  current={order.fulfillmentStatus}
-                  onUpdate={(s) => updateFulfillment(order.id, s)}
-                />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {fulfillModal && (
+        <FulfillModal
+          eventId={eventId}
+          orderId={fulfillModal.orderId}
+          item={fulfillModal.item}
+          onClose={() => setFulfillModal(null)}
+          onSaved={() => { setFulfillModal(null); load(); }}
+        />
+      )}
+
+      {noteModal && (
+        <NoteModal
+          eventId={eventId}
+          orderId={noteModal.orderId}
+          currentNotes={noteModal.currentNotes}
+          onClose={() => setNoteModal(null)}
+          onSaved={() => { setNoteModal(null); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+function ItemFulfillmentBadge({ quantity, fulfilledQty }: { quantity: number; fulfilledQty: number }) {
+  const pct = quantity > 0 ? fulfilledQty / quantity : 0;
+  const style = pct >= 1
+    ? { bg: 'rgba(34,197,94,0.15)', color: '#16a34a' }
+    : pct > 0
+      ? { bg: 'rgba(59,130,246,0.15)', color: '#2563eb' }
+      : { bg: 'rgba(245,158,11,0.15)', color: '#d97706' };
+  return (
+    <span
+      className="inline-block px-1.5 py-0.5 rounded text-xs font-medium tabular-nums"
+      style={{ background: style.bg, color: style.color }}
+    >
+      {fulfilledQty}/{quantity}
+    </span>
   );
 }
 
 function FulfillmentBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; color: string }> = {
     pending: { bg: 'rgba(245,158,11,0.15)', color: '#d97706' },
+    partial: { bg: 'rgba(59,130,246,0.15)', color: '#2563eb' },
     fulfilled: { bg: 'rgba(34,197,94,0.15)', color: '#16a34a' },
     problematic: { bg: 'rgba(239,68,68,0.15)', color: '#dc2626' },
   };
@@ -290,21 +350,177 @@ function FulfillmentBadge({ status }: { status: string }) {
   );
 }
 
-function FulfillmentActions({ current, onUpdate }: { current: string; onUpdate: (s: string) => void }) {
-  const options = ['pending', 'fulfilled', 'problematic'].filter((s) => s !== current);
+function FulfillModal({
+  eventId,
+  orderId,
+  item,
+  onClose,
+  onSaved,
+}: {
+  eventId: string;
+  orderId: string;
+  item: LogisticsOrderAdmin['items'][0];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t } = useI18n();
+  const remaining = item.quantity - item.fulfilledQty;
+  const [qty, setQty] = useState(remaining > 0 ? remaining : item.quantity);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (fulfillQty: number) => {
+    const newFulfilledQty = Math.min(item.fulfilledQty + fulfillQty, item.quantity);
+    setSaving(true);
+    try {
+      await api.fulfillLogisticsItem(eventId, orderId, item.id, { quantity: newFulfilledQty });
+      toast.success(t('logistics.fulfillmentUpdated'));
+      onSaved();
+    } catch {
+      toast.error(t('logistics.fulfillmentError'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="flex gap-1">
-      {options.map((s) => (
-        <button
-          key={s}
-          onClick={() => onUpdate(s)}
-          className="text-xs px-2 py-1 rounded"
-          style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
-          title={`Mark ${s}`}
-        >
-          {s === 'fulfilled' ? '✓' : s === 'problematic' ? '!' : '⏳'}
-        </button>
-      ))}
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-lg p-5 w-full max-w-sm shadow-xl"
+        style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>{t('logistics.fulfillItem')}</h3>
+        <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {item.item.name}
+        </p>
+        <p className="text-xs mb-4" style={{ color: 'var(--color-text-muted)' }}>
+          {t('logistics.ordered')}: {item.quantity} · {t('logistics.alreadyFulfilled')}: {item.fulfilledQty}
+        </p>
+
+        <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {t('logistics.qtyToFulfill')}
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={remaining}
+          value={qty}
+          onChange={(e) => setQty(Math.max(0, Math.min(remaining, parseInt(e.target.value) || 0)))}
+          className="w-full px-3 py-1.5 text-sm rounded mb-3"
+          style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+          >
+            {t('common.cancel')}
+          </button>
+          {remaining > 0 && (
+            <button
+              disabled={saving}
+              onClick={() => handleSubmit(remaining)}
+              className="px-3 py-1.5 text-sm rounded font-medium disabled:opacity-50"
+              style={{ background: 'rgba(34,197,94,0.15)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.3)' }}
+            >
+              {t('logistics.fulfillAll')} ({remaining})
+            </button>
+          )}
+          <button
+            disabled={saving || qty <= 0}
+            onClick={() => handleSubmit(qty)}
+            className="px-3 py-1.5 text-sm text-white rounded font-medium disabled:opacity-50"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            {saving ? t('common.saving') : t('logistics.fulfill')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NoteModal({
+  eventId,
+  orderId,
+  currentNotes,
+  onClose,
+  onSaved,
+}: {
+  eventId: string;
+  orderId: string;
+  currentNotes: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { t } = useI18n();
+  const MAX_CHARS = 1000;
+  const [notes, setNotes] = useState(currentNotes ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateLogisticsOrderNotes(eventId, orderId, { notes });
+      toast.success(t('logistics.notesSaved'));
+      onSaved();
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-lg p-5 w-full max-w-md shadow-xl"
+        style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+          {currentNotes ? t('logistics.editNote') : t('logistics.addNote')}
+        </h3>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value.slice(0, MAX_CHARS))}
+          rows={4}
+          className="w-full px-3 py-1.5 text-sm rounded mb-1"
+          style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+          placeholder={t('logistics.notePlaceholder')}
+        />
+        <p className="text-xs mb-3" style={{ color: notes.length > MAX_CHARS * 0.9 ? '#dc2626' : 'var(--color-text-muted)' }}>
+          {notes.length}/{MAX_CHARS}
+        </p>
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            disabled={saving}
+            onClick={handleSave}
+            className="px-3 py-1.5 text-sm text-white rounded font-medium disabled:opacity-50"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            {saving ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

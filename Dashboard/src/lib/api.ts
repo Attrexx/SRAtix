@@ -667,6 +667,7 @@ export interface LogisticsOrderAdmin {
   items: Array<{
     id: string;
     quantity: number;
+    fulfilledQty: number;
     unitPriceCents: number;
     subtotalCents: number;
     item: { name: string };
@@ -1273,6 +1274,18 @@ export const api = {
     request<Record<string, unknown>>(
       `/admin/logistics/events/${eventId}/orders/${orderId}/fulfillment`,
       { method: 'PUT', body: data },
+    ),
+
+  fulfillLogisticsItem: (eventId: string, orderId: string, itemId: string, data: { quantity: number }) =>
+    request<{ fulfilledQty: number; orderFulfillmentStatus: string }>(
+      `/admin/logistics/events/${eventId}/orders/${orderId}/items/${itemId}/fulfill`,
+      { method: 'PATCH', body: data },
+    ),
+
+  updateLogisticsOrderNotes: (eventId: string, orderId: string, data: { notes: string }) =>
+    request<Record<string, unknown>>(
+      `/admin/logistics/events/${eventId}/orders/${orderId}/notes`,
+      { method: 'PATCH', body: data },
     ),
 
   getLogisticsOverview: (eventId: string, signal?: AbortSignal) =>

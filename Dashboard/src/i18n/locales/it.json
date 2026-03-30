@@ -834,5 +834,17 @@
   "logistics.invalidPrice": "Inserire un prezzo valido.",
   "logistics.invalidStock": "Inserire una quantità di stock valida.",
   "logistics.itemUpdated": "Articolo aggiornato.",
-  "logistics.itemCreated": "Articolo creato."
+  "logistics.itemCreated": "Articolo creato.",
+  "logistics.fulfill": "Evadere",
+  "logistics.fulfillItem": "Evadere articolo",
+  "logistics.ordered": "Ordinato",
+  "logistics.alreadyFulfilled": "Evaso",
+  "logistics.qtyToFulfill": "Quantità da evadere",
+  "logistics.fulfillAll": "Evadere tutto",
+  "logistics.notes": "Note",
+  "logistics.addNote": "Aggiungi nota",
+  "logistics.editNote": "Modifica nota",
+  "logistics.notePlaceholder": "Aggiungi una nota interna su questo ordine...",
+  "logistics.notesSaved": "Nota salvata.",
+  "logistics.partial": "Parziale"
 }
