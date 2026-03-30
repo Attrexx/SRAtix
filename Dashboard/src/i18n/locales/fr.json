@@ -72,6 +72,8 @@
   "common.deactivate": "Désactiver",
   "common.true": "vrai",
   "common.false": "faux",
+  "common.status": "Statut",
+  "common.error": "Une erreur est survenue",
 
   "theme.light": "Clair",
   "theme.dark": "Sombre",
@@ -946,5 +948,21 @@
   "logistics.save": "Enregistrer",
   "logistics.cancel": "Annuler",
   "logistics.confirmDelete": "Supprimer cet article ? Les articles avec des commandes payées ne peuvent pas être supprimés.",
-  "logistics.date": "Date"
+  "logistics.date": "Date",
+  "logistics.sold": "Vendu",
+  "logistics.fulfillmentBreakdown": "Répartition des livraisons",
+  "logistics.pendingLabel": "En attente",
+  "logistics.problematic": "Problématique",
+  "logistics.itemsCount": "articles",
+  "logistics.noData": "Pas encore de données logistiques.",
+  "logistics.loadError": "Échec du chargement des données logistiques.",
+  "logistics.fulfillmentUpdated": "Statut de livraison mis à jour.",
+  "logistics.fulfillmentError": "Échec de la mise à jour du statut de livraison.",
+  "logistics.paymentStatus": "Paiement",
+  "logistics.itemDeleted": "Article supprimé.",
+  "logistics.deleteError": "Échec de la suppression de l'article.",
+  "logistics.invalidPrice": "Veuillez saisir un prix valide.",
+  "logistics.invalidStock": "Veuillez saisir une quantité de stock valide.",
+  "logistics.itemUpdated": "Article mis à jour.",
+  "logistics.itemCreated": "Article créé."
 }

@@ -12,6 +12,9 @@ const sratixI18n = (function () {
 
   const translations = {
     en: {
+      // Common
+      'common.loading':          'Loading…',
+
       // Ticket cards
       'tickets.noTickets':       'No tickets available at this time.',
       'tickets.loadError':       'Unable to load tickets. Please try again later.',
@@ -312,6 +315,8 @@ const sratixI18n = (function () {
     },
 
     fr: {
+      'common.loading':          'Chargement…',
+
       'tickets.noTickets':       'Aucun billet disponible pour le moment.',
       'tickets.loadError':       'Impossible de charger les billets. Veuillez réessayer.',
       'tickets.free':            'Gratuit',
@@ -596,6 +601,8 @@ const sratixI18n = (function () {
     },
 
     de: {
+      'common.loading':          'Laden…',
+
       'tickets.noTickets':       'Zurzeit sind keine Tickets verfügbar.',
       'tickets.loadError':       'Tickets konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
       'tickets.free':            'Kostenlos',
@@ -880,6 +887,8 @@ const sratixI18n = (function () {
     },
 
     it: {
+      'common.loading':          'Caricamento…',
+
       'tickets.noTickets':       'Al momento non sono disponibili biglietti.',
       'tickets.loadError':       'Impossibile caricare i biglietti. Riprova più tardi.',
       'tickets.free':            'Gratuito',
@@ -1164,6 +1173,8 @@ const sratixI18n = (function () {
     },
 
     'zh-TW': {
+      'common.loading':          '載入中…',
+
       'tickets.noTickets':       '目前暫無可購買的票券。',
       'tickets.loadError':       '無法載入票券，請稍後再試。',
       'tickets.free':            '免費',

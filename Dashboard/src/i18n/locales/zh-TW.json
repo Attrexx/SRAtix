@@ -72,6 +72,8 @@
   "common.deactivate": "停用",
   "common.true": "是",
   "common.false": "否",
+  "common.status": "狀態",
+  "common.error": "發生錯誤",
 
   "theme.light": "淺色",
   "theme.dark": "深色",
@@ -816,5 +818,21 @@
   "logistics.save": "儲存",
   "logistics.cancel": "取消",
   "logistics.confirmDelete": "刪除此品項？有已付款訂單的品項無法刪除。",
-  "logistics.date": "日期"
+  "logistics.date": "日期",
+  "logistics.sold": "已售",
+  "logistics.fulfillmentBreakdown": "履行概覽",
+  "logistics.pendingLabel": "待處理",
+  "logistics.problematic": "有問題",
+  "logistics.itemsCount": "品項",
+  "logistics.noData": "尚無物流資料。",
+  "logistics.loadError": "載入物流資料失敗。",
+  "logistics.fulfillmentUpdated": "履行狀態已更新。",
+  "logistics.fulfillmentError": "更新履行狀態失敗。",
+  "logistics.paymentStatus": "付款",
+  "logistics.itemDeleted": "品項已刪除。",
+  "logistics.deleteError": "刪除品項失敗。",
+  "logistics.invalidPrice": "請輸入有效的價格。",
+  "logistics.invalidStock": "請輸入有效的庫存數量。",
+  "logistics.itemUpdated": "品項已更新。",
+  "logistics.itemCreated": "品項已建立。"
 }

@@ -72,6 +72,8 @@
   "common.deactivate": "Deactivate",
   "common.true": "true",
   "common.false": "false",
+  "common.status": "Status",
+  "common.error": "An error occurred",
 
   "theme.light": "Light",
   "theme.dark": "Dark",
@@ -977,5 +979,21 @@
   "logistics.save": "Save",
   "logistics.cancel": "Cancel",
   "logistics.confirmDelete": "Delete this item? Items with paid orders cannot be deleted.",
-  "logistics.date": "Date"
+  "logistics.date": "Date",
+  "logistics.sold": "Sold",
+  "logistics.fulfillmentBreakdown": "Fulfillment Breakdown",
+  "logistics.pendingLabel": "Pending",
+  "logistics.problematic": "Problematic",
+  "logistics.itemsCount": "items",
+  "logistics.noData": "No logistics data yet.",
+  "logistics.loadError": "Failed to load logistics data.",
+  "logistics.fulfillmentUpdated": "Fulfillment status updated.",
+  "logistics.fulfillmentError": "Failed to update fulfillment status.",
+  "logistics.paymentStatus": "Payment",
+  "logistics.itemDeleted": "Item deleted.",
+  "logistics.deleteError": "Failed to delete item.",
+  "logistics.invalidPrice": "Please enter a valid price.",
+  "logistics.invalidStock": "Please enter a valid stock quantity.",
+  "logistics.itemUpdated": "Item updated.",
+  "logistics.itemCreated": "Item created."
 }

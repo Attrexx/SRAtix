@@ -72,6 +72,8 @@
   "common.deactivate": "Deaktivieren",
   "common.true": "wahr",
   "common.false": "falsch",
+  "common.status": "Status",
+  "common.error": "Ein Fehler ist aufgetreten",
 
   "theme.light": "Hell",
   "theme.dark": "Dunkel",
@@ -944,5 +946,21 @@
   "logistics.save": "Speichern",
   "logistics.cancel": "Abbrechen",
   "logistics.confirmDelete": "Diesen Artikel löschen? Artikel mit bezahlten Bestellungen können nicht gelöscht werden.",
-  "logistics.date": "Datum"
+  "logistics.date": "Datum",
+  "logistics.sold": "Verkauft",
+  "logistics.fulfillmentBreakdown": "Lieferübersicht",
+  "logistics.pendingLabel": "Ausstehend",
+  "logistics.problematic": "Problematisch",
+  "logistics.itemsCount": "Artikel",
+  "logistics.noData": "Noch keine Logistikdaten.",
+  "logistics.loadError": "Logistikdaten konnten nicht geladen werden.",
+  "logistics.fulfillmentUpdated": "Lieferstatus aktualisiert.",
+  "logistics.fulfillmentError": "Lieferstatus konnte nicht aktualisiert werden.",
+  "logistics.paymentStatus": "Zahlung",
+  "logistics.itemDeleted": "Artikel gelöscht.",
+  "logistics.deleteError": "Artikel konnte nicht gelöscht werden.",
+  "logistics.invalidPrice": "Bitte geben Sie einen gültigen Preis ein.",
+  "logistics.invalidStock": "Bitte geben Sie eine gültige Lagermenge ein.",
+  "logistics.itemUpdated": "Artikel aktualisiert.",
+  "logistics.itemCreated": "Artikel erstellt."
 }
