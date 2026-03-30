@@ -1205,14 +1205,16 @@ export class ExhibitorPortalService {
     if (!event) throw new NotFoundException('Event not found');
 
     // Get all event_admin, admin, and super_admin emails for this org
-    const admins = await this.prisma.user.findMany({
+    const adminRoles = await this.prisma.userRole.findMany({
       where: {
         orgId: event.orgId,
         role: { in: ['event_admin', 'admin', 'super_admin'] },
-        status: 'active',
       },
-      select: { email: true },
+      select: { user: { select: { email: true, active: true } } },
     });
+    const admins = adminRoles
+      .filter(r => r.user.active)
+      .map(r => r.user);
 
     const fromName = profile?.companyName || 'Exhibitor';
     const fromEmail = profile?.contactEmail || userEmail;

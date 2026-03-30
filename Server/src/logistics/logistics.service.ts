@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../payments/stripe.service';
-import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateLogisticsItemDto } from './dto/create-logistics-item.dto';
 import { UpdateLogisticsItemDto } from './dto/update-logistics-item.dto';
 
@@ -49,7 +49,7 @@ export class LogisticsService {
 
     this.audit.log({
       eventId,
-      action: 'logistics_item.created' as AuditAction,
+      action: 'logistics_item.created',
       entity: 'logistics_item',
       entityId: item.id,
       detail: { name: dto.name, priceCents: dto.priceCents, stockTotal: dto.stockTotal },
@@ -76,10 +76,10 @@ export class LogisticsService {
 
     this.audit.log({
       eventId,
-      action: 'logistics_item.updated' as AuditAction,
+      action: 'logistics_item.updated',
       entity: 'logistics_item',
       entityId: itemId,
-      detail: dto,
+      detail: { ...dto },
     });
 
     return updated;
@@ -104,7 +104,7 @@ export class LogisticsService {
 
     this.audit.log({
       eventId,
-      action: 'logistics_item.deleted' as AuditAction,
+      action: 'logistics_item.deleted',
       entity: 'logistics_item',
       entityId: itemId,
       detail: { name: item.name },
@@ -138,7 +138,7 @@ export class LogisticsService {
 
     this.audit.log({
       eventId,
-      action: 'logistics_order.fulfillment_updated' as AuditAction,
+      action: 'logistics_order.fulfillment_updated',
       entity: 'logistics_order',
       entityId: orderId,
       detail: { fulfillmentStatus, notes },
