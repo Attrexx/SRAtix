@@ -758,6 +758,37 @@ ${data.message}
   }
 
   /**
+   * Notify admins that an exhibitor logistics order was paid.
+   */
+  async sendLogisticsOrderNotification(
+    recipients: string[],
+    data: {
+      orderNumber: string;
+      exhibitorName: string;
+      customerEmail: string;
+      eventName: string;
+      totalFormatted: string;
+      currency: string;
+      items: Array<{ name: string; quantity: number; subtotalFormatted: string }>;
+    },
+  ): Promise<void> {
+    const html = this.renderAdminLogisticsOrder(data);
+    const itemLines = data.items.map(i => `  ${i.quantity}× ${i.name} — ${i.subtotalFormatted} ${data.currency}`).join('\n');
+    const text = `Logistics Order Paid: ${data.orderNumber}\n\nExhibitor: ${data.exhibitorName}\nEmail: ${data.customerEmail}\nEvent: ${data.eventName}\n\nItems:\n${itemLines}\n\nTotal: ${data.totalFormatted} ${data.currency}\n\n— SRAtix`;
+
+    for (const to of recipients) {
+      this.send({
+        to,
+        subject: `📦 Logistics order ${data.orderNumber} — ${data.eventName}`,
+        html,
+        text,
+      }).catch((err) =>
+        this.logger.error(`Logistics notification failed for ${to}: ${err}`),
+      );
+    }
+  }
+
+  /**
    * Low-level send — delegates to transport.
    */
   private async send(message: EmailMessage): Promise<DeliveryResult> {
@@ -1173,5 +1204,52 @@ Venue: ${data.eventVenue}
       </table>
     </body>
     </html>`;
+  }
+
+  private renderAdminLogisticsOrder(data: {
+    orderNumber: string;
+    exhibitorName: string;
+    customerEmail: string;
+    eventName: string;
+    totalFormatted: string;
+    currency: string;
+    items: Array<{ name: string; quantity: number; subtotalFormatted: string }>;
+  }): string {
+    const itemRows = data.items
+      .map(
+        (i) =>
+          `<tr>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee;">${i.name}</td>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee; text-align: center;">${i.quantity}</td>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee; text-align: right;">${i.subtotalFormatted} ${data.currency}</td>
+          </tr>`,
+      )
+      .join('');
+
+    const rows = [
+      this.adminInfoRow('Order', `#${data.orderNumber}`),
+      this.adminInfoRow('Exhibitor', data.exhibitorName),
+      this.adminInfoRow('Email', `<a href="mailto:${data.customerEmail}" style="color: #4f46e5; text-decoration: none;">${data.customerEmail}</a>`),
+      this.adminInfoRow('Event', data.eventName),
+    ].join('');
+
+    return this.adminWrapper('Logistics Order Paid', `
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <p style="margin: 0; font-size: 26px; font-weight: 700; color: #15803d;">${data.totalFormatted} ${data.currency}</p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #16a34a;">Payment confirmed</p>
+      </div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows}
+      </table>
+      <h3 style="margin: 20px 0 8px; font-size: 14px; color: #333;">Items ordered</h3>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 14px;">
+        <tr style="background: #f8f9fa;">
+          <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Item</th>
+          <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Qty</th>
+          <th style="padding: 8px 12px; text-align: right; font-weight: 600;">Subtotal</th>
+        </tr>
+        ${itemRows}
+      </table>
+    `);
   }
 }

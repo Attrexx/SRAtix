@@ -9,6 +9,7 @@ import { StripeService } from '../payments/stripe.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateLogisticsItemDto } from './dto/create-logistics-item.dto';
 import { UpdateLogisticsItemDto } from './dto/update-logistics-item.dto';
+import { EmailService } from '../email/email.service';
 
 const ORDER_NUMBER_MAX_RETRIES = 5;
 
@@ -20,6 +21,7 @@ export class LogisticsService {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly audit: AuditLogService,
+    private readonly email: EmailService,
   ) {}
 
   // ─── Admin: Stock Items ───────────────────────────────────────────
@@ -360,6 +362,11 @@ export class LogisticsService {
     });
 
     this.logger.log(`Logistics order ${order.orderNumber} marked as paid`);
+
+    // Notify superadmins (testing — expand to admin + event_admin after testing)
+    this.notifyLogisticsOrderPaid(order.id).catch((err) =>
+      this.logger.error(`Failed to send logistics order notification: ${err}`),
+    );
   }
 
   async markExpired(orderId: string) {
@@ -392,6 +399,56 @@ export class LogisticsService {
   }
 
   // ─── Internals ────────────────────────────────────────────────────
+
+  /**
+   * Send admin notification for a paid logistics order.
+   * Testing: super_admin only. After testing, add 'admin' + 'event_admin'.
+   */
+  private async notifyLogisticsOrderPaid(orderId: string) {
+    const order = await this.prisma.logisticsOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { item: { select: { name: true } } } },
+        event: { select: { name: true, orgId: true } },
+        org: { select: { name: true } },
+      },
+    });
+    if (!order) return;
+
+    // Testing: super_admin only — expand to ['super_admin', 'admin', 'event_admin'] after testing
+    const adminRoles = await this.prisma.userRole.findMany({
+      where: {
+        orgId: order.event.orgId,
+        role: { in: ['super_admin'] },
+      },
+      select: { user: { select: { email: true, active: true } } },
+    });
+    const recipients = [
+      ...new Set(
+        adminRoles
+          .filter((r) => r.user.active)
+          .map((r) => r.user.email)
+          .filter(Boolean),
+      ),
+    ];
+    if (recipients.length === 0) return;
+
+    await this.email.sendLogisticsOrderNotification(recipients, {
+      orderNumber: order.orderNumber,
+      exhibitorName: order.org.name,
+      customerEmail: order.customerEmail ?? '',
+      eventName: order.event.name,
+      totalFormatted: (order.totalCents / 100).toFixed(2),
+      currency: order.currency,
+      items: order.items.map((li) => ({
+        name: li.item.name,
+        quantity: li.quantity,
+        subtotalFormatted: (li.subtotalCents / 100).toFixed(2),
+      })),
+    });
+
+    this.logger.log(`Logistics order notification sent for ${order.orderNumber} to ${recipients.length} recipient(s)`);
+  }
 
   private async generateOrderNumber(eventId: string): Promise<string> {
     const year = new Date().getFullYear();
