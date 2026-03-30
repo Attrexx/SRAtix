@@ -228,6 +228,9 @@ export default function ExhibitorSetupPage() {
                 <InfoRow label={t('exhibitors.status')} value={selected.status} />
               </Section>
 
+              {/* Booth QR Code */}
+              {selected.boothNumber && <BoothQrSection exhibitorId={selected.id} t={t} />}
+
               {/* Company Profile */}
               <Section title={t('exhibitors.companyProfile')}>
                 {selected.profile.description && (
@@ -318,5 +321,40 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
       <span className="text-gray-500 w-32 flex-shrink-0">{label}</span>
       <span className="text-gray-800 dark:text-gray-200 break-all">{value}</span>
     </div>
+  );
+}
+
+function BoothQrSection({ exhibitorId, t }: { exhibitorId: string; t: (k: string) => string }) {
+  const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [showText, setShowText] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBoothQr(exhibitorId).then((data) => {
+      if (!cancelled) setQrPayload(data.qrPayload);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [exhibitorId]);
+
+  if (!qrPayload) return null;
+
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrPayload)}&size=180x180&format=svg`;
+
+  return (
+    <Section title={t('exhibitors.boothQrCode')}>
+      <div className="flex flex-col items-center gap-2 py-2">
+        {!showText ? (
+          <img src={qrUrl} alt="Booth QR code" width={180} height={180} className="rounded border bg-white p-1" />
+        ) : (
+          <code className="text-xs bg-gray-100 dark:bg-gray-800 p-3 rounded break-all select-all">{qrPayload}</code>
+        )}
+        <button
+          className="text-xs text-blue-600 hover:underline"
+          onClick={() => setShowText(!showText)}
+        >
+          {showText ? t('exhibitors.showQrImage') : t('exhibitors.showQrText')}
+        </button>
+      </div>
+    </Section>
   );
 }

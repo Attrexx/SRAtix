@@ -205,9 +205,14 @@
 
   async function apiFetch(endpoint, options = {}) {
     const url = API_BASE + '/' + endpoint.replace(/^\//, '');
+    var headers = options.headers || {};
+    // Don't set Content-Type for FormData — browser sets multipart boundary automatically
+    if (!(options.body instanceof FormData)) {
+      headers = { 'Content-Type': 'application/json', ...headers };
+    }
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
       ...options,
+      headers: headers,
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -216,11 +221,13 @@
     return body;
   }
 
-  /** Resolve a relative URL (e.g. /uploads/...) against API_BASE. */
+  /** Resolve a relative URL (e.g. /uploads/...) against the server origin. */
   function resolveApiUrl(path) {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return API_BASE + (path.startsWith('/') ? '' : '/') + path;
+    // /uploads/ paths are served from the server root, not under /api
+    var origin = API_BASE.replace(/\/api\/?$/, '');
+    return origin + (path.startsWith('/') ? '' : '/') + path;
   }
 
   // ─── Ticket widget ────────────────────────────────────────────────────────────
@@ -2804,6 +2811,7 @@
     booth: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18l-2 9H5L3 3Z"/><path d="M5 12v8h14v-8"/><path d="M12 12v8"/><path d="M1 3h22"/></svg>',
     institution: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 .856l10 5.556V9H2V6.412L12 .856ZM5.06 7h13.88L12 3.144L5.06 7ZM7 11v8H5v-8h2Zm6 0v8h-2v-8h2Zm6 0v8h-2v-8h2ZM2 21h20v2H2v-2Z"/></svg>',
     tip: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 1 4 12.7V17H8v-2.3A7 7 0 0 1 12 2Z"/></svg>',
+    contact: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z"/><polyline points="22,6 12,13 2,6"/></svg>',
   };
 
   // ─── SRAtix brand logo SVG (inline, white, for portal header) ──────────────
@@ -2821,6 +2829,7 @@
       { key: 'media',      icon: PORTAL_ICONS.media,     label: t('exhibitorPortal.tabMedia') },
       { key: 'analytics',  icon: PORTAL_ICONS.analytics, label: t('exhibitorPortal.tabAnalytics') },
       { key: 'logistics',  icon: PORTAL_ICONS.logistics, label: t('exhibitorPortal.tabLogistics') },
+      { key: 'contact',    icon: PORTAL_ICONS.contact,   label: t('exhibitorPortal.tabContact') },
     ];
 
     const hasLogo = !!profile.logoUrl;
@@ -2879,6 +2888,9 @@
         </div>
         <div class="sratix-portal-panel" id="sratix-panel-logistics"
              style="${activeTab !== 'logistics' ? 'display:none' : ''}">
+        </div>
+        <div class="sratix-portal-panel" id="sratix-panel-contact"
+             style="${activeTab !== 'contact' ? 'display:none' : ''}">
         </div>
       </div>
     `;
@@ -2946,6 +2958,7 @@
     renderMediaPanel(container.querySelector('#sratix-panel-media'), profile, events, authHeaders);
     renderAnalyticsPanel(container.querySelector('#sratix-panel-analytics'), events, authHeaders);
     renderLogisticsPanel(container.querySelector('#sratix-panel-logistics'), events, authHeaders);
+    renderContactPanel(container.querySelector('#sratix-panel-contact'), profile, events, authHeaders);
   }
 
   function renderProfilePanel(panel, profile, authHeaders) {
@@ -3122,68 +3135,30 @@
             ${escHtml(ev.status || 'draft')}
           </span>
         </div>
-        <form class="sratix-portal-form sratix-event-detail-form">
-          <div class="sratix-portal-fields">
-            <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.boothNumber'))}</label>
-              <input type="text" name="boothNumber" value="${escAttr(ev.boothNumber || '')}" class="sratix-input" />
-            </div>
-            <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.expoArea'))}</label>
-              <input type="text" name="expoArea" value="${escAttr(ev.expoArea || '')}" class="sratix-input" />
-            </div>
-            <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorCategory'))}</label>
-              <input type="text" name="exhibitorCategory" value="${escAttr(ev.exhibitorCategory || '')}" class="sratix-input" />
-            </div>
-            <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorType'))}</label>
-              <input type="text" name="exhibitorType" value="${escAttr(ev.exhibitorType || '')}" class="sratix-input" />
-            </div>
+        <div class="sratix-portal-info-box">
+          <span class="sratix-portal-info-box__icon">${PORTAL_ICONS.tip}</span>
+          <p>${escHtml(t('exhibitorPortal.boothAssignedByOrganizers'))}</p>
+        </div>
+        <div class="sratix-portal-fields sratix-portal-fields--readonly">
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.boothNumber'))}</label>
+            <div class="sratix-readonly-value">${escHtml(ev.boothNumber || '—')}</div>
           </div>
-          <div class="sratix-portal-actions">
-            <button type="submit" class="sratix-btn sratix-btn--primary sratix-btn--sm">
-              ${escHtml(t('exhibitorPortal.saveEvent'))}
-            </button>
-            <span class="sratix-portal-status"></span>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.expoArea'))}</label>
+            <div class="sratix-readonly-value">${escHtml(ev.expoArea || '—')}</div>
           </div>
-        </form>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorCategory'))}</label>
+            <div class="sratix-readonly-value">${escHtml(ev.exhibitorCategory || '—')}</div>
+          </div>
+          <div class="sratix-field-group">
+            <label class="sratix-label">${escHtml(t('exhibitorPortal.exhibitorType'))}</label>
+            <div class="sratix-readonly-value">${escHtml(ev.exhibitorType || '—')}</div>
+          </div>
+        </div>
       </div>
     `).join('');
-
-    // Save handlers for each event form
-    panel.querySelectorAll('.sratix-event-card').forEach(card => {
-      const eventId = card.dataset.eventId;
-      const form = card.querySelector('.sratix-event-detail-form');
-      const statusEl = card.querySelector('.sratix-portal-status');
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = form.querySelector('button[type="submit"]');
-        btn.disabled = true;
-
-        const body = {
-          boothNumber: form.boothNumber.value.trim() || undefined,
-          expoArea: form.expoArea.value.trim() || undefined,
-          exhibitorCategory: form.exhibitorCategory.value.trim() || undefined,
-          exhibitorType: form.exhibitorType.value.trim() || undefined,
-        };
-
-        try {
-          await apiFetch(`exhibitor-portal/events/${eventId}/details`, {
-            method: 'PUT',
-            headers: authHeaders,
-            body: JSON.stringify(body),
-          });
-          showStatus(statusEl, t('exhibitorPortal.saved'), false);
-        } catch (err) {
-          console.error('[SRAtix] Event details save error:', err);
-          showStatus(statusEl, t('exhibitorPortal.saveError'), true);
-        } finally {
-          btn.disabled = false;
-        }
-      });
-    });
   }
 
   // ─── Staff panel ───────────────────────────────────────────────────────────
@@ -3476,25 +3451,21 @@
 
           <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.demoImages'))}</h4>
           <div class="sratix-media-gallery" id="sratix-demo-gallery">
-            ${demoGallery.map((item, i) => `
-              <div class="sratix-media-item" data-index="${i}">
-                <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
-                <button type="button" class="sratix-media-remove" data-scope="demo" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
-              </div>
-            `).join('')}
+            ${renderGalleryItems(demoGallery, 'demo')}
           </div>
           <div class="sratix-media-add">
             <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
-              <input type="url" id="sratix-add-demo-image-url" class="sratix-input" placeholder="https://..." />
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.chooseImage'))}</label>
+              <input type="file" id="sratix-add-demo-image-file" class="sratix-input" accept="image/*" />
             </div>
             <div class="sratix-field-group">
               <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
               <input type="text" id="sratix-add-demo-image-caption" class="sratix-input" maxlength="200" />
             </div>
             <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-demo-image-btn">
-              + ${escHtml(t('exhibitorPortal.addImage'))}
+              + ${escHtml(t('exhibitorPortal.uploadImage'))}
             </button>
+            <span class="sratix-portal-status" id="sratix-demo-upload-status"></span>
           </div>
 
           <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.demoVideos'))}</h4>
@@ -3530,25 +3501,21 @@
 
           <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.companyImages'))}</h4>
           <div class="sratix-media-gallery" id="sratix-profile-gallery">
-            ${profileGallery.map((item, i) => `
-              <div class="sratix-media-item" data-index="${i}">
-                <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
-                <button type="button" class="sratix-media-remove" data-scope="profile" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
-              </div>
-            `).join('')}
+            ${renderGalleryItems(profileGallery, 'profile')}
           </div>
           <div class="sratix-media-add">
             <div class="sratix-field-group">
-              <label class="sratix-label">${escHtml(t('exhibitorPortal.imageUrl'))}</label>
-              <input type="url" id="sratix-add-image-url" class="sratix-input" placeholder="https://..." />
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.chooseImage'))}</label>
+              <input type="file" id="sratix-add-image-file" class="sratix-input" accept="image/*" />
             </div>
             <div class="sratix-field-group">
               <label class="sratix-label">${escHtml(t('exhibitorPortal.imageCaption'))}</label>
               <input type="text" id="sratix-add-image-caption" class="sratix-input" maxlength="200" />
             </div>
             <button type="button" class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-add-image-btn">
-              + ${escHtml(t('exhibitorPortal.addImage'))}
+              + ${escHtml(t('exhibitorPortal.uploadImage'))}
             </button>
+            <span class="sratix-portal-status" id="sratix-profile-upload-status"></span>
           </div>
 
           <h4 class="sratix-media-sub-title">${escHtml(t('exhibitorPortal.companyVideos'))}</h4>
@@ -3577,40 +3544,76 @@
     `;
 
     // ── Local state ──
-    let currentDemoGallery = [...demoGallery];
-    let currentDemoVideos  = [...demoVideos];
-    let currentGallery     = [...profileGallery];
-    let currentVideos      = [...profileVideos];
+    var currentDemoGallery = [...demoGallery];
+    var currentDemoVideos  = [...demoVideos];
+    var currentGallery     = [...profileGallery];
+    var currentVideos      = [...profileVideos];
+
+    /** Upload image file to server and add to gallery */
+    async function uploadImageToGallery(scope, fileInput, captionInput, statusEl) {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showStatus(statusEl, t('exhibitorPortal.onlyImages'), true);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showStatus(statusEl, t('exhibitorPortal.fileTooLarge'), true);
+        return;
+      }
+      var fd = new FormData();
+      fd.append('file', file);
+      fd.append('caption', captionInput.value.trim());
+      var endpoint = scope === 'demo'
+        ? 'exhibitor-portal/events/' + ev.eventId + '/media/upload'
+        : 'exhibitor-portal/profile/media/upload';
+      statusEl.textContent = t('exhibitorPortal.uploading');
+      statusEl.className = 'sratix-portal-status';
+      try {
+        var item = await apiFetch(endpoint, { method: 'POST', headers: authHeaders, body: fd });
+        if (scope === 'demo') {
+          currentDemoGallery.push(item);
+          refreshGalleryDisplay(panel.querySelector('#sratix-demo-gallery'), currentDemoGallery, 'demo');
+        } else {
+          currentGallery.push(item);
+          refreshGalleryDisplay(panel.querySelector('#sratix-profile-gallery'), currentGallery, 'profile');
+        }
+        fileInput.value = '';
+        captionInput.value = '';
+        showStatus(statusEl, t('exhibitorPortal.imageUploaded'), false);
+        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos, authHeaders, ev);
+      } catch (err) {
+        showStatus(statusEl, err.message || t('exhibitorPortal.saveError'), true);
+      }
+    }
 
     // ── Demo section handlers ──
     if (ev) {
-      panel.querySelector('#sratix-add-demo-image-btn').addEventListener('click', () => {
-        const urlInput = panel.querySelector('#sratix-add-demo-image-url');
-        const capInput = panel.querySelector('#sratix-add-demo-image-caption');
-        const url = urlInput.value.trim();
-        if (!url) return;
-        currentDemoGallery.push({ url, caption: capInput.value.trim() || undefined });
-        urlInput.value = ''; capInput.value = '';
-        refreshGalleryDisplay(panel.querySelector('#sratix-demo-gallery'), currentDemoGallery, 'demo');
-        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+      panel.querySelector('#sratix-add-demo-image-btn').addEventListener('click', function () {
+        uploadImageToGallery(
+          'demo',
+          panel.querySelector('#sratix-add-demo-image-file'),
+          panel.querySelector('#sratix-add-demo-image-caption'),
+          panel.querySelector('#sratix-demo-upload-status')
+        );
       });
 
-      panel.querySelector('#sratix-add-demo-video-btn').addEventListener('click', () => {
-        const urlInput = panel.querySelector('#sratix-add-demo-video-url');
-        const raw = urlInput.value.trim();
+      panel.querySelector('#sratix-add-demo-video-btn').addEventListener('click', function () {
+        var urlInput = panel.querySelector('#sratix-add-demo-video-url');
+        var raw = urlInput.value.trim();
         if (!raw) return;
         currentDemoVideos.push(raw);
         urlInput.value = '';
         refreshVideoDisplay(panel.querySelector('#sratix-demo-video-list'), currentDemoVideos, 'demo');
-        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+        bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos, authHeaders, ev);
       });
 
-      panel.querySelector('#sratix-save-demo-media').addEventListener('click', async () => {
-        const btn = panel.querySelector('#sratix-save-demo-media');
-        const statusEl = panel.querySelector('#sratix-demo-media-status');
+      panel.querySelector('#sratix-save-demo-media').addEventListener('click', async function () {
+        var btn = panel.querySelector('#sratix-save-demo-media');
+        var statusEl = panel.querySelector('#sratix-demo-media-status');
         btn.disabled = true;
         try {
-          const body = {
+          var body = {
             demoTitle: panel.querySelector('#sratix-demo-title').value.trim() || undefined,
             demoDescription: panel.querySelector('#sratix-demo-desc').value.trim() || undefined,
           };
@@ -3618,7 +3621,7 @@
           await apiFetch('exhibitor-portal/events/' + ev.eventId + '/details', {
             method: 'PUT', headers: authHeaders, body: JSON.stringify(body),
           });
-          // Save event media (demo gallery/videos)
+          // Save video links
           await apiFetch('exhibitor-portal/events/' + ev.eventId + '/media', {
             method: 'PUT', headers: authHeaders,
             body: JSON.stringify({ mediaGallery: currentDemoGallery, videoLinks: currentDemoVideos }),
@@ -3631,30 +3634,28 @@
     }
 
     // ── Profile media handlers ──
-    panel.querySelector('#sratix-add-image-btn').addEventListener('click', () => {
-      const urlInput = panel.querySelector('#sratix-add-image-url');
-      const captionInput = panel.querySelector('#sratix-add-image-caption');
-      const url = urlInput.value.trim();
-      if (!url) return;
-      currentGallery.push({ url, caption: captionInput.value.trim() || undefined });
-      urlInput.value = ''; captionInput.value = '';
-      refreshGalleryDisplay(panel.querySelector('#sratix-profile-gallery'), currentGallery, 'profile');
-      bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+    panel.querySelector('#sratix-add-image-btn').addEventListener('click', function () {
+      uploadImageToGallery(
+        'profile',
+        panel.querySelector('#sratix-add-image-file'),
+        panel.querySelector('#sratix-add-image-caption'),
+        panel.querySelector('#sratix-profile-upload-status')
+      );
     });
 
-    panel.querySelector('#sratix-add-video-btn').addEventListener('click', () => {
-      const urlInput = panel.querySelector('#sratix-add-video-url');
-      const raw = urlInput.value.trim();
+    panel.querySelector('#sratix-add-video-btn').addEventListener('click', function () {
+      var urlInput = panel.querySelector('#sratix-add-video-url');
+      var raw = urlInput.value.trim();
       if (!raw) return;
       currentVideos.push(raw);
       urlInput.value = '';
       refreshVideoDisplay(panel.querySelector('#sratix-video-links-list'), currentVideos, 'profile');
-      bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+      bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos, authHeaders, ev);
     });
 
-    panel.querySelector('#sratix-save-media').addEventListener('click', async () => {
-      const btn = panel.querySelector('#sratix-save-media');
-      const statusEl = panel.querySelector('#sratix-media-status');
+    panel.querySelector('#sratix-save-media').addEventListener('click', async function () {
+      var btn = panel.querySelector('#sratix-save-media');
+      var statusEl = panel.querySelector('#sratix-media-status');
       btn.disabled = true;
       try {
         await apiFetch('exhibitor-portal/profile/media', {
@@ -3667,7 +3668,7 @@
       } finally { btn.disabled = false; }
     });
 
-    bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos);
+    bindAllMediaRemoveHandlers(panel, currentDemoGallery, currentDemoVideos, currentGallery, currentVideos, authHeaders, ev);
   }
 
   /** Render a single video row with YouTube embed preview when applicable. */
@@ -3691,39 +3692,59 @@
     </div>`;
   }
 
+  function renderGalleryItems(gallery, scope) {
+    return gallery.map(function (item, i) {
+      var imgSrc = item.url && (item.url.startsWith('http') ? item.url : resolveApiUrl(item.url));
+      return '<div class="sratix-media-item" data-index="' + i + '"' +
+        (item.fileId ? ' data-file-id="' + escAttr(item.fileId) + '"' : '') + '>' +
+        '<img src="' + escAttr(imgSrc) + '" alt="' + escAttr(item.caption || '') + '" class="sratix-media-thumb" />' +
+        '<button type="button" class="sratix-media-remove" data-scope="' + scope + '" data-index="' + i + '" title="' + escHtml(t('exhibitorPortal.remove')) + '">✕</button>' +
+        '</div>';
+    }).join('');
+  }
+
   function refreshGalleryDisplay(container, gallery, scope) {
-    container.innerHTML = gallery.map((item, i) => `
-      <div class="sratix-media-item" data-index="${i}">
-        <img src="${escAttr(item.url)}" alt="${escAttr(item.caption || '')}" class="sratix-media-thumb" />
-        <button type="button" class="sratix-media-remove" data-scope="${scope}" data-index="${i}" title="${escHtml(t('exhibitorPortal.remove'))}">✕</button>
-      </div>
-    `).join('');
+    container.innerHTML = renderGalleryItems(gallery, scope);
   }
 
   function refreshVideoDisplay(container, videos, scope) {
     container.innerHTML = videos.map((url, i) => renderVideoRow(scope, url, i)).join('');
   }
 
-  function bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos) {
-    panel.querySelectorAll('.sratix-media-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const scope = btn.dataset.scope;
-        const idx = parseInt(btn.dataset.index, 10);
+  function bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos, authHeaders, ev) {
+    panel.querySelectorAll('.sratix-media-remove').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var scope = btn.dataset.scope;
+        var idx = parseInt(btn.dataset.index, 10);
+        var gallery = scope === 'demo' ? demoGallery : profileGallery;
+        var item = gallery[idx];
+
+        // If the item was file-uploaded, delete from server
+        if (item && item.fileId) {
+          try {
+            var endpoint = scope === 'demo'
+              ? 'exhibitor-portal/events/' + ev.eventId + '/media/' + item.fileId
+              : 'exhibitor-portal/profile/media/' + item.fileId;
+            await apiFetch(endpoint, { method: 'DELETE', headers: authHeaders });
+          } catch (e) {
+            // Continue removing from local state even on error
+          }
+        }
+
+        gallery.splice(idx, 1);
         if (scope === 'demo') {
-          demoGallery.splice(idx, 1);
           refreshGalleryDisplay(panel.querySelector('#sratix-demo-gallery'), demoGallery, 'demo');
         } else {
-          profileGallery.splice(idx, 1);
           refreshGalleryDisplay(panel.querySelector('#sratix-profile-gallery'), profileGallery, 'profile');
         }
-        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos);
+        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos, authHeaders, ev);
       });
     });
 
-    panel.querySelectorAll('[data-action="remove-video"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const scope = btn.dataset.scope;
-        const idx = parseInt(btn.dataset.index, 10);
+    panel.querySelectorAll('[data-action="remove-video"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var scope = btn.dataset.scope;
+        var idx = parseInt(btn.dataset.index, 10);
         if (scope === 'demo') {
           demoVideos.splice(idx, 1);
           refreshVideoDisplay(panel.querySelector('#sratix-demo-video-list'), demoVideos, 'demo');
@@ -3731,7 +3752,7 @@
           profileVideos.splice(idx, 1);
           refreshVideoDisplay(panel.querySelector('#sratix-video-links-list'), profileVideos, 'profile');
         }
-        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos);
+        bindAllMediaRemoveHandlers(panel, demoGallery, demoVideos, profileGallery, profileVideos, authHeaders, ev);
       });
     });
   }
@@ -3790,10 +3811,17 @@
         <div class="sratix-booth-qr-section">
           <h4>${escHtml(t('exhibitorPortal.boothQrCode'))}</h4>
           <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.boothQrHint'))}</p>
-          <button class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-show-qr-btn">
-            ${escHtml(t('exhibitorPortal.showQrCode'))}
-          </button>
-          <div id="sratix-qr-display" style="display:none"></div>
+          <div class="sratix-qr-toggle-row">
+            <button class="sratix-btn sratix-btn--outline sratix-btn--sm sratix-btn--active" id="sratix-show-qr-image-btn">
+              ${escHtml(t('exhibitorPortal.showQrImage'))}
+            </button>
+            <button class="sratix-btn sratix-btn--outline sratix-btn--sm" id="sratix-show-qr-text-btn">
+              ${escHtml(t('exhibitorPortal.showQrText'))}
+            </button>
+          </div>
+          <div id="sratix-qr-display">
+            <p class="sratix-loading">${escHtml(t('common.loading'))}</p>
+          </div>
         </div>
       `;
 
@@ -3814,27 +3842,46 @@
 
       container.innerHTML = html;
 
-      // QR code button
-      const qrBtn = container.querySelector('#sratix-show-qr-btn');
-      if (qrBtn) {
-        qrBtn.addEventListener('click', async function () {
-          const display = container.querySelector('#sratix-qr-display');
-          if (display.style.display !== 'none') {
-            display.style.display = 'none';
-            return;
-          }
-          try {
-            const qrData = await apiFetch('exhibitor-portal/events/' + eventId + '/booth-qr', { headers: authHeaders });
-            display.innerHTML = `<div class="sratix-qr-payload">
-              <code>${escHtml(qrData.qrPayload)}</code>
-              <p class="sratix-portal-hint">${escHtml(t('exhibitorPortal.qrPayloadHint'))}</p>
-            </div>`;
-            display.style.display = '';
-          } catch (err) {
-            display.innerHTML = `<p class="sratix-portal-status--error">${escHtml(err.message || t('common.error'))}</p>`;
-            display.style.display = '';
-          }
-        });
+      // QR code: auto-load and toggle between image/text
+      var qrDisplay = container.querySelector('#sratix-qr-display');
+      var qrImageBtn = container.querySelector('#sratix-show-qr-image-btn');
+      var qrTextBtn = container.querySelector('#sratix-show-qr-text-btn');
+      var qrPayloadCache = null;
+
+      function showQrImage() {
+        if (!qrPayloadCache) return;
+        var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(qrPayloadCache) + '&size=200x200&format=svg';
+        qrDisplay.innerHTML = '<div class="sratix-qr-payload">' +
+          '<img class="sratix-qr" src="' + escAttr(qrUrl) + '" alt="Booth QR code" width="200" height="200" />' +
+          '<p class="sratix-portal-hint">' + escHtml(t('exhibitorPortal.qrImageHint')) + '</p>' +
+          '</div>';
+        qrImageBtn.classList.add('sratix-btn--active');
+        qrTextBtn.classList.remove('sratix-btn--active');
+      }
+
+      function showQrText() {
+        if (!qrPayloadCache) return;
+        qrDisplay.innerHTML = '<div class="sratix-qr-payload">' +
+          '<code>' + escHtml(qrPayloadCache) + '</code>' +
+          '<p class="sratix-portal-hint">' + escHtml(t('exhibitorPortal.qrPayloadHint')) + '</p>' +
+          '</div>';
+        qrTextBtn.classList.add('sratix-btn--active');
+        qrImageBtn.classList.remove('sratix-btn--active');
+      }
+
+      if (qrImageBtn && qrTextBtn) {
+        qrImageBtn.addEventListener('click', showQrImage);
+        qrTextBtn.addEventListener('click', showQrText);
+
+        // Auto-load QR on analytics open
+        apiFetch('exhibitor-portal/events/' + eventId + '/booth-qr', { headers: authHeaders })
+          .then(function (qrData) {
+            qrPayloadCache = qrData.qrPayload;
+            showQrImage();
+          })
+          .catch(function (err) {
+            qrDisplay.innerHTML = '<p class="sratix-portal-status--error">' + escHtml(err.message || t('common.error')) + '</p>';
+          });
       }
 
       // Render charts with simple canvas bars (no Chart.js dependency)
@@ -3901,6 +3948,116 @@
       ctx.fillText(label, 0, 0);
       ctx.restore();
     });
+  }
+
+  // ── Contact Organizers Panel ──────────────────────────────────────
+
+  function renderContactPanel(panel, profile, events, authHeaders) {
+    if (!events || events.length === 0) {
+      panel.innerHTML = `<p class="sratix-portal-empty">${escHtml(t('exhibitorPortal.noEvents'))}</p>`;
+      return;
+    }
+
+    let html = `<div class="sratix-contact-panel">
+      <label class="sratix-label">${escHtml(t('exhibitorPortal.selectEvent'))}</label>
+      <select class="sratix-input" id="sratix-contact-event-select">
+        <option value="">—</option>
+        ${events.map(ev => `<option value="${escAttr(ev.eventId)}">${escHtml(ev.event?.name || ev.eventId)}</option>`).join('')}
+      </select>
+      <div id="sratix-contact-content"></div>
+    </div>`;
+    panel.innerHTML = html;
+
+    const sel = panel.querySelector('#sratix-contact-event-select');
+    // Auto-select if single event
+    if (events.length === 1) {
+      sel.value = events[0].eventId;
+      loadContactContent(panel.querySelector('#sratix-contact-content'), events[0].eventId, profile, authHeaders);
+    }
+    sel.addEventListener('change', function () {
+      const content = panel.querySelector('#sratix-contact-content');
+      if (!this.value) { content.innerHTML = ''; return; }
+      loadContactContent(content, this.value, profile, authHeaders);
+    });
+  }
+
+  async function loadContactContent(container, eventId, profile, authHeaders) {
+    container.innerHTML = `<p class="sratix-loading">${escHtml(t('common.loading'))}</p>`;
+
+    try {
+      const info = await apiFetch('exhibitor-portal/events/' + eventId + '/contact-info', { headers: authHeaders });
+
+      let contactDetailsHtml = '';
+      if (info.contactEmail || info.contactPhone || info.contactWhatsapp) {
+        contactDetailsHtml = '<div class="sratix-contact-details">';
+        contactDetailsHtml += '<h4>' + escHtml(t('exhibitorPortal.organizerContactDetails')) + '</h4>';
+        if (info.contactEmail) {
+          contactDetailsHtml += '<p><strong>' + escHtml(t('exhibitorPortal.contactEmail')) + ':</strong> <a href="mailto:' + escAttr(info.contactEmail) + '">' + escHtml(info.contactEmail) + '</a></p>';
+        }
+        if (info.contactPhone) {
+          contactDetailsHtml += '<p><strong>' + escHtml(t('exhibitorPortal.contactPhone')) + ':</strong> <a href="tel:' + escAttr(info.contactPhone) + '">' + escHtml(info.contactPhone) + '</a></p>';
+        }
+        if (info.contactWhatsapp) {
+          var waNumber = info.contactWhatsapp.replace(/[^0-9+]/g, '');
+          contactDetailsHtml += '<p><strong>WhatsApp:</strong> <a href="https://wa.me/' + escAttr(waNumber.replace('+', '')) + '" target="_blank" rel="noopener">' + escHtml(info.contactWhatsapp) + '</a></p>';
+        }
+        contactDetailsHtml += '</div>';
+      }
+
+      container.innerHTML = `
+        ${contactDetailsHtml}
+        <div class="sratix-portal-info-box">
+          <span class="sratix-portal-info-box__icon">${PORTAL_ICONS.tip}</span>
+          <p>${escHtml(t('exhibitorPortal.contactFormHint'))}</p>
+        </div>
+        <form class="sratix-portal-form" id="sratix-contact-form">
+          <div class="sratix-portal-fields">
+            <div class="sratix-field-group sratix-field-group--full">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.contactSubject'))} <span class="sratix-required">*</span></label>
+              <input type="text" name="subject" required class="sratix-input" maxlength="200" />
+            </div>
+            <div class="sratix-field-group sratix-field-group--full">
+              <label class="sratix-label">${escHtml(t('exhibitorPortal.contactMessage'))} <span class="sratix-required">*</span></label>
+              <textarea name="message" rows="6" required class="sratix-input" maxlength="5000"></textarea>
+            </div>
+          </div>
+          <div class="sratix-portal-actions">
+            <button type="submit" class="sratix-btn sratix-btn--primary">
+              ${escHtml(t('exhibitorPortal.sendMessage'))}
+            </button>
+            <span class="sratix-portal-status" id="sratix-contact-status"></span>
+          </div>
+        </form>
+      `;
+
+      container.querySelector('#sratix-contact-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var form = e.target;
+        var btn = form.querySelector('button[type="submit"]');
+        var statusEl = form.querySelector('#sratix-contact-status');
+        btn.disabled = true;
+
+        try {
+          await apiFetch('exhibitor-portal/events/' + eventId + '/contact', {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({
+              subject: form.subject.value.trim(),
+              message: form.message.value.trim(),
+            }),
+          });
+          showStatus(statusEl, t('exhibitorPortal.messageSent'), false);
+          form.subject.value = '';
+          form.message.value = '';
+        } catch (err) {
+          showStatus(statusEl, err.message || t('exhibitorPortal.saveError'), true);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    } catch (err) {
+      container.innerHTML = `<p class="sratix-portal-status--error">${escHtml(err.message || t('common.error'))}</p>`;
+    }
   }
 
   // ── Logistics Panel (Phase 1e) ───────────────────────────────────

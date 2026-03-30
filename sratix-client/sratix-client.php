@@ -3,7 +3,7 @@
  * Plugin Name:       SRAtix Client
  * Plugin URI:        https://swissroboticsday.ch
  * Description:       SRAtix public ticket purchase — embeds registration forms and attendee self-service from the SRAtix ticketing server.
- * Version:           0.6.3
+ * Version:           0.7.0
  * Author:            TAROS Web Services
  * Author URI:        https://taros.ch
  * License:           Proprietary
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /*──────────────────────────────────────────────────────────────
  * Constants
  *────────────────────────────────────────────────────────────*/
-define( 'SRATIX_CLIENT_VERSION', '0.6.3' );
+define( 'SRATIX_CLIENT_VERSION', '0.7.0' );
 define( 'SRATIX_CLIENT_FILE',    __FILE__ );
 define( 'SRATIX_CLIENT_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'SRATIX_CLIENT_URL',     plugin_dir_url( __FILE__ ) );

@@ -232,6 +232,12 @@
   "events.settings.logoUploaded": "標誌已上傳",
   "events.settings.logoUploadFailed": "標誌上傳失敗",
 
+  "events.settings.contactInfoTitle": "主辦方聯繫資訊",
+  "events.settings.contactInfoHint": "在展商入口顯示的聯繫方式。展商也可以使用聯繫表單與您聯繫。",
+  "events.settings.contactEmail": "聯繫電郵",
+  "events.settings.contactPhone": "聯繫電話",
+  "events.settings.contactWhatsapp": "WhatsApp 號碼",
+
   "events.settings.pagePaths": "頁面路徑",
   "events.settings.pagePathsHint": "放置各 SRAtix 短碼的 WordPress 頁面路徑。用於小工具之間的連結。",
   "events.settings.pathTickets": "購票頁面",
@@ -756,6 +762,9 @@
   "exhibitors.setupStatus": "狀態",
   "exhibitors.submittedAt": "已提交",
   "exhibitors.confirmedAt": "已確認",
+  "exhibitors.boothQrCode": "攤位 QR 碼",
+  "exhibitors.showQrImage": "顯示 QR 碼",
+  "exhibitors.showQrText": "顯示 QR 載荷",
   "exhibitors.confirmDelete": "確定要永久刪除 {name} 嗎？相關人員、展示和佈置申請也將一併移除。此操作無法撤銷。",
   "exhibitors.failedToDelete": "無法刪除參展商。"
 }

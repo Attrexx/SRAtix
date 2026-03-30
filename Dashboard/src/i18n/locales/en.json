@@ -234,6 +234,12 @@
   "events.settings.logoUploaded": "Logo uploaded",
   "events.settings.logoUploadFailed": "Failed to upload logo",
 
+  "events.settings.contactInfoTitle": "Organizer Contact Information",
+  "events.settings.contactInfoHint": "Contact details shown to exhibitors in the portal. Exhibitors can also use the contact form to reach you.",
+  "events.settings.contactEmail": "Contact Email",
+  "events.settings.contactPhone": "Contact Phone",
+  "events.settings.contactWhatsapp": "WhatsApp Number",
+
   "events.settings.pagePaths": "Page Paths",
   "events.settings.pagePathsHint": "WordPress page slugs where each SRAtix shortcode is placed. Used for cross-linking between widgets.",
   "events.settings.pathTickets": "Ticket Purchase Page",
@@ -919,6 +925,9 @@
   "exhibitors.setupStatus": "Status",
   "exhibitors.submittedAt": "Submitted",
   "exhibitors.confirmedAt": "Confirmed",
+  "exhibitors.boothQrCode": "Booth QR Code",
+  "exhibitors.showQrImage": "Show QR image",
+  "exhibitors.showQrText": "Show QR payload",
   "exhibitors.confirmDelete": "Are you sure you want to permanently delete {name}? This will also remove all staff, demos, and setup requests. This cannot be undone.",
   "exhibitors.failedToDelete": "Failed to delete exhibitor."
 }

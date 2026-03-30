@@ -89,6 +89,11 @@ export default function EventSettingsPage() {
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingLandscape, setUploadingLandscape] = useState(false);
 
+  // Contact info (shown to exhibitors)
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactWhatsapp, setContactWhatsapp] = useState('');
+
   // Legal pages
   const [legalPages, setLegalPages] = useState<Record<string, string>>({});
   const [legalModalSlug, setLegalModalSlug] = useState<string | null>(null);
@@ -123,6 +128,9 @@ export default function EventSettingsPage() {
     setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
+    setContactEmail((meta.contactEmail as string) ?? '');
+    setContactPhone((meta.contactPhone as string) ?? '');
+    setContactWhatsapp((meta.contactWhatsapp as string) ?? '');
     const paths = (meta.pagePaths ?? {}) as Record<string, string>;
     setPagePathTickets(paths.tickets ?? '/tickets/');
     setPagePathRegister(paths.register ?? '/register/');
@@ -176,6 +184,9 @@ export default function EventSettingsPage() {
           ticketIntro: ticketIntro.trim() || undefined,
           exhibitorTicketTitle: exhibitorTicketTitle.trim() || undefined,
           exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
+          contactEmail: contactEmail.trim() || undefined,
+          contactPhone: contactPhone.trim() || undefined,
+          contactWhatsapp: contactWhatsapp.trim() || undefined,
           pagePaths: {
             tickets: pagePathTickets.trim() || '/tickets/',
             register: pagePathRegister.trim() || '/register/',
@@ -357,6 +368,19 @@ export default function EventSettingsPage() {
                 }
               }}
             />
+          </div>
+          <div className="mt-6 space-y-4">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+              {t('events.settings.contactInfoTitle')}
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              {t('events.settings.contactInfoHint')}
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <FieldInput label={t('events.settings.contactEmail')} type="email" value={contactEmail} onChange={setContactEmail} placeholder="contact@example.com" />
+              <FieldInput label={t('events.settings.contactPhone')} type="tel" value={contactPhone} onChange={setContactPhone} placeholder="+41 ..." />
+              <FieldInput label={t('events.settings.contactWhatsapp')} type="tel" value={contactWhatsapp} onChange={setContactWhatsapp} placeholder="+41 ..." />
+            </div>
           </div>
         </Section>
 

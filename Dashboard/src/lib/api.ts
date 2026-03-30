@@ -1166,6 +1166,20 @@ export const api = {
       `/admin/exhibitor-portal/exhibitors/${id}`,
       { method: 'DELETE' },
     ),
+
+  getBoothQr: (exhibitorId: string) =>
+    request<{ qrPayload: string }>(
+      `/admin/exhibitor-portal/exhibitors/${exhibitorId}/booth-qr`,
+    ),
+
+  adminUpdateBoothDetails: (
+    exhibitorId: string,
+    data: { boothNumber?: string; expoArea?: string; exhibitorCategory?: string; exhibitorType?: string },
+  ) =>
+    request<Record<string, unknown>>(
+      `/admin/exhibitor-portal/exhibitors/${exhibitorId}/booth-details`,
+      { method: 'PUT', body: data },
+    ),
 };
 
 export { ApiError };

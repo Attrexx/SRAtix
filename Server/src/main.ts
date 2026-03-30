@@ -69,6 +69,7 @@ async function bootstrap() {
         'https://www.swissroboticsday.ch',
         'https://tix.swiss-robotics.org',
       ],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       credentials: true,
     });
 

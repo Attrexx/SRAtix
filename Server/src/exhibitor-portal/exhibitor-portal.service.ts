@@ -21,6 +21,8 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 import { RecordBoothScanDto } from './dto/record-booth-scan.dto';
 import { RecordBoothLeadDto } from './dto/record-booth-lead.dto';
 import { UpsertSetupRequestDto, AdminUpdateSetupRequestDto } from './dto/upsert-setup-request.dto';
+import { AdminUpdateBoothDetailsDto } from './dto/admin-update-booth-details.dto';
+import { SendContactMessageDto } from './dto/send-contact-message.dto';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, unlinkSync, existsSync } from 'fs';
 import { randomBytes, createHmac, timingSafeEqual } from 'crypto';
@@ -333,10 +335,8 @@ export class ExhibitorPortalService {
     const updated = await this.prisma.eventExhibitor.update({
       where: { id: eventExhibitor.id },
       data: {
-        boothNumber: dto.boothNumber,
-        expoArea: dto.expoArea,
-        exhibitorCategory: dto.exhibitorCategory,
-        exhibitorType: dto.exhibitorType,
+        // Booth fields (boothNumber, expoArea, exhibitorCategory, exhibitorType)
+        // are admin-only — exhibitors cannot change them from the portal.
         demoTitle: dto.demoTitle,
         demoDescription: dto.demoDescription,
         status: dto.status,
@@ -735,6 +735,137 @@ export class ExhibitorPortalService {
     return updated;
   }
 
+  // ── Media file uploads ──────────────────────────────────────────────
+
+  async uploadMediaImage(
+    orgId: string,
+    userId: string,
+    fileBuffer: Buffer,
+    mimetype: string,
+    originalName: string,
+    scope: 'profile' | 'demo',
+    eventId?: string,
+    caption?: string,
+  ) {
+    if (!mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+
+    const profile = await this.prisma.exhibitorProfile.findUnique({ where: { orgId } });
+    if (!profile) throw new NotFoundException('Exhibitor profile not found');
+
+    let ee: any;
+    if (scope === 'demo') {
+      if (!eventId) throw new BadRequestException('eventId is required for demo uploads');
+      ee = await this.requireEventExhibitor(orgId, eventId);
+    }
+
+    // Optimize: max 1200px wide, webp
+    const optimized = await sharp(fileBuffer)
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const mediaDir = resolve(__dirname, '..', '..', 'uploads', 'exhibitors', orgId, 'media');
+    mkdirSync(mediaDir, { recursive: true });
+
+    const fileId = randomBytes(8).toString('hex');
+    const filename = `${fileId}.webp`;
+    const filePath = join(mediaDir, filename);
+    writeFileSync(filePath, optimized);
+
+    const storagePath = `exhibitors/${orgId}/media/${filename}`;
+    const publicUrl = `/uploads/${storagePath}?v=${Date.now()}`;
+
+    const uploadedFile = await this.prisma.uploadedFile.create({
+      data: {
+        orgId,
+        originalName,
+        mimeType: 'image/webp',
+        sizeBytes: optimized.length,
+        storagePath,
+        publicUrl,
+      },
+    });
+
+    const galleryItem = { fileId: uploadedFile.id, url: publicUrl, caption: caption || '' };
+
+    if (scope === 'profile') {
+      const gallery: any[] = Array.isArray(profile.mediaGallery) ? [...(profile.mediaGallery as any[])] : [];
+      gallery.push(galleryItem);
+      await this.prisma.exhibitorProfile.update({
+        where: { orgId },
+        data: { mediaGallery: gallery as any },
+      });
+      this.audit.log({
+        userId, action: 'exhibitor_profile.updated', entity: 'exhibitor_profile',
+        entityId: profile.id, detail: { field: 'mediaGallery', fileId: uploadedFile.id },
+      });
+    } else {
+      const gallery: any[] = Array.isArray(ee.demoMediaGallery) ? [...(ee.demoMediaGallery as any[])] : [];
+      gallery.push(galleryItem);
+      const updated = await this.prisma.eventExhibitor.update({
+        where: { id: ee.id },
+        data: { demoMediaGallery: gallery as any },
+      });
+      this.audit.log({
+        userId, action: 'event_exhibitor.updated', entity: 'event_exhibitor',
+        entityId: ee.id, detail: { eventId, field: 'demoMediaGallery', fileId: uploadedFile.id },
+      });
+      this.dispatchExhibitorWebhook(orgId, eventId!, updated, ee.exhibitorProfileId);
+    }
+
+    return galleryItem;
+  }
+
+  async removeMediaImage(
+    orgId: string,
+    userId: string,
+    fileId: string,
+    scope: 'profile' | 'demo',
+    eventId?: string,
+  ) {
+    const profile = await this.prisma.exhibitorProfile.findUnique({ where: { orgId } });
+    if (!profile) throw new NotFoundException('Exhibitor profile not found');
+
+    // Remove UploadedFile record and physical file
+    const uploadedFile = await this.prisma.uploadedFile.findUnique({ where: { id: fileId } });
+    if (uploadedFile && uploadedFile.orgId === orgId) {
+      const absPath = resolve(__dirname, '..', '..', 'uploads', uploadedFile.storagePath);
+      if (existsSync(absPath)) unlinkSync(absPath);
+      await this.prisma.uploadedFile.delete({ where: { id: fileId } }).catch(() => {});
+    }
+
+    if (scope === 'profile') {
+      const gallery: any[] = Array.isArray(profile.mediaGallery) ? [...(profile.mediaGallery as any[])] : [];
+      const filtered = gallery.filter((item: any) => item.fileId !== fileId);
+      await this.prisma.exhibitorProfile.update({
+        where: { orgId },
+        data: { mediaGallery: filtered as any },
+      });
+      this.audit.log({
+        userId, action: 'exhibitor_profile.updated', entity: 'exhibitor_profile',
+        entityId: profile.id, detail: { field: 'mediaGallery', removedFileId: fileId },
+      });
+    } else {
+      if (!eventId) throw new BadRequestException('eventId is required');
+      const ee = await this.requireEventExhibitor(orgId, eventId);
+      const gallery: any[] = Array.isArray(ee.demoMediaGallery) ? [...(ee.demoMediaGallery as any[])] : [];
+      const filtered = gallery.filter((item: any) => item.fileId !== fileId);
+      const updated = await this.prisma.eventExhibitor.update({
+        where: { id: ee.id },
+        data: { demoMediaGallery: filtered as any },
+      });
+      this.audit.log({
+        userId, action: 'event_exhibitor.updated', entity: 'event_exhibitor',
+        entityId: ee.id, detail: { eventId, field: 'demoMediaGallery', removedFileId: fileId },
+      });
+      this.dispatchExhibitorWebhook(orgId, eventId, updated, ee.exhibitorProfileId);
+    }
+
+    return { success: true };
+  }
+
   // ── Booth QR & Scanning (Phase 1d) ──────────────────────────────────
 
   /**
@@ -1028,6 +1159,90 @@ export class ExhibitorPortalService {
     return result;
   }
 
+  // ── Contact Organizers ──────────────────────────────────────────────
+
+  /**
+   * Get event contact info from event.meta.branding for the portal.
+   */
+  async getEventContactInfo(orgId: string, eventId: string) {
+    // Verify the exhibitor belongs to this event
+    await this.requireEventExhibitor(orgId, eventId);
+
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { meta: true, name: true },
+    });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const meta = (event.meta as Record<string, unknown>) ?? {};
+    return {
+      eventName: event.name,
+      contactEmail: (meta.contactEmail as string) || null,
+      contactPhone: (meta.contactPhone as string) || null,
+      contactWhatsapp: (meta.contactWhatsapp as string) || null,
+    };
+  }
+
+  /**
+   * Send a contact message from an exhibitor to event organizers.
+   */
+  async sendContactMessage(
+    orgId: string,
+    userId: string,
+    userEmail: string,
+    eventId: string,
+    dto: SendContactMessageDto,
+  ) {
+    const ee = await this.requireEventExhibitor(orgId, eventId);
+    const profile = await this.prisma.exhibitorProfile.findUnique({
+      where: { orgId },
+      select: { companyName: true, contactEmail: true },
+    });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { name: true, orgId: true },
+    });
+    if (!event) throw new NotFoundException('Event not found');
+
+    // Get all event_admin, admin, and super_admin emails for this org
+    const admins = await this.prisma.user.findMany({
+      where: {
+        orgId: event.orgId,
+        role: { in: ['event_admin', 'admin', 'super_admin'] },
+        status: 'active',
+      },
+      select: { email: true },
+    });
+
+    const fromName = profile?.companyName || 'Exhibitor';
+    const fromEmail = profile?.contactEmail || userEmail;
+    const recipients = [...new Set(admins.map(a => a.email).filter(Boolean))];
+
+    if (recipients.length === 0) {
+      throw new NotFoundException('No admin recipients found for this event');
+    }
+
+    for (const to of recipients) {
+      this.email.sendExhibitorContactMessage(to, {
+        fromName,
+        fromEmail,
+        eventName: event.name,
+        subject: dto.subject,
+        message: dto.message,
+      }).catch(err => this.logger.error(`Contact message to ${to} failed: ${err}`));
+    }
+
+    this.audit.log({
+      userId,
+      action: 'exhibitor.contact_sent',
+      entity: 'event_exhibitor',
+      entityId: ee.id,
+      detail: { eventId, subject: dto.subject, recipientCount: recipients.length },
+    });
+
+    return { success: true, recipientCount: recipients.length };
+  }
+
   /**
    * Admin: list all setup requests for an event.
    */
@@ -1231,6 +1446,97 @@ export class ExhibitorPortalService {
       .catch((err) =>
         this.logger.error(`Webhook dispatch failed for exhibitor.updated: ${err}`),
       );
+  }
+
+  /**
+   * Admin: update booth details (number, area, category, type) for an exhibitor.
+   * Sends email notification to the exhibitor and their booth staff.
+   */
+  async adminUpdateBoothDetails(userId: string, eventExhibitorId: string, dto: AdminUpdateBoothDetailsDto) {
+    const ee = await this.prisma.eventExhibitor.findUnique({
+      where: { id: eventExhibitorId },
+      include: {
+        exhibitorProfile: { select: { id: true, companyName: true, contactEmail: true, orgId: true } },
+        event: { select: { id: true, name: true, startDate: true, venue: true } },
+        staff: { select: { email: true } },
+      },
+    });
+    if (!ee) throw new NotFoundException(`EventExhibitor ${eventExhibitorId} not found`);
+
+    // Detect which fields actually changed
+    const changedFields: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+    const boothFields = ['boothNumber', 'expoArea', 'exhibitorCategory', 'exhibitorType'] as const;
+    for (const field of boothFields) {
+      if (dto[field] !== undefined && dto[field] !== ee[field]) {
+        changedFields.push({ field, oldValue: ee[field] ?? null, newValue: dto[field] ?? null });
+      }
+    }
+
+    const updated = await this.prisma.eventExhibitor.update({
+      where: { id: eventExhibitorId },
+      data: {
+        boothNumber: dto.boothNumber !== undefined ? dto.boothNumber : undefined,
+        expoArea: dto.expoArea !== undefined ? dto.expoArea : undefined,
+        exhibitorCategory: dto.exhibitorCategory !== undefined ? dto.exhibitorCategory : undefined,
+        exhibitorType: dto.exhibitorType !== undefined ? dto.exhibitorType : undefined,
+      },
+    });
+
+    this.audit.log({
+      userId,
+      action: 'event_exhibitor.booth_details_updated',
+      entity: 'event_exhibitor',
+      entityId: eventExhibitorId,
+      detail: { changedFields: changedFields.map(c => c.field) },
+    });
+
+    // Fire WP sync webhook
+    this.dispatchExhibitorWebhook(ee.exhibitorProfile.orgId, ee.event.id, updated, ee.exhibitorProfile.id);
+
+    // Send email notification if fields actually changed
+    if (changedFields.length > 0) {
+      const recipients = new Set<string>();
+      // Buyer/exhibitor email from meta
+      const meta = (ee.meta as Record<string, unknown>) ?? {};
+      const buyerEmail = (meta.buyerEmail as string) || ee.exhibitorProfile.contactEmail;
+      if (buyerEmail) recipients.add(buyerEmail);
+      // Staff emails
+      for (const s of ee.staff) {
+        if (s.email) recipients.add(s.email);
+      }
+
+      for (const to of recipients) {
+        this.email.sendBoothDetailsNotification(to, {
+          companyName: ee.exhibitorProfile.companyName,
+          eventName: ee.event.name,
+          changedFields,
+          boothNumber: updated.boothNumber,
+          expoArea: updated.expoArea,
+          exhibitorCategory: updated.exhibitorCategory,
+          exhibitorType: updated.exhibitorType,
+        }).catch(err => this.logger.error(`Booth details notification to ${to} failed: ${err}`));
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Admin: get booth QR payload by EventExhibitor ID (no org scoping).
+   */
+  async getBoothQrPayloadById(eventExhibitorId: string) {
+    const ee = await this.prisma.eventExhibitor.findUnique({
+      where: { id: eventExhibitorId },
+      select: { id: true, eventId: true },
+    });
+    if (!ee) throw new NotFoundException(`EventExhibitor ${eventExhibitorId} not found`);
+
+    const hmac = this.computeBoothHmac(ee.id, ee.eventId);
+    return {
+      eventExhibitorId: ee.id,
+      qrPayload: `booth:${ee.id}:${hmac}`,
+      eventId: ee.eventId,
+    };
   }
 
   /**

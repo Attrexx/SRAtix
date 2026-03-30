@@ -634,6 +634,130 @@ Questions? Contact contact@swissroboticsday.ch
   }
 
   /**
+   * Send notification when an admin assigns or changes booth details for an exhibitor.
+   */
+  async sendBoothDetailsNotification(
+    to: string,
+    data: {
+      companyName: string;
+      eventName: string;
+      changedFields: { field: string; oldValue: string | null; newValue: string | null }[];
+      boothNumber: string | null;
+      expoArea: string | null;
+      exhibitorCategory: string | null;
+      exhibitorType: string | null;
+    },
+  ): Promise<DeliveryResult> {
+    const fieldLabels: Record<string, string> = {
+      boothNumber: 'Booth Number',
+      expoArea: 'Expo Area',
+      exhibitorCategory: 'Category',
+      exhibitorType: 'Type',
+    };
+
+    const changesHtml = data.changedFields.map(c =>
+      `<li><strong>${fieldLabels[c.field] || c.field}:</strong> ${c.oldValue || '(not set)'} → ${c.newValue || '(not set)'}</li>`
+    ).join('');
+
+    const detailsHtml = [
+      data.boothNumber ? `<p style="margin: 4px 0;"><strong>Booth Number:</strong> ${data.boothNumber}</p>` : '',
+      data.expoArea ? `<p style="margin: 4px 0;"><strong>Expo Area:</strong> ${data.expoArea}</p>` : '',
+      data.exhibitorCategory ? `<p style="margin: 4px 0;"><strong>Category:</strong> ${data.exhibitorCategory}</p>` : '',
+      data.exhibitorType ? `<p style="margin: 4px 0;"><strong>Type:</strong> ${data.exhibitorType}</p>` : '',
+    ].filter(Boolean).join('');
+
+    const html = this.publicWrapper('Booth Details Updated', `
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        Hi, this is an update regarding <strong>${data.companyName}</strong> at <strong>${data.eventName}</strong>.
+      </p>
+      <div style="background: #e8f4fd; border-left: 4px solid #4f8cff; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 12px; color: #333;">📋 What Changed</h3>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">${changesHtml}</ul>
+      </div>
+      <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">🏢 Current Booth Details</h3>
+        ${detailsHtml || '<p style="margin: 4px 0; color: #666;">No booth details assigned yet.</p>'}
+      </div>
+      <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
+        Questions? Contact <a href="mailto:contact@swissroboticsday.ch">contact@swissroboticsday.ch</a>.
+      </p>
+    `);
+
+    const changesText = data.changedFields.map(c =>
+      `  - ${fieldLabels[c.field] || c.field}: ${c.oldValue || '(not set)'} → ${c.newValue || '(not set)'}`
+    ).join('\n');
+
+    const text = `Booth Details Updated
+
+Hi, this is an update regarding ${data.companyName} at ${data.eventName}.
+
+What Changed:
+${changesText}
+
+Current Booth Details:
+  Booth Number: ${data.boothNumber || '(not set)'}
+  Expo Area: ${data.expoArea || '(not set)'}
+  Category: ${data.exhibitorCategory || '(not set)'}
+  Type: ${data.exhibitorType || '(not set)'}
+
+Questions? Contact contact@swissroboticsday.ch
+
+— Swiss Robotics Association / SRAtix`;
+
+    return this.send({
+      to,
+      subject: `🏢 Booth details updated for ${data.companyName} — ${data.eventName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send a contact message from an exhibitor to event organizers.
+   */
+  async sendExhibitorContactMessage(
+    to: string,
+    data: {
+      fromName: string;
+      fromEmail: string;
+      eventName: string;
+      subject: string;
+      message: string;
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.adminWrapper('Exhibitor Contact Message', `
+      <p style="font-size: 16px; margin: 0 0 20px;">
+        A message from exhibitor <strong>${data.fromName}</strong> regarding <strong>${data.eventName}</strong>:
+      </p>
+      <div style="background: #f8f9fa; border-left: 4px solid #4f8cff; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
+        <h3 style="margin: 0 0 8px; color: #333;">Subject: ${data.subject}</h3>
+        <p style="margin: 0; white-space: pre-wrap; font-size: 14px;">${data.message}</p>
+      </div>
+      <p style="font-size: 14px; color: #666; margin: 0;">
+        Reply directly to: <a href="mailto:${data.fromEmail}">${data.fromEmail}</a>
+      </p>
+    `);
+
+    const text = `Exhibitor Contact Message
+
+From: ${data.fromName} (${data.fromEmail})
+Event: ${data.eventName}
+Subject: ${data.subject}
+
+${data.message}
+
+— SRAtix Exhibitor Portal`;
+
+    return this.send({
+      to,
+      replyTo: data.fromEmail,
+      subject: `📩 [${data.eventName}] ${data.subject} — from ${data.fromName}`,
+      html,
+      text,
+    });
+  }
+
+  /**
    * Low-level send — delegates to transport.
    */
   private async send(message: EmailMessage): Promise<DeliveryResult> {

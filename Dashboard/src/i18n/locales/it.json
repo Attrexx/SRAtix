@@ -234,6 +234,12 @@
   "events.settings.logoUploaded": "Logo caricato",
   "events.settings.logoUploadFailed": "Caricamento del logo fallito",
 
+  "events.settings.contactInfoTitle": "Informazioni di contatto dell'organizzatore",
+  "events.settings.contactInfoHint": "Dettagli di contatto mostrati agli espositori nel portale. Gli espositori possono anche usare il modulo di contatto.",
+  "events.settings.contactEmail": "E-mail di contatto",
+  "events.settings.contactPhone": "Telefono di contatto",
+  "events.settings.contactWhatsapp": "Numero WhatsApp",
+
   "events.settings.pagePaths": "Percorsi pagine",
   "events.settings.pagePathsHint": "Slug delle pagine WordPress dove sono inseriti gli shortcode SRAtix. Usati per i collegamenti tra widget.",
   "events.settings.pathTickets": "Pagina acquisto biglietti",
@@ -758,6 +764,9 @@
   "exhibitors.setupStatus": "Stato",
   "exhibitors.submittedAt": "Inviato",
   "exhibitors.confirmedAt": "Confermato",
+  "exhibitors.boothQrCode": "QR Code dello stand",
+  "exhibitors.showQrImage": "Mostra QR",
+  "exhibitors.showQrText": "Mostra payload QR",
   "exhibitors.confirmDelete": "Eliminare definitivamente {name}? Personale, demo e richieste di allestimento verranno rimossi. Questa azione non può essere annullata.",
   "exhibitors.failedToDelete": "Impossibile eliminare l'espositore."
 }

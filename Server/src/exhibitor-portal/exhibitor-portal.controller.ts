@@ -25,6 +25,8 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 import { RecordBoothScanDto } from './dto/record-booth-scan.dto';
 import { RecordBoothLeadDto } from './dto/record-booth-lead.dto';
 import { UpsertSetupRequestDto, AdminUpdateSetupRequestDto } from './dto/upsert-setup-request.dto';
+import { AdminUpdateBoothDetailsDto } from './dto/admin-update-booth-details.dto';
+import { SendContactMessageDto } from './dto/send-contact-message.dto';
 import { FastifyRequest } from 'fastify';
 
 @Controller('exhibitor-portal')
@@ -199,6 +201,56 @@ export class ExhibitorPortalController {
     return this.portalService.updateEventMedia(orgId, user.sub, eventId, dto);
   }
 
+  @Post('profile/media/upload')
+  async uploadProfileImage(
+    @CurrentUser() user: JwtPayload,
+    @Req() req: FastifyRequest,
+  ) {
+    const orgId = this.requireOrgId(user);
+    const data = await req.file();
+    if (!data) throw new BadRequestException('No file uploaded');
+    if (!data.mimetype.startsWith('image/'))
+      throw new BadRequestException('Only image files are accepted');
+    const buffer = await data.toBuffer();
+    const caption = (data.fields as any)?.caption?.value || '';
+    return this.portalService.uploadMediaImage(orgId, user.sub, buffer, data.mimetype, data.filename, 'profile', undefined, caption);
+  }
+
+  @Post('events/:eventId/media/upload')
+  async uploadEventImage(
+    @CurrentUser() user: JwtPayload,
+    @Param('eventId') eventId: string,
+    @Req() req: FastifyRequest,
+  ) {
+    const orgId = this.requireOrgId(user);
+    const data = await req.file();
+    if (!data) throw new BadRequestException('No file uploaded');
+    if (!data.mimetype.startsWith('image/'))
+      throw new BadRequestException('Only image files are accepted');
+    const buffer = await data.toBuffer();
+    const caption = (data.fields as any)?.caption?.value || '';
+    return this.portalService.uploadMediaImage(orgId, user.sub, buffer, data.mimetype, data.filename, 'demo', eventId, caption);
+  }
+
+  @Delete('profile/media/:fileId')
+  async removeProfileImage(
+    @CurrentUser() user: JwtPayload,
+    @Param('fileId') fileId: string,
+  ) {
+    const orgId = this.requireOrgId(user);
+    return this.portalService.removeMediaImage(orgId, user.sub, fileId, 'profile');
+  }
+
+  @Delete('events/:eventId/media/:fileId')
+  async removeEventImage(
+    @CurrentUser() user: JwtPayload,
+    @Param('eventId') eventId: string,
+    @Param('fileId') fileId: string,
+  ) {
+    const orgId = this.requireOrgId(user);
+    return this.portalService.removeMediaImage(orgId, user.sub, fileId, 'demo', eventId);
+  }
+
   // ── Booth QR & Analytics ─────────────────────────────────────────────
 
   @Get('events/:eventId/booth-qr')
@@ -247,6 +299,27 @@ export class ExhibitorPortalController {
   ) {
     const orgId = this.requireOrgId(user);
     return this.portalService.upsertSetupRequest(orgId, user.sub, eventId, dto);
+  }
+
+  // ── Contact Organizers ───────────────────────────────────────────────
+
+  @Get('events/:eventId/contact-info')
+  async getContactInfo(
+    @CurrentUser() user: JwtPayload,
+    @Param('eventId') eventId: string,
+  ) {
+    const orgId = this.requireOrgId(user);
+    return this.portalService.getEventContactInfo(orgId, eventId);
+  }
+
+  @Post('events/:eventId/contact')
+  async sendContactMessage(
+    @CurrentUser() user: JwtPayload,
+    @Param('eventId') eventId: string,
+    @Body() dto: SendContactMessageDto,
+  ) {
+    const orgId = this.requireOrgId(user);
+    return this.portalService.sendContactMessage(orgId, user.sub, user.email, eventId, dto);
   }
 }
 
@@ -310,5 +383,21 @@ export class ExhibitorPortalAdminController {
   @Roles('super_admin', 'admin')
   async deleteExhibitor(@Param('id') id: string) {
     return this.portalService.deleteEventExhibitor(id);
+  }
+
+  @Put('exhibitors/:id/booth-details')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async updateBoothDetails(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateBoothDetailsDto,
+  ) {
+    return this.portalService.adminUpdateBoothDetails(user.sub, id, dto);
+  }
+
+  @Get('exhibitors/:id/booth-qr')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async getBoothQr(@Param('id') id: string) {
+    return this.portalService.getBoothQrPayloadById(id);
   }
 }

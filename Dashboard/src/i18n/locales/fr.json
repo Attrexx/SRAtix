@@ -234,6 +234,12 @@
   "events.settings.logoUploaded": "Logo téléversé",
   "events.settings.logoUploadFailed": "Échec du téléversement du logo",
 
+  "events.settings.contactInfoTitle": "Coordonnées de l'organisateur",
+  "events.settings.contactInfoHint": "Coordonnées affichées aux exposants dans le portail. Les exposants peuvent aussi utiliser le formulaire de contact.",
+  "events.settings.contactEmail": "E-mail de contact",
+  "events.settings.contactPhone": "Téléphone de contact",
+  "events.settings.contactWhatsapp": "Numéro WhatsApp",
+
   "events.settings.pagePaths": "Chemins des pages",
   "events.settings.pagePathsHint": "Slugs des pages WordPress où chaque shortcode SRAtix est placé. Utilisés pour les liens entre widgets.",
   "events.settings.pathTickets": "Page d'achat de billets",
@@ -888,6 +894,9 @@
   "exhibitors.setupStatus": "Statut",
   "exhibitors.submittedAt": "Soumis",
   "exhibitors.confirmedAt": "Confirm\u00e9",
+  "exhibitors.boothQrCode": "QR Code du stand",
+  "exhibitors.showQrImage": "Afficher le QR",
+  "exhibitors.showQrText": "Afficher le payload QR",
   "exhibitors.confirmDelete": "Voulez-vous vraiment supprimer d\u00e9finitivement {name} ? Le personnel, les d\u00e9mos et les demandes d'installation seront \u00e9galement supprim\u00e9s. Cette action est irr\u00e9versible.",
   "exhibitors.failedToDelete": "Impossible de supprimer l'exposant."
 }

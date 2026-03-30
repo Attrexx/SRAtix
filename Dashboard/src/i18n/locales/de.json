@@ -234,6 +234,12 @@
   "events.settings.logoUploaded": "Logo hochgeladen",
   "events.settings.logoUploadFailed": "Fehler beim Hochladen des Logos",
 
+  "events.settings.contactInfoTitle": "Kontaktinformationen des Veranstalters",
+  "events.settings.contactInfoHint": "Kontaktdaten, die den Ausstellern im Portal angezeigt werden. Aussteller können auch das Kontaktformular nutzen.",
+  "events.settings.contactEmail": "Kontakt-E-Mail",
+  "events.settings.contactPhone": "Kontakttelefon",
+  "events.settings.contactWhatsapp": "WhatsApp-Nummer",
+
   "events.settings.pagePaths": "Seitenpfade",
   "events.settings.pagePathsHint": "WordPress-Seitenslugs, auf denen die SRAtix-Shortcodes platziert sind. Werden für die Verlinkung zwischen Widgets verwendet.",
   "events.settings.pathTickets": "Ticket-Kaufseite",
@@ -886,6 +892,9 @@
   "exhibitors.setupStatus": "Status",
   "exhibitors.submittedAt": "Eingereicht",
   "exhibitors.confirmedAt": "Best\u00e4tigt",
+  "exhibitors.boothQrCode": "Stand QR-Code",
+  "exhibitors.showQrImage": "QR-Code anzeigen",
+  "exhibitors.showQrText": "QR-Payload anzeigen",
   "exhibitors.confirmDelete": "M\u00f6chten Sie {name} wirklich dauerhaft l\u00f6schen? Personal, Demos und Setup-Anfragen werden ebenfalls entfernt. Dies kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
   "exhibitors.failedToDelete": "Aussteller konnte nicht gel\u00f6scht werden."
 }
