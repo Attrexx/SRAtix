@@ -37,6 +37,7 @@ model Organization {
   tickets    Ticket[]
   webhookEndpoints WebhookEndpoint[]
   formTemplates    FormTemplate[]
+  logisticsOrders  LogisticsOrder[] @relation("LogisticsOrders")
 
   @@map("organizations")
 }
@@ -79,6 +80,8 @@ model Event {
   webhookEndpoints WebhookEndpoint[]
   eventExhibitors  EventExhibitor[]
   membershipPartners MembershipPartner[]
+  logisticsItems   LogisticsItem[]
+  logisticsOrders  LogisticsOrder[]
 
   @@unique([orgId, slug])
   @@index([orgId])
@@ -872,4 +875,81 @@ model ExhibitorSetupRequest {
 
   @@index([status])
   @@map("exhibitor_setup_requests")
+}
+
+// ============================================================================
+// LOGISTICS STOCK & ORDERS (Phase 1f — exhibitor stock purchasing)
+// ============================================================================
+
+/// Purchasable item managed by event admins (e.g. tables, chairs, power strips).
+model LogisticsItem {
+  id          String   @id @default(uuid()) @db.Char(36)
+  eventId     String   @db.Char(36)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  priceCents  Int      @default(0)
+  currency    String   @default("CHF") @db.VarChar(3)
+  stockTotal  Int      @default(0)
+  stockReserved Int    @default(0) // paid/pending orders
+  status      String   @default("active") @db.VarChar(30) // active | archived
+  sortOrder   Int      @default(0)
+  meta        Json?
+  createdAt   DateTime @default(now()) @db.DateTime(3)
+  updatedAt   DateTime @updatedAt @db.DateTime(3)
+
+  event      Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderItems LogisticsOrderItem[]
+
+  @@index([eventId])
+  @@index([status])
+  @@map("logistics_items")
+}
+
+/// Logistics order placed by an exhibitor (paid via Stripe).
+model LogisticsOrder {
+  id                String   @id @default(uuid()) @db.Char(36)
+  eventId           String   @db.Char(36)
+  exhibitorOrgId    String   @db.Char(36)
+  orderNumber       String   @unique @db.VarChar(20) // LOG-2026-0001
+  totalCents        Int
+  currency          String   @default("CHF") @db.VarChar(3)
+  status            String   @default("pending") @db.VarChar(30) // pending | paid | cancelled | expired
+  fulfillmentStatus String   @default("pending") @db.VarChar(30) // pending | fulfilled | problematic
+  stripeSessionId   String?  @db.VarChar(255)
+  stripePaymentId   String?  @db.VarChar(255)
+  customerEmail     String?  @db.VarChar(255)
+  customerName      String?  @db.VarChar(255)
+  notes             String?  @db.Text
+  paidAt            DateTime? @db.DateTime(3)
+  meta              Json?
+  createdAt         DateTime @default(now()) @db.DateTime(3)
+  updatedAt         DateTime @updatedAt @db.DateTime(3)
+
+  event  Event                @relation(fields: [eventId], references: [id])
+  org    Organization         @relation("LogisticsOrders", fields: [exhibitorOrgId], references: [id])
+  items  LogisticsOrderItem[]
+
+  @@index([eventId])
+  @@index([exhibitorOrgId])
+  @@index([status])
+  @@index([stripeSessionId])
+  @@map("logistics_orders")
+}
+
+/// Line item within a logistics order.
+model LogisticsOrderItem {
+  id               String @id @default(uuid()) @db.Char(36)
+  logisticsOrderId String @db.Char(36)
+  logisticsItemId  String @db.Char(36)
+  quantity         Int
+  unitPriceCents   Int
+  subtotalCents    Int
+  meta             Json?
+
+  order LogisticsOrder @relation(fields: [logisticsOrderId], references: [id], onDelete: Cascade)
+  item  LogisticsItem  @relation(fields: [logisticsItemId], references: [id])
+
+  @@index([logisticsOrderId])
+  @@index([logisticsItemId])
+  @@map("logistics_order_items")
 }

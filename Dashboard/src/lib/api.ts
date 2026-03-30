@@ -633,6 +633,62 @@ export interface FieldDefinition {
   active: boolean;
 }
 
+// ─── Logistics Types ────────────────────────────────────────────
+
+export interface LogisticsItem {
+  id: string;
+  eventId: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+  stockTotal: number;
+  stockReserved: number;
+  status: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LogisticsOrderAdmin {
+  id: string;
+  eventId: string;
+  exhibitorOrgId: string;
+  orderNumber: string;
+  totalCents: number;
+  currency: string;
+  status: string;
+  fulfillmentStatus: string;
+  customerEmail: string | null;
+  customerName: string | null;
+  notes: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  items: Array<{
+    id: string;
+    quantity: number;
+    unitPriceCents: number;
+    subtotalCents: number;
+    item: { name: string };
+  }>;
+  org: { name: string; contactEmail: string | null };
+}
+
+export interface LogisticsOverview {
+  stockSummary: Array<{
+    id: string;
+    name: string;
+    priceCents: number;
+    stockTotal: number;
+    sold: number;
+    available: number;
+    stockStatus: string;
+  }>;
+  fulfillmentCounts: { pending: number; fulfilled: number; problematic: number };
+  totalRevenue: number;
+  totalOrders: number;
+}
+
 // ─── API Methods ────────────────────────────────────────────────
 // Note: auth flows (login, logout, refresh) are handled directly in
 // Dashboard/src/lib/auth.tsx via fetch() with credentials: 'include'.
@@ -1179,6 +1235,50 @@ export const api = {
     request<Record<string, unknown>>(
       `/admin/exhibitor-portal/exhibitors/${exhibitorId}/booth-details`,
       { method: 'PUT', body: data },
+    ),
+
+  // ─── Logistics (Admin) ──────────────────────────────────────────
+
+  getLogisticsItems: (eventId: string, signal?: AbortSignal) =>
+    request<LogisticsItem[]>(
+      `/admin/logistics/events/${eventId}/items`,
+      { signal },
+    ),
+
+  createLogisticsItem: (eventId: string, data: { name: string; description?: string; priceCents: number; stockTotal: number; sortOrder?: number }) =>
+    request<LogisticsItem>(
+      `/admin/logistics/events/${eventId}/items`,
+      { method: 'POST', body: data },
+    ),
+
+  updateLogisticsItem: (eventId: string, itemId: string, data: Partial<LogisticsItem>) =>
+    request<LogisticsItem>(
+      `/admin/logistics/events/${eventId}/items/${itemId}`,
+      { method: 'PUT', body: data },
+    ),
+
+  deleteLogisticsItem: (eventId: string, itemId: string) =>
+    request<{ success: boolean }>(
+      `/admin/logistics/events/${eventId}/items/${itemId}`,
+      { method: 'DELETE' },
+    ),
+
+  getLogisticsOrders: (eventId: string, signal?: AbortSignal) =>
+    request<LogisticsOrderAdmin[]>(
+      `/admin/logistics/events/${eventId}/orders`,
+      { signal },
+    ),
+
+  updateLogisticsFulfillment: (eventId: string, orderId: string, data: { fulfillmentStatus: string; notes?: string }) =>
+    request<Record<string, unknown>>(
+      `/admin/logistics/events/${eventId}/orders/${orderId}/fulfillment`,
+      { method: 'PUT', body: data },
+    ),
+
+  getLogisticsOverview: (eventId: string, signal?: AbortSignal) =>
+    request<LogisticsOverview>(
+      `/admin/logistics/events/${eventId}/overview`,
+      { signal },
     ),
 };
 

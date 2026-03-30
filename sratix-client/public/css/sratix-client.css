@@ -2244,47 +2244,176 @@ label.sratix-checkbox-label {
 	height: auto;
 }
 
-/* ── Logistics Panel (Phase 1e) ──────────────────────────────────────── */
+/* ── Logistics Panel (Stock Purchasing) ──────────────────────────────── */
 
 .sratix-logistics-panel {
 	padding: 8px 0;
 }
 
-.sratix-logistics-status {
-	padding: 12px 16px;
+.sratix-logistics-items {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.sratix-logistics-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	padding: 14px 16px;
+	background: var(--sratix-navy-mid, #1a2332);
+	border: 1px solid var(--sratix-border, #2d3a4a);
 	border-radius: 8px;
-	margin-bottom: 16px;
+}
+
+.sratix-logistics-item__name {
+	font-weight: 600;
+	font-size: 0.95rem;
+}
+
+.sratix-logistics-item__desc {
+	font-size: 0.82rem;
+	opacity: 0.7;
+	margin-top: 2px;
+}
+
+.sratix-logistics-item__price {
+	font-size: 0.9rem;
+	font-weight: 600;
+	margin-top: 4px;
+	color: var(--sratix-accent, #3b82f6);
+}
+
+.sratix-logistics-item__stock {
+	font-size: 0.8rem;
+	opacity: 0.6;
+	margin-top: 2px;
+}
+
+.sratix-logistics-item__qty {
+	flex-shrink: 0;
+	width: 80px;
+}
+
+.sratix-logistics-qty {
+	width: 100%;
+	text-align: center;
+}
+
+.sratix-logistics-out-of-stock {
+	display: inline-block;
+	padding: 4px 10px;
+	font-size: 0.78rem;
+	background: rgba(239, 68, 68, 0.15);
+	color: #ef4444;
+	border-radius: 6px;
+	white-space: nowrap;
+}
+
+.sratix-logistics-order-summary {
+	margin-top: 16px;
+	padding: 16px;
+	background: var(--sratix-navy-mid, #1a2332);
+	border: 1px solid var(--sratix-border, #2d3a4a);
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.sratix-logistics-order-total {
+	font-size: 1rem;
+	flex: 1;
+}
+
+.sratix-logistics-orders {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.sratix-logistics-order {
+	padding: 14px 16px;
+	background: var(--sratix-navy-mid, #1a2332);
+	border: 1px solid var(--sratix-border, #2d3a4a);
+	border-radius: 8px;
+}
+
+.sratix-logistics-order__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 8px;
+}
+
+.sratix-logistics-order__number {
+	font-weight: 600;
 	font-size: 0.9rem;
 }
 
-.sratix-logistics-status--confirmed {
-	background: #dcfce7;
-	color: #166534;
-	border: 1px solid #86efac;
+.sratix-logistics-order__date {
+	font-size: 0.82rem;
+	opacity: 0.6;
 }
 
-.sratix-logistics-status--submitted {
-	background: #dbeafe;
-	color: #1e40af;
-	border: 1px solid #93c5fd;
+.sratix-logistics-badge {
+	display: inline-block;
+	padding: 2px 10px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	border-radius: 999px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
 }
 
-.sratix-logistics-status--mod-requested {
-	background: #fef3c7;
-	color: #92400e;
-	border: 1px solid #fcd34d;
+.sratix-logistics-badge--paid {
+	background: rgba(34, 197, 94, 0.15);
+	color: #22c55e;
 }
 
-.sratix-logistics-admin-notes {
-	margin-top: 8px;
-	font-style: italic;
+.sratix-logistics-badge--pending {
+	background: rgba(234, 179, 8, 0.15);
+	color: #eab308;
+}
+
+.sratix-logistics-badge--cancelled,
+.sratix-logistics-badge--expired {
+	background: rgba(239, 68, 68, 0.15);
+	color: #ef4444;
+}
+
+.sratix-logistics-badge--fulfilled {
+	background: rgba(34, 197, 94, 0.15);
+	color: #22c55e;
+}
+
+.sratix-logistics-badge--problematic {
+	background: rgba(249, 115, 22, 0.15);
+	color: #f97316;
+}
+
+.sratix-logistics-order__items {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 0.85rem;
+}
+
+.sratix-logistics-order__line {
+	display: flex;
+	justify-content: space-between;
 	opacity: 0.85;
 }
 
-.sratix-logistics-actions {
-	display: flex;
-	gap: 12px;
-	margin-top: 16px;
+.sratix-logistics-order__total {
+	margin-top: 8px;
+	font-size: 0.9rem;
+	text-align: right;
 }
 
 .sratix-checkbox-label {

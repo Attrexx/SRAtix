@@ -4060,7 +4060,7 @@
     }
   }
 
-  // ── Logistics Panel (Phase 1e) ───────────────────────────────────
+  // ── Logistics Panel (Stock Purchasing) ──────────────────────────────
 
   function renderLogisticsPanel(panel, events, authHeaders) {
     if (!events || events.length === 0) {
@@ -4068,7 +4068,7 @@
       return;
     }
 
-    let html = `<div class="sratix-logistics-panel">
+    panel.innerHTML = `<div class="sratix-logistics-panel">
       <label class="sratix-label">${escHtml(t('exhibitorPortal.selectEvent'))}</label>
       <select class="sratix-input" id="sratix-logistics-event-select">
         <option value="">—</option>
@@ -4076,123 +4076,131 @@
       </select>
       <div id="sratix-logistics-content"></div>
     </div>`;
-    panel.innerHTML = html;
 
     panel.querySelector('#sratix-logistics-event-select').addEventListener('change', function () {
-      const eventId = this.value;
-      const content = panel.querySelector('#sratix-logistics-content');
+      var eventId = this.value;
+      var content = panel.querySelector('#sratix-logistics-content');
       if (!eventId) { content.innerHTML = ''; return; }
-      loadLogisticsForm(content, eventId, authHeaders);
+      loadLogisticsContent(content, eventId, authHeaders);
     });
   }
 
-  async function loadLogisticsForm(container, eventId, authHeaders) {
+  async function loadLogisticsContent(container, eventId, authHeaders) {
     container.innerHTML = `<p class="sratix-loading">${escHtml(t('common.loading'))}</p>`;
 
     try {
-      const [optionsRes, requestRes] = await Promise.all([
-        apiFetch('exhibitor-portal/events/' + eventId + '/setup-options', { headers: authHeaders }),
-        apiFetch('exhibitor-portal/events/' + eventId + '/setup-request', { headers: authHeaders }),
+      var [itemsRes, ordersRes] = await Promise.all([
+        apiFetch('exhibitor-portal/events/' + eventId + '/logistics/items', { headers: authHeaders }),
+        apiFetch('exhibitor-portal/events/' + eventId + '/logistics/orders', { headers: authHeaders }),
       ]);
 
-      const setupOptions = optionsRes.setupOptions;
-      const request = requestRes;
+      var items = Array.isArray(itemsRes) ? itemsRes : [];
+      var orders = Array.isArray(ordersRes) ? ordersRes : [];
 
-      if (!setupOptions || !Array.isArray(setupOptions) || setupOptions.length === 0) {
-        container.innerHTML = `<p class="sratix-portal-empty">${escHtml(t('exhibitorPortal.noSetupOptions'))}</p>`;
-        return;
-      }
+      var html = '';
 
-      // Status banner
-      let statusHtml = '';
-      if (request.status === 'confirmed') {
-        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--confirmed">
-          ✓ ${escHtml(t('exhibitorPortal.setupConfirmed'))}
-        </div>`;
-      } else if (request.status === 'modification_requested') {
-        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--mod-requested">
-          ${escHtml(t('exhibitorPortal.setupModificationRequested'))}
-          ${request.adminNotes ? `<p class="sratix-logistics-admin-notes">${escHtml(request.adminNotes)}</p>` : ''}
-        </div>`;
-      } else if (request.status === 'submitted') {
-        statusHtml = `<div class="sratix-logistics-status sratix-logistics-status--submitted">
-          ${escHtml(t('exhibitorPortal.setupSubmitted'))}
-        </div>`;
-      }
-
-      const savedData = (request.data && typeof request.data === 'object') ? request.data : {};
-      const isEditable = request.status !== 'confirmed';
-
-      let formHtml = statusHtml + '<form id="sratix-logistics-form" class="sratix-portal-form">';
-
-      // Build form fields from setupOptions config
-      setupOptions.forEach(function (option) {
-        const fieldName = option.key || option.id;
-        const savedVal = savedData[fieldName] || '';
-        const label = option.label || fieldName;
-        const fieldDisabled = isEditable ? '' : 'disabled';
-
-        formHtml += `<div class="sratix-field-group">
-          <label class="sratix-label">${escHtml(label)}`;
-
-        if (option.required) {
-          formHtml += ' <span class="sratix-required">*</span>';
-        }
-        formHtml += '</label>';
-
-        if (option.type === 'select' && Array.isArray(option.options)) {
-          formHtml += `<select name="${escAttr(fieldName)}" class="sratix-input" ${fieldDisabled}>
-            <option value="">—</option>
-            ${option.options.map(function (opt) {
-              const optVal = typeof opt === 'string' ? opt : (opt.value || opt);
-              const optLabel = typeof opt === 'string' ? opt : (opt.label || opt.value);
-              const sel = String(savedVal) === String(optVal) ? 'selected' : '';
-              return `<option value="${escAttr(optVal)}" ${sel}>${escHtml(optLabel)}</option>`;
-            }).join('')}
-          </select>`;
-        } else if (option.type === 'textarea') {
-          formHtml += `<textarea name="${escAttr(fieldName)}" class="sratix-input" rows="3" ${fieldDisabled}>${escHtml(String(savedVal))}</textarea>`;
-        } else if (option.type === 'checkbox') {
-          formHtml += `<label class="sratix-checkbox-label">
-            <input type="checkbox" name="${escAttr(fieldName)}" ${savedVal ? 'checked' : ''} ${fieldDisabled} />
-            ${escHtml(option.checkboxLabel || label)}
-          </label>`;
-        } else if (option.type === 'number') {
-          formHtml += `<input type="number" name="${escAttr(fieldName)}" value="${escAttr(String(savedVal))}" class="sratix-input"
-            min="${option.min != null ? option.min : ''}" max="${option.max != null ? option.max : ''}" ${fieldDisabled} />`;
-        } else {
-          formHtml += `<input type="text" name="${escAttr(fieldName)}" value="${escAttr(String(savedVal))}" class="sratix-input" ${fieldDisabled} />`;
-        }
-
-        if (option.hint) {
-          formHtml += `<p class="sratix-portal-hint">${escHtml(option.hint)}</p>`;
-        }
-
-        formHtml += '</div>';
-      });
-
-      if (isEditable) {
-        formHtml += `<div class="sratix-logistics-actions">
-          <button type="button" class="sratix-btn sratix-btn--outline" data-action="save-draft">
-            ${escHtml(t('exhibitorPortal.saveDraft'))}
-          </button>
-          <button type="button" class="sratix-btn sratix-btn--primary" data-action="submit-setup">
-            ${escHtml(t('exhibitorPortal.submitSetup'))}
-          </button>
-        </div>`;
-      }
-
-      formHtml += '<div class="sratix-portal-status" id="sratix-logistics-status"></div></form>';
-
-      container.innerHTML = formHtml;
-
-      // Bind save/submit
-      if (isEditable) {
-        container.querySelector('[data-action="save-draft"]').addEventListener('click', function () {
-          saveSetupRequest(container, eventId, 'draft', authHeaders, setupOptions);
+      // ── Available Items ──
+      if (items.length === 0) {
+        html += `<p class="sratix-portal-empty" style="margin-top:16px">${escHtml(t('exhibitorPortal.logisticsNoItems'))}</p>`;
+      } else {
+        html += `<h4 class="sratix-portal-section-title" style="margin-top:16px">${escHtml(t('exhibitorPortal.logisticsAvailableItems'))}</h4>`;
+        html += '<div class="sratix-logistics-items">';
+        items.forEach(function (item) {
+          var available = item.stockTotal - item.stockReserved;
+          var maxQty = Math.max(0, available);
+          html += `<div class="sratix-logistics-item" data-item-id="${escAttr(item.id)}">
+            <div class="sratix-logistics-item__info">
+              <div class="sratix-logistics-item__name">${escHtml(item.name)}</div>
+              ${item.description ? `<div class="sratix-logistics-item__desc">${escHtml(item.description)}</div>` : ''}
+              <div class="sratix-logistics-item__price">${escHtml(formatPrice(item.priceCents, item.currency))}</div>
+              <div class="sratix-logistics-item__stock">${escHtml(t('exhibitorPortal.logisticsInStock'))}: ${available}</div>
+            </div>
+            <div class="sratix-logistics-item__qty">
+              ${maxQty > 0
+                ? `<input type="number" class="sratix-input sratix-logistics-qty" min="0" max="${maxQty}" value="0" data-item-id="${escAttr(item.id)}" data-price="${item.priceCents}" data-currency="${escAttr(item.currency || 'CHF')}" />`
+                : `<span class="sratix-logistics-out-of-stock">${escHtml(t('exhibitorPortal.logisticsOutOfStock'))}</span>`}
+            </div>
+          </div>`;
         });
-        container.querySelector('[data-action="submit-setup"]').addEventListener('click', function () {
-          saveSetupRequest(container, eventId, 'submitted', authHeaders, setupOptions);
+        html += '</div>';
+
+        // Order summary + button
+        html += `<div class="sratix-logistics-order-summary" id="sratix-logistics-summary" style="display:none">
+          <div class="sratix-logistics-order-total">
+            ${escHtml(t('exhibitorPortal.logisticsTotal'))}: <strong id="sratix-logistics-total">CHF 0.00</strong>
+          </div>
+          <button type="button" class="sratix-btn sratix-btn--primary" id="sratix-logistics-order-btn">
+            ${escHtml(t('exhibitorPortal.logisticsPlaceOrder'))}
+          </button>
+          <div class="sratix-portal-status" id="sratix-logistics-status"></div>
+        </div>`;
+      }
+
+      // ── Order History ──
+      if (orders.length > 0) {
+        html += `<h4 class="sratix-portal-section-title" style="margin-top:32px">${escHtml(t('exhibitorPortal.logisticsOrderHistory'))}</h4>`;
+        html += '<div class="sratix-logistics-orders">';
+        orders.forEach(function (order) {
+          var statusClass = 'sratix-logistics-badge--' + order.status;
+          var fulfillClass = 'sratix-logistics-badge--' + order.fulfillmentStatus;
+          var orderDate = new Date(order.createdAt).toLocaleDateString();
+
+          html += `<div class="sratix-logistics-order">
+            <div class="sratix-logistics-order__header">
+              <span class="sratix-logistics-order__number">${escHtml(order.orderNumber)}</span>
+              <span class="sratix-logistics-order__date">${escHtml(orderDate)}</span>
+              <span class="sratix-logistics-badge ${statusClass}">${escHtml(t('exhibitorPortal.logisticsStatus_' + order.status))}</span>
+              ${order.status === 'paid' ? `<span class="sratix-logistics-badge ${fulfillClass}">${escHtml(t('exhibitorPortal.logisticsFulfill_' + order.fulfillmentStatus))}</span>` : ''}
+            </div>
+            <div class="sratix-logistics-order__items">
+              ${(order.items || []).map(function (oi) {
+                return `<div class="sratix-logistics-order__line">
+                  <span>${escHtml((oi.item && oi.item.name) || '—')} × ${oi.quantity}</span>
+                  <span>${escHtml(formatPrice(oi.subtotalCents, order.currency))}</span>
+                </div>`;
+              }).join('')}
+            </div>
+            <div class="sratix-logistics-order__total">
+              ${escHtml(t('exhibitorPortal.logisticsTotal'))}: <strong>${escHtml(formatPrice(order.totalCents, order.currency))}</strong>
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+
+      // ── Bind quantity change → update summary ──
+      var qtyInputs = container.querySelectorAll('.sratix-logistics-qty');
+      var summaryEl = container.querySelector('#sratix-logistics-summary');
+      var totalEl = container.querySelector('#sratix-logistics-total');
+
+      function updateSummary() {
+        var total = 0;
+        var hasItems = false;
+        qtyInputs.forEach(function (inp) {
+          var qty = parseInt(inp.value, 10) || 0;
+          if (qty > 0) {
+            hasItems = true;
+            total += qty * parseInt(inp.getAttribute('data-price'), 10);
+          }
+        });
+        if (summaryEl) {
+          summaryEl.style.display = hasItems ? '' : 'none';
+        }
+        if (totalEl) {
+          var currency = qtyInputs.length > 0 ? (qtyInputs[0].getAttribute('data-currency') || 'CHF') : 'CHF';
+          totalEl.textContent = formatPrice(total, currency);
+        }
+      }
+
+      qtyInputs.forEach(function (inp) { inp.addEventListener('input', updateSummary); });
+
+      // ── Bind order button ──
+      var orderBtn = container.querySelector('#sratix-logistics-order-btn');
+      if (orderBtn) {
+        orderBtn.addEventListener('click', function () {
+          submitLogisticsOrder(container, eventId, authHeaders, qtyInputs);
         });
       }
     } catch (err) {
@@ -4200,37 +4208,41 @@
     }
   }
 
-  async function saveSetupRequest(container, eventId, status, authHeaders, setupOptions) {
-    const form = container.querySelector('#sratix-logistics-form');
-    const statusEl = container.querySelector('#sratix-logistics-status');
+  async function submitLogisticsOrder(container, eventId, authHeaders, qtyInputs) {
+    var statusEl = container.querySelector('#sratix-logistics-status');
+    var orderBtn = container.querySelector('#sratix-logistics-order-btn');
 
-    // Gather form data
-    const data = {};
-    setupOptions.forEach(function (option) {
-      const fieldName = option.key || option.id;
-      const el = form.querySelector('[name="' + fieldName + '"]');
-      if (!el) return;
-      if (option.type === 'checkbox') {
-        data[fieldName] = el.checked;
-      } else if (option.type === 'number') {
-        data[fieldName] = el.value ? Number(el.value) : null;
-      } else {
-        data[fieldName] = el.value;
+    // Collect selected items
+    var selectedItems = [];
+    qtyInputs.forEach(function (inp) {
+      var qty = parseInt(inp.value, 10) || 0;
+      if (qty > 0) {
+        selectedItems.push({ logisticsItemId: inp.getAttribute('data-item-id'), quantity: qty });
       }
     });
 
+    if (selectedItems.length === 0) return;
+
+    if (orderBtn) { orderBtn.disabled = true; orderBtn.textContent = t('common.loading'); }
+
     try {
-      await apiFetch('exhibitor-portal/events/' + eventId + '/setup-request', {
-        method: 'PUT',
+      var result = await apiFetch('exhibitor-portal/events/' + eventId + '/logistics/checkout', {
+        method: 'POST',
         headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: data, status: status }),
+        body: JSON.stringify({
+          items: selectedItems,
+          successUrl: window.location.href,
+          cancelUrl: window.location.href,
+        }),
       });
-      showStatus(statusEl, status === 'submitted' ? t('exhibitorPortal.setupSubmittedSuccess') : t('exhibitorPortal.setupSaved'), false);
-      // Reload form to reflect new status
-      if (status === 'submitted') {
-        setTimeout(function () { loadLogisticsForm(container, eventId, authHeaders); }, 1500);
+
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error('Unexpected response from server');
       }
     } catch (err) {
+      if (orderBtn) { orderBtn.disabled = false; orderBtn.textContent = t('exhibitorPortal.logisticsPlaceOrder'); }
       showStatus(statusEl, err.message || t('common.error'), true);
     }
   }

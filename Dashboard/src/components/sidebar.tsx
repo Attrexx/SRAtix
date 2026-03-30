@@ -35,6 +35,7 @@ function getEventNav(eventId: string, t: (key: string) => string): NavItem[] {
     { href: `/dashboard/events/${eventId}/export`, label: t('nav.export'), icon: <Icons.Upload size={18} /> },
     { href: `/dashboard/events/${eventId}/webhooks`, label: t('nav.webhooks'), icon: <Icons.Link size={18} />, roles: ['admin', 'owner'] },
     { href: `/dashboard/events/${eventId}/exhibitor-setup`, label: t('nav.exhibitorSetup'), icon: <Icons.Package size={18} />, roles: ['event_admin', 'admin', 'super_admin'] },
+    { href: `/dashboard/events/${eventId}/logistics`, label: t('nav.logistics'), icon: <Icons.Package size={18} />, roles: ['event_admin', 'admin', 'super_admin'] },
     { href: `/dashboard/events/${eventId}/settings`, label: t('nav.eventSettings'), icon: <Icons.Settings size={18} /> },
   ];
 }

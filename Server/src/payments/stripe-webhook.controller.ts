@@ -23,6 +23,7 @@ import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ti
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 import { AuthService } from '../auth/auth.service';
+import { LogisticsService } from '../logistics/logistics.service';
 import { randomBytes } from 'crypto';
 
 /**
@@ -53,6 +54,7 @@ export class StripeWebhookController {
     private readonly settings: SettingsService,
     private readonly registrationReminder: RegistrationReminderWorker,
     private readonly auth: AuthService,
+    private readonly logistics: LogisticsService,
   ) {}
 
   @Post()
@@ -118,6 +120,23 @@ export class StripeWebhookController {
    * Test orders are tagged with isTestOrder in meta for traceability.
    */
   private async handleCheckoutComplete(session: Stripe.Checkout.Session) {
+    // ── Logistics order? Delegate to logistics service ────────────────
+    const logisticsOrderId = session.metadata?.sratix_logistics_order_id;
+    if (logisticsOrderId) {
+      this.logger.log(`Logistics payment confirmed for order ${logisticsOrderId}`);
+      const paymentIntentId =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id;
+      await this.logistics.markPaid(
+        logisticsOrderId,
+        paymentIntentId ?? null,
+        session.customer_details?.email ?? session.customer_email ?? null,
+        session.customer_details?.name ?? null,
+      );
+      return;
+    }
+
     const orderId = session.metadata?.sratix_order_id;
     if (!orderId) {
       this.logger.warn('Checkout completed but no sratix_order_id in metadata');
@@ -419,6 +438,14 @@ export class StripeWebhookController {
    * Mark order as expired.
    */
   private async handleCheckoutExpired(session: Stripe.Checkout.Session) {
+    // ── Logistics order? ──────────────────────────────────────────────
+    const logisticsOrderId = session.metadata?.sratix_logistics_order_id;
+    if (logisticsOrderId) {
+      this.logger.log(`Logistics checkout expired for order ${logisticsOrderId}`);
+      await this.logistics.markExpired(logisticsOrderId);
+      return;
+    }
+
     const orderId = session.metadata?.sratix_order_id;
     if (!orderId) return;
 

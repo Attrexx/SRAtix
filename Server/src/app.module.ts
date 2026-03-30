@@ -32,6 +32,7 @@ import { SystemModule } from './system/system.module';
 import { ContactModule } from './contact/contact.module';
 import { ExhibitorPortalModule } from './exhibitor-portal/exhibitor-portal.module';
 import { MembershipPartnersModule } from './membership-partners/membership-partners.module';
+import { LogisticsModule } from './logistics/logistics.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
@@ -128,6 +129,9 @@ import { join } from 'path';
 
     // Membership Partners — dynamic event partner management
     MembershipPartnersModule,
+
+    // Logistics — exhibitor stock purchasing system
+    LogisticsModule,
   ],
   providers: [
     // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)
