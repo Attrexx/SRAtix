@@ -972,7 +972,7 @@
   "logistics.editItem": "Edit Item",
   "logistics.name": "Name",
   "logistics.description": "Description",
-  "logistics.price": "Price (cents)",
+  "logistics.price": "Price (CHF)",
   "logistics.stockTotal": "Stock Total",
   "logistics.save": "Save",
   "logistics.cancel": "Cancel",

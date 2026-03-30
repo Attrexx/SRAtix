@@ -941,7 +941,7 @@
   "logistics.editItem": "Modifier l'article",
   "logistics.name": "Nom",
   "logistics.description": "Description",
-  "logistics.price": "Prix (centimes)",
+  "logistics.price": "Prix (CHF)",
   "logistics.stockTotal": "Stock total",
   "logistics.save": "Enregistrer",
   "logistics.cancel": "Annuler",

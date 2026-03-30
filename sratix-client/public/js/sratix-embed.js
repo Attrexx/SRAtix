@@ -2896,6 +2896,8 @@
     `;
 
     // Tab switching
+    var portalEl = container.querySelector('.sratix-exhibitor-portal');
+    if (portalEl) portalEl._sratixAuth = authHeaders;
     container.querySelectorAll('.sratix-portal-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
@@ -3056,9 +3058,10 @@
         });
         if (!res.ok) throw new Error('Upload failed');
         await res.json();
-        // Re-fetch full profile and re-render
+        // Re-fetch full profile and re-render panel + header logo
         const refreshed = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
         renderProfilePanel(panel, refreshed, authHeaders);
+        syncHeaderLogo(panel, refreshed);
       } catch (err) {
         console.error('[SRAtix] Logo upload error:', err);
         showStatus(panel.querySelector('#sratix-profile-status'), t('exhibitorPortal.logoUploadError'), true);
@@ -3076,6 +3079,7 @@
           });
           const refreshed = await apiFetch('exhibitor-portal/profile', { headers: authHeaders });
           renderProfilePanel(panel, refreshed, authHeaders);
+          syncHeaderLogo(panel, refreshed);
         } catch (err) {
           console.error('[SRAtix] Logo remove error:', err);
         }
@@ -4106,7 +4110,7 @@
         html += `<h4 class="sratix-portal-section-title" style="margin-top:16px">${escHtml(t('exhibitorPortal.logisticsAvailableItems'))}</h4>`;
         html += '<div class="sratix-logistics-items">';
         items.forEach(function (item) {
-          var available = item.stockTotal - item.stockReserved;
+          var available = item.stockAvailable != null ? item.stockAvailable : 0;
           var maxQty = Math.max(0, available);
           html += `<div class="sratix-logistics-item" data-item-id="${escAttr(item.id)}">
             <div class="sratix-logistics-item__info">
@@ -4252,6 +4256,50 @@
     el.textContent = message;
     el.className = 'sratix-portal-status ' + (isError ? 'sratix-portal-status--error' : 'sratix-portal-status--success');
     setTimeout(() => { el.textContent = ''; el.className = 'sratix-portal-status'; }, 4000);
+  }
+
+  /** Sync the header logo with updated profile data */
+  function syncHeaderLogo(panelOrChild, profile) {
+    var portal = panelOrChild.closest('.sratix-exhibitor-portal');
+    if (!portal) return;
+    var logoDiv = portal.querySelector('.sratix-portal-header__logo');
+    if (!logoDiv) return;
+    if (profile.logoUrl) {
+      logoDiv.innerHTML = `<label class="sratix-portal-header__logo-wrap sratix-portal-header__logo-wrap--has-img" tabindex="0" title="${escAttr(t('exhibitorPortal.changeLogo'))}">
+        <img src="${escAttr(resolveApiUrl(profile.logoUrl))}" alt="${escAttr(profile.companyName || '')}" class="sratix-portal-header__logo-img" />
+        <span class="sratix-portal-header__logo-overlay">${escHtml(t('exhibitorPortal.changeLogo'))}</span>
+        <input type="file" accept="image/*" class="sratix-header-logo-input" hidden />
+      </label>`;
+    } else {
+      logoDiv.innerHTML = `<label class="sratix-portal-header__logo-wrap sratix-portal-header__logo-wrap--empty" tabindex="0">
+        <span class="sratix-portal-header__logo-ph">${escHtml(t('exhibitorPortal.uploadLogo'))}</span>
+        <input type="file" accept="image/*" class="sratix-header-logo-input" hidden />
+      </label>`;
+    }
+    // Re-bind the header logo input
+    var newInput = logoDiv.querySelector('.sratix-header-logo-input');
+    if (newInput) {
+      newInput.addEventListener('change', async function () {
+        var file = newInput.files[0];
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('file', file);
+        try {
+          await fetch(API_BASE + '/exhibitor-portal/profile/logo', {
+            method: 'POST',
+            headers: { Authorization: portal._sratixAuth.Authorization },
+            body: fd,
+          });
+          var refreshed = await apiFetch('exhibitor-portal/profile', { headers: portal._sratixAuth });
+          syncHeaderLogo(logoDiv, refreshed);
+          // Also refresh profile panel if visible
+          var profilePanel = portal.querySelector('#sratix-panel-profile');
+          if (profilePanel) renderProfilePanel(profilePanel, refreshed, portal._sratixAuth);
+        } catch (err) {
+          console.error('[SRAtix] Header logo upload error:', err);
+        }
+      });
+    }
   }
 
   // ─── Exhibitor Confirmation (post-purchase polling) ──────────────────────────

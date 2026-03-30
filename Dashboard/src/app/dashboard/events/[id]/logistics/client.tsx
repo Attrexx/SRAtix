@@ -22,19 +22,19 @@ export default function LogisticsPage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">{t('logistics.title')}</h2>
+      <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-text)' }}>{t('logistics.title')}</h2>
 
       {/* Sub-tab navigation */}
-      <div className="flex gap-1 border-b mb-4">
+      <div className="flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
         {(['overview', 'requests', 'stock'] as SubTab[]).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === key
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            className="px-4 py-2 text-sm font-medium transition-colors"
+            style={{
+              borderBottom: tab === key ? '2px solid var(--color-primary)' : '2px solid transparent',
+              color: tab === key ? 'var(--color-primary)' : 'var(--color-text-muted)',
+            }}
           >
             {t(`logistics.tab${key[0].toUpperCase()}${key.slice(1)}`)}
           </button>
@@ -65,8 +65,8 @@ function OverviewTab({ eventId }: { eventId: string }) {
     return () => ac.abort();
   }, [eventId]);
 
-  if (loading) return <p className="text-gray-500">{t('common.loading')}</p>;
-  if (!data) return <p className="text-gray-500">{t('logistics.noData')}</p>;
+  if (loading) return <p style={{ color: 'var(--color-text-muted)' }}>{t('common.loading')}</p>;
+  if (!data) return <p style={{ color: 'var(--color-text-muted)' }}>{t('logistics.noData')}</p>;
 
   const fc = data.fulfillmentCounts;
 
@@ -76,20 +76,20 @@ function OverviewTab({ eventId }: { eventId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label={t('logistics.totalOrders')} value={String(data.totalOrders)} />
         <StatCard label={t('logistics.totalRevenue')} value={`CHF ${(data.totalRevenue / 100).toFixed(2)}`} />
-        <StatCard label={t('logistics.fulfilled')} value={String(fc.fulfilled)} color="text-green-600" />
-        <StatCard label={t('logistics.pending')} value={String(fc.pending)} color="text-amber-600" />
+        <StatCard label={t('logistics.fulfilled')} value={String(fc.fulfilled)} valueColor="var(--color-success, #16a34a)" />
+        <StatCard label={t('logistics.pending')} value={String(fc.pending)} valueColor="var(--color-warning, #d97706)" />
       </div>
 
       {/* Stock status table */}
       <div>
-        <h3 className="text-lg font-medium mb-2">{t('logistics.stockStatus')}</h3>
+        <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text)' }}>{t('logistics.stockStatus')}</h3>
         {data.stockSummary.length === 0 ? (
-          <p className="text-gray-500 text-sm">{t('logistics.noItems')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('logistics.noItems')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-gray-500">
+                <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
                   <th className="py-2 pr-4">{t('logistics.itemName')}</th>
                   <th className="py-2 pr-4 text-right">{t('logistics.price')}</th>
                   <th className="py-2 pr-4 text-right">{t('logistics.stockTotal')}</th>
@@ -100,8 +100,8 @@ function OverviewTab({ eventId }: { eventId: string }) {
               </thead>
               <tbody>
                 {data.stockSummary.map((item) => (
-                  <tr key={item.id} className="border-b">
-                    <td className="py-2 pr-4 font-medium">{item.name}</td>
+                  <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td className="py-2 pr-4 font-medium" style={{ color: 'var(--color-text)' }}>{item.name}</td>
                     <td className="py-2 pr-4 text-right">CHF {(item.priceCents / 100).toFixed(2)}</td>
                     <td className="py-2 pr-4 text-right">{item.stockTotal}</td>
                     <td className="py-2 pr-4 text-right">{item.sold}</td>
@@ -120,7 +120,7 @@ function OverviewTab({ eventId }: { eventId: string }) {
       {/* Fulfillment breakdown */}
       {data.totalOrders > 0 && (
         <div>
-          <h3 className="text-lg font-medium mb-2">{t('logistics.fulfillmentBreakdown')}</h3>
+          <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text)' }}>{t('logistics.fulfillmentBreakdown')}</h3>
           <div className="flex gap-4">
             <FulfillmentBar label={t('logistics.fulfilled')} count={fc.fulfilled} total={data.totalOrders} color="bg-green-500" />
             <FulfillmentBar label={t('logistics.pendingLabel')} count={fc.pending} total={data.totalOrders} color="bg-amber-500" />
@@ -132,28 +132,32 @@ function OverviewTab({ eventId }: { eventId: string }) {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatCard({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="rounded-lg border p-4">
-      <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${color ?? ''}`}>{value}</p>
+    <div className="rounded-lg p-4" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
+      <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>{label}</p>
+      <p className="text-2xl font-bold mt-1" style={{ color: valueColor ?? 'var(--color-text)' }}>{value}</p>
     </div>
   );
 }
 
 function StockBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    available: 'bg-green-100 text-green-700',
-    low: 'bg-amber-100 text-amber-700',
-    out_of_stock: 'bg-red-100 text-red-700',
+  const styles: Record<string, { bg: string; color: string }> = {
+    available: { bg: 'rgba(34,197,94,0.15)', color: '#16a34a' },
+    low: { bg: 'rgba(245,158,11,0.15)', color: '#d97706' },
+    out_of_stock: { bg: 'rgba(239,68,68,0.15)', color: '#dc2626' },
   };
   const labels: Record<string, string> = {
     available: 'In Stock',
     low: 'Low Stock',
     out_of_stock: 'Out of Stock',
   };
+  const s = styles[status] ?? { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)' };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span
+      className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+      style={{ background: s.bg, color: s.color }}
+    >
       {labels[status] ?? status}
     </span>
   );
@@ -163,11 +167,11 @@ function FulfillmentBar({ label, count, total, color }: { label: string; count: 
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
     <div className="flex-1">
-      <div className="flex justify-between text-xs text-gray-500 mb-1">
+      <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>
         <span>{label}</span>
         <span>{count} ({pct}%)</span>
       </div>
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-muted, var(--color-bg-subtle))' }}>
         <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -205,17 +209,17 @@ function RequestsTab({ eventId }: { eventId: string }) {
     }
   };
 
-  if (loading) return <p className="text-gray-500">{t('common.loading')}</p>;
+  if (loading) return <p style={{ color: 'var(--color-text-muted)' }}>{t('common.loading')}</p>;
 
   if (orders.length === 0) {
-    return <p className="text-gray-500 text-sm">{t('logistics.noOrders')}</p>;
+    return <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('logistics.noOrders')}</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
-          <tr className="border-b text-left text-gray-500">
+          <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
             <th className="py-2 pr-4">{t('logistics.orderNumber')}</th>
             <th className="py-2 pr-4">{t('logistics.exhibitor')}</th>
             <th className="py-2 pr-4">{t('logistics.items')}</th>
@@ -228,22 +232,22 @@ function RequestsTab({ eventId }: { eventId: string }) {
         </thead>
         <tbody>
           {orders.map((order) => (
-            <tr key={order.id} className="border-b hover:bg-gray-50">
-              <td className="py-2 pr-4 font-mono text-xs">{order.orderNumber}</td>
+            <tr key={order.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <td className="py-2 pr-4 font-mono text-xs" style={{ color: 'var(--color-text)' }}>{order.orderNumber}</td>
               <td className="py-2 pr-4">
-                <div className="font-medium">{order.org.name}</div>
+                <div className="font-medium" style={{ color: 'var(--color-text)' }}>{order.org.name}</div>
                 {order.customerEmail && (
-                  <div className="text-xs text-gray-400">{order.customerEmail}</div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{order.customerEmail}</div>
                 )}
               </td>
               <td className="py-2 pr-4">
                 {order.items.map((li) => (
-                  <div key={li.id} className="text-xs">
+                  <div key={li.id} className="text-xs" style={{ color: 'var(--color-text)' }}>
                     {li.quantity}× {li.item.name}
                   </div>
                 ))}
               </td>
-              <td className="py-2 pr-4 text-right font-medium">
+              <td className="py-2 pr-4 text-right font-medium" style={{ color: 'var(--color-text)' }}>
                 {order.currency} {(order.totalCents / 100).toFixed(2)}
               </td>
               <td className="py-2 pr-4">
@@ -252,7 +256,7 @@ function RequestsTab({ eventId }: { eventId: string }) {
               <td className="py-2 pr-4">
                 <FulfillmentBadge status={order.fulfillmentStatus} />
               </td>
-              <td className="py-2 pr-4 text-xs text-gray-500">
+              <td className="py-2 pr-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                 {new Date(order.createdAt).toLocaleDateString()}
               </td>
               <td className="py-2">
@@ -270,13 +274,17 @@ function RequestsTab({ eventId }: { eventId: string }) {
 }
 
 function FulfillmentBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-700',
-    fulfilled: 'bg-green-100 text-green-700',
-    problematic: 'bg-red-100 text-red-700',
+  const styles: Record<string, { bg: string; color: string }> = {
+    pending: { bg: 'rgba(245,158,11,0.15)', color: '#d97706' },
+    fulfilled: { bg: 'rgba(34,197,94,0.15)', color: '#16a34a' },
+    problematic: { bg: 'rgba(239,68,68,0.15)', color: '#dc2626' },
   };
+  const s = styles[status] ?? { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)' };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span
+      className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+      style={{ background: s.bg, color: s.color }}
+    >
       {status}
     </span>
   );
@@ -290,7 +298,8 @@ function FulfillmentActions({ current, onUpdate }: { current: string; onUpdate: 
         <button
           key={s}
           onClick={() => onUpdate(s)}
-          className="text-xs px-2 py-1 rounded border hover:bg-gray-100"
+          className="text-xs px-2 py-1 rounded"
+          style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}
           title={`Mark ${s}`}
         >
           {s === 'fulfilled' ? '✓' : s === 'problematic' ? '!' : '⏳'}
@@ -334,15 +343,16 @@ function StockTab({ eventId }: { eventId: string }) {
     }
   };
 
-  if (loading) return <p className="text-gray-500">{t('common.loading')}</p>;
+  if (loading) return <p style={{ color: 'var(--color-text-muted)' }}>{t('common.loading')}</p>;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <span className="text-sm text-gray-500">{items.length} {t('logistics.itemsCount')}</span>
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{items.length} {t('logistics.itemsCount')}</span>
         <button
           onClick={() => { setEditItem(null); setShowForm(true); }}
-          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-3 py-1.5 text-sm text-white rounded"
+          style={{ background: 'var(--color-primary)' }}
         >
           + {t('logistics.addItem')}
         </button>
@@ -358,12 +368,12 @@ function StockTab({ eventId }: { eventId: string }) {
       )}
 
       {items.length === 0 ? (
-        <p className="text-gray-500 text-sm">{t('logistics.noItems')}</p>
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{t('logistics.noItems')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', textAlign: 'left' }}>
                 <th className="py-2 pr-4">{t('logistics.itemName')}</th>
                 <th className="py-2 pr-4">{t('logistics.description')}</th>
                 <th className="py-2 pr-4 text-right">{t('logistics.price')}</th>
@@ -375,12 +385,12 @@ function StockTab({ eventId }: { eventId: string }) {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 pr-4 font-medium">{item.name}</td>
-                  <td className="py-2 pr-4 text-gray-500 text-xs max-w-xs truncate">{item.description || '—'}</td>
-                  <td className="py-2 pr-4 text-right">CHF {(item.priceCents / 100).toFixed(2)}</td>
-                  <td className="py-2 pr-4 text-right">{item.stockTotal}</td>
-                  <td className="py-2 pr-4 text-right">{item.stockReserved}</td>
+                <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <td className="py-2 pr-4 font-medium" style={{ color: 'var(--color-text)' }}>{item.name}</td>
+                  <td className="py-2 pr-4 text-xs max-w-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>{item.description || '—'}</td>
+                  <td className="py-2 pr-4 text-right" style={{ color: 'var(--color-text)' }}>CHF {(item.priceCents / 100).toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right" style={{ color: 'var(--color-text)' }}>{item.stockTotal}</td>
+                  <td className="py-2 pr-4 text-right" style={{ color: 'var(--color-text)' }}>{item.stockReserved}</td>
                   <td className="py-2 pr-4">
                     <StatusBadge status={item.status} />
                   </td>
@@ -388,14 +398,14 @@ function StockTab({ eventId }: { eventId: string }) {
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setEditItem(item); setShowForm(true); }}
-                        className="text-gray-400 hover:text-gray-600"
+                        style={{ color: 'var(--color-text-muted)' }}
                         title={t('common.edit')}
                       >
                         <Icons.Edit size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(item)}
-                        className="text-gray-400 hover:text-red-600"
+                        style={{ color: 'var(--color-text-muted)' }}
                         title={t('common.delete')}
                       >
                         <Icons.Trash size={14} />
@@ -460,24 +470,25 @@ function ItemForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 p-4 border rounded-lg bg-gray-50 space-y-3">
+    <form onSubmit={handleSubmit} className="mb-4 p-4 rounded-lg space-y-3" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}>
       <div className="flex justify-between items-center">
-        <h4 className="font-medium">{item ? t('logistics.editItem') : t('logistics.addItem')}</h4>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+        <h4 className="font-medium" style={{ color: 'var(--color-text)' }}>{item ? t('logistics.editItem') : t('logistics.addItem')}</h4>
+        <button type="button" onClick={onClose} style={{ color: 'var(--color-text-muted)' }}>✕</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('logistics.itemName')} *</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('logistics.itemName')} *</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full px-3 py-1.5 text-sm border rounded"
+            className="w-full px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('logistics.price')} (CHF) *</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('logistics.price')} *</label>
           <input
             type="number"
             step="0.01"
@@ -485,35 +496,38 @@ function ItemForm({
             value={priceChf}
             onChange={(e) => setPriceChf(e.target.value)}
             required
-            className="w-full px-3 py-1.5 text-sm border rounded"
+            className="w-full px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">{t('logistics.stockTotal')} *</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('logistics.stockTotal')} *</label>
           <input
             type="number"
             min="0"
             value={stockTotal}
             onChange={(e) => setStockTotal(e.target.value)}
             required
-            className="w-full px-3 py-1.5 text-sm border rounded"
+            className="w-full px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
           />
         </div>
-        <div className="md:col-span-2">
-          <label className="block text-xs text-gray-500 mb-1">{t('logistics.description')}</label>
+        <div className="md:col-span-3">
+          <label className="block text-xs mb-1" style={{ color: 'var(--color-text-secondary)' }}>{t('logistics.description')}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full px-3 py-1.5 text-sm border rounded"
+            className="w-full px-3 py-1.5 text-sm rounded"
+            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
           />
         </div>
       </div>
       <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm border rounded hover:bg-gray-100">
+        <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm rounded" style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}>
           {t('common.cancel')}
         </button>
-        <button type="submit" disabled={saving} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-3 py-1.5 text-sm text-white rounded disabled:opacity-50" style={{ background: 'var(--color-primary)' }}>
           {saving ? t('common.saving') : (item ? t('common.save') : t('logistics.addItem'))}
         </button>
       </div>

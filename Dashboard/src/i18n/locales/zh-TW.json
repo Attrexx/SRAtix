@@ -811,7 +811,7 @@
   "logistics.editItem": "編輯品項",
   "logistics.name": "名稱",
   "logistics.description": "描述",
-  "logistics.price": "價格（分）",
+  "logistics.price": "價格 (CHF)",
   "logistics.stockTotal": "庫存總量",
   "logistics.save": "儲存",
   "logistics.cancel": "取消",

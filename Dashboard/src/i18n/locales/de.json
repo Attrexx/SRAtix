@@ -939,7 +939,7 @@
   "logistics.editItem": "Artikel bearbeiten",
   "logistics.name": "Name",
   "logistics.description": "Beschreibung",
-  "logistics.price": "Preis (Rappen)",
+  "logistics.price": "Preis (CHF)",
   "logistics.stockTotal": "Lagerbestand",
   "logistics.save": "Speichern",
   "logistics.cancel": "Abbrechen",
