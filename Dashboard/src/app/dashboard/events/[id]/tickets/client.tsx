@@ -102,14 +102,64 @@ const TICKET_ICON_OPTIONS: { value: string; label: string; viewBox: string; path
     paths: <path fill="currentColor" d="M1.382 8.505v5.058a5.057 5.057 0 0 0 5.057 5.058h3.677a5.057 5.057 0 0 0 5.057-5.058V8.506L1.382 8.505ZM11.887.16a.69.69 0 0 1 .086.972c-.642.765-.784 1.287-.586 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.074 1.822a4.622 4.622 0 0 1-.751 1.328h3.881c.437.016.754.127.95.335c.11.114.188.258.237.432l.06-.002a3.448 3.448 0 0 1 0 6.897l-.116-.004A6.438 6.438 0 0 1 10.117 20H6.438a6.436 6.436 0 0 1-6.436-6.437V8.337c-.02-.433.062-.74.244-.92c.183-.18.453-.277.809-.29h2.953a.689.689 0 0 1 .144-.17C4.762 6.44 5.16 5.9 5.36 5.337c.114-.32.101-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.728-3.202a.69.69 0 1 1 1.057.886c-.642.765-.783 1.287-.585 1.637c.061.109.593.948.715 1.207c.275.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.858a.689.689 0 0 1 .144-.17C7.52 6.44 7.918 5.9 8.118 5.337c.114-.32.102-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.729-3.202a.69.69 0 1 1 1.056.886c-.641.765-.783 1.287-.585 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.859a.689.689 0 0 1 .143-.17c.61-.518 1.007-1.058 1.207-1.621c.114-.32.102-.51-.022-.771c-.078-.166-.568-.942-.667-1.116c-.538-.952-.242-2.044.729-3.202a.69.69 0 0 1 .971-.086Zm4.665 9.11v4.138a2.069 2.069 0 0 0 0-4.138Z" />,
   },
   {
-    value: 'individual',
-    label: 'Robot (Individual)',
+    value: 'professionals',
+    label: 'Robot (Professional)',
     viewBox: '0 0 24 24',
     paths: (
       <g fill="none" stroke="currentColor" strokeWidth={1.5}>
         <path d="M14.706 4.313H9.294a4.981 4.981 0 0 0-4.982 4.981v5.412a4.982 4.982 0 0 0 4.982 4.982h5.412a4.982 4.982 0 0 0 4.982-4.982V9.294a4.982 4.982 0 0 0-4.982-4.982Z" />
         <path d="M19.606 15.588h1.619a1.025 1.025 0 0 0 1.025-1.025V9.438a1.025 1.025 0 0 0-1.025-1.025h-1.62m-15.21 7.175h-1.62a1.025 1.025 0 0 1-1.025-1.025V9.438a1.025 1.025 0 0 1 1.025-1.025h1.62" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.765 8.413v-4.1m18.46 4.1l-.01-4.1M9.94 15.588h4.1m-6.16-4.613L8.903 9.95l1.025 1.025m4.102 0l1.025-1.025l1.024 1.025" />
+      </g>
+    ),
+  },
+  {
+    value: 'young_academics',
+    label: 'Grad Cap + Star (Young Academic)',
+    viewBox: '0 0 24 24',
+    paths: (
+      <g fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" />
+        <path d="M20 10v6.5" />
+        <path d="M21.5 4l-1.5 3-1.5-3 1.5-1z" />
+      </g>
+    ),
+  },
+  {
+    value: 'academics',
+    label: 'Book (Academic)',
+    viewBox: '0 0 24 24',
+    paths: (
+      <g fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M8 7h8M8 11h5" />
+      </g>
+    ),
+  },
+  {
+    value: 'young_professionals',
+    label: 'Briefcase + Star (Young Professional)',
+    viewBox: '0 0 24 24',
+    paths: (
+      <g fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <rect x={2} y={7} width={20} height={14} rx={2} ry={2} />
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        <path d="M19.5 4l-1.5 3-1.5-3 1.5-1z" />
+      </g>
+    ),
+  },
+  {
+    value: 'others',
+    label: 'Ellipsis Circle (Others)',
+    viewBox: '0 0 24 24',
+    paths: (
+      <g fill="none" stroke="currentColor" strokeWidth={1.5}>
+        <circle cx={12} cy={12} r={10} />
+        <circle cx={8} cy={12} r={1} fill="currentColor" />
+        <circle cx={12} cy={12} r={1} fill="currentColor" />
+        <circle cx={16} cy={12} r={1} fill="currentColor" />
       </g>
     ),
   },

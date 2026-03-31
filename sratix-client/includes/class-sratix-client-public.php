@@ -117,13 +117,13 @@ class SRAtix_Client_Public {
 	/**
 	 * Get prices for SRA membership WooCommerce products.
 	 *
-	 * Returns productId → priceCents map for the 3 individual-type
+	 * Returns productId → priceCents map for the 6 individual-type
 	 * membership products used in hybrid ticket bundles.
 	 *
 	 * @return array<int, int>
 	 */
 	private function get_membership_product_prices() {
-		$product_ids = array( 4601, 4603, 4605 ); // individual, student, retired
+		$product_ids = array( 4601, 4603, 4605, 11989, 11992, 11994 ); // professionals, student, retired, young_academics, academics, young_professionals
 		$prices      = array();
 
 		if ( ! function_exists( 'wc_get_product' ) ) {

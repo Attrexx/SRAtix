@@ -152,6 +152,10 @@ class SRAtix_Control_Webhook {
 
 		// Approach 2: Reverse-map from ProfileGrid group ID.
 		$group_tier_map = array(
+			22 => 'young_professionals',
+			21 => 'academics',
+			20 => 'young_academics',
+			19 => 'others',
 			18 => 'academic',
 			17 => 'startup',
 			16 => 'industry_large',
@@ -159,7 +163,7 @@ class SRAtix_Control_Webhook {
 			14 => 'industry_small',
 			13 => 'student',
 			12 => 'retired',
-			11 => 'individual',
+			11 => 'professionals',
 		);
 
 		if ( function_exists( 'pm_user_group_ids' ) ) {
@@ -179,14 +183,18 @@ class SRAtix_Control_Webhook {
 
 		$roles        = $user->roles;
 		$role_tier_map = array(
-			'student'           => 'student',
-			'individual_member' => 'individual',
-			'retired_member'    => 'retired',
-			'academic_member'   => 'academic',
-			'startup_member'    => 'startup',
-			'industry_small'    => 'industry_small',
-			'industry_medium'   => 'industry_medium',
-			'industry_large'    => 'industry_large',
+			'student'                  => 'student',
+			'young_academics_member'   => 'young_academics',
+			'academics_member'         => 'academics',
+			'young_professionals_member' => 'young_professionals',
+			'individual_member'        => 'professionals',
+			'professionals_member'     => 'professionals',
+			'retired_member'           => 'retired',
+			'academic_member'          => 'academic',
+			'startup_member'           => 'startup',
+			'industry_small'           => 'industry_small',
+			'industry_medium'          => 'industry_medium',
+			'industry_large'           => 'industry_large',
 		);
 
 		foreach ( $role_tier_map as $role => $t ) {
@@ -519,15 +527,14 @@ class SRAtix_Control_Webhook {
 	/**
 	 * Get the WP role for a given WC product ID.
 	 *
-	 * Since hybrid tickets always map to individual-type SRA memberships
-	 * (student, individual, retired), all bundled users get 'candidate' role.
+	 * All individual-type SRA memberships get 'candidate' role.
 	 *
 	 * @param int $product_id WC product ID.
 	 * @return string|null     WP role slug or null.
 	 */
 	private function get_wp_role_for_product( $product_id ) {
 		// All individual-type membership products → candidate role
-		$candidate_products = array( 4601, 4603, 4605, 5335 );
+		$candidate_products = array( 4601, 4603, 4605, 11989, 11992, 11994, 5335 );
 
 		if ( in_array( $product_id, $candidate_products, true ) ) {
 			return 'candidate';
@@ -539,8 +546,8 @@ class SRAtix_Control_Webhook {
 	/**
 	 * Map a ticket's membership tier to the actual SRA membership tier.
 	 *
-	 * Legal-entity tiers (industry, academic, startup) are too expensive
-	 * to bundle 1:1 with event tickets, so they all map to 'individual'.
+	 * Legal-entity tiers (industry, academic, startup, others) are too expensive
+	 * to bundle 1:1 with event tickets, so they all map to 'professionals'.
 	 *
 	 * @param string $tier Original membership tier from the ticket type.
 	 * @return string       Mapped SRA membership tier.
@@ -551,14 +558,18 @@ class SRAtix_Control_Webhook {
 		}
 
 		$hybrid_map = array(
-			'student'         => 'student',
-			'individual'      => 'individual',
-			'retired'         => 'retired',
-			'industry_small'  => 'individual',
-			'industry_medium' => 'individual',
-			'industry_large'  => 'individual',
-			'academic'        => 'individual',
-			'startup'         => 'individual',
+			'student'              => 'student',
+			'young_academics'      => 'young_academics',
+			'academics'            => 'academics',
+			'young_professionals'  => 'young_professionals',
+			'professionals'        => 'professionals',
+			'retired'              => 'retired',
+			'industry_small'       => 'professionals',
+			'industry_medium'      => 'professionals',
+			'industry_large'       => 'professionals',
+			'academic'             => 'professionals',
+			'startup'              => 'professionals',
+			'others'               => 'professionals',
 		);
 
 		return $hybrid_map[ $tier ] ?? $tier;
@@ -572,9 +583,12 @@ class SRAtix_Control_Webhook {
 	 */
 	private function get_sra_wp_product_id( $tier ) {
 		$tier_product_map = array(
-			'student'    => 4603,
-			'individual' => 4601,
-			'retired'    => 4605,
+			'student'              => 4603,
+			'young_academics'      => 11989,
+			'academics'            => 11992,
+			'young_professionals'  => 11994,
+			'professionals'        => 4601,
+			'retired'              => 4605,
 		);
 
 		return $tier_product_map[ $tier ] ?? 0;
@@ -584,9 +598,11 @@ class SRAtix_Control_Webhook {
 	 * Assign the user to the correct ProfileGrid group based on product ID.
 	 *
 	 * Uses the same mapping as sra-wprole-assigner.php:
-	 *   Group 18 → Academic (4597), 17 → Startup (4599), 16 → Lg (4595),
+	 *   Group 22 → Young Professionals (11994), 21 → Academics (11992),
+	 *   20 → Young Academics (11989), 19 → Others (5335),
+	 *   18 → Academic (4597), 17 → Startup (4599), 16 → Lg (4595),
 	 *   15 → Med (4593), 14 → Sm (4591), 13 → Student (4603),
-	 *   12 → Retired (4605), 11 → Individual (4601), 19 → Others (5335).
+	 *   12 → Retired (4605), 11 → Professionals (4601).
 	 *
 	 * @param int $user_id    WP user ID.
 	 * @param int $product_id WC product ID.
@@ -594,15 +610,18 @@ class SRAtix_Control_Webhook {
 	private function assign_profilegrid_group( $user_id, $product_id ) {
 		// Product ID → ProfileGrid Group ID
 		$product_to_group = array(
-			4597 => 18, // Academic
-			4599 => 17, // Startup
-			4595 => 16, // Industry Large
-			4593 => 15, // Industry Medium
-			4591 => 14, // Industry Small
-			5335 => 19, // Others
-			4603 => 13, // Student
-			4605 => 12, // Retired
-			4601 => 11, // Individual
+			4597  => 18, // Academic Institutions
+			4599  => 17, // Startup
+			4595  => 16, // Industry Large
+			4593  => 15, // Industry Medium
+			4591  => 14, // Industry Small
+			5335  => 19, // Others
+			11994 => 22, // Young Professionals
+			11992 => 21, // Academics
+			11989 => 20, // Young Academics
+			4603  => 13, // Student
+			4605  => 12, // Retired
+			4601  => 11, // Professionals (was: Individual)
 		);
 
 		if ( ! isset( $product_to_group[ $product_id ] ) ) {

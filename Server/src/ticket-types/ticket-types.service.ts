@@ -30,32 +30,42 @@ export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
 /**
  * Membership tiers — aligns with WooCommerce product matrix on SRA.
+ *
+ * Individual: student, young_academics, academics, young_professionals, professionals, retired
+ * Legal:      startup, industry_small, industry_medium, industry_large, academic, others
  */
 export const MEMBERSHIP_TIERS = [
-  'student', 'individual', 'retired',
+  'student', 'young_academics', 'academics', 'young_professionals', 'professionals', 'retired',
   'industry_small', 'industry_medium', 'industry_large',
-  'academic', 'startup',
+  'academic', 'startup', 'others',
 ] as const;
 export type MembershipTier = (typeof MEMBERSHIP_TIERS)[number];
 
 /**
- * The 3 tiers available for hybrid (bundle) tickets.
- * Legal-entity tiers are no longer offered as standalone bundle options.
+ * The 6 individual tiers available for hybrid (bundle) tickets.
+ * Legal-entity tiers are not offered as standalone bundle options —
+ * they map to 'professionals' via HYBRID_TIER_MAP.
  */
-export const HYBRID_TIERS: MembershipTier[] = ['student', 'individual', 'retired'];
+export const HYBRID_TIERS: MembershipTier[] = [
+  'student', 'young_academics', 'academics', 'young_professionals', 'professionals', 'retired',
+];
 
 /**
  * WooCommerce product ID ↔ membership tier mapping.
  */
 export const WP_PRODUCT_TIER_MAP: Record<number, MembershipTier> = {
-  4603: 'student',
-  4601: 'individual',
-  4605: 'retired',
-  4591: 'industry_small',
-  4593: 'industry_medium',
-  4595: 'industry_large',
-  4597: 'academic',
-  4599: 'startup',
+  4603:  'student',
+  11989: 'young_academics',
+  11992: 'academics',
+  11994: 'young_professionals',
+  4601:  'professionals',
+  4605:  'retired',
+  4591:  'industry_small',
+  4593:  'industry_medium',
+  4595:  'industry_large',
+  4597:  'academic',
+  4599:  'startup',
+  5335:  'others',
 };
 
 /**
@@ -63,13 +73,17 @@ export const WP_PRODUCT_TIER_MAP: Record<number, MembershipTier> = {
  */
 export const TIER_CATEGORY_MAP: Record<MembershipTier, TicketCategory> = {
   student: 'individual',
-  individual: 'individual',
+  young_academics: 'individual',
+  academics: 'individual',
+  young_professionals: 'individual',
+  professionals: 'individual',
   retired: 'individual',
   industry_small: 'legal',
   industry_medium: 'legal',
   industry_large: 'legal',
   academic: 'legal',
   startup: 'legal',
+  others: 'legal',
 };
 
 /**
@@ -77,13 +91,17 @@ export const TIER_CATEGORY_MAP: Record<MembershipTier, TicketCategory> = {
  */
 export const TIER_WP_PRODUCT_MAP: Record<MembershipTier, number> = {
   student: 4603,
-  individual: 4601,
+  young_academics: 11989,
+  academics: 11992,
+  young_professionals: 11994,
+  professionals: 4601,
   retired: 4605,
   industry_small: 4591,
   industry_medium: 4593,
   industry_large: 4595,
   academic: 4597,
   startup: 4599,
+  others: 5335,
 };
 
 /**
@@ -91,17 +109,21 @@ export const TIER_WP_PRODUCT_MAP: Record<MembershipTier, number> = {
  * to the ACTUAL SRA membership tier used for WC order + user creation.
  *
  * Legal-entity tiers are too expensive to bundle 1:1 with event tickets,
- * so they all map to the 'individual' SRA membership instead.
+ * so they all map to the 'professionals' SRA membership instead.
  */
 export const HYBRID_TIER_MAP: Record<MembershipTier, MembershipTier> = {
   student: 'student',
-  individual: 'individual',
+  young_academics: 'young_academics',
+  academics: 'academics',
+  young_professionals: 'young_professionals',
+  professionals: 'professionals',
   retired: 'retired',
-  industry_small: 'individual',
-  industry_medium: 'individual',
-  industry_large: 'individual',
-  academic: 'individual',
-  startup: 'individual',
+  industry_small: 'professionals',
+  industry_medium: 'professionals',
+  industry_large: 'professionals',
+  academic: 'professionals',
+  startup: 'professionals',
+  others: 'professionals',
 };
 
 /**
@@ -109,13 +131,17 @@ export const HYBRID_TIER_MAP: Record<MembershipTier, MembershipTier> = {
  */
 export const TIER_LABELS: Record<MembershipTier, string> = {
   student: 'Student',
-  individual: 'Individual',
+  young_academics: 'Young Academic',
+  academics: 'Academic',
+  young_professionals: 'Young Professional',
+  professionals: 'Professional',
   retired: 'Retired',
   industry_small: 'Industry — Small',
   industry_medium: 'Industry — Medium',
   industry_large: 'Industry — Large',
-  academic: 'Academic',
+  academic: 'Academic Institution',
   startup: 'Startup',
+  others: 'Others',
 };
 
 /**

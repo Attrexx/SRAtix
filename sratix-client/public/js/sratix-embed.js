@@ -113,13 +113,55 @@
       inner: '<path fill="currentColor" d="M1.382 8.505v5.058a5.057 5.057 0 0 0 5.057 5.058h3.677a5.057 5.057 0 0 0 5.057-5.058V8.506L1.382 8.505ZM11.887.16a.69.69 0 0 1 .086.972c-.642.765-.784 1.287-.586 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.074 1.822a4.622 4.622 0 0 1-.751 1.328h3.881c.437.016.754.127.95.335c.11.114.188.258.237.432l.06-.002a3.448 3.448 0 0 1 0 6.897l-.116-.004A6.438 6.438 0 0 1 10.117 20H6.438a6.436 6.436 0 0 1-6.436-6.437V8.337c-.02-.433.062-.74.244-.92c.183-.18.453-.277.809-.29h2.953a.689.689 0 0 1 .144-.17C4.762 6.44 5.16 5.9 5.36 5.337c.114-.32.101-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.728-3.202a.69.69 0 1 1 1.057.886c-.642.765-.783 1.287-.585 1.637c.061.109.593.948.715 1.207c.275.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.858a.689.689 0 0 1 .144-.17C7.52 6.44 7.918 5.9 8.118 5.337c.114-.32.102-.51-.022-.771c-.078-.166-.569-.942-.667-1.116c-.539-.952-.242-2.044.729-3.202a.69.69 0 1 1 1.056.886c-.641.765-.783 1.287-.585 1.637c.062.109.593.948.715 1.207c.276.585.312 1.152.073 1.822a4.622 4.622 0 0 1-.75 1.328h.859a.689.689 0 0 1 .143-.17c.61-.518 1.007-1.058 1.207-1.621c.114-.32.102-.51-.022-.771c-.078-.166-.568-.942-.667-1.116c-.538-.952-.242-2.044.729-3.202a.69.69 0 0 1 .971-.086Zm4.665 9.11v4.138a2.069 2.069 0 0 0 0-4.138Z"/>',
     },
 
-    // Robot with ears and antenna (robot-appreciate)
-    individual: {
+    // Robot with ears and antenna (robot-appreciate) — Professionals
+    professionals: {
       viewBox: '0 0 24 24',
       inner: '<g fill="none" stroke="currentColor" stroke-width="1.5">' +
         '<path d="M14.706 4.313H9.294a4.981 4.981 0 0 0-4.982 4.981v5.412a4.982 4.982 0 0 0 4.982 4.982h5.412a4.982 4.982 0 0 0 4.982-4.982V9.294a4.982 4.982 0 0 0-4.982-4.982Z"/>' +
         '<path d="M19.606 15.588h1.619a1.025 1.025 0 0 0 1.025-1.025V9.438a1.025 1.025 0 0 0-1.025-1.025h-1.62m-15.21 7.175h-1.62a1.025 1.025 0 0 1-1.025-1.025V9.438a1.025 1.025 0 0 1 1.025-1.025h1.62"/>' +
         '<path stroke-linecap="round" stroke-linejoin="round" d="M2.765 8.413v-4.1m18.46 4.1l-.01-4.1M9.94 15.588h4.1m-6.16-4.613L8.903 9.95l1.025 1.025m4.102 0l1.025-1.025l1.024 1.025"/>' +
+        '</g>',
+    },
+
+    // Young Academics — graduation cap with star
+    young_academics: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 10l10-5 10 5-10 5z"/>' +
+        '<path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>' +
+        '<path d="M20 10v4"/>' +
+        '<path d="M15 2l.5 1.5L17 4l-1.5.5L15 6l-.5-1.5L13 4l1.5-.5z"/>' +
+        '</g>',
+    },
+
+    // Academics — open book with bookmark
+    academics: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>' +
+        '<path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' +
+        '<path d="M14 4h2v5l-1-.75L14 9z"/>' +
+        '</g>',
+    },
+
+    // Young Professionals — briefcase with star
+    young_professionals: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>' +
+        '<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>' +
+        '<path d="M12 12l.5 1.5L14 14l-1.5.5L12 16l-.5-1.5L10 14l1.5-.5z"/>' +
+        '</g>',
+    },
+
+    // Others — ellipsis in circle
+    others: {
+      viewBox: '0 0 24 24',
+      inner: '<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<circle cx="12" cy="12" r="10"/>' +
+        '<circle cx="8" cy="12" r=".5" fill="currentColor"/>' +
+        '<circle cx="12" cy="12" r=".5" fill="currentColor"/>' +
+        '<circle cx="16" cy="12" r=".5" fill="currentColor"/>' +
         '</g>',
     },
 
@@ -716,13 +758,17 @@
 
   const HYBRID_TIER_LABELS = {
     student: 'Student',
-    individual: 'Individual',
+    young_academics: 'Young Academic',
+    academics: 'Academic',
+    young_professionals: 'Young Professional',
+    professionals: 'Professional',
     retired: 'Retired',
-    industry_small: 'Individual',
-    industry_medium: 'Individual',
-    industry_large: 'Individual',
-    academic: 'Individual',
-    startup: 'Individual',
+    industry_small: 'Professional',
+    industry_medium: 'Professional',
+    industry_large: 'Professional',
+    academic: 'Professional',
+    startup: 'Professional',
+    others: 'Professional',
   };
 
   function renderTicketCards(types, layout, memberSession) {

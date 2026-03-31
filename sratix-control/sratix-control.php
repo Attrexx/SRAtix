@@ -3,7 +3,7 @@
  * Plugin Name:       SRAtix Control
  * Plugin URI:        https://swiss-robotics.org
  * Description:       SRAtix admin dashboard connector — links Swiss Robotics Association WordPress to the SRAtix ticketing server.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Author:            TAROS Web Services
  * Author URI:        https://taros.ch
  * License:           Proprietary
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /*──────────────────────────────────────────────────────────────
  * Constants
  *────────────────────────────────────────────────────────────*/
-define( 'SRATIX_CONTROL_VERSION', '0.1.0' );
+define( 'SRATIX_CONTROL_VERSION', '0.2.0' );
 define( 'SRATIX_CONTROL_FILE',    __FILE__ );
 define( 'SRATIX_CONTROL_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'SRATIX_CONTROL_URL',     plugin_dir_url( __FILE__ ) );
