@@ -82,7 +82,11 @@ export class PublicRegistrationController {
     }
 
     const attendee = await this.attendees.findByRegistrationToken(token);
-    if (!attendee) throw new NotFoundException('Invalid registration link');
+    if (!attendee) {
+      // Token was cleared by old code or is truly invalid — can't
+      // distinguish, so return a friendly "likely already registered" hint.
+      return { tokenConsumed: true };
+    }
 
     // Check token expiry
     if (attendee.registrationTokenExpiresAt && attendee.registrationTokenExpiresAt < new Date()) {
@@ -147,7 +151,9 @@ export class PublicRegistrationController {
     }
 
     const attendee = await this.attendees.findByRegistrationToken(token);
-    if (!attendee) throw new NotFoundException('Invalid registration link');
+    if (!attendee) {
+      return { tokenConsumed: true };
+    }
 
     if (attendee.registrationTokenExpiresAt && attendee.registrationTokenExpiresAt < new Date()) {
       throw new GoneException('This registration link has expired');

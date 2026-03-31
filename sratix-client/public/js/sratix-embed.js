@@ -2405,10 +2405,10 @@
       }
 
       // Already registered — show friendly confirmation
-      if (data.alreadyRegistered) {
+      if (data.alreadyRegistered || data.tokenConsumed) {
         container.innerHTML = '<div class="sratix-set-password__success">'
           + '<h2>' + escHtml(t('reg.alreadyRegisteredTitle')) + '</h2>'
-          + '<p>' + escHtml(t('reg.alreadyRegisteredMsg').replace('{name}', data.attendeeName || '')) + '</p>'
+          + '<p>' + escHtml(t('reg.alreadyRegisteredMsg').replace('{name}', data.attendeeName || t('reg.alreadyRegisteredFallbackName'))) + '</p>'
           + '</div>';
         return;
       }
