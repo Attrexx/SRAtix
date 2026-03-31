@@ -388,12 +388,12 @@ export class AuthController {
   async resetPassword(
     @Body() dto: ResetPasswordDto,
     @Req() req: FastifyRequest,
-  ): Promise<{ success: boolean }> {
-    await this.authService.resetPassword(dto.token, dto.password, {
+  ): Promise<{ success: boolean; email?: string }> {
+    const result = await this.authService.resetPassword(dto.token, dto.password, {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
     });
-    return { success: true };
+    return { success: true, email: result.email };
   }
 
   // ─── Demo / Impersonation ──────────────────────────────────────

@@ -670,12 +670,12 @@ export class AuthService implements OnModuleDestroy {
     rawToken: string,
     newPassword: string,
     meta?: { ip?: string; userAgent?: string },
-  ): Promise<void> {
+  ): Promise<{ email: string }> {
     const hashedToken = createHash('sha256').update(rawToken).digest('hex');
 
     const user = await this.prisma.user.findUnique({
       where: { resetToken: hashedToken },
-      select: { id: true, resetTokenExpiresAt: true },
+      select: { id: true, email: true, resetTokenExpiresAt: true },
     });
 
     if (!user) {
@@ -705,6 +705,8 @@ export class AuthService implements OnModuleDestroy {
       ip: meta?.ip,
       userAgent: meta?.userAgent,
     });
+
+    return { email: user.email };
   }
 
   // ─── Password Setup (new accounts without password) ────────────

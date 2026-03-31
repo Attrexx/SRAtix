@@ -2520,6 +2520,84 @@ label.sratix-checkbox-label {
 	font-style: italic;
 }
 
+/* ── Password Strength Meter ── */
+.sratix-strength-display {
+	margin-top: 10px;
+}
+
+.sratix-strength-meter {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.sratix-strength-meter__bar {
+	flex: 1;
+	height: 6px;
+	background: rgba(255,255,255,0.1);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.sratix-strength-meter__fill {
+	height: 100%;
+	border-radius: 3px;
+	transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.sratix-strength-meter__fill[data-level="weak"]   { width: 25%;  background: #ef4444; }
+.sratix-strength-meter__fill[data-level="fair"]   { width: 50%;  background: #f59e0b; }
+.sratix-strength-meter__fill[data-level="good"]   { width: 75%;  background: #22d3ee; }
+.sratix-strength-meter__fill[data-level="strong"] { width: 100%; background: #4ade80; }
+
+.sratix-strength-meter__label {
+	font-size: 0.8em;
+	font-weight: 600;
+	min-width: 52px;
+	text-align: right;
+}
+
+.sratix-strength-meter__label[data-level="weak"]   { color: #ef4444; }
+.sratix-strength-meter__label[data-level="fair"]   { color: #f59e0b; }
+.sratix-strength-meter__label[data-level="good"]   { color: #22d3ee; }
+.sratix-strength-meter__label[data-level="strong"] { color: #4ade80; }
+
+.sratix-strength-checks {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 2px 12px;
+	font-size: 0.82em;
+}
+
+.sratix-strength-checks li {
+	color: var(--sratix-text-muted);
+	transition: color 0.2s;
+}
+
+.sratix-strength-checks li::before {
+	content: '○ ';
+}
+
+.sratix-strength-checks li.pass {
+	color: #4ade80;
+}
+
+.sratix-strength-checks li.pass::before {
+	content: '● ';
+}
+
+/* ── Confirmation Loading Hint ── */
+.sratix-confirmation-loading__hint {
+	font-size: 0.85em;
+	color: var(--sratix-text-muted);
+	margin-top: 8px;
+	font-style: italic;
+}
+
 /* ── Portal Login Form ── */
 .sratix-portal-login {
 	display: flex;

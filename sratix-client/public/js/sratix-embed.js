@@ -2576,6 +2576,58 @@
 
   // ─── Set Password widget ─────────────────────────────────────────────────────
 
+  // ─── Password strength ────────────────────────────────────────────────────────
+
+  /**
+   * Evaluate password strength against 9 conditions.
+   * Returns { score: 0-9, level: 'weak'|'fair'|'good'|'strong', checks: boolean[] }.
+   * Need 5/9 for "good" (green submit). 3-4 = "fair". <3 = "weak".
+   */
+  function evaluatePasswordStrength(pw, email) {
+    var checks = [
+      pw.length >= 8,                                        // 1. min 8 chars
+      pw.length >= 12,                                       // 2. 12+ chars (bonus)
+      /[a-z]/.test(pw),                                      // 3. lowercase
+      /[A-Z]/.test(pw),                                      // 4. uppercase
+      /[0-9]/.test(pw),                                      // 5. digit
+      /[^a-zA-Z0-9]/.test(pw),                               // 6. special char
+      !/(.)\1{2,}/.test(pw),                                 // 7. no 3+ repeated chars
+      !email || pw.toLowerCase() !== email.toLowerCase(),    // 8. not same as email
+      !/password|12345|qwerty|abcdef|letmein/i.test(pw),     // 9. no common patterns
+    ];
+    var score = checks.reduce(function(s, c) { return s + (c ? 1 : 0); }, 0);
+    var level = score >= 7 ? 'strong' : score >= 5 ? 'good' : score >= 3 ? 'fair' : 'weak';
+    return { score: score, level: level, checks: checks };
+  }
+
+  function renderStrengthMeter(containerEl, pw, email) {
+    var result = evaluatePasswordStrength(pw, email);
+    var pct = Math.round((result.score / 9) * 100);
+    var colors = { weak: '#ef4444', fair: '#f59e0b', good: '#22c55e', strong: '#10b981' };
+    var color = colors[result.level];
+    var labelKey = 'setPassword.strength.' + result.level;
+
+    containerEl.innerHTML =
+      '<div class="sratix-strength-meter">' +
+        '<div class="sratix-strength-meter__bar">' +
+          '<div class="sratix-strength-meter__fill" style="width:' + pct + '%;background:' + color + ';"></div>' +
+        '</div>' +
+        '<span class="sratix-strength-meter__label" style="color:' + color + ';">' + escHtml(t(labelKey)) + '</span>' +
+      '</div>' +
+      '<ul class="sratix-strength-checks">' +
+        '<li class="' + (result.checks[0] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.minLength')) + '</li>' +
+        '<li class="' + (result.checks[2] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.lowercase')) + '</li>' +
+        '<li class="' + (result.checks[3] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.uppercase')) + '</li>' +
+        '<li class="' + (result.checks[4] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.digit')) + '</li>' +
+        '<li class="' + (result.checks[5] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.special')) + '</li>' +
+        '<li class="' + (result.checks[1] ? 'pass' : 'fail') + '">' + escHtml(t('setPassword.req.longBonus')) + '</li>' +
+      '</ul>';
+
+    return result;
+  }
+
+  // ─── Set Password widget ─────────────────────────────────────────────────────
+
   async function initSetPasswordWidget() {
     const container = document.getElementById('sratix-set-password-widget');
     if (!container) return;
@@ -2600,17 +2652,19 @@
         <div class="sratix-set-password__card">
           <h2 class="sratix-set-password__title">${escHtml(isSetup ? t('setPassword.setupTitle') : t('setPassword.resetTitle'))}</h2>
           <p class="sratix-set-password__desc">${escHtml(isSetup ? t('setPassword.setupDesc') : t('setPassword.resetDesc'))}</p>
-          <form class="sratix-set-password__form" autocomplete="off">
+          <form class="sratix-set-password__form" autocomplete="on" method="post">
+            <input type="hidden" id="sratix-set-email" name="username" autocomplete="username" value="" />
             <div class="sratix-form-field">
               <label for="sratix-new-password">${escHtml(t('setPassword.newPassword'))}</label>
-              <input id="sratix-new-password" type="password" required minlength="8" autocomplete="new-password" />
+              <input id="sratix-new-password" name="new-password" type="password" required minlength="8" autocomplete="new-password" />
+              <div id="sratix-strength-display" class="sratix-strength-display"></div>
             </div>
             <div class="sratix-form-field">
               <label for="sratix-confirm-password">${escHtml(t('setPassword.confirmPassword'))}</label>
-              <input id="sratix-confirm-password" type="password" required minlength="8" autocomplete="new-password" />
+              <input id="sratix-confirm-password" name="confirm-password" type="password" required minlength="8" autocomplete="new-password" />
             </div>
             <div class="sratix-set-password__error" style="display:none;"></div>
-            <button type="submit" class="sratix-btn sratix-btn--primary sratix-set-password__submit">
+            <button type="submit" class="sratix-btn sratix-btn--primary sratix-set-password__submit" disabled>
               ${escHtml(isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn'))}
             </button>
           </form>
@@ -2620,15 +2674,33 @@
     var form = container.querySelector('.sratix-set-password__form');
     var errorEl = container.querySelector('.sratix-set-password__error');
     var submitBtn = container.querySelector('.sratix-set-password__submit');
+    var pwInput = container.querySelector('#sratix-new-password');
+    var pw2Input = container.querySelector('#sratix-confirm-password');
+    var strengthDisplay = container.querySelector('#sratix-strength-display');
+    var hiddenEmail = container.querySelector('#sratix-set-email');
+    var currentStrength = { level: 'weak', score: 0 };
+
+    // Live strength meter
+    pwInput.addEventListener('input', function() {
+      var pw = pwInput.value;
+      if (pw.length === 0) {
+        strengthDisplay.innerHTML = '';
+        submitBtn.disabled = true;
+        return;
+      }
+      currentStrength = renderStrengthMeter(strengthDisplay, pw, hiddenEmail.value);
+      // Enable submit only if strength >= good (5/9)
+      submitBtn.disabled = currentStrength.score < 5;
+    });
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      var pw = container.querySelector('#sratix-new-password').value;
-      var pw2 = container.querySelector('#sratix-confirm-password').value;
+      var pw = pwInput.value;
+      var pw2 = pw2Input.value;
       errorEl.style.display = 'none';
 
-      if (pw.length < 8) {
-        errorEl.textContent = t('setPassword.tooShort');
+      if (currentStrength.score < 5) {
+        errorEl.textContent = t('setPassword.tooWeak');
         errorEl.style.display = 'block';
         return;
       }
@@ -2642,25 +2714,66 @@
       submitBtn.textContent = t('setPassword.saving');
 
       try {
-        await apiFetch('auth/reset-password', {
+        var result = await apiFetch('auth/reset-password', {
           method: 'POST',
           body: JSON.stringify({ token: token, password: pw }),
         });
 
+        var userEmail = result.email || '';
+
+        // Populate hidden email field to trigger browser "Save Password" prompt
+        if (userEmail) {
+          hiddenEmail.value = userEmail;
+          // Create a visible-to-browser-but-hidden-to-user credential form
+          // so password managers detect the email + new-password pair
+          var credFrame = document.createElement('form');
+          credFrame.method = 'post';
+          credFrame.action = '#';
+          credFrame.style.cssText = 'position:absolute;left:-9999px;';
+          credFrame.innerHTML =
+            '<input type="text" name="username" autocomplete="username" value="' + escAttr(userEmail) + '" />' +
+            '<input type="password" name="password" autocomplete="current-password" value="' + escAttr(pw) + '" />' +
+            '<input type="submit" />';
+          document.body.appendChild(credFrame);
+          // Trigger submission to prompt password manager, then remove
+          try { credFrame.querySelector('input[type="submit"]').click(); } catch (ignore) {}
+          setTimeout(function() { credFrame.remove(); }, 500);
+        }
+
+        // Auto-login: call the login API to get auth tokens
         container.querySelector('.sratix-set-password__card').innerHTML = `
           <div class="sratix-set-password__success">
             <h2>${escHtml(t('setPassword.successTitle'))}</h2>
             <p>${escHtml(t('setPassword.successMsg'))}</p>
-            <p class="sratix-set-password__redirect">${escHtml(t('setPassword.redirecting'))}</p>
+            <p class="sratix-set-password__redirect">${escHtml(t('setPassword.signingIn'))}</p>
           </div>`;
 
+        if (userEmail) {
+          try {
+            var authRes = await apiFetch('auth/login', {
+              method: 'POST',
+              body: JSON.stringify({ email: userEmail, password: pw }),
+            });
+            // Store token and redirect to portal
+            if (authRes.accessToken) {
+              sessionStorage.setItem('sratix_access_token', authRes.accessToken);
+              if (authRes.refreshToken) {
+                sessionStorage.setItem('sratix_refresh_token', authRes.refreshToken);
+              }
+            }
+          } catch (loginErr) {
+            // Login failed — not critical, user can log in manually
+          }
+        }
+
+        // Redirect to portal
+        container.querySelector('.sratix-set-password__redirect').textContent = t('setPassword.redirecting');
         setTimeout(function() {
           window.location.href = portalPath;
-        }, 3000);
+        }, 1500);
       } catch (err) {
         var msg = err.message || '';
         if (msg === 'TOKEN_CONSUMED') {
-          // Password was already set — show success with portal link
           container.querySelector('.sratix-set-password__card').innerHTML = `
             <div class="sratix-set-password__success">
               <h2>${escHtml(t('setPassword.alreadySetTitle'))}</h2>
@@ -4337,6 +4450,7 @@
           '<div class="sratix-confirmation-loading">' +
             '<div class="sratix-spinner"></div>' +
             '<p>' + escHtml(t('exhibitorConfirmation.loading')) + '</p>' +
+            '<p class="sratix-confirmation-loading__hint">' + escHtml(t('exhibitorConfirmation.loadingHint')) + '</p>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -4366,13 +4480,16 @@
       return;
     }
 
+    // Use API_BASE (ends with /api) — strip trailing /api to get server origin
+    var serverOrigin = API_BASE.replace(/\/api\/?$/, '');
+
     var attempts = 0;
     var maxAttempts = 40; // 40 × 3s = 2 minutes max
     var pollTimer = setInterval(async function () {
       attempts++;
       try {
         var resp = await fetch(
-          apiUrl + '/api/public/exhibitor-setup/' + encodeURIComponent(orderNumber) +
+          serverOrigin + '/api/public/exhibitor-setup/' + encodeURIComponent(orderNumber) +
           '?email=' + encodeURIComponent(email)
         );
         if (!resp.ok) {
@@ -4432,13 +4549,15 @@
           '</div>' +
         '</div>';
     } else {
-      // Timeout or no data — show generic success with email note
+      // Timeout or no data — show friendly fallback with email note
       body.innerHTML =
         '<div class="sratix-confirmation-ready">' +
-          '<p>' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
-          '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
-            escHtml(t('exhibitorConfirmation.setupLater')) +
-          '</button>' +
+          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
+          '<div class="sratix-confirmation-actions">' +
+            '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
+              escHtml(t('exhibitorConfirmation.dismiss')) +
+            '</button>' +
+          '</div>' +
         '</div>';
     }
 
