@@ -2827,8 +2827,8 @@
           window.location.href = portalPath;
         }, 1500);
       } catch (err) {
-        var msg = err.message || '';
-        if (msg === 'TOKEN_CONSUMED') {
+        var msg = (err.message || '').trim();
+        if (msg.includes('TOKEN_CONSUMED')) {
           container.querySelector('.sratix-set-password__card').innerHTML = `
             <div class="sratix-set-password__success">
               <h2>${escHtml(t('setPassword.alreadySetTitle'))}</h2>
@@ -2836,7 +2836,7 @@
               <a href="${escAttr(portalPath)}" class="sratix-btn sratix-btn--primary" style="margin-top:16px;display:inline-block;text-decoration:none;">${escHtml(t('setPassword.goToPortal'))}</a>
             </div>`;
         } else {
-          errorEl.textContent = msg === 'TOKEN_EXPIRED' ? t('setPassword.failed') : (msg || t('setPassword.failed'));
+          errorEl.textContent = t('setPassword.failed');
           errorEl.style.display = 'block';
           submitBtn.disabled = false;
           submitBtn.textContent = isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn');
