@@ -309,7 +309,7 @@
   "tickets.form.maxPerOrderPlaceholder": "10",
   "tickets.form.maxStaff": "Pass staff max.",
   "tickets.form.maxStaffPlaceholder": "es. 5",
-  "tickets.form.maxStaffHint": "Numero di pass staff/stand inclusi con questo biglietto espositore. Lasciare vuoto per disabilitare.",
+  "tickets.form.maxStaffHint": "Numero di pass staff/stand inclusi con questo pacchetto stand espositore. Lasciare vuoto per disabilitare.",
   "tickets.form.salesStart": "Inizio vendite",
   "tickets.form.salesEnd": "Fine vendite",
   "tickets.form.membershipSection": "Adesione SRA",

@@ -249,7 +249,8 @@
     const url = API_BASE + '/' + endpoint.replace(/^\//, '');
     var headers = options.headers || {};
     // Don't set Content-Type for FormData — browser sets multipart boundary automatically
-    if (!(options.body instanceof FormData)) {
+    // Don't set Content-Type when there's no body (e.g. DELETE requests)
+    if (options.body && !(options.body instanceof FormData)) {
       headers = { 'Content-Type': 'application/json', ...headers };
     }
     const res = await fetch(url, {
@@ -4486,9 +4487,8 @@
   function renderExhibitorConfirmation() {
     var params = new URLSearchParams(window.location.search);
     var orderNumber = params.get('sratix_order') || '';
-    var email = params.get('sratix_email') || '';
 
-    // Create confirmation container
+    // Create confirmation container — no polling needed, provisioning happens server-side
     var container = document.createElement('div');
     container.className = 'sratix-exhibitor-confirmation';
     container.setAttribute('role', 'status');
@@ -4502,10 +4502,13 @@
           '</p>' +
         '</div>' +
         '<div id="sratix-confirmation-body">' +
-          '<div class="sratix-confirmation-loading">' +
-            '<div class="sratix-spinner"></div>' +
-            '<p>' + escHtml(t('exhibitorConfirmation.loading')) + '</p>' +
-            '<p class="sratix-confirmation-loading__hint">' + escHtml(t('exhibitorConfirmation.loadingHint')) + '</p>' +
+          '<div class="sratix-confirmation-ready">' +
+            '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
+            '<div class="sratix-confirmation-actions">' +
+              '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
+                escHtml(t('exhibitorConfirmation.dismiss')) +
+              '</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -4529,94 +4532,7 @@
     cleanUrl.searchParams.delete('sratix_email');
     window.history.replaceState(null, '', cleanUrl.toString());
 
-    // Poll for exhibitor setup completion
-    if (!orderNumber || !email) {
-      showConfirmationReady(container, null);
-      return;
-    }
-
-    // Use API_BASE (ends with /api) — strip trailing /api to get server origin
-    var serverOrigin = API_BASE.replace(/\/api\/?$/, '');
-
-    var attempts = 0;
-    var maxAttempts = 40; // 40 × 3s = 2 minutes max
-    var pollTimer = setInterval(async function () {
-      attempts++;
-      try {
-        var resp = await fetch(
-          serverOrigin + '/api/public/exhibitor-setup/' + encodeURIComponent(orderNumber) +
-          '?email=' + encodeURIComponent(email)
-        );
-        if (!resp.ok) {
-          if (attempts >= maxAttempts) {
-            clearInterval(pollTimer);
-            showConfirmationReady(container, null);
-          }
-          return;
-        }
-        var data = await resp.json();
-        if (data.ready) {
-          clearInterval(pollTimer);
-          showConfirmationReady(container, data);
-        } else if (attempts >= maxAttempts) {
-          clearInterval(pollTimer);
-          showConfirmationReady(container, null);
-        }
-      } catch (e) {
-        if (attempts >= maxAttempts) {
-          clearInterval(pollTimer);
-          showConfirmationReady(container, null);
-        }
-      }
-    }, 3000);
-  }
-
-  function showConfirmationReady(container, data) {
-    var body = container.querySelector('#sratix-confirmation-body');
-    if (!body) return;
-
-    if (data && data.passwordAlreadySet && data.portalUrl) {
-      body.innerHTML =
-        '<div class="sratix-confirmation-ready">' +
-          '<h3>' + escHtml(t('setPassword.alreadySetTitle')) + '</h3>' +
-          '<p class="sratix-confirmation-note">' + escHtml(t('setPassword.alreadySetMsg')) + '</p>' +
-          '<div class="sratix-confirmation-actions">' +
-            '<a href="' + escAttr(data.portalUrl) + '" class="sratix-btn sratix-btn-primary">' +
-              escHtml(t('setPassword.goToPortal')) +
-            '</a>' +
-          '</div>' +
-        '</div>';
-    } else if (data && data.passwordSetupUrl) {
-      body.innerHTML =
-        '<div class="sratix-confirmation-ready">' +
-          '<h3>' + escHtml(t('exhibitorConfirmation.ready')) + '</h3>' +
-          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.passwordHint')) + '</p>' +
-          '<div class="sratix-confirmation-actions">' +
-            '<a href="' + escAttr(data.passwordSetupUrl) + '" class="sratix-btn sratix-btn-primary">' +
-              escHtml(t('exhibitorConfirmation.setupNow')) +
-            '</a>' +
-          '</div>' +
-          '<div class="sratix-confirmation-later">' +
-            '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
-            '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
-              escHtml(t('exhibitorConfirmation.setupLater')) +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    } else {
-      // Timeout or no data — show friendly fallback with email note
-      body.innerHTML =
-        '<div class="sratix-confirmation-ready">' +
-          '<p class="sratix-confirmation-note">' + escHtml(t('exhibitorConfirmation.emailNote')) + '</p>' +
-          '<div class="sratix-confirmation-actions">' +
-            '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
-              escHtml(t('exhibitorConfirmation.dismiss')) +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    }
-
-    var dismissBtn = body.querySelector('.sratix-confirmation-dismiss');
+    var dismissBtn = container.querySelector('.sratix-confirmation-dismiss');
     if (dismissBtn) {
       dismissBtn.addEventListener('click', function () {
         container.remove();

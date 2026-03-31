@@ -309,7 +309,7 @@
   "tickets.form.maxPerOrderPlaceholder": "10",
   "tickets.form.maxStaff": "Max. Mitarbeiter-Pässe",
   "tickets.form.maxStaffPlaceholder": "z.B. 5",
-  "tickets.form.maxStaffHint": "Anzahl der Mitarbeiter-/Standpässe, die in diesem Ausstellerticket enthalten sind. Leer lassen zum Deaktivieren.",
+  "tickets.form.maxStaffHint": "Anzahl der Mitarbeiter-/Standpässe, die in diesem Aussteller-Standpaket enthalten sind. Leer lassen zum Deaktivieren.",
   "tickets.form.salesStart": "Verkaufsstart",
   "tickets.form.salesEnd": "Verkaufsende",
   "tickets.form.membershipSection": "SRA-Mitgliedschaft",

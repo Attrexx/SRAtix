@@ -22,6 +22,7 @@ interface OrderConfirmationData {
   eventName: string;
   eventDate: string;
   eventVenue: string;
+  isExhibitor?: boolean;
 }
 
 /**
@@ -52,10 +53,13 @@ export class EmailService {
   ): Promise<DeliveryResult> {
     const html = this.renderOrderConfirmation(data);
     const text = this.renderOrderConfirmationText(data);
+    const subject = data.isExhibitor
+      ? `Your booth for ${data.eventName} — Order ${data.orderNumber}`
+      : `Your tickets for ${data.eventName} — Order ${data.orderNumber}`;
 
     return this.send({
       to,
-      subject: `Your tickets for ${data.eventName} — Order ${data.orderNumber}`,
+      subject,
       html,
       text,
       headers: {
@@ -242,11 +246,11 @@ export class EmailService {
       registrationUrl: string;
     },
   ): Promise<DeliveryResult> {
-    const html = this.publicWrapper("You've Been Gifted a Ticket!", `
+    const html = this.publicWrapper("You've Been Assigned a Ticket!", `
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
-        You are receiving this email because <strong>${data.purchaserName}</strong> has purchased
-        a ticket on your behalf for <strong>${data.eventName}</strong>. Your attendance has been
+        You are receiving this email because <strong>${data.purchaserName}</strong> has assigned
+        you a ticket for <strong>${data.eventName}</strong>. Your attendance has been
         reserved and a ticket has been assigned to you.
       </p>
 
@@ -293,11 +297,11 @@ export class EmailService {
         If you believe you received this email in error, you can safely ignore it.
       </p>
     `);
-    const text = `You've Been Gifted a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has purchased a ticket on your behalf for ${data.eventName}.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+    const text = `You've Been Assigned a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has assigned you a ticket for ${data.eventName}.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
 
     return this.send({
       to,
-      subject: `🎟️ ${data.purchaserName} has gifted you a ticket to ${data.eventName}`,
+      subject: `🎟️ ${data.purchaserName} has assigned you a ticket to ${data.eventName}`,
       html,
       text,
     });
@@ -393,7 +397,7 @@ export class EmailService {
     const html = this.publicWrapper(`${urgency}: Complete Your Registration`, `
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
-        ${data.purchaserName} gifted you a ticket to <strong>${data.eventName}</strong>
+        ${data.purchaserName} assigned you a ticket to <strong>${data.eventName}</strong>
         on ${data.eventDate}. You haven't completed your registration yet.
       </p>
       <div style="margin: 24px 0; text-align: center;">
@@ -401,7 +405,7 @@ export class EmailService {
       </div>
       ${data.isSecondReminder ? '<p style="font-size: 14px; color: #dc2626; margin: 20px 0 0;">This is your final reminder. Your registration link expires on the day of the event.</p>' : ''}
     `);
-    const text = `${urgency}: Complete Your Registration\n\nHi ${data.recipientName},\n\n${data.purchaserName} gifted you a ticket to ${data.eventName} on ${data.eventDate}. Please complete your registration:\n\n${data.registrationUrl}\n\n— Swiss Robotics Association / SRAtix`;
+    const text = `${urgency}: Complete Your Registration\n\nHi ${data.recipientName},\n\n${data.purchaserName} assigned you a ticket to ${data.eventName} on ${data.eventDate}. Please complete your registration:\n\n${data.registrationUrl}\n\n— Swiss Robotics Association / SRAtix`;
 
     return this.send({
       to,
@@ -804,6 +808,7 @@ ${data.message}
   // ─── Template Rendering (Phase 1: Inline HTML) ────────────────
 
   private renderOrderConfirmation(data: OrderConfirmationData): string {
+    const itemLabel = data.isExhibitor ? 'Booth Package' : 'Ticket Type';
     const ticketRows = data.tickets
       .map(
         (t) => `
@@ -813,6 +818,13 @@ ${data.message}
         </tr>`,
       )
       .join('');
+
+    const thankYouLine = data.isExhibitor
+      ? `Thank you for your order! Your booth for <strong>${data.eventName}</strong> is confirmed. You will receive a separate email with instructions to set up your Exhibitor Portal.`
+      : `Thank you for your order! Your tickets for <strong>${data.eventName}</strong> are confirmed.`;
+
+    // Exhibitors don't get ticket QR codes — they receive access via the Exhibitor Portal
+    const showTicketCodes = !data.isExhibitor && data.ticketCodes && data.ticketCodes.length > 0;
 
     return `
     <!DOCTYPE html>
@@ -839,7 +851,7 @@ ${data.message}
               Hi <strong>${data.customerName}</strong>,
             </p>
             <p style="font-size: 16px; margin: 0 0 20px;">
-              Thank you for your order! Your tickets for <strong>${data.eventName}</strong> are confirmed.
+              ${thankYouLine}
             </p>
 
             <!-- Order Summary -->
@@ -848,7 +860,7 @@ ${data.message}
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <thead>
                   <tr>
-                    <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">Ticket Type</th>
+                    <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">${itemLabel}</th>
                     <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">Qty</th>
                   </tr>
                 </thead>
@@ -861,12 +873,12 @@ ${data.message}
               </p>
             </div>
 
-            ${data.ticketCodes && data.ticketCodes.length > 0 ? `
+            ${showTicketCodes ? `
             <!-- Ticket Codes -->
             <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
-              <h3 style="margin: 0 0 8px; color: #333;">Your Ticket Code${data.ticketCodes.length > 1 ? 's' : ''}</h3>
-              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present ${data.ticketCodes.length > 1 ? 'these codes' : 'this code'} at the event entrance for check-in.</p>
-              ${data.ticketCodes.map((code) => `<table cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0;"><tr>
+              <h3 style="margin: 0 0 8px; color: #333;">Your Ticket Code${data.ticketCodes!.length > 1 ? 's' : ''}</h3>
+              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present ${data.ticketCodes!.length > 1 ? 'these codes' : 'this code'} at the event entrance for check-in.</p>
+              ${data.ticketCodes!.map((code) => `<table cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0;"><tr>
                 <td style="vertical-align: middle; padding-right: 12px;">${data.apiBaseUrl ? `<img src="${data.apiBaseUrl}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
                 <td style="vertical-align: middle;"><div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div></td>
               </tr></table>`).join('')}
@@ -899,18 +911,24 @@ ${data.message}
       .map((t) => `  - ${t.typeName} x${t.quantity}`)
       .join('\n');
 
+    const itemLabel = data.isExhibitor ? 'Booth package' : 'Tickets';
+    const thankYouLine = data.isExhibitor
+      ? `Thank you for your order! Your booth for ${data.eventName} is confirmed. You will receive a separate email with instructions to set up your Exhibitor Portal.`
+      : `Thank you for your order! Your tickets for ${data.eventName} are confirmed.`;
+    const showTicketCodes = !data.isExhibitor && data.ticketCodes && data.ticketCodes.length > 0;
+
     return `
 Order Confirmation — ${data.orderNumber}
 
 Hi ${data.customerName},
 
-Thank you for your order! Your tickets for ${data.eventName} are confirmed.
+${thankYouLine}
 
-Tickets:
+${itemLabel}:
 ${tickets}
 
 Total: ${data.totalFormatted} ${data.currency}
-${data.ticketCodes && data.ticketCodes.length > 0 ? `\nTicket Code${data.ticketCodes.length > 1 ? 's' : ''}:\n${data.ticketCodes.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
+${showTicketCodes ? `\nTicket Code${data.ticketCodes!.length > 1 ? 's' : ''}:\n${data.ticketCodes!.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
 Event: ${data.eventName}
 Date: ${data.eventDate}
 Venue: ${data.eventVenue}

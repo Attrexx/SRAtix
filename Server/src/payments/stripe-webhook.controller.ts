@@ -292,10 +292,11 @@ export class StripeWebhookController {
         const ticketTypes = ttIds.length > 0
           ? await this.prisma.ticketType.findMany({
               where: { id: { in: ttIds } },
-              select: { id: true, name: true },
+              select: { id: true, name: true, category: true },
             })
           : [];
         const ttNameMap = new Map(ticketTypes.map((tt) => [tt.id, tt.name]));
+        const isExhibitorOrder = ticketTypes.some((tt) => tt.category === 'exhibitor');
 
         const ticketDetails = paidOrder.items.map((item: { ticketTypeId: string; quantity: number }) => ({
           typeName: ttNameMap.get(item.ticketTypeId) ?? 'Ticket',
@@ -313,6 +314,7 @@ export class StripeWebhookController {
           eventName: event?.name ?? 'Event',
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
           eventVenue: event?.venue ?? '',
+          isExhibitor: isExhibitorOrder,
         });
       } catch (err) {
         this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);

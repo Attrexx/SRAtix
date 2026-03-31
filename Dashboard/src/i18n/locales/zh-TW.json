@@ -309,7 +309,7 @@
   "tickets.form.maxPerOrderPlaceholder": "10",
   "tickets.form.maxStaff": "最大工作人員通行證",
   "tickets.form.maxStaffPlaceholder": "例如 5",
-  "tickets.form.maxStaffHint": "此展商票包含的工作人員/展位通行證數量。留空以停用。",
+  "tickets.form.maxStaffHint": "此展商攝位套餐包含的工作人員/展位通行證數量。留空以停用。",
   "tickets.form.salesStart": "開始銷售",
   "tickets.form.salesEnd": "結束銷售",
   "tickets.form.membershipSection": "SRA 會員資格",

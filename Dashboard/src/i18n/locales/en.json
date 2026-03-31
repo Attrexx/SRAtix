@@ -309,7 +309,7 @@
   "tickets.form.maxPerOrderPlaceholder": "10",
   "tickets.form.maxStaff": "Max Staff Passes",
   "tickets.form.maxStaffPlaceholder": "e.g. 5",
-  "tickets.form.maxStaffHint": "Number of staff/booth passes included with this exhibitor ticket. Leave empty to disable.",
+  "tickets.form.maxStaffHint": "Number of staff/booth passes included with this exhibitor booth package. Leave empty to disable.",
   "tickets.form.salesStart": "Sales Start",
   "tickets.form.salesEnd": "Sales End",
   "tickets.form.membershipSection": "SRA Membership",
