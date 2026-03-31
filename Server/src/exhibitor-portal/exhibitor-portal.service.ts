@@ -623,7 +623,7 @@ export class ExhibitorPortalService {
     });
 
     // Generate password setup token + send portal invite email
-    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swiss-robotics.org/exhibitor-portal';
+    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swissroboticsday.ch/exhibitor-portal';
     let passwordSetupUrl: string | undefined;
     if (isNewStaffUser || !staffUser.passwordHash) {
       const rawToken = await this.auth.initiatePasswordSetup(staffUser.id);

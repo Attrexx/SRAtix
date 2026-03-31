@@ -64,7 +64,7 @@ export class ExhibitorSetupController {
     // Build the password setup URL
     const portalBaseUrl = await this.settings.resolve(
       'exhibitor_portal_url',
-      'https://swiss-robotics.org/exhibitor-portal',
+      'https://swissroboticsday.ch/exhibitor-portal',
     );
     const siteOrigin = new URL(portalBaseUrl).origin;
 

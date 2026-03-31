@@ -608,7 +608,7 @@ export class StripeWebhookController {
         // Build password setup URL from event site (not Dashboard)
         const portalBaseUrl = await this.settings.resolve(
           'exhibitor_portal_url',
-          'https://swiss-robotics.org/exhibitor-portal',
+          'https://swissroboticsday.ch/exhibitor-portal',
         );
         const siteOrigin = new URL(portalBaseUrl).origin;
         const eventRecord = await this.prisma.event.findUnique({
@@ -626,7 +626,7 @@ export class StripeWebhookController {
       // 7. Send welcome email with portal + password setup links
       const portalBaseUrl = await this.settings.resolve(
         'exhibitor_portal_url',
-        'https://swiss-robotics.org/exhibitor-portal',
+        'https://swissroboticsday.ch/exhibitor-portal',
       );
       await this.email.sendExhibitorWelcome(email, {
         contactName: displayName,

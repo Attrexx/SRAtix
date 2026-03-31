@@ -280,6 +280,18 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     required: false,
   },
 
+  // ── Portal / Frontend ──
+  {
+    key: 'exhibitor_portal_url',
+    envVar: 'EXHIBITOR_PORTAL_URL',
+    label: 'Exhibitor Portal URL',
+    group: 'WordPress',
+    description: 'Full URL to the exhibitor portal page on the event website (e.g. https://swissroboticsday.ch/exhibitor-portal)',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
+
   // ── General ──
   {
     key: 'node_env',
