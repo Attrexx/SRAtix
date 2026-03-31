@@ -2404,6 +2404,15 @@
         return;
       }
 
+      // Already registered — show friendly confirmation
+      if (data.alreadyRegistered) {
+        container.innerHTML = '<div class="sratix-set-password__success">'
+          + '<h2>' + escHtml(t('reg.alreadyRegisteredTitle')) + '</h2>'
+          + '<p>' + escHtml(t('reg.alreadyRegisteredMsg').replace('{name}', data.attendeeName || '')) + '</p>'
+          + '</div>';
+        return;
+      }
+
       var attendee = data.attendee || {};
       var event = data.event || {};
       var ticketTypeName = data.ticketTypeName || '';

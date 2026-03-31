@@ -89,9 +89,12 @@ export class PublicRegistrationController {
       throw new GoneException('This registration link has expired');
     }
 
-    // Check if already registered
+    // Check if already registered — return friendly response instead of error
     if (attendee.status === 'registered') {
-      throw new BadRequestException('You have already completed registration');
+      return {
+        alreadyRegistered: true,
+        attendeeName: attendee.firstName,
+      };
     }
 
     // Find the ticket to get ticket type + form schema
@@ -209,7 +212,6 @@ export class PublicRegistrationController {
       where: { id: attendee.id },
       data: {
         status: 'registered',
-        registrationToken: null,
         registrationTokenExpiresAt: null,
       },
     });
