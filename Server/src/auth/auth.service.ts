@@ -678,8 +678,11 @@ export class AuthService implements OnModuleDestroy {
       select: { id: true, resetTokenExpiresAt: true },
     });
 
-    if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
-      throw new UnauthorizedException('Invalid or expired reset token');
+    if (!user) {
+      throw new UnauthorizedException('TOKEN_CONSUMED');
+    }
+    if (!user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
+      throw new UnauthorizedException('TOKEN_EXPIRED');
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);

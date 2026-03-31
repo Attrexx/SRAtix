@@ -6,6 +6,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 
@@ -61,17 +62,35 @@ export class ExhibitorSetupController {
       return { ready: false };
     }
 
-    // Build the password setup URL
     const portalBaseUrl = await this.settings.resolve(
       'exhibitor_portal_url',
       'https://swissroboticsday.ch/exhibitor-portal',
     );
-    const siteOrigin = new URL(portalBaseUrl).origin;
+
+    // Check if the token has already been consumed (password already set)
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
+    const tokenUser = await this.prisma.user.findUnique({
+      where: { resetToken: hashedToken },
+      select: { id: true },
+    });
 
     const event = await this.prisma.event.findUnique({
       where: { id: order.eventId },
       select: { name: true, meta: true },
     });
+
+    if (!tokenUser) {
+      // Token was consumed — password already set
+      return {
+        ready: true,
+        passwordAlreadySet: true,
+        portalUrl: portalBaseUrl,
+        eventName: event?.name ?? 'Event',
+      };
+    }
+
+    // Token still valid — build password setup URL
+    const siteOrigin = new URL(portalBaseUrl).origin;
     const eventMeta = (event?.meta as Record<string, any>) ?? {};
     const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
     const passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;

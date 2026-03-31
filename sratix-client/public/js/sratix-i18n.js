@@ -312,6 +312,9 @@ const sratixI18n = (function () {
       'setPassword.redirecting':         'Redirecting to the portal…',
       'setPassword.failed':              'This link is invalid or has expired. Please contact the organiser.',
       'setPassword.invalidLink':         'Invalid password setup link. Please check your email for the correct link.',
+      'setPassword.alreadySetTitle':     'Password Already Set',
+      'setPassword.alreadySetMsg':       'Your password has already been configured. You can sign in to the exhibitor portal.',
+      'setPassword.goToPortal':          'Go to Exhibitor Portal',
     },
 
     fr: {
@@ -598,6 +601,9 @@ const sratixI18n = (function () {
       'setPassword.redirecting':         'Redirection vers le portail…',
       'setPassword.failed':              'Ce lien est invalide ou a expiré. Veuillez contacter l\'organisateur.',
       'setPassword.invalidLink':         'Lien de configuration invalide. Vérifiez votre e-mail pour le lien correct.',
+      'setPassword.alreadySetTitle':     'Mot de passe déjà défini',
+      'setPassword.alreadySetMsg':       'Votre mot de passe a déjà été configuré. Vous pouvez vous connecter au portail exposant.',
+      'setPassword.goToPortal':          'Accéder au portail exposant',
     },
 
     de: {
@@ -884,6 +890,9 @@ const sratixI18n = (function () {
       'setPassword.redirecting':         'Weiterleitung zum Portal…',
       'setPassword.failed':              'Dieser Link ist ungültig oder abgelaufen. Bitte kontaktieren Sie den Veranstalter.',
       'setPassword.invalidLink':         'Ungültiger Link. Bitte überprüfen Sie Ihre E-Mail für den korrekten Link.',
+      'setPassword.alreadySetTitle':     'Passwort bereits festgelegt',
+      'setPassword.alreadySetMsg':       'Ihr Passwort wurde bereits konfiguriert. Sie können sich im Aussteller-Portal anmelden.',
+      'setPassword.goToPortal':          'Zum Aussteller-Portal',
     },
 
     it: {
@@ -1170,6 +1179,9 @@ const sratixI18n = (function () {
       'setPassword.redirecting':         'Reindirizzamento al portale…',
       'setPassword.failed':              'Questo link non è valido o è scaduto. Contatta l\'organizzatore.',
       'setPassword.invalidLink':         'Link non valido. Controlla la tua e-mail per il link corretto.',
+      'setPassword.alreadySetTitle':     'Password già impostata',
+      'setPassword.alreadySetMsg':       'La tua password è già stata configurata. Puoi accedere al portale espositore.',
+      'setPassword.goToPortal':          'Vai al portale espositore',
     },
 
     'zh-TW': {
@@ -1456,6 +1468,9 @@ const sratixI18n = (function () {
       'setPassword.redirecting':         '正在跳轉至入口…',
       'setPassword.failed':              '此連結無效或已過期。請聯繫主辦方。',
       'setPassword.invalidLink':         '無效的密碼設定連結。請查看您的電子郵件以獲取正確連結。',
+      'setPassword.alreadySetTitle':     '密碼已設定',
+      'setPassword.alreadySetMsg':       '您的密碼已完成設定，可直接登入展商入口。',
+      'setPassword.goToPortal':          '前往展商入口',
     },
   };
 

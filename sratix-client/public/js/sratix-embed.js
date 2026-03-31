@@ -2658,10 +2658,21 @@
           window.location.href = portalPath;
         }, 3000);
       } catch (err) {
-        errorEl.textContent = err.message || t('setPassword.failed');
-        errorEl.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn');
+        var msg = err.message || '';
+        if (msg === 'TOKEN_CONSUMED') {
+          // Password was already set — show success with portal link
+          container.querySelector('.sratix-set-password__card').innerHTML = `
+            <div class="sratix-set-password__success">
+              <h2>${escHtml(t('setPassword.alreadySetTitle'))}</h2>
+              <p>${escHtml(t('setPassword.alreadySetMsg'))}</p>
+              <a href="${escAttr(portalPath)}" class="sratix-btn sratix-btn--primary" style="margin-top:16px;display:inline-block;text-decoration:none;">${escHtml(t('setPassword.goToPortal'))}</a>
+            </div>`;
+        } else {
+          errorEl.textContent = msg === 'TOKEN_EXPIRED' ? t('setPassword.failed') : (msg || t('setPassword.failed'));
+          errorEl.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = isSetup ? t('setPassword.setupBtn') : t('setPassword.resetBtn');
+        }
       }
     });
   }
@@ -4392,7 +4403,18 @@
     var body = container.querySelector('#sratix-confirmation-body');
     if (!body) return;
 
-    if (data && data.passwordSetupUrl) {
+    if (data && data.passwordAlreadySet && data.portalUrl) {
+      body.innerHTML =
+        '<div class="sratix-confirmation-ready">' +
+          '<h3>' + escHtml(t('setPassword.alreadySetTitle')) + '</h3>' +
+          '<p class="sratix-confirmation-note">' + escHtml(t('setPassword.alreadySetMsg')) + '</p>' +
+          '<div class="sratix-confirmation-actions">' +
+            '<a href="' + escAttr(data.portalUrl) + '" class="sratix-btn sratix-btn-primary">' +
+              escHtml(t('setPassword.goToPortal')) +
+            '</a>' +
+          '</div>' +
+        '</div>';
+    } else if (data && data.passwordSetupUrl) {
       body.innerHTML =
         '<div class="sratix-confirmation-ready">' +
           '<h3>' + escHtml(t('exhibitorConfirmation.ready')) + '</h3>' +
