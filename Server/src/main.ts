@@ -73,8 +73,21 @@ async function bootstrap() {
       credentials: true,
     });
 
-    // Disable Cloudflare response buffering for SSE streams
+    // Prevent Fastify from rejecting bodyless requests that carry Content-Type: application/json
+    // (some proxies / browsers add this header even for DELETE with no body)
     const fastifyInstance = app.getHttpAdapter().getInstance();
+    fastifyInstance.addHook('preParsing', (request, reply, payload, done) => {
+      const cl = request.headers['content-length'];
+      if (
+        request.headers['content-type']?.startsWith('application/json') &&
+        (!cl || cl === '0')
+      ) {
+        delete request.headers['content-type'];
+      }
+      done(null, payload);
+    });
+
+    // Disable Cloudflare response buffering for SSE streams
     fastifyInstance.addHook('onSend', async (request, reply, payload) => {
       if (reply.getHeader('content-type')?.toString().includes('text/event-stream')) {
         reply.header('X-Accel-Buffering', 'no');
