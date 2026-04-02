@@ -90,12 +90,15 @@ export class TicketsService {
    * Format: 12 uppercase alphanumeric characters (base36).
    */
   private generateTicketCode(): string {
-    const bytes = randomBytes(9); // 72 bits of entropy
-    return bytes
-      .toString('base64url')
-      .replace(/[^A-Za-z0-9]/g, '')
-      .substring(0, 12)
-      .toUpperCase();
+    // Generate until we have 12 alphanumeric chars
+    // (base64url may include - and _ which get stripped)
+    let result = '';
+    while (result.length < 12) {
+      result += randomBytes(9)
+        .toString('base64url')
+        .replace(/[^A-Za-z0-9]/g, '');
+    }
+    return result.substring(0, 12).toUpperCase();
   }
 
   /**

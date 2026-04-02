@@ -24,8 +24,8 @@ export class TicketQrController {
     @Param('code') code: string,
     @Res() reply: FastifyReply,
   ) {
-    // Validate code format (12 uppercase alphanumeric chars)
-    if (!/^[A-Z0-9]{12}$/.test(code)) {
+    // Validate code format (8-16 uppercase alphanumeric chars)
+    if (!/^[A-Z0-9]{8,16}$/.test(code)) {
       throw new NotFoundException('Ticket not found');
     }
 
