@@ -687,6 +687,32 @@ function Bell({ size, ...props }: IconProps) {
   );
 }
 
+/** User plus — add staff/partner */
+function UserPlus({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  );
+}
+
+/** QR code */
+function QrCode({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <rect x="2" y="2" width="8" height="8" rx="1" />
+      <rect x="14" y="2" width="8" height="8" rx="1" />
+      <rect x="2" y="14" width="8" height="8" rx="1" />
+      <rect x="14" y="14" width="4" height="4" rx="0.5" />
+      <line x1="22" y1="14" x2="22" y2="18" />
+      <line x1="18" y1="22" x2="22" y2="22" />
+    </svg>
+  );
+}
+
 /* ──────────────────────── Export as namespace ──────────────────────── */
 
 export const Icons = {
@@ -757,6 +783,8 @@ export const Icons = {
   Columns,
   ChevronDown,
   Bell,
+  UserPlus,
+  QrCode,
 } as const;
 
 export type IconName = keyof typeof Icons;

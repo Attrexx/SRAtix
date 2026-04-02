@@ -690,6 +690,37 @@ export interface LogisticsOverview {
   totalOrders: number;
 }
 
+// ─── Comp Entry Types (Staff & Partners) ────────────────────────
+
+export type CompType = 'staff' | 'volunteer' | 'partner' | 'sponsor_no_booth' | 'sponsor_with_booth';
+
+export interface CompEntry {
+  id: string;
+  compType: CompType;
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string | null;
+  status: string;
+  ticketId: string | null;
+  ticketCode: string | null;
+  ticketStatus: string | null;
+  qrPayload: string | null;
+  orderId: string | null;
+  orderNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CompEntrySummary {
+  staff: number;
+  volunteer: number;
+  partner: number;
+  sponsor_no_booth: number;
+  sponsor_with_booth: number;
+  total: number;
+}
+
 // ─── API Methods ────────────────────────────────────────────────
 // Note: auth flows (login, logout, refresh) are handled directly in
 // Dashboard/src/lib/auth.tsx via fetch() with credentials: 'include'.
@@ -1292,6 +1323,56 @@ export const api = {
     request<LogisticsOverview>(
       `/admin/logistics/events/${eventId}/overview`,
       { signal },
+    ),
+
+  // ─── Comp Entries (Staff & Partners) ────────────────────────────
+
+  getCompEntries: (eventId: string, signal?: AbortSignal) =>
+    request<CompEntry[]>(
+      `/events/${eventId}/comp-entries`,
+      { signal },
+    ),
+
+  getCompEntrySummary: (eventId: string, signal?: AbortSignal) =>
+    request<CompEntrySummary>(
+      `/events/${eventId}/comp-entries/summary`,
+      { signal },
+    ),
+
+  getCompEntry: (eventId: string, id: string, signal?: AbortSignal) =>
+    request<CompEntry>(
+      `/events/${eventId}/comp-entries/${id}`,
+      { signal },
+    ),
+
+  createCompEntry: (eventId: string, data: {
+    compType: CompType;
+    firstName: string;
+    lastName: string;
+    email: string;
+    organization?: string;
+  }) =>
+    request<CompEntry>(
+      `/events/${eventId}/comp-entries`,
+      { method: 'POST', body: data },
+    ),
+
+  updateCompEntry: (eventId: string, id: string, data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    compType?: CompType;
+    organization?: string;
+  }) =>
+    request<CompEntry>(
+      `/events/${eventId}/comp-entries/${id}`,
+      { method: 'PATCH', body: data },
+    ),
+
+  deleteCompEntry: (eventId: string, id: string) =>
+    request<{ success: boolean }>(
+      `/events/${eventId}/comp-entries/${id}`,
+      { method: 'DELETE' },
     ),
 };
 

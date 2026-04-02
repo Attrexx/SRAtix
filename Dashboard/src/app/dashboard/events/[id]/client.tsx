@@ -20,6 +20,7 @@ export default function EventOverviewPage() {
     ticketsSold: 0,
     checkIns: 0,
     totalAttendees: 0,
+    compEntries: 0,
   });
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -47,9 +48,10 @@ export default function EventOverviewPage() {
     const ordP = api.getOrders(id, ac.signal).catch(() => [] as any[]);
     const ciP = api.getCheckInStats(id, ac.signal).catch(() => ({ total: 0, today: 0, byTicketType: {} }));
     const attP = api.getAttendees(id, ac.signal).catch(() => []);
+    const compP = api.getCompEntrySummary(id, ac.signal).catch(() => ({ total: 0 }));
 
-    Promise.all([evP, ttsP, ordP, ciP, attP])
-      .then(([ev, tts, orders, checkInStats, attendees]) => {
+    Promise.all([evP, ttsP, ordP, ciP, attP, compP])
+      .then(([ev, tts, orders, checkInStats, attendees, compSummary]) => {
         if (ev) setEvent(ev);
         setTicketTypes(tts);
         const paidOrders = orders.filter((o: any) => o.status === 'paid');
@@ -60,6 +62,7 @@ export default function EventOverviewPage() {
           ticketsSold: tts.reduce((sum, tt) => sum + (tt.sold ?? 0), 0),
           checkIns: checkInStats.total,
           totalAttendees: attendees.length,
+          compEntries: (compSummary as any).total ?? 0,
         });
       })
       .finally(() => setLoading(false));
@@ -219,6 +222,16 @@ export default function EventOverviewPage() {
           icon={<Icons.Users size={20} />}
           label="Attendees"
           value={(stats.totalAttendees ?? 0).toLocaleString()}
+        />
+        <StatCard
+          icon={<Icons.UserPlus size={20} />}
+          label={t('staffPartners.title')}
+          value={(stats.compEntries ?? 0).toLocaleString()}
+        />
+        <StatCard
+          icon={<Icons.UserPlus size={20} />}
+          label={t('nav.staffPartners')}
+          value={(stats.compEntries ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}

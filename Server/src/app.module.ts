@@ -33,6 +33,7 @@ import { ContactModule } from './contact/contact.module';
 import { ExhibitorPortalModule } from './exhibitor-portal/exhibitor-portal.module';
 import { MembershipPartnersModule } from './membership-partners/membership-partners.module';
 import { LogisticsModule } from './logistics/logistics.module';
+import { CompEntriesModule } from './comp-entries/comp-entries.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
@@ -132,6 +133,9 @@ import { join } from 'path';
 
     // Logistics — exhibitor stock purchasing system
     LogisticsModule,
+
+    // Comp entries — staff, volunteers, partners, sponsors (complimentary tickets)
+    CompEntriesModule,
   ],
   providers: [
     // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)

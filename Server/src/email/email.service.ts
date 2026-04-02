@@ -228,6 +228,95 @@ export class EmailService {
     }
   }
 
+  // ─── Comp Entry (Staff & Partners) Emails ─────────────────────
+
+  /**
+   * Send a complimentary pass confirmation to staff, volunteers, partners,
+   * or sponsors. Includes QR code and event details.
+   * Email body varies by comp type.
+   */
+  async sendCompEntryConfirmation(
+    to: string,
+    data: {
+      recipientName: string;
+      compType: string;
+      compTypeLabel: string;
+      organization?: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      ticketCode: string;
+      orderNumber: string;
+      apiBaseUrl?: string;
+    },
+  ): Promise<DeliveryResult> {
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || '';
+    const introByType: Record<string, string> = {
+      staff: `You have been registered as <strong>Staff</strong> for <strong>${data.eventName}</strong>. Your complimentary event pass is confirmed.`,
+      volunteer: `Thank you for volunteering at <strong>${data.eventName}</strong>! Your complimentary event pass is confirmed.`,
+      partner: `As a representative of <strong>${data.organization || 'our partner organization'}</strong>, you have been granted a complimentary pass to <strong>${data.eventName}</strong>.`,
+      sponsor_no_booth: `As a representative of <strong>${data.organization || 'our sponsor'}</strong>, you have been granted a complimentary pass to <strong>${data.eventName}</strong>.`,
+      sponsor_with_booth: `As a representative of <strong>${data.organization || 'our sponsor'}</strong>, you have been granted a complimentary pass with booth access to <strong>${data.eventName}</strong>.`,
+    };
+    const intro = introByType[data.compType] || introByType.staff;
+
+    const orgRow = data.organization
+      ? this.adminInfoRow('Organization', data.organization)
+      : '';
+
+    const html = this.publicWrapper(`Your ${data.compTypeLabel} Pass`, `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">${intro}</p>
+
+      <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+        🎫 Pass Details
+      </h3>
+      <div style="background: #f8fafc; border-left: 4px solid #1a1a2e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Type', data.compTypeLabel)}
+          ${orgRow}
+          ${this.adminInfoRow('Order', `#${data.orderNumber}`)}
+        </table>
+      </div>
+
+      <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+        📅 Event Information
+      </h3>
+      <div style="background: #f8fafc; border-left: 4px solid #1a1a2e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Event', data.eventName)}
+          ${this.adminInfoRow('Date', data.eventDate)}
+          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+        </table>
+      </div>
+
+      <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+        ✅ Your Entry Pass
+      </h3>
+      <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px; text-align: center;">
+        <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present this QR code at the event entrance for check-in.</p>
+        ${apiBase ? `<img src="${apiBase}/api/public/tickets/${data.ticketCode}/qr.png" width="160" height="160" alt="QR Code" style="display: inline-block; border-radius: 8px; margin: 0 0 12px;" />` : ''}
+        <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 20px; font-family: monospace; font-size: 18px; letter-spacing: 2px; font-weight: 700; display: inline-block;">
+          ${data.ticketCode}
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: #999; margin: 20px 0 0; line-height: 1.5;">
+        💡 Save this email or take a screenshot of the QR code for quick check-in at the event.
+      </p>
+    `);
+
+    const orgLine = data.organization ? `Organization: ${data.organization}\n` : '';
+    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName}\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\nTicket Code: ${data.ticketCode}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nPresent your ticket code at the event entrance for check-in.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+
+    return this.send({
+      to,
+      subject: `🎫 Your ${data.compTypeLabel} pass for ${data.eventName} — #${data.orderNumber}`,
+      html,
+      text,
+    });
+  }
+
   // ─── Ticket Gift & Registration Emails ────────────────────────
 
   /**
