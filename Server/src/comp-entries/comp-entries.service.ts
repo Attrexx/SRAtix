@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
-import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
+import { AuditLogService } from '../audit-log/audit-log.service';
 
 /** Valid comp-entry types. */
 export const COMP_TYPES = [
@@ -66,7 +66,7 @@ export class CompEntriesService {
     const existing = await this.prisma.ticketType.findFirst({
       where: {
         eventId,
-        meta: { path: ['isCompType'], equals: true },
+        meta: { path: ['isCompType'], equals: true } as any,
       },
     });
 
@@ -230,7 +230,7 @@ export class CompEntriesService {
     this.audit.log({
       eventId,
       userId: actorUserId,
-      action: 'comp_entry.created' as AuditAction,
+      action: 'comp_entry.created',
       entity: 'comp_entry',
       entityId: result.attendee.id,
       detail: {
@@ -258,15 +258,19 @@ export class CompEntriesService {
    */
   async findByEvent(eventId: string) {
     const attendees = await this.prisma.attendee.findMany({
-      where: {
-        eventId,
-        meta: { path: ['compType'], not: undefined },
-      },
+      where: { eventId },
       orderBy: { createdAt: 'desc' },
     });
 
+    // Filter in-app — MariaDB JSON path queries are unreliable
+    const compAttendees = attendees.filter((a) => {
+      const meta = a.meta as Record<string, unknown> | null;
+      return !!meta?.compType;
+    });
+
     // Batch-load tickets and orders
-    const attendeeIds = attendees.map((a) => a.id);
+    const attendeeIds = compAttendees.map((a) => a.id);
+    if (attendeeIds.length === 0) return [];
 
     const tickets = await this.prisma.ticket.findMany({
       where: { attendeeId: { in: attendeeIds }, eventId },
@@ -278,7 +282,7 @@ export class CompEntriesService {
     });
     const orderMap = new Map(orders.map((o) => [o.attendeeId, o]));
 
-    return attendees.map((a) => {
+    return compAttendees.map((a) => {
       const ticket = ticketMap.get(a.id);
       const order = orderMap.get(a.id);
       return this.enrichEntry(a, ticket, order, eventId);
@@ -431,7 +435,7 @@ export class CompEntriesService {
     this.audit.log({
       eventId,
       userId: actorUserId,
-      action: 'comp_entry.updated' as AuditAction,
+      action: 'comp_entry.updated',
       entity: 'comp_entry',
       entityId: attendeeId,
       detail: { changes: data },
@@ -479,7 +483,7 @@ export class CompEntriesService {
     this.audit.log({
       eventId,
       userId: actorUserId,
-      action: 'comp_entry.deleted' as AuditAction,
+      action: 'comp_entry.deleted',
       entity: 'comp_entry',
       entityId: attendeeId,
       detail: {
