@@ -63,11 +63,13 @@ export class CompEntriesService {
    * Find or create the "Complimentary" ticket type for an event.
    */
   private async ensureCompTicketType(eventId: string, orgId: string) {
-    const existing = await this.prisma.ticketType.findFirst({
-      where: {
-        eventId,
-        meta: { path: ['isCompType'], equals: true } as any,
-      },
+    // MariaDB JSON path filtering is unreliable — load all and filter in-app
+    const ticketTypes = await this.prisma.ticketType.findMany({
+      where: { eventId },
+    });
+    const existing = ticketTypes.find((tt) => {
+      const meta = tt.meta as Record<string, unknown> | null;
+      return meta?.isCompType === true;
     });
 
     if (existing) return existing;
