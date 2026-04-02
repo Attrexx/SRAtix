@@ -31,6 +31,9 @@ export default function AttendeesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // QR modal state
+  const [qrAttendee, setQrAttendee] = useState<Attendee | null>(null);
+
   // Form state
   const [fFirst, setFFirst] = useState('');
   const [fLast, setFLast] = useState('');
@@ -282,6 +285,29 @@ export default function AttendeesPage() {
               );
             },
           },
+          {
+            key: 'tickets',
+            header: t('attendees.column.ticket'),
+            render: (row) => {
+              const att = row as unknown as Attendee;
+              const ticket = att.tickets?.[0];
+              if (!ticket) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+              return (
+                <span className="inline-flex items-center gap-1.5">
+                  <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono dark:bg-gray-800">
+                    {ticket.code}
+                  </code>
+                  <button
+                    className="opacity-60 hover:opacity-100 transition-opacity"
+                    title={t('staffPartners.viewQr') ?? 'View QR Code'}
+                    onClick={(e) => { e.stopPropagation(); setQrAttendee(att); }}
+                  >
+                    <Icons.QrCode size={16} />
+                  </button>
+                </span>
+              );
+            },
+          },
           { key: 'phone', header: t('attendees.column.phone') },
           { key: 'company', header: t('attendees.column.company') },
           {
@@ -322,6 +348,60 @@ export default function AttendeesPage() {
         searchKeys={['firstName', 'lastName', 'email', 'company']}
         emptyMessage={t('attendees.empty')}
       />
+
+      {/* ── QR Code Modal ── */}
+      {qrAttendee && qrAttendee.tickets?.[0] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setQrAttendee(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl p-6 shadow-xl text-center"
+            style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+                {t('staffPartners.qrTitle') ?? 'QR Code'}
+              </h2>
+              <button onClick={() => setQrAttendee(null)} className="opacity-60 hover:opacity-100">
+                <Icons.X size={20} />
+              </button>
+            </div>
+
+            <p className="mb-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {qrAttendee.firstName} {qrAttendee.lastName}
+            </p>
+
+            <div className="my-4">
+              <img
+                src={`/api/public/tickets/${qrAttendee.tickets[0].code}/qr.png`}
+                alt="QR Code"
+                width={300}
+                height={300}
+                className="mx-auto rounded-lg"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <a
+                href={`/api/public/tickets/${qrAttendee.tickets[0].code}/qr.png`}
+                download={`${qrAttendee.tickets[0].code}-qr.png`}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-secondary)' }}
+              >
+                <Icons.Download size={13} />
+                {t('common.downloadCsv')?.replace('CSV', 'QR') ?? 'Download QR'}
+              </a>
+            </div>
+
+            <code
+              className="inline-block rounded-lg px-4 py-2 text-lg font-mono font-bold tracking-widest"
+              style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text)' }}
+            >
+              {qrAttendee.tickets[0].code}
+            </code>
+          </div>
+        </div>
+      )}
 
       {/* ── Create / Edit Modal ── */}
       {showModal && (

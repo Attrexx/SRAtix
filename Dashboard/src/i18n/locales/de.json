@@ -364,6 +364,7 @@
   "attendees.column.email": "E-Mail",
   "attendees.column.phone": "Telefon",
   "attendees.column.company": "Unternehmen",
+  "attendees.column.ticket": "Ticket",
   "attendees.column.registered": "Registriert",
   "attendees.empty": "Noch keine Teilnehmer registriert.",
   "attendees.failedToSave": "Teilnehmer konnte nicht gespeichert werden",

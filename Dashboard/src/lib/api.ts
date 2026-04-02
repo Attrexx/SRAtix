@@ -334,6 +334,7 @@ export interface Attendee {
   company?: string;
   status?: string;
   purchasedByAttendeeId?: string;
+  tickets?: { code: string; status: string }[];
   createdAt: string;
 }
 

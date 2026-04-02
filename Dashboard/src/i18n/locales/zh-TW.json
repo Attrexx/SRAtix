@@ -364,6 +364,7 @@
   "attendees.column.email": "電子信箱",
   "attendees.column.phone": "電話",
   "attendees.column.company": "公司",
+  "attendees.column.ticket": "票券",
   "attendees.column.registered": "登記時間",
   "attendees.empty": "尚無參加者登記。",
   "attendees.failedToSave": "無法儲存參加者",

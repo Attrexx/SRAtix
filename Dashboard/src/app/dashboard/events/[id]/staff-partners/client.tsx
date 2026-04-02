@@ -157,8 +157,6 @@ export default function StaffPartnersPage() {
     sponsor_with_booth: { bg: '#f3e8ff', text: '#6b21a8' },
   };
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
-
   if (loading) {
     return (
       <div className="space-y-4">
@@ -518,15 +516,25 @@ export default function StaffPartnersPage() {
               {getTypeLabel(qrEntry.compType)}
             </span>
 
-            {qrEntry.ticketCode && apiBase && (
+            {qrEntry.ticketCode && (
               <div className="my-4">
                 <img
-                  src={`${apiBase}/api/public/tickets/${qrEntry.ticketCode}/qr.png`}
+                  src={`/api/public/tickets/${qrEntry.ticketCode}/qr.png`}
                   alt="QR Code"
-                  width={200}
-                  height={200}
+                  width={300}
+                  height={300}
                   className="mx-auto rounded-lg"
+                  style={{ imageRendering: 'pixelated' }}
                 />
+                <a
+                  href={`/api/public/tickets/${qrEntry.ticketCode}/qr.png`}
+                  download={`${qrEntry.ticketCode}-qr.png`}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                  style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text-secondary)' }}
+                >
+                  <Icons.Download size={13} />
+                  {t('common.downloadCsv').replace('CSV', 'QR')}
+                </a>
               </div>
             )}
 

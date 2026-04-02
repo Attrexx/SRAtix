@@ -17,6 +17,12 @@ export class AttendeesService {
     return this.prisma.attendee.findMany({
       where: { eventId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        tickets: {
+          select: { code: true, status: true },
+          take: 5,
+        },
+      },
     });
   }
 

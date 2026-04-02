@@ -364,6 +364,7 @@
   "attendees.column.email": "E-mail",
   "attendees.column.phone": "Téléphone",
   "attendees.column.company": "Entreprise",
+  "attendees.column.ticket": "Billet",
   "attendees.column.registered": "Inscription",
   "attendees.empty": "Aucun participant inscrit.",
   "attendees.failedToSave": "Impossible d'enregistrer le participant",
