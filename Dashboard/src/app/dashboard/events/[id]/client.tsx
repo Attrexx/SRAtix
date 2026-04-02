@@ -229,11 +229,6 @@ export default function EventOverviewPage() {
           value={(stats.compEntries ?? 0).toLocaleString()}
         />
         <StatCard
-          icon={<Icons.UserPlus size={20} />}
-          label={t('nav.staffPartners')}
-          value={(stats.compEntries ?? 0).toLocaleString()}
-        />
-        <StatCard
           icon={<Icons.ShoppingCart size={20} />}
           label={t('events.overview.orders')}
           value={(stats.paidOrders ?? 0).toLocaleString()}
