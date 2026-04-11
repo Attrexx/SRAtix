@@ -542,6 +542,7 @@
 
       // When no partners, "no membership" becomes a card inside the grid next to SRA
       var regularBtnHtml = `<button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
+          <span class="sratix-member-btn__card-label">${escHtml(t('memberGate.regularCardLabel'))}</span>
           ${escHtml(t('memberGate.regularLabel'))}
         </button>`;
 
@@ -549,9 +550,10 @@
         <div class="sratix-member-gate${gateModifier}">
           <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
           <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
-          <p class="sratix-member-gate__subtitle">${escHtml(gateInfo.memberGateSubtitle || t('memberGate.subtitle'))}</p>
+          <div class="sratix-member-gate__subtitle">${gateInfo.memberGateSubtitle || escHtml(t('memberGate.subtitle'))}</div>
           <div class="sratix-member-gate__buttons">
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
+              <span class="sratix-member-btn__card-label">${escHtml(t('memberGate.sraCardLabel'))}</span>
               ${sraLogo}
               <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
               <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>

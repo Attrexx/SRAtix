@@ -455,12 +455,16 @@ export default function EventSettingsPage() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
               Member Gate
             </h3>
-            <FieldInput
-              label="Subtitle"
-              value={memberGateSubtitle}
-              onChange={setMemberGateSubtitle}
-              placeholder="e.g. Members may be eligible for discounted tickets and exclusive perks."
-            />
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                Subtitle
+              </label>
+              <RichTextEditor
+                value={memberGateSubtitle}
+                onChange={setMemberGateSubtitle}
+                placeholder="e.g. Members may be eligible for discounted tickets and exclusive perks."
+              />
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                 Disclaimer
