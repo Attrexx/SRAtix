@@ -166,6 +166,7 @@ export class EventsService {
     ticketIntro: string;
     exhibitorTicketTitle: string;
     exhibitorTicketIntro: string;
+    memberGateSubtitle: string;
     memberGateDisclaimer: string;
     legalPageUrls: Record<string, string>;
     pagePaths: Record<string, string>;
@@ -182,6 +183,7 @@ export class EventsService {
       ticketIntro: (meta.ticketIntro as string) ?? '',
       exhibitorTicketTitle: (meta.exhibitorTicketTitle as string) ?? '',
       exhibitorTicketIntro: (meta.exhibitorTicketIntro as string) ?? '',
+      memberGateSubtitle: (meta.memberGateSubtitle as string) ?? '',
       memberGateDisclaimer: (meta.memberGateDisclaimer as string) ?? '',
       legalPageUrls: this.getLegalPageUrls(eventId, meta, '/api'),
       pagePaths: {

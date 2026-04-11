@@ -509,12 +509,17 @@
       ? `<img src="${escAttr(config.sraLogoUrl)}" alt="SRA" class="sratix-member-btn__logo" />`
       : '<span class="sratix-member-btn__icon">🔵</span>';
 
-    // Fetch partners from API (cached for this page load)
+    // Fetch partners + public-info from API (cached for this page load)
     if (!renderMemberGate._partnersCache) {
       renderMemberGate._partnersCache = apiFetch(`events/${eventId}/membership-partners/public`).catch(function () { return []; });
     }
+    if (!renderMemberGate._publicInfoCache) {
+      renderMemberGate._publicInfoCache = apiFetch(`events/${eventId}/public-info`).catch(function () { return {}; });
+    }
 
-    renderMemberGate._partnersCache.then(function (partners) {
+    Promise.all([renderMemberGate._partnersCache, renderMemberGate._publicInfoCache]).then(function (results) {
+      var partners = results[0];
+      var gateInfo = results[1] || {};
       var hasPartners = partners && partners.length > 0;
       var gateModifier = hasPartners ? '' : ' sratix-member-gate--no-partners';
       var partnerButtonsHtml = '';
@@ -544,7 +549,7 @@
         <div class="sratix-member-gate${gateModifier}">
           <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
           <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
-          <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
+          <p class="sratix-member-gate__subtitle">${escHtml(gateInfo.memberGateSubtitle || t('memberGate.subtitle'))}</p>
           <div class="sratix-member-gate__buttons">
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
               ${sraLogo}
@@ -555,6 +560,7 @@
             ${hasPartners ? '' : regularBtnHtml}
           </div>
           ${hasPartners ? regularBtnHtml : ''}
+          ${gateInfo.memberGateDisclaimer ? '<div class="sratix-member-gate__disclaimer">' + gateInfo.memberGateDisclaimer + '</div>' : ''}
         </div>
       `;
 

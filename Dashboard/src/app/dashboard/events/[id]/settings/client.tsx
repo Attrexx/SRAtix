@@ -84,6 +84,7 @@ export default function EventSettingsPage() {
   const [ticketIntro, setTicketIntro] = useState('');
   const [exhibitorTicketTitle, setExhibitorTicketTitle] = useState('');
   const [exhibitorTicketIntro, setExhibitorTicketIntro] = useState('');
+  const [memberGateSubtitle, setMemberGateSubtitle] = useState('');
   const [memberGateDisclaimer, setMemberGateDisclaimer] = useState('');
   const [logoIconUrl, setLogoIconUrl] = useState('');
   const [logoLandscapeUrl, setLogoLandscapeUrl] = useState('');
@@ -127,6 +128,7 @@ export default function EventSettingsPage() {
     setTicketIntro((meta.ticketIntro as string) ?? '');
     setExhibitorTicketTitle((meta.exhibitorTicketTitle as string) ?? '');
     setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
+    setMemberGateSubtitle((meta.memberGateSubtitle as string) ?? '');
     setMemberGateDisclaimer((meta.memberGateDisclaimer as string) ?? '');
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
@@ -186,6 +188,7 @@ export default function EventSettingsPage() {
           ticketIntro: ticketIntro.trim() || undefined,
           exhibitorTicketTitle: exhibitorTicketTitle.trim() || undefined,
           exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
+          memberGateSubtitle: memberGateSubtitle.trim() || undefined,
           memberGateDisclaimer: memberGateDisclaimer.trim() || undefined,
           contactEmail: contactEmail.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
@@ -447,19 +450,30 @@ export default function EventSettingsPage() {
             </div>
           </div>
 
-          {/* Member Gate Disclaimer */}
-          <div className="mt-6 space-y-2">
+          {/* Member Gate Customization */}
+          <div className="mt-6 space-y-4">
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-              Member Gate Disclaimer
+              Member Gate
             </h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Optional note displayed below the membership cards (e.g. membership validity info). Supports HTML.
-            </p>
-            <RichTextEditor
-              value={memberGateDisclaimer}
-              onChange={setMemberGateDisclaimer}
-              placeholder="e.g. SRA memberships are valid until the end of the calendar year..."
+            <FieldInput
+              label="Subtitle"
+              value={memberGateSubtitle}
+              onChange={setMemberGateSubtitle}
+              placeholder="e.g. Members may be eligible for discounted tickets and exclusive perks."
             />
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                Disclaimer
+              </label>
+              <p className="mb-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Optional note displayed below the membership cards (e.g. membership validity info). Supports HTML.
+              </p>
+              <RichTextEditor
+                value={memberGateDisclaimer}
+                onChange={setMemberGateDisclaimer}
+                placeholder="e.g. SRA memberships are valid until the end of the calendar year..."
+              />
+            </div>
           </div>
         </Section>
 
