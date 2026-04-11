@@ -102,7 +102,7 @@ const sratixI18n = (function () {
       'schedule.comingSoon':     'Event schedule will be published soon.',
 
       // Member gate
-      'memberGate.title':          'Are you a member?',
+      'memberGate.title':          'Are you an SRA member?',
       'memberGate.subtitle':       'Members may be eligible for discounted tickets and exclusive perks.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.sraCardLabel':   'Already an SRA member',
@@ -417,7 +417,7 @@ const sratixI18n = (function () {
 
       'schedule.comingSoon':     'Le programme sera publié prochainement.',
 
-      'memberGate.title':          'Êtes-vous membre ?',
+      'memberGate.title':          'Êtes-vous membre SRA ?',
       'memberGate.subtitle':       'Les membres peuvent bénéficier de tarifs réduits et d’avantages exclusifs.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.sraCardLabel':   'Déjà membre SRA',
@@ -725,7 +725,7 @@ const sratixI18n = (function () {
 
       'schedule.comingSoon':     'Das Veranstaltungsprogramm wird in Kürze veröffentlicht.',
 
-      'memberGate.title':          'Sind Sie Mitglied?',
+      'memberGate.title':          'Sind Sie SRA-Mitglied?',
       'memberGate.subtitle':       'Mitglieder können von ermässigten Tickets und exklusiven Vorteilen profitieren.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.sraCardLabel':   'Bereits SRA-Mitglied',
@@ -1033,7 +1033,7 @@ const sratixI18n = (function () {
 
       'schedule.comingSoon':     'Il programma dell\'evento sarà pubblicato a breve.',
 
-      'memberGate.title':          'Sei un membro?',
+      'memberGate.title':          'Sei un membro SRA?',
       'memberGate.subtitle':       'I membri possono beneficiare di biglietti scontati e vantaggi esclusivi.',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.sraCardLabel':   'Già membro SRA',
@@ -1341,7 +1341,7 @@ const sratixI18n = (function () {
 
       'schedule.comingSoon':     '活動議程即將公布。',
 
-      'memberGate.title':          '您是會員嗎？',
+      'memberGate.title':          '您是 SRA 會員嗎？',
       'memberGate.subtitle':       '會員可享有折扣票價及專屬福利。',
       'memberGate.sraLabel':       'Swiss Robotics Association',
       'memberGate.sraCardLabel':   '已是 SRA 會員',

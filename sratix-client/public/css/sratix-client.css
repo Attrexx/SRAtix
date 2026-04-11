@@ -846,6 +846,16 @@ label.sratix-checkbox-label {
 	font-weight: 700;
 	margin: 0 0 8px;
 	color: var(--sratix-text);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.sratix-member-gate__title-logo {
+	max-height: 40px;
+	width: auto;
+	object-fit: contain;
 }
 
 .sratix-member-gate__subtitle {
@@ -871,6 +881,17 @@ label.sratix-checkbox-label {
 .sratix-member-gate--no-partners .sratix-member-gate__buttons {
 	grid-template-columns: repeat(2, 1fr);
 	max-width: 440px;
+}
+
+@media (max-width: 480px) {
+	.sratix-member-gate__buttons {
+		grid-template-columns: 1fr;
+		max-width: 320px;
+	}
+	.sratix-member-gate--no-partners .sratix-member-gate__buttons {
+		grid-template-columns: 1fr;
+		max-width: 320px;
+	}
 }
 
 .sratix-member-btn {
@@ -941,12 +962,10 @@ label.sratix-checkbox-label {
 }
 
 .sratix-member-btn__card-label {
-	font-size: 0.7em;
-	font-weight: 400;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--sratix-text-muted);
-	margin-bottom: -8px;
+	font-size: 0.85em;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--sratix-text);
 }
 
 .sratix-member-btn__logo {
@@ -964,11 +983,11 @@ label.sratix-checkbox-label {
 }
 
 .sratix-member-btn__website {
-	font-size: 0.75em;
+	font-size: 0.8em;
 	font-weight: 400;
 	color: var(--sratix-text-muted);
-	text-decoration: none;
-	opacity: 0.7;
+	text-decoration: underline;
+	opacity: 0.85;
 	transition: opacity 0.15s ease, color 0.15s ease;
 }
 
