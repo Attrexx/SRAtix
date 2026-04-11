@@ -85,6 +85,7 @@
 	min-height: calc(100vh - 100px);
 	box-sizing: border-box;
 	padding: 40px 24px 60px;
+	overflow-x: hidden;
 }
 
 .sratix-page-inner {
@@ -888,11 +889,14 @@ label.sratix-checkbox-label {
 @media (max-width: 480px) {
 	.sratix-member-gate__buttons {
 		grid-template-columns: 1fr;
-		max-width: 320px;
+		max-width: 100%;
 	}
 	.sratix-member-gate--no-partners .sratix-member-gate__buttons {
 		grid-template-columns: 1fr;
-		max-width: 320px;
+		max-width: 100%;
+	}
+	.sratix-member-btn--regular {
+		max-width: 100%;
 	}
 }
 
