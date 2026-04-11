@@ -881,7 +881,7 @@ label.sratix-checkbox-label {
 /* When only 2 cards (SRA + no-membership), cap at 50/50 */
 .sratix-member-gate--no-partners .sratix-member-gate__buttons {
 	grid-template-columns: repeat(2, 1fr);
-	max-width: 440px;
+	max-width: 680px;
 }
 
 @media (max-width: 480px) {
