@@ -865,6 +865,7 @@ label.sratix-checkbox-label {
 	max-width: 680px;
 	margin-left: auto;
 	margin-right: auto;
+	text-align: left;
 }
 
 .sratix-member-gate__buttons {
@@ -1008,7 +1009,7 @@ label.sratix-checkbox-label {
 	border: 1px solid var(--sratix-border);
 	border-radius: 8px;
 	background: rgba(255, 255, 255, 0.03);
-	text-align: center;
+	text-align: left;
 }
 
 /* ── SRA / RobotX Login Form ── */
