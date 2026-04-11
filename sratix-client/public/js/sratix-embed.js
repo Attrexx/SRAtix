@@ -557,7 +557,6 @@
               <span class="sratix-member-btn__card-label">${escHtml(t('memberGate.sraCardLabel'))}</span>
               <hr class="sratix-member-btn__sep" />
               <span class="sratix-member-btn__card-desc">${escHtml(t('memberGate.sraCardDesc'))}</span>
-              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>
             </button>
             ${partnerButtonsHtml}
             ${hasPartners ? '' : regularBtnHtml}
@@ -592,7 +591,7 @@
                   </ul>
                 </div>
               </div>
-              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-why-join__cta">${escHtml(t('memberGate.whyJoinVisit'))} &rarr;</a>
+              <div class="sratix-why-join__cta-wrap"><a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-why-join__cta">${escHtml(t('memberGate.whyJoinVisit'))} &rarr;</a></div>
             </div>
           </details>
         </div>
