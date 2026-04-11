@@ -904,7 +904,7 @@ label.sratix-checkbox-label {
 	border-color: var(--sratix-accent, #6366f1);
 }
 
-/* "Continue without membership" — full-width dashed row below the grid */
+/* "Continue without membership" — full-width row below the grid */
 .sratix-member-btn--regular {
 	width: 100%;
 	max-width: 680px;
@@ -913,10 +913,10 @@ label.sratix-checkbox-label {
 	justify-content: center;
 	padding: 14px 28px;
 	margin: 4px auto 0;
-	border-style: dashed;
-	font-weight: 400;
-	opacity: 0.75;
-	font-size: 0.9em;
+	border-style: solid;
+	font-weight: 500;
+	opacity: 0.85;
+	font-size: 1.05em;
 	color: #fff;
 }
 
@@ -964,6 +964,20 @@ label.sratix-checkbox-label {
 	opacity: 1;
 	color: var(--sratix-text);
 	text-decoration: underline;
+}
+
+/* Membership disclaimer */
+.sratix-member-gate__disclaimer {
+	max-width: 680px;
+	margin: 16px auto 0;
+	padding: 12px 16px;
+	font-size: 0.82em;
+	line-height: 1.5;
+	color: var(--sratix-text-muted);
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.03);
+	text-align: center;
 }
 
 /* ── SRA / RobotX Login Form ── */

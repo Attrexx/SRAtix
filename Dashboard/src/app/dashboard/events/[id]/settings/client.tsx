@@ -84,6 +84,7 @@ export default function EventSettingsPage() {
   const [ticketIntro, setTicketIntro] = useState('');
   const [exhibitorTicketTitle, setExhibitorTicketTitle] = useState('');
   const [exhibitorTicketIntro, setExhibitorTicketIntro] = useState('');
+  const [memberGateDisclaimer, setMemberGateDisclaimer] = useState('');
   const [logoIconUrl, setLogoIconUrl] = useState('');
   const [logoLandscapeUrl, setLogoLandscapeUrl] = useState('');
   const [uploadingIcon, setUploadingIcon] = useState(false);
@@ -126,6 +127,7 @@ export default function EventSettingsPage() {
     setTicketIntro((meta.ticketIntro as string) ?? '');
     setExhibitorTicketTitle((meta.exhibitorTicketTitle as string) ?? '');
     setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
+    setMemberGateDisclaimer((meta.memberGateDisclaimer as string) ?? '');
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
     setContactEmail((meta.contactEmail as string) ?? '');
@@ -184,6 +186,7 @@ export default function EventSettingsPage() {
           ticketIntro: ticketIntro.trim() || undefined,
           exhibitorTicketTitle: exhibitorTicketTitle.trim() || undefined,
           exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
+          memberGateDisclaimer: memberGateDisclaimer.trim() || undefined,
           contactEmail: contactEmail.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
           contactWhatsapp: contactWhatsapp.trim() || undefined,
@@ -442,6 +445,21 @@ export default function EventSettingsPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Member Gate Disclaimer */}
+          <div className="mt-6 space-y-2">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              Member Gate Disclaimer
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Optional note displayed below the membership cards (e.g. membership validity info). Supports HTML.
+            </p>
+            <RichTextEditor
+              value={memberGateDisclaimer}
+              onChange={setMemberGateDisclaimer}
+              placeholder="e.g. SRA memberships are valid until the end of the calendar year..."
+            />
           </div>
         </Section>
 

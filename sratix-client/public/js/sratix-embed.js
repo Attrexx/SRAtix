@@ -296,8 +296,8 @@
       return loadAndRenderTickets(container, eventId, layout, session);
     }
 
-    // Step 3: Show member gate if enabled and no session yet
-    if (config.memberGateEnabled) {
+    // Step 3: Show member gate if enabled and no session yet (visitors only)
+    if (config.memberGateEnabled && role !== 'exhibitor') {
       renderMemberGate(container, eventId, layout);
       return;
     }
@@ -514,14 +514,34 @@
       renderMemberGate._partnersCache = apiFetch(`events/${eventId}/membership-partners/public`).catch(function () { return []; });
     }
 
-    renderMemberGate._partnersCache.then(function () {
-      // Partners hidden — only SRA + "no membership" shown side-by-side
+    renderMemberGate._partnersCache.then(function (partners) {
+      var hasPartners = partners && partners.length > 0;
+      var gateModifier = hasPartners ? '' : ' sratix-member-gate--no-partners';
+      var partnerButtonsHtml = '';
+      if (hasPartners) {
+        partnerButtonsHtml = partners.map(function (p) {
+          const resolvedLogo = resolveUrl(p.logoUrl);
+          const logo = resolvedLogo
+            ? `<img src="${escAttr(resolvedLogo)}" alt="${escAttr(p.name)}" class="sratix-member-btn__logo" />`
+            : '<span class="sratix-member-btn__icon">🤝</span>';
+          const website = p.websiteUrl
+            ? `<a href="${escAttr(p.websiteUrl)}" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>`
+            : '';
+          return `<button class="sratix-member-btn sratix-member-btn--partner" data-member="partner" data-partner-id="${escAttr(p.id)}" data-partner-name="${escAttr(p.name)}" data-partner-logo="${escAttr(resolvedLogo || '')}">
+            ${logo}
+            <span class="sratix-member-btn__label">${escHtml(p.name)}</span>
+            ${website}
+          </button>`;
+        }).join('');
+      }
+
+      // When no partners, "no membership" becomes a card inside the grid next to SRA
       var regularBtnHtml = `<button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
           ${escHtml(t('memberGate.regularLabel'))}
         </button>`;
 
       container.innerHTML = `
-        <div class="sratix-member-gate sratix-member-gate--no-partners">
+        <div class="sratix-member-gate${gateModifier}">
           <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
           <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
           <p class="sratix-member-gate__subtitle">${escHtml(t('memberGate.subtitle'))}</p>
@@ -531,13 +551,26 @@
               <span class="sratix-member-btn__label">${escHtml(t('memberGate.sraLabel'))}</span>
               <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>
             </button>
-            ${regularBtnHtml}
+            ${partnerButtonsHtml}
+            ${hasPartners ? '' : regularBtnHtml}
           </div>
+          ${hasPartners ? regularBtnHtml : ''}
         </div>
       `;
 
       container.querySelector('[data-member="sra"]').addEventListener('click', function () {
         renderSraLoginForm(container, eventId, layout);
+      });
+
+      // Attach event listeners for each partner button
+      container.querySelectorAll('[data-member="partner"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          renderPartnerCodeForm(container, eventId, layout, {
+            id: btn.dataset.partnerId,
+            name: btn.dataset.partnerName,
+            logoUrl: btn.dataset.partnerLogo || null,
+          });
+        });
       });
 
       container.querySelector('[data-member="none"]').addEventListener('click', function () {
