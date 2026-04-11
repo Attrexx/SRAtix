@@ -543,6 +543,8 @@
       // When no partners, "no membership" becomes a card inside the grid next to SRA
       var regularBtnHtml = `<button class="sratix-member-btn sratix-member-btn--regular" data-member="none">
           <span class="sratix-member-btn__card-label">${escHtml(t('memberGate.regularCardLabel'))}</span>
+          <hr class="sratix-member-btn__sep" />
+          <span class="sratix-member-btn__card-desc">${escHtml(t('memberGate.regularCardDesc'))}</span>
         </button>`;
 
       container.innerHTML = `
@@ -553,6 +555,8 @@
           <div class="sratix-member-gate__buttons">
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
               <span class="sratix-member-btn__card-label">${escHtml(t('memberGate.sraCardLabel'))}</span>
+              <hr class="sratix-member-btn__sep" />
+              <span class="sratix-member-btn__card-desc">${escHtml(t('memberGate.sraCardDesc'))}</span>
               <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-member-btn__website" onclick="event.stopPropagation()">${escHtml(t('memberGate.viewWebsite'))}</a>
             </button>
             ${partnerButtonsHtml}
@@ -560,6 +564,37 @@
           </div>
           ${hasPartners ? regularBtnHtml : ''}
           ${gateInfo.memberGateDisclaimer ? '<div class="sratix-member-gate__disclaimer">' + gateInfo.memberGateDisclaimer + '</div>' : ''}
+          <details class="sratix-why-join">
+            <summary class="sratix-why-join__toggle">${escHtml(t('memberGate.whyJoinTitle'))}</summary>
+            <div class="sratix-why-join__content">
+              ${sraLogoTitle ? '<div class="sratix-why-join__logo">' + sraLogoTitle.replace('sratix-member-gate__title-logo', 'sratix-why-join__logo-img') + '</div>' : ''}
+              <div class="sratix-why-join__cols">
+                <div class="sratix-why-join__col">
+                  <h4>Individual Memberships</h4>
+                  <p class="sratix-why-join__desc">For working professionals, students, and retirees. These tiers focus on career tools:</p>
+                  <ul>
+                    <li>Creating and managing your CV</li>
+                    <li>Browsing job listings</li>
+                    <li>Setting up job alerts</li>
+                    <li>Browsing the Collaboration Space</li>
+                  </ul>
+                </div>
+                <div class="sratix-why-join__col">
+                  <h4>Corporate &amp; Institutional Memberships</h4>
+                  <p class="sratix-why-join__desc">For companies, start-ups, universities, and research institutions. These tiers unlock the full ecosystem:</p>
+                  <ul>
+                    <li>Job posting and management</li>
+                    <li>Resume browsing and talent search</li>
+                    <li>Robotics Ecosystem Map and directory</li>
+                    <li>Collaboration space for announcements and partnerships</li>
+                    <li>Corporate / institutional profiles</li>
+                    <li>Manager seats and team system</li>
+                  </ul>
+                </div>
+              </div>
+              <a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-why-join__cta">${escHtml(t('memberGate.whyJoinVisit'))} &rarr;</a>
+            </div>
+          </details>
         </div>
       `;
 

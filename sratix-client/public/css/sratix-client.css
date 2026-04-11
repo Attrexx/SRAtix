@@ -899,19 +899,20 @@ label.sratix-checkbox-label {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	gap: 18px;
+	justify-content: flex-start;
+	gap: 12px;
 	min-height: 150px;
-	padding: 24px 16px;
-	border: 2px solid var(--sratix-border);
+	padding: 24px 20px;
+	border: 2px solid rgba(255, 255, 255, 0.15);
 	border-radius: 12px;
-	background: var(--sratix-navy-light);
+	background: rgba(255, 255, 255, 0.06);
 	color: var(--sratix-text);
 	font-family: 'Outfit', sans-serif;
 	font-size: 0.95em;
 	font-weight: 600;
 	cursor: pointer;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+	text-align: center;
 }
 
 .sratix-member-btn:hover {
@@ -934,14 +935,14 @@ label.sratix-checkbox-label {
 	width: 100%;
 	max-width: 680px;
 	min-height: auto;
-	flex-direction: row;
-	justify-content: center;
-	padding: 14px 28px;
+	flex-direction: column;
+	justify-content: flex-start;
+	padding: 24px 20px;
 	margin: 4px auto 0;
 	border-style: solid;
 	font-weight: 500;
-	opacity: 0.85;
-	font-size: 1.05em;
+	opacity: 1;
+	font-size: 0.95em;
 	color: #fff;
 }
 
@@ -955,18 +956,32 @@ label.sratix-checkbox-label {
 	max-width: none;
 	min-height: 150px;
 	flex-direction: column;
-	padding: 24px 16px;
+	padding: 24px 20px;
 	margin: 0;
-	opacity: 0.85;
 	font-size: 0.95em;
 	font-weight: 600;
 }
 
 .sratix-member-btn__card-label {
-	font-size: 0.85em;
-	font-weight: 600;
-	letter-spacing: 0.02em;
-	color: var(--sratix-text);
+	font-size: 1em;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	color: #fff;
+}
+
+.sratix-member-btn__sep {
+	width: 40px;
+	border: none;
+	border-top: 2px solid rgba(255, 255, 255, 0.15);
+	margin: 0;
+}
+
+.sratix-member-btn__card-desc {
+	font-size: 0.8em;
+	font-weight: 400;
+	line-height: 1.5;
+	color: var(--sratix-text-muted);
+	text-align: center;
 }
 
 .sratix-member-btn__logo {
@@ -1010,6 +1025,119 @@ label.sratix-checkbox-label {
 	border-radius: 8px;
 	background: rgba(255, 255, 255, 0.03);
 	text-align: left;
+}
+
+/* Why join the SRA? — expandable section */
+.sratix-why-join {
+	max-width: 680px;
+	margin: 12px auto 0;
+}
+
+.sratix-why-join__toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	cursor: pointer;
+	font-size: 0.88em;
+	font-weight: 600;
+	color: var(--sratix-text-muted);
+	padding: 10px 16px;
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.03);
+	transition: color 0.15s ease, border-color 0.15s ease;
+	list-style: none;
+}
+
+.sratix-why-join__toggle::-webkit-details-marker {
+	display: none;
+}
+
+.sratix-why-join__toggle::after {
+	content: '\25BC';
+	font-size: 0.65em;
+	transition: transform 0.2s ease;
+}
+
+.sratix-why-join[open] .sratix-why-join__toggle::after {
+	transform: rotate(180deg);
+}
+
+.sratix-why-join__toggle:hover {
+	color: var(--sratix-text);
+	border-color: rgba(255, 255, 255, 0.25);
+}
+
+.sratix-why-join__content {
+	margin-top: 12px;
+	padding: 24px;
+	border: 1px solid var(--sratix-border);
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.04);
+	text-align: left;
+}
+
+.sratix-why-join__logo {
+	text-align: center;
+	margin-bottom: 20px;
+}
+
+.sratix-why-join__logo-img {
+	max-height: 48px;
+	width: auto;
+	object-fit: contain;
+}
+
+.sratix-why-join__cols {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 24px;
+	margin-bottom: 20px;
+}
+
+@media (max-width: 560px) {
+	.sratix-why-join__cols {
+		grid-template-columns: 1fr;
+	}
+}
+
+.sratix-why-join__col h4 {
+	font-size: 0.95em;
+	font-weight: 700;
+	color: var(--sratix-text);
+	margin: 0 0 6px;
+}
+
+.sratix-why-join__desc {
+	font-size: 0.82em;
+	color: var(--sratix-text-muted);
+	margin: 0 0 10px;
+	line-height: 1.45;
+}
+
+.sratix-why-join__col ul {
+	margin: 0;
+	padding: 0 0 0 18px;
+	font-size: 0.82em;
+	color: var(--sratix-text-muted);
+	line-height: 1.7;
+}
+
+.sratix-why-join__cta {
+	display: inline-block;
+	padding: 8px 20px;
+	font-size: 0.88em;
+	font-weight: 600;
+	color: #fff;
+	background: #3b82f6;
+	border-radius: 8px;
+	text-decoration: none;
+	transition: background 0.15s ease;
+}
+
+.sratix-why-join__cta:hover {
+	background: #2563eb;
 }
 
 /* ── SRA / RobotX Login Form ── */
