@@ -98,6 +98,7 @@
 .page-content:has(.sratix-page-wrap),
 .entry-content:has(.sratix-page-wrap) {
 	background-color: var(--sratix-navy) !important;
+	overflow-x: hidden;
 }
 
 /* ── Ticket Display Header ── */
