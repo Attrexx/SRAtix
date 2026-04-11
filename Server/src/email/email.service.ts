@@ -317,6 +317,104 @@ export class EmailService {
     });
   }
 
+  /**
+   * Send a complimentary pass invitation — directs the recipient to complete
+   * a registration form via a unique link. No QR code yet; that comes after
+   * they finish registration.
+   */
+  async sendCompEntryInvitation(
+    to: string,
+    data: {
+      recipientName: string;
+      compType: string;
+      compTypeLabel: string;
+      organization?: string;
+      eventName: string;
+      eventDate: string;
+      eventVenue: string;
+      orderNumber: string;
+      registrationUrl: string;
+    },
+  ): Promise<DeliveryResult> {
+    const introByType: Record<string, string> = {
+      staff: `You have been added as <strong>Staff</strong> for <strong>${data.eventName}</strong>. A complimentary event pass has been reserved for you.`,
+      volunteer: `Thank you for volunteering at <strong>${data.eventName}</strong>! A complimentary event pass has been reserved for you.`,
+      partner: `As a representative of <strong>${data.organization || 'our partner organization'}</strong>, a complimentary pass to <strong>${data.eventName}</strong> has been reserved for you.`,
+      sponsor_no_booth: `As a representative of <strong>${data.organization || 'our sponsor'}</strong>, a complimentary pass to <strong>${data.eventName}</strong> has been reserved for you.`,
+      sponsor_with_booth: `As a representative of <strong>${data.organization || 'our sponsor'}</strong>, a complimentary pass with booth access to <strong>${data.eventName}</strong> has been reserved for you.`,
+    };
+    const intro = introByType[data.compType] || introByType.staff;
+
+    const orgRow = data.organization
+      ? this.adminInfoRow('Organization', data.organization)
+      : '';
+
+    const registrationBlock = data.registrationUrl
+      ? `<h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+          ✏️ Action Required
+        </h3>
+        <p style="font-size: 15px; margin: 0 0 12px; color: #333;">
+          To finalize your attendance and receive your event entry pass (QR code), please complete a short registration form.
+          Your registration details help the event organizers with:
+        </p>
+        <ul style="font-size: 15px; margin: 0 0 16px; padding-left: 20px; color: #555;">
+          <li style="margin-bottom: 6px;"><strong>Badge printing</strong> — so your personalized badge is ready at check-in</li>
+          <li style="margin-bottom: 6px;"><strong>Matchmaking opportunities</strong> — to connect you with relevant attendees and exhibitors</li>
+          <li style="margin-bottom: 6px;"><strong>Improved conference experience</strong> — tailored sessions and networking suggestions</li>
+        </ul>
+        <div style="margin: 28px 0; text-align: center;">
+          <a href="${data.registrationUrl}" style="display: inline-block; background: #dc2626; color: white; padding: 14px 36px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 700; letter-spacing: 0.3px;">Complete Registration</a>
+        </div>`
+      : `<p style="font-size: 14px; color: #888; margin: 20px 0;">A registration link will be sent to you shortly.</p>`;
+
+    const html = this.publicWrapper(`Your ${data.compTypeLabel} Pass — Registration Required`, `
+      <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin: 0 0 20px;">${intro}</p>
+
+      <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+        🎫 Pass Details
+      </h3>
+      <div style="background: #f8fafc; border-left: 4px solid #1a1a2e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Type', data.compTypeLabel)}
+          ${orgRow}
+          ${this.adminInfoRow('Order', `#${data.orderNumber}`)}
+        </table>
+      </div>
+
+      <h3 style="font-size: 15px; color: #1a1a2e; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+        📅 Event Information
+      </h3>
+      <div style="background: #f8fafc; border-left: 4px solid #1a1a2e; border-radius: 6px; padding: 16px 20px; margin: 0 0 24px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          ${this.adminInfoRow('Event', data.eventName)}
+          ${this.adminInfoRow('Date', data.eventDate)}
+          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+        </table>
+      </div>
+
+      ${registrationBlock}
+
+      <p style="font-size: 13px; color: #999; margin: 20px 0 0; line-height: 1.5;">
+        💡 If you don't see this email in your inbox, please check your spam or junk folder.
+        If you believe you received this email in error, you can safely ignore it.
+      </p>
+    `);
+
+    const orgLine = data.organization ? `Organization: ${data.organization}\n` : '';
+    const registrationLine = data.registrationUrl
+      ? `\nTo complete your registration, visit:\n${data.registrationUrl}\n`
+      : '';
+    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName} — Registration Required\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n${registrationLine}\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+
+    return this.send({
+      to,
+      subject: `🎫 Your ${data.compTypeLabel} pass for ${data.eventName} — Complete Registration`,
+      html,
+      text,
+    });
+  }
+
   // ─── Ticket Gift & Registration Emails ────────────────────────
 
   /**

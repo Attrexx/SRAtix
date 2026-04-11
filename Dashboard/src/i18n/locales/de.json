@@ -986,7 +986,7 @@
   "staffPartners.subtitle": "Kostenlosen Zugang für Personal, Freiwillige, Partner und Sponsoren verwalten.",
   "staffPartners.addEntry": "Person hinzufügen",
   "staffPartners.editEntry": "Person bearbeiten",
-  "staffPartners.create": "Hinzufügen & Ticket senden",
+  "staffPartners.create": "Einladung senden",
   "staffPartners.type.staff": "Personal",
   "staffPartners.type.volunteer": "Freiwillige",
   "staffPartners.type.partner": "Partner",
@@ -1016,5 +1016,8 @@
   "staffPartners.emailReadonly": "E-Mail kann nach der Erstellung nicht geändert werden.",
   "staffPartners.failedToSave": "Eintrag konnte nicht gespeichert werden.",
   "staffPartners.failedToDelete": "Eintrag konnte nicht gelöscht werden.",
-  "staffPartners.confirmDelete": "{name} löschen? Das Ticket wird ungültig."
+  "staffPartners.confirmDelete": "{name} löschen? Das Ticket wird ungültig.",
+  "staffPartners.status.invited": "Eingeladen",
+  "staffPartners.status.registered": "Registriert",
+  "staffPartners.qrPending": "Der QR-Code wird verfügbar, nachdem die Person ihre Registrierung abgeschlossen hat."
 }

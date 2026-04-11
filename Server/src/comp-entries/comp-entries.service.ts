@@ -5,10 +5,12 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { SettingsService } from '../settings/settings.service';
 
 /** Valid comp-entry types. */
 export const COMP_TYPES = [
@@ -55,6 +57,7 @@ export class CompEntriesService {
     private readonly ticketsService: TicketsService,
     private readonly emailService: EmailService,
     private readonly audit: AuditLogService,
+    private readonly settings: SettingsService,
   ) {}
 
   // ─── Helpers ───────────────────────────────────────────────────
@@ -159,7 +162,13 @@ export class CompEntriesService {
 
     // Single transaction: create attendee → order → ticket
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Attendee
+      // Generate registration token (64-char hex, like gift tickets)
+      const registrationToken = randomBytes(32).toString('hex');
+      // Token expires at event end date 23:59:59
+      const tokenExpiry = new Date(event.endDate);
+      tokenExpiry.setHours(23, 59, 59, 999);
+
+      // 1. Attendee — status 'invited', with registration token
       const attendee = await tx.attendee.create({
         data: {
           eventId,
@@ -168,7 +177,9 @@ export class CompEntriesService {
           firstName: data.firstName,
           lastName: data.lastName,
           company: data.organization || undefined,
-          status: 'registered',
+          status: 'invited',
+          registrationToken,
+          registrationTokenExpiresAt: tokenExpiry,
           tags: [`comp:${data.compType}`],
           meta: {
             compType: data.compType,
@@ -225,7 +236,7 @@ export class CompEntriesService {
         },
       });
 
-      return { attendee, order, ticket };
+      return { attendee, order, ticket, registrationToken };
     });
 
     // Audit
@@ -243,13 +254,9 @@ export class CompEntriesService {
       },
     });
 
-    // Send email (fire-and-forget)
-    const qrPayload = this.ticketsService.buildQrPayload(
-      result.ticket.code,
-      eventId,
-    );
-    this.sendCompEmail(event, data, result.ticket.code, result.order.orderNumber).catch(
-      (err) => this.logger.error(`Comp email failed for ${data.email}: ${err}`),
+    // Send invitation email with registration link (fire-and-forget)
+    this.sendCompInvitationEmail(event, data, result.registrationToken, result.order.orderNumber).catch(
+      (err) => this.logger.error(`Comp invitation email failed for ${data.email}: ${err}`),
     );
 
     return this.enrichEntry(result.attendee, result.ticket, result.order, eventId);
@@ -630,6 +637,61 @@ export class CompEntriesService {
       eventVenue: event.venue || '',
       ticketCode,
       orderNumber,
+    });
+  }
+
+  /**
+   * Send the comp entry invitation email with a registration link.
+   * The recipient clicks the link to complete their registration form.
+   */
+  private async sendCompInvitationEmail(
+    event: {
+      id: string;
+      name: string;
+      venue: string | null;
+      startDate: Date;
+      endDate: Date;
+    },
+    data: {
+      compType: CompType;
+      firstName: string;
+      lastName: string;
+      email: string;
+      organization?: string;
+    },
+    registrationToken: string,
+    orderNumber: string,
+  ) {
+    // Get registration base URL from settings
+    const registrationBaseUrl = await this.settings.resolve('registration_base_url');
+    if (!registrationBaseUrl) {
+      this.logger.warn(
+        'registration_base_url not configured — comp invitation email will not include a registration link. ' +
+        'Set it in Dashboard Settings → WordPress.',
+      );
+    }
+
+    const registrationUrl = registrationBaseUrl
+      ? `${registrationBaseUrl.replace(/\/$/, '')}?token=${registrationToken}`
+      : '';
+
+    const eventDate = event.startDate.toLocaleDateString('en-CH', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    return this.emailService.sendCompEntryInvitation(data.email, {
+      recipientName: `${data.firstName} ${data.lastName}`,
+      compType: data.compType,
+      compTypeLabel: COMP_TYPE_LABELS[data.compType],
+      organization: data.organization,
+      eventName: event.name,
+      eventDate,
+      eventVenue: event.venue || '',
+      orderNumber,
+      registrationUrl,
     });
   }
 }

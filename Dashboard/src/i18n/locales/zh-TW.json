@@ -858,7 +858,7 @@
   "staffPartners.subtitle": "管理工作人員、志願者、合作夥伴和贊助商的免費入場。",
   "staffPartners.addEntry": "新增人員",
   "staffPartners.editEntry": "編輯人員",
-  "staffPartners.create": "新增並發送票券",
+  "staffPartners.create": "發送邀請",
   "staffPartners.type.staff": "工作人員",
   "staffPartners.type.volunteer": "志願者",
   "staffPartners.type.partner": "合作夥伴",
@@ -888,5 +888,8 @@
   "staffPartners.emailReadonly": "建立後無法更改電子郵件。",
   "staffPartners.failedToSave": "儲存失敗。",
   "staffPartners.failedToDelete": "刪除失敗。",
-  "staffPartners.confirmDelete": "刪除 {name}？其票券將被作廢。"
+  "staffPartners.confirmDelete": "刪除 {name}？其票券將被作廢。",
+  "staffPartners.status.invited": "已邀請",
+  "staffPartners.status.registered": "已註冊",
+  "staffPartners.qrPending": "QR碼將在收件人完成註冊後提供。"
 }

@@ -282,11 +282,13 @@ export class TicketTypesService {
   // ─── Queries ──────────────────────────────────────────────────
 
   async findByEvent(eventId: string) {
-    return this.prisma.ticketType.findMany({
+    const types = await this.prisma.ticketType.findMany({
       where: { eventId },
       orderBy: { sortOrder: 'asc' },
       include: { pricingVariants: { orderBy: { sortOrder: 'asc' } } },
     });
+    // Hide internal comp ticket types from the tickets dashboard
+    return types.filter((tt) => (tt.meta as Record<string, unknown> | null)?.isCompType !== true);
   }
 
   /**
@@ -312,6 +314,8 @@ export class TicketTypesService {
 
     return types
       .filter((t) => !t.salesEnd || t.salesEnd > now)
+      // Hide internal comp ticket types from public
+      .filter((t) => (t.meta as Record<string, unknown> | null)?.isCompType !== true)
       .map((t) => {
         const pricing = this.resolvePrice(t, t.pricingVariants, now);
         return {
@@ -783,6 +787,8 @@ export class TicketTypesService {
     // ── Cross-membership visibility rules ──────────────────────────
     // Partner members don't see tickets that bundle SRA membership (and vice versa in future)
     const filtered = ticketTypes.filter((tt) => {
+      // Hide comp (internal) ticket types from public registration
+      if ((tt.meta as Record<string, unknown> | null)?.isCompType === true) return false;
       if ((memberGroup === 'robotx' || memberGroup === 'partner') && tt.membershipTier) return false;
       // Role-based filtering: visitor sees non-exhibitor, exhibitor sees only exhibitor
       if (role === 'visitor' && tt.category === 'exhibitor') return false;

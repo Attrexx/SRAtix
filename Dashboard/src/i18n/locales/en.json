@@ -1019,7 +1019,7 @@
   "staffPartners.subtitle": "Manage complimentary access for staff, volunteers, partners, and sponsors.",
   "staffPartners.addEntry": "Add Person",
   "staffPartners.editEntry": "Edit Person",
-  "staffPartners.create": "Add & Send Ticket",
+  "staffPartners.create": "Send Invite",
   "staffPartners.type.staff": "Staff",
   "staffPartners.type.volunteer": "Volunteer",
   "staffPartners.type.partner": "Partner",
@@ -1049,5 +1049,8 @@
   "staffPartners.emailReadonly": "Email cannot be changed after creation.",
   "staffPartners.failedToSave": "Failed to save entry.",
   "staffPartners.failedToDelete": "Failed to delete entry.",
-  "staffPartners.confirmDelete": "Delete {name}? Their ticket will be voided."
+  "staffPartners.confirmDelete": "Delete {name}? Their ticket will be voided.",
+  "staffPartners.status.invited": "Invited",
+  "staffPartners.status.registered": "Registered",
+  "staffPartners.qrPending": "QR code will be available after the recipient completes their registration."
 }

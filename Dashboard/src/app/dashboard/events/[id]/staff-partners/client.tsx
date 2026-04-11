@@ -290,19 +290,34 @@ export default function StaffPartnersPage() {
             key: 'ticketStatus',
             header: t('staffPartners.column.status'),
             render: (row) => {
-              const status = (row.ticketStatus as string) || 'valid';
+              const entry = row as unknown as CompEntry;
+              // Show attendee status (invited → awaiting registration, registered → pass active)
+              const attendeeStatus = entry.status || 'invited';
+              const ticketStatus = (entry.ticketStatus as string) || 'valid';
+
+              if (attendeeStatus === 'invited') {
+                return (
+                  <span
+                    className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                    style={{ background: '#fef3c7', color: '#92400e' }}
+                  >
+                    {t('staffPartners.status.invited')}
+                  </span>
+                );
+              }
+
               const colors: Record<string, { bg: string; text: string }> = {
                 valid: { bg: '#d4edda', text: '#155724' },
                 used: { bg: '#cce5ff', text: '#004085' },
                 voided: { bg: '#f8d7da', text: '#721c24' },
               };
-              const c = colors[status] || { bg: '#f8f9fa', text: '#6c757d' };
+              const c = colors[ticketStatus] || { bg: '#f8f9fa', text: '#6c757d' };
               return (
                 <span
                   className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
                   style={{ background: c.bg, color: c.text }}
                 >
-                  {status}
+                  {t('staffPartners.status.registered')}
                 </span>
               );
             },
@@ -516,7 +531,7 @@ export default function StaffPartnersPage() {
               {getTypeLabel(qrEntry.compType)}
             </span>
 
-            {qrEntry.ticketCode && (
+            {qrEntry.ticketCode && qrEntry.status === 'registered' && (
               <div className="my-4">
                 <img
                   src={`/api/public/tickets/${qrEntry.ticketCode}/qr.png`}
@@ -535,6 +550,14 @@ export default function StaffPartnersPage() {
                   <Icons.Download size={13} />
                   {t('common.downloadCsv').replace('CSV', 'QR')}
                 </a>
+              </div>
+            )}
+
+            {qrEntry.status === 'invited' && (
+              <div className="my-4 rounded-lg p-4" style={{ background: '#fef3c7' }}>
+                <p className="text-sm" style={{ color: '#92400e' }}>
+                  {t('staffPartners.qrPending')}
+                </p>
               </div>
             )}
 

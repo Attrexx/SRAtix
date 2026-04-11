@@ -988,7 +988,7 @@
   "staffPartners.subtitle": "Gérer les accès gratuits pour le personnel, les bénévoles, les partenaires et les sponsors.",
   "staffPartners.addEntry": "Ajouter une personne",
   "staffPartners.editEntry": "Modifier la personne",
-  "staffPartners.create": "Ajouter & Envoyer le billet",
+  "staffPartners.create": "Envoyer l'invitation",
   "staffPartners.type.staff": "Personnel",
   "staffPartners.type.volunteer": "Bénévole",
   "staffPartners.type.partner": "Partenaire",
@@ -1018,5 +1018,8 @@
   "staffPartners.emailReadonly": "L'email ne peut pas être modifié après la création.",
   "staffPartners.failedToSave": "Échec de l'enregistrement.",
   "staffPartners.failedToDelete": "Échec de la suppression.",
-  "staffPartners.confirmDelete": "Supprimer {name} ? Son billet sera annulé."
+  "staffPartners.confirmDelete": "Supprimer {name} ? Son billet sera annulé.",
+  "staffPartners.status.invited": "Invité(e)",
+  "staffPartners.status.registered": "Inscrit(e)",
+  "staffPartners.qrPending": "Le code QR sera disponible après que la personne aura complété son inscription."
 }

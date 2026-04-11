@@ -169,6 +169,7 @@ export class PublicRegistrationController {
       include: {
         ticketType: { select: { id: true, name: true, formSchemaId: true } },
         event: { select: { id: true, name: true, startDate: true, endDate: true, venue: true } },
+        order: { select: { orderNumber: true } },
       },
     });
 
@@ -228,15 +229,51 @@ export class PublicRegistrationController {
 
     // Send confirmation email to recipient
     if (ticket?.event) {
-      this.email
-        .sendRecipientRegistrationConfirmation(attendee.email, {
-          recipientName: finalFirstName,
-          eventName: ticket.event.name,
-          eventDate: ticket.event.startDate.toISOString().split('T')[0],
-          eventVenue: ticket.event.venue ?? '',
-          ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
-        })
-        .catch((err) => console.error('[Registration] Confirmation email failed:', err));
+      const ticketMeta = ticket.meta as Record<string, unknown> | null;
+      const isComp = ticketMeta?.isComp === true;
+
+      if (isComp) {
+        // Comp entry — send the full QR confirmation email
+        const compType = (ticketMeta?.compType as string) || 'staff';
+        const compTypeLabels: Record<string, string> = {
+          staff: 'Staff',
+          volunteer: 'Volunteer',
+          partner: 'Partner',
+          sponsor_no_booth: 'Sponsor',
+          sponsor_with_booth: 'Sponsor (Booth)',
+        };
+        const attendeeMeta = attendee.meta as Record<string, unknown> | null;
+
+        this.email
+          .sendCompEntryConfirmation(attendee.email, {
+            recipientName: finalFirstName,
+            compType,
+            compTypeLabel: compTypeLabels[compType] || compType,
+            organization: (attendeeMeta?.organization as string) || attendee.company || undefined,
+            eventName: ticket.event.name,
+            eventDate: ticket.event.startDate.toLocaleDateString('en-CH', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            eventVenue: ticket.event.venue ?? '',
+            ticketCode: ticket.code,
+            orderNumber: ticket.order?.orderNumber ?? '',
+          })
+          .catch((err) => console.error('[Registration] Comp confirmation email failed:', err));
+      } else {
+        // Regular recipient — send standard confirmation
+        this.email
+          .sendRecipientRegistrationConfirmation(attendee.email, {
+            recipientName: finalFirstName,
+            eventName: ticket.event.name,
+            eventDate: ticket.event.startDate.toISOString().split('T')[0],
+            eventVenue: ticket.event.venue ?? '',
+            ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
+          })
+          .catch((err) => console.error('[Registration] Confirmation email failed:', err));
+      }
     }
 
     // Notify the purchaser that the recipient registered

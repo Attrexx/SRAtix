@@ -291,6 +291,16 @@ const SETTING_DEFINITIONS: SettingDefinition[] = [
     sensitive: false,
     required: false,
   },
+  {
+    key: 'registration_base_url',
+    envVar: 'REGISTRATION_BASE_URL',
+    label: 'Registration Page URL',
+    group: 'WordPress',
+    description: 'Base URL to the registration page with [sratix_register] shortcode (e.g. https://swissroboticsday.ch/register). Used for comp entry invitation links.',
+    type: 'string',
+    sensitive: false,
+    required: false,
+  },
 
   // ── General ──
   {
