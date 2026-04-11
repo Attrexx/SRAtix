@@ -882,7 +882,6 @@ label.sratix-checkbox-label {
 .sratix-member-gate--no-partners .sratix-member-gate__buttons {
 	grid-template-columns: 1fr 1fr;
 	max-width: 860px;
-	overflow: hidden;
 }
 
 @media (max-width: 480px) {
@@ -915,27 +914,27 @@ label.sratix-checkbox-label {
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 	text-align: center;
 	min-width: 0;
-	overflow: hidden;
+	overflow-wrap: break-word;
 	word-wrap: break-word;
 }
 
 .sratix-member-btn:hover {
-	border-color: var(--sratix-red, #e53e3e);
+	border-color: #797e85;
 	background: rgba(255,255,255,0.05);
 	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 	transform: translateY(-2px);
 }
 
 .sratix-member-btn:active {
-	background: rgba(229, 62, 62, 0.15) !important;
+	background: rgba(121, 126, 133, 0.15) !important;
 }
 
 .sratix-member-btn--sra:hover {
-	border-color: var(--sratix-red, #e53e3e);
+	border-color: #797e85;
 }
 
 .sratix-member-btn--partner:hover {
-	border-color: var(--sratix-red, #e53e3e);
+	border-color: #797e85;
 }
 
 /* "Continue without membership" — full-width row below the grid */
