@@ -914,6 +914,7 @@ label.sratix-checkbox-label {
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 	text-align: center;
 	min-width: 0;
+	overflow: hidden;
 	overflow-wrap: break-word;
 	word-wrap: break-word;
 }
