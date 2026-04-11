@@ -847,9 +847,10 @@ label.sratix-checkbox-label {
 	margin: 0 0 8px;
 	color: var(--sratix-text);
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 12px;
+	gap: 8px;
 }
 
 .sratix-member-gate__title-logo {
