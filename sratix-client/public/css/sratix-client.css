@@ -1157,6 +1157,24 @@ label.sratix-checkbox-label {
 	background: var(--sratix-red-hover, #c53030);
 }
 
+/* ── Discrete "Details about SRA" link (when why-join is hidden) ── */
+.sratix-why-join-link {
+	text-align: center;
+	margin-top: 18px;
+}
+
+.sratix-why-join-link a {
+	color: var(--sratix-text-muted, #94a3b8);
+	font-size: 0.85rem;
+	text-decoration: none;
+	transition: color 0.2s;
+}
+
+.sratix-why-join-link a:hover {
+	color: #fff;
+	text-decoration: underline;
+}
+
 /* ── SRA / RobotX Login Form ── */
 .sratix-login-form {
 	max-width: 400px;

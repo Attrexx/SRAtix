@@ -563,7 +563,7 @@
           </div>
           ${hasPartners ? regularBtnHtml : ''}
           ${gateInfo.memberGateDisclaimer ? '<div class="sratix-member-gate__disclaimer">' + gateInfo.memberGateDisclaimer + '</div>' : ''}
-          <details class="sratix-why-join">
+          ${gateInfo.memberGateShowWhyJoin !== false ? `<details class="sratix-why-join">
             <summary class="sratix-why-join__toggle">${escHtml(t('memberGate.whyJoinTitle'))}</summary>
             <div class="sratix-why-join__content">
               ${sraLogoTitle ? '<div class="sratix-why-join__logo">' + sraLogoTitle.replace('sratix-member-gate__title-logo', 'sratix-why-join__logo-img') + '</div>' : ''}
@@ -593,7 +593,7 @@
               </div>
               <div class="sratix-why-join__cta-wrap"><a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-why-join__cta">${escHtml(t('memberGate.whyJoinVisit'))} &rarr;</a></div>
             </div>
-          </details>
+          </details>` : `<div class="sratix-why-join-link"><a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer">${escHtml(t('memberGate.detailsAboutSra'))} &rarr;</a></div>`}
         </div>
       `;
 

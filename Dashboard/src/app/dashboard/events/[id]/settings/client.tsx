@@ -86,6 +86,7 @@ export default function EventSettingsPage() {
   const [exhibitorTicketIntro, setExhibitorTicketIntro] = useState('');
   const [memberGateSubtitle, setMemberGateSubtitle] = useState('');
   const [memberGateDisclaimer, setMemberGateDisclaimer] = useState('');
+  const [memberGateShowWhyJoin, setMemberGateShowWhyJoin] = useState(true);
   const [logoIconUrl, setLogoIconUrl] = useState('');
   const [logoLandscapeUrl, setLogoLandscapeUrl] = useState('');
   const [uploadingIcon, setUploadingIcon] = useState(false);
@@ -130,6 +131,7 @@ export default function EventSettingsPage() {
     setExhibitorTicketIntro((meta.exhibitorTicketIntro as string) ?? '');
     setMemberGateSubtitle((meta.memberGateSubtitle as string) ?? '');
     setMemberGateDisclaimer((meta.memberGateDisclaimer as string) ?? '');
+    setMemberGateShowWhyJoin(meta.memberGateShowWhyJoin !== false);
     setLogoIconUrl((meta.logoIconUrl as string) ?? '');
     setLogoLandscapeUrl((meta.logoLandscapeUrl as string) ?? '');
     setContactEmail((meta.contactEmail as string) ?? '');
@@ -190,6 +192,7 @@ export default function EventSettingsPage() {
           exhibitorTicketIntro: exhibitorTicketIntro.trim() || undefined,
           memberGateSubtitle: memberGateSubtitle.trim() || undefined,
           memberGateDisclaimer: memberGateDisclaimer.trim() || undefined,
+          memberGateShowWhyJoin,
           contactEmail: contactEmail.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
           contactWhatsapp: contactWhatsapp.trim() || undefined,
@@ -455,6 +458,19 @@ export default function EventSettingsPage() {
             <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
               Member Gate
             </h3>
+            <div>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                <input
+                  type="checkbox"
+                  checked={memberGateShowWhyJoin}
+                  onChange={(e) => setMemberGateShowWhyJoin(e.target.checked)}
+                />
+                Show "SRA membership details" expandable section
+              </label>
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                When disabled, a discrete "Details about SRA" link is shown instead.
+              </p>
+            </div>
             <div>
               <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                 Subtitle

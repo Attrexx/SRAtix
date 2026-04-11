@@ -168,6 +168,7 @@ export class EventsService {
     exhibitorTicketIntro: string;
     memberGateSubtitle: string;
     memberGateDisclaimer: string;
+    memberGateShowWhyJoin: boolean;
     legalPageUrls: Record<string, string>;
     pagePaths: Record<string, string>;
   }> {
@@ -185,6 +186,7 @@ export class EventsService {
       exhibitorTicketIntro: (meta.exhibitorTicketIntro as string) ?? '',
       memberGateSubtitle: (meta.memberGateSubtitle as string) ?? '',
       memberGateDisclaimer: (meta.memberGateDisclaimer as string) ?? '',
+      memberGateShowWhyJoin: meta.memberGateShowWhyJoin !== false,
       legalPageUrls: this.getLegalPageUrls(eventId, meta, '/api'),
       pagePaths: {
         tickets: paths.tickets ?? '/tickets/',
