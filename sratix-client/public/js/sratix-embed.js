@@ -1214,6 +1214,38 @@
   }
 
   /**
+   * Render a checkbox dropdown (multi-select with optional hierarchy).
+   * @param {string} id       The DOM id prefix for the field
+   * @param {Object} field    A FormField from the schema
+   * @param {string} ph       Placeholder text
+   * @returns {string}        HTML string
+   */
+  function renderCheckboxDropdown(id, field, ph) {
+    var hasChildren = (field.options || []).some(function (o) { return o.children && o.children.length; });
+    var ddId = id + '-msd';
+    var h = '<div class="sratix-msd" id="' + escAttr(ddId) + '" data-field-id="' + escAttr(field.id) + '">';
+    h += '<button type="button" class="sratix-input sratix-msd-trigger" aria-haspopup="listbox" aria-expanded="false">';
+    h += '<span class="sratix-msd-text">' + escHtml(ph || t('reg.form.selectPlaceholder') || 'Select…') + '</span>';
+    h += '<svg class="sratix-msd-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>';
+    h += '</button>';
+    h += '<div class="sratix-msd-panel" role="listbox" aria-multiselectable="true">';
+    (field.options || []).forEach(function (o) {
+      if (hasChildren && o.children && o.children.length) {
+        h += '<div class="sratix-msd-group">';
+        h += '<label class="sratix-msd-item sratix-msd-parent"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+        o.children.forEach(function (c) {
+          h += '<label class="sratix-msd-item sratix-msd-child"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(c.value) + '" /> ' + escHtml(resolveLabel(c.label)) + '</label>';
+        });
+        h += '</div>';
+      } else {
+        h += '<label class="sratix-msd-item"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+      }
+    });
+    h += '</div></div>';
+    return h;
+  }
+
+  /**
    * Render a single form field to an HTML string.
    * @param {Object} field  A FormField from the schema
    * @returns {string}
@@ -1260,6 +1292,14 @@
           + '</div>';
         break;
       case 'select':
+        // If options contain children (hierarchical), render as checkbox dropdown
+        var selectHasChildren = (field.options || []).some(function (o) { return o.children && o.children.length; });
+        if (selectHasChildren) {
+          // Fall through to multi-select checkbox dropdown
+          html = renderCheckboxDropdown(id, field, ph);
+          break;
+        }
+        // Otherwise fall through to country/canton native select
       case 'country':
       case 'canton':
         var opts = '<option value="">' + escHtml(ph || t('reg.form.selectPlaceholder')) + '</option>';
@@ -1270,32 +1310,7 @@
         break;
       case 'multi-select':
         // Checkbox dropdown with hierarchy support
-        var hasChildren = (field.options || []).some(function (o) { return o.children && o.children.length; });
-        var ddId = id + '-msd';
-        html = '<div class="sratix-msd" id="' + escAttr(ddId) + '" data-field-id="' + escAttr(field.id) + '">';
-        html += '<button type="button" class="sratix-input sratix-msd-trigger" aria-haspopup="listbox" aria-expanded="false">';
-        html += '<span class="sratix-msd-text">' + escHtml(ph || t('reg.form.selectPlaceholder') || 'Select…') + '</span>';
-        html += '<svg class="sratix-msd-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>';
-        html += '</button>';
-        html += '<div class="sratix-msd-panel" role="listbox" aria-multiselectable="true">';
-        (field.options || []).forEach(function (o, idx) {
-          if (hasChildren && o.children && o.children.length) {
-            // Parent group with children
-            html += '<div class="sratix-msd-group">';
-            html += '<label class="sratix-msd-item sratix-msd-parent"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
-            o.children.forEach(function (c) {
-              html += '<label class="sratix-msd-item sratix-msd-child"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(c.value) + '" /> ' + escHtml(resolveLabel(c.label)) + '</label>';
-            });
-            html += '</div>';
-          } else if (hasChildren && !o.children) {
-            // Flat option inside a hierarchical list (orphan)
-            html += '<label class="sratix-msd-item"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
-          } else {
-            // Flat option (no hierarchy)
-            html += '<label class="sratix-msd-item"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
-          }
-        });
-        html += '</div></div>';
+        html = renderCheckboxDropdown(id, field, ph);
         break;
       case 'radio':
         html = '<div class="sratix-radio-group" data-field-id="' + escAttr(field.id) + '">';
@@ -1432,6 +1447,13 @@
           result[field.id] = el ? el.innerHTML.trim() : '';
           break;
         default:
+          // Check if this is a select field rendered as checkbox dropdown (hierarchical)
+          var msdFallback = form.querySelector('#' + CSS.escape(id) + '-msd');
+          if (msdFallback) {
+            var cbChecked = msdFallback.querySelectorAll('input[type="checkbox"]:checked');
+            result[field.id] = Array.from(cbChecked).map(function (c) { return c.value; });
+            break;
+          }
           el = form.querySelector('#' + CSS.escape(id));
           result[field.id] = el ? (el.value || '').trim() : '';
       }

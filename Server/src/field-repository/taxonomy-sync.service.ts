@@ -140,7 +140,7 @@ export class TaxonomySyncService implements OnModuleInit {
   private buildHierarchicalOptions(terms: WpTerm[]): HierarchicalOption[] {
     const parents = terms
       .filter((t) => t.parent === 0)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
     const childMap = new Map<number, WpTerm[]>();
     for (const t of terms.filter((t) => t.parent !== 0)) {
@@ -151,7 +151,7 @@ export class TaxonomySyncService implements OnModuleInit {
 
     return parents.map((p) => {
       const children = (childMap.get(p.id) || []).sort((a, b) =>
-        a.name.localeCompare(b.name),
+        a.name.localeCompare(b.name, undefined, { numeric: true }),
       );
 
       const opt: HierarchicalOption = {
