@@ -3064,3 +3064,117 @@ padding-top: 16px;
 border-top: 1px solid var(--sratix-border, rgba(255,255,255,0.1));
 text-align: center;
 }
+
+/* ── Multi-Select Checkbox Dropdown ── */
+
+.sratix-msd {
+	position: relative;
+}
+
+.sratix-msd-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	text-align: left;
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+.sratix-msd-text {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--sratix-text-muted);
+}
+
+.sratix-msd-text.sratix-msd-has-value {
+	color: var(--sratix-text);
+}
+
+.sratix-msd-arrow {
+	flex-shrink: 0;
+	margin-left: 8px;
+	color: var(--sratix-text-muted);
+	transition: transform 0.2s;
+}
+
+.sratix-msd-open .sratix-msd-arrow {
+	transform: rotate(180deg);
+}
+
+.sratix-msd-panel {
+	display: none;
+	position: absolute;
+	z-index: 50;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	max-height: 260px;
+	overflow-y: auto;
+	background: var(--sratix-navy-light);
+	border: 1px solid var(--sratix-border-h);
+	border-radius: 10px;
+	padding: 6px 0;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.sratix-msd-open .sratix-msd-panel {
+	display: block;
+}
+
+/* Scrollbar */
+.sratix-msd-panel::-webkit-scrollbar {
+	width: 6px;
+}
+.sratix-msd-panel::-webkit-scrollbar-track {
+	background: transparent;
+}
+.sratix-msd-panel::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 3px;
+}
+
+/* Group wrapper — visual separator between parent groups */
+.sratix-msd-group + .sratix-msd-group {
+	border-top: 1px solid var(--sratix-border);
+	margin-top: 4px;
+	padding-top: 4px;
+}
+
+/* Individual item */
+.sratix-msd-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 14px;
+	font-size: 0.9em;
+	cursor: pointer;
+	color: var(--sratix-text);
+	transition: background 0.12s;
+}
+
+.sratix-msd-item:hover {
+	background: var(--sratix-navy-mid);
+}
+
+/* Parent item (bold) */
+.sratix-msd-parent {
+	font-weight: 600;
+}
+
+/* Child item (indented) */
+.sratix-msd-child {
+	padding-left: 30px;
+	font-size: 0.85em;
+}
+
+/* Checkbox styling */
+.sratix-msd-item input[type="checkbox"] {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	accent-color: var(--sratix-red);
+	cursor: pointer;
+}

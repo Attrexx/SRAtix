@@ -72,9 +72,10 @@ const sratixI18n = (function () {
 
       // Dynamic form fields
       'reg.form.selectPlaceholder': 'Select…',
+      'reg.form.selected':         'selected',
       'reg.form.yes':              'Yes',
       'reg.form.no':               'No',
-      'reg.form.fieldRequired':    '{field} is required.',
+      'reg.form.fieldRequired':    '{field} is required.', 
 
       // Shared / modal
       'modal.close':             'Close',
@@ -397,9 +398,10 @@ const sratixI18n = (function () {
       'reg.back':                '← Retour',
 
       'reg.form.selectPlaceholder': 'Sélectionner…',
+      'reg.form.selected':         'sélectionnés',
       'reg.form.yes':              'Oui',
       'reg.form.no':               'Non',
-      'reg.form.fieldRequired':    '{field} est obligatoire.',
+      'reg.form.fieldRequired':    '{field} est obligatoire.', 
 
       'modal.close':             'Fermer',
 
@@ -710,6 +712,7 @@ const sratixI18n = (function () {
       'reg.back':                '← Zurück',
 
       'reg.form.selectPlaceholder': 'Auswählen…',
+      'reg.form.selected':         'ausgewählt',
       'reg.form.yes':              'Ja',
       'reg.form.no':               'Nein',
       'reg.form.fieldRequired':    '{field} ist erforderlich.',
@@ -1023,9 +1026,10 @@ const sratixI18n = (function () {
       'reg.back':                '← Indietro',
 
       'reg.form.selectPlaceholder': 'Seleziona…',
+      'reg.form.selected':         'selezionati',
       'reg.form.yes':              'Sì',
       'reg.form.no':               'No',
-      'reg.form.fieldRequired':    '{field} è obbligatorio.',
+      'reg.form.fieldRequired':    '{field} è obbligatorio.', 
 
       'modal.close':             'Chiudi',
 
@@ -1336,6 +1340,7 @@ const sratixI18n = (function () {
       'reg.back':                '← 返回',
 
       'reg.form.selectPlaceholder': '請選擇…',
+      'reg.form.selected':         '已選擇',
       'reg.form.yes':              '是',
       'reg.form.no':               '否',
       'reg.form.fieldRequired':    '{field} 為必填。',

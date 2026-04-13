@@ -1269,11 +1269,33 @@
         html = '<select class="sratix-input" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
         break;
       case 'multi-select':
-        var mOpts = '';
-        (field.options || []).forEach(function (o) {
-          mOpts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
+        // Checkbox dropdown with hierarchy support
+        var hasChildren = (field.options || []).some(function (o) { return o.children && o.children.length; });
+        var ddId = id + '-msd';
+        html = '<div class="sratix-msd" id="' + escAttr(ddId) + '" data-field-id="' + escAttr(field.id) + '">';
+        html += '<button type="button" class="sratix-input sratix-msd-trigger" aria-haspopup="listbox" aria-expanded="false">';
+        html += '<span class="sratix-msd-text">' + escHtml(ph || t('reg.form.selectPlaceholder') || 'Select…') + '</span>';
+        html += '<svg class="sratix-msd-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>';
+        html += '</button>';
+        html += '<div class="sratix-msd-panel" role="listbox" aria-multiselectable="true">';
+        (field.options || []).forEach(function (o, idx) {
+          if (hasChildren && o.children && o.children.length) {
+            // Parent group with children
+            html += '<div class="sratix-msd-group">';
+            html += '<label class="sratix-msd-item sratix-msd-parent"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+            o.children.forEach(function (c) {
+              html += '<label class="sratix-msd-item sratix-msd-child"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(c.value) + '" /> ' + escHtml(resolveLabel(c.label)) + '</label>';
+            });
+            html += '</div>';
+          } else if (hasChildren && !o.children) {
+            // Flat option inside a hierarchical list (orphan)
+            html += '<label class="sratix-msd-item"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+          } else {
+            // Flat option (no hierarchy)
+            html += '<label class="sratix-msd-item"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+          }
         });
-        html = '<select class="sratix-input" id="' + escAttr(id) + '" multiple data-field-id="' + escAttr(field.id) + '">' + mOpts + '</select>';
+        html += '</div></div>';
         break;
       case 'radio':
         html = '<div class="sratix-radio-group" data-field-id="' + escAttr(field.id) + '">';
@@ -1368,9 +1390,13 @@
 
       switch (field.type) {
         case 'multi-select':
-          el = form.querySelector('#' + CSS.escape(id));
-          if (el) {
-            result[field.id] = Array.from(el.selectedOptions).map(function (o) { return o.value; });
+          // Read checked values from checkbox dropdown
+          var msdWrap = form.querySelector('#' + CSS.escape(id) + '-msd');
+          if (msdWrap) {
+            var checked = msdWrap.querySelectorAll('input[type="checkbox"]:checked');
+            result[field.id] = Array.from(checked).map(function (c) { return c.value; });
+          } else {
+            result[field.id] = [];
           }
           break;
         case 'radio':
@@ -1411,6 +1437,68 @@
       }
     });
     return result;
+  }
+
+  /**
+   * Initialise all multi-select checkbox dropdowns inside a container.
+   * @param {HTMLElement} container
+   */
+  function initMultiSelectDropdowns(container) {
+    var dropdowns = container.querySelectorAll('.sratix-msd');
+    dropdowns.forEach(function (dd) {
+      var trigger = dd.querySelector('.sratix-msd-trigger');
+      var panel = dd.querySelector('.sratix-msd-panel');
+      var textEl = dd.querySelector('.sratix-msd-text');
+      if (!trigger || !panel || !textEl) return;
+
+      var placeholder = textEl.textContent;
+
+      function updateText() {
+        var checked = dd.querySelectorAll('input[type="checkbox"]:checked');
+        if (checked.length === 0) {
+          textEl.textContent = placeholder;
+          textEl.classList.remove('sratix-msd-has-value');
+        } else if (checked.length <= 2) {
+          var labels = Array.from(checked).map(function (cb) {
+            return cb.parentElement.textContent.trim();
+          });
+          textEl.textContent = labels.join(', ');
+          textEl.classList.add('sratix-msd-has-value');
+        } else {
+          textEl.textContent = checked.length + ' ' + (t('reg.form.selected') || 'selected');
+          textEl.classList.add('sratix-msd-has-value');
+        }
+      }
+
+      // Toggle panel
+      trigger.addEventListener('click', function (e) {
+        e.preventDefault();
+        var isOpen = dd.classList.toggle('sratix-msd-open');
+        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        // Close other open dropdowns
+        if (isOpen) {
+          container.querySelectorAll('.sratix-msd.sratix-msd-open').forEach(function (other) {
+            if (other !== dd) {
+              other.classList.remove('sratix-msd-open');
+              other.querySelector('.sratix-msd-trigger').setAttribute('aria-expanded', 'false');
+            }
+          });
+        }
+      });
+
+      // Update trigger text on checkbox change
+      panel.addEventListener('change', function () {
+        updateText();
+      });
+
+      // Close on click outside
+      document.addEventListener('click', function (e) {
+        if (!dd.contains(e.target)) {
+          dd.classList.remove('sratix-msd-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
   }
 
   /**
@@ -1558,8 +1646,9 @@
         applyConditionVisibility(formEl, schemaFields, initSnap);
       }
 
-      // Initialize richtext editors if any exist in this form
+      // Initialize richtext editors and multi-select dropdowns
       initRichtextEditors(formEl);
+      initMultiSelectDropdowns(formEl);
     }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -1939,6 +2028,7 @@
 
       if (currentStep === 2) {
         initRichtextEditors(modal);
+        initMultiSelectDropdowns(modal);
         // Restore previously collected answers
         if (schemaFields) {
           schemaFields.forEach(function (f) {
@@ -2573,6 +2663,9 @@
       container.innerHTML = formHtml;
 
       var formEl = container.querySelector('#sratix-register-form');
+
+      // Initialise multi-select checkbox dropdowns
+      initMultiSelectDropdowns(container);
 
       // Wire up condition-based visibility if using custom form
       if (useCustomForm && schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {

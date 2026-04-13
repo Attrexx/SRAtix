@@ -406,6 +406,9 @@ function getDefaultFieldDefinitions() {
     fd('company_email', { en: 'Company Email', de: 'Firmen-E-Mail', fr: 'E-mail entreprise', it: 'E-mail aziendale', 'zh-TW': '公司電子郵件' }, 'email', 'company', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 2,
     }),
+    // industry_sector: Options are synced daily from WP `robotics_field` taxonomy
+    // by TaxonomySyncService. The hardcoded list below serves as initial fallback
+    // only — it will be overwritten on the first successful sync.
     fd('industry_sector', { en: 'Industry / Sector', de: 'Branche / Sektor', fr: 'Industrie / Secteur', it: 'Settore industriale', 'zh-TW': '產業 / 領域' }, 'multi-select', 'company', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 3,
       options: multiOptI18n([
