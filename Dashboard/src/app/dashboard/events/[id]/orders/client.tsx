@@ -231,10 +231,15 @@ export default function OrdersPage() {
 
   // ── Detail / Edit View ──
   if (viewMode !== 'list' && selectedOrder) {
+    const meta = (selectedOrder.meta as Record<string, unknown>) ?? {};
+    const hasGiftRecipients = Array.isArray(meta.recipientAttendees) && (meta.recipientAttendees as unknown[]).length > 0;
+    const att = selectedOrder.attendee;
+    const formSubs = att?.formSubmissions ?? [];
+
     return (
       <div>
-        {/* Back button & title */}
-        <div className="mb-6 flex items-center gap-3">
+        {/* Back button & title row */}
+        <div className="mb-4 flex items-center gap-3">
           <button
             onClick={backToList}
             className="rounded-lg p-2 transition-colors"
@@ -242,41 +247,41 @@ export default function OrdersPage() {
           >
             <Icons.ArrowLeft size={16} />
           </button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
               {viewMode === 'edit' ? t('orders.editOrder') : t('orders.detail.title')}
             </h1>
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               {selectedOrder.orderNumber}
-              {!!(selectedOrder as Order).meta?.isTestOrder && <TestBadge />}
+              {!!meta.isTestOrder && <TestBadge />}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {viewMode === 'detail' && (
               <>
                 <button
                   onClick={() => openEdit(selectedOrder)}
-                  className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                   style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
                 >
-                  <span className="inline-flex items-center gap-1"><Icons.Edit size={14} /> {t('orders.editOrder')}</span>
+                  <span className="inline-flex items-center gap-1"><Icons.Edit size={13} /> {t('orders.editOrder')}</span>
                 </button>
                 {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'refunded' && (
                   <button
                     onClick={() => handleCancel(selectedOrder)}
-                    className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-danger, #ef4444)' }}
                   >
-                    <span className="inline-flex items-center gap-1"><Icons.Ban size={14} /> {t('orders.cancelOrder')}</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Ban size={13} /> {t('orders.cancelOrder')}</span>
                   </button>
                 )}
                 {(selectedOrder.status === 'pending' || selectedOrder.status === 'cancelled') && (
                   <button
                     onClick={() => handleDelete(selectedOrder)}
-                    className="rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                     style={{ border: '1px solid var(--color-border)', color: 'var(--color-danger, #ef4444)' }}
                   >
-                    <span className="inline-flex items-center gap-1"><Icons.Trash size={14} /> {t('orders.deleteOrder')}</span>
+                    <span className="inline-flex items-center gap-1"><Icons.Trash size={13} /> {t('orders.deleteOrder')}</span>
                   </button>
                 )}
               </>
@@ -287,11 +292,11 @@ export default function OrdersPage() {
         {detailLoading ? (
           <div className="space-y-3">
             {[1, 2].map((i) => (
-              <div key={i} className="h-24 animate-pulse rounded-lg" style={{ background: 'var(--color-bg-muted)' }} />
+              <div key={i} className="h-20 animate-pulse rounded-lg" style={{ background: 'var(--color-bg-muted)' }} />
             ))}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {error && (
               <div
                 className="rounded-lg px-4 py-2 text-sm"
@@ -301,102 +306,169 @@ export default function OrdersPage() {
               </div>
             )}
 
-            {/* Order Info Card */}
-            <div
-              className="rounded-xl p-5"
-              style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
-            >
-              <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-                {t('orders.detail.orderInfo')}
-              </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <InfoField label={t('orders.column.status')} value={<StatusBadge status={selectedOrder.status} />} />
-                <InfoField
-                  label={t('orders.column.total')}
-                  value={`${(selectedOrder.totalCents / 100).toFixed(2)} ${selectedOrder.currency}`}
-                />
-                <InfoField
-                  label={t('orders.column.date')}
-                  value={new Date(selectedOrder.createdAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                />
-                {selectedOrder.paidAt && (
+            {/* Email action feedback */}
+            {emailResult && (
+              <div
+                className="rounded-lg px-4 py-2 text-sm flex items-center justify-between"
+                style={{
+                  background: emailResult.type === 'success' ? 'var(--color-success-bg, #dcfce7)' : 'var(--color-error-bg, #fee2e2)',
+                  color: emailResult.type === 'success' ? 'var(--color-success-text, #166534)' : 'var(--color-error-text, #991b1b)',
+                }}
+              >
+                <span>{emailResult.message}</span>
+                <button onClick={() => setEmailResult(null)} className="ml-2 opacity-60 hover:opacity-100">✕</button>
+              </div>
+            )}
+
+            {/* ── Top 2-column grid: Order Info + Customer ── */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Order Info */}
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.orderInfo')}
+                </h2>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <InfoField label={t('orders.column.status')} value={<StatusBadge status={selectedOrder.status} />} />
                   <InfoField
-                    label={t('orders.detail.paidAt')}
-                    value={new Date(selectedOrder.paidAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    label={t('orders.column.total')}
+                    value={`${(selectedOrder.totalCents / 100).toFixed(2)} ${selectedOrder.currency}`}
                   />
-                )}
-                {!!(selectedOrder.meta as Record<string, unknown> | null)?.stripePaymentId && (
-                  <InfoField label={t('orders.detail.stripeRef')} value={String((selectedOrder.meta as Record<string, unknown>).stripePaymentId)} />
+                  <InfoField
+                    label={t('orders.column.date')}
+                    value={new Date(selectedOrder.createdAt).toLocaleDateString('en-CH', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  />
+                  {selectedOrder.paidAt && (
+                    <InfoField
+                      label={t('orders.detail.paidAt')}
+                      value={new Date(selectedOrder.paidAt).toLocaleDateString('en-CH', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    />
+                  )}
+                  {selectedOrder.stripePaymentId && (
+                    <InfoField label={t('orders.detail.stripeRef')} value={
+                      <code className="text-[10px] break-all">{selectedOrder.stripePaymentId}</code>
+                    } />
+                  )}
+                  {meta.promoCodeId && (
+                    <InfoField label={t('orders.detail.promoCode')} value={String(meta.promoCodeLabel ?? meta.promoCodeId)} />
+                  )}
+                </div>
+              </div>
+
+              {/* Customer / Attendee */}
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.customer')}
+                </h2>
+                {viewMode === 'edit' ? (
+                  <div className="space-y-3">
+                    <FieldInput
+                      label={t('orders.form.customerName')}
+                      value={fCustomerName}
+                      onChange={setFCustomerName}
+                      placeholder="Jane Doe"
+                    />
+                    <FieldInput
+                      label={t('orders.form.customerEmail')}
+                      value={fCustomerEmail}
+                      onChange={setFCustomerEmail}
+                      placeholder="jane@example.com"
+                      type="email"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <InfoField label={t('orders.column.customer')} value={att ? `${att.firstName} ${att.lastName}` : selectedOrder.customerName ?? '—'} />
+                    <InfoField label={t('orders.column.email')} value={selectedOrder.customerEmail ?? att?.email ?? '—'} />
+                    {att?.company && <InfoField label={t('attendees.column.company')} value={att.company} />}
+                    {att?.phone && <InfoField label={t('orders.detail.phone')} value={att.phone} />}
+                    {att?.jobTitle && <InfoField label={t('orders.detail.jobTitle')} value={att.jobTitle} />}
+                    {att?.orgRole && <InfoField label={t('orders.detail.orgRole')} value={att.orgRole} />}
+                    {att?.badgeName && <InfoField label={t('orders.detail.badgeName')} value={att.badgeName} />}
+                    {att?.dietaryNeeds && <InfoField label={t('orders.detail.dietaryNeeds')} value={att.dietaryNeeds} />}
+                    {att?.accessibilityNeeds && <InfoField label={t('orders.detail.accessibilityNeeds')} value={att.accessibilityNeeds} />}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Customer / Attendee Card */}
-            <div
-              className="rounded-xl p-5"
-              style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
-            >
-              <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-                {t('orders.detail.customer')}
-              </h2>
-              {viewMode === 'edit' ? (
-                <div className="space-y-4">
-                  <FieldInput
-                    label={t('orders.form.customerName')}
-                    value={fCustomerName}
-                    onChange={setFCustomerName}
-                    placeholder="Jane Doe"
-                  />
-                  <FieldInput
-                    label={t('orders.form.customerEmail')}
-                    value={fCustomerEmail}
-                    onChange={setFCustomerEmail}
-                    placeholder="jane@example.com"
-                    type="email"
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <InfoField label={t('orders.column.customer')} value={selectedOrder.attendee ? `${selectedOrder.attendee.firstName} ${selectedOrder.attendee.lastName}` : selectedOrder.customerName ?? '—'} />
-                  <InfoField label={t('orders.column.email')} value={selectedOrder.customerEmail ?? selectedOrder.attendee?.email ?? '—'} />
-                  {selectedOrder.attendee?.company && (
-                    <InfoField label={t('attendees.column.company')} value={selectedOrder.attendee.company} />
-                  )}
-                </div>
-              )}
-            </div>
+            {/* ── Payment Info + Line Items ── */}
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Payment */}
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.payment')}
+                </h2>
+                {paymentInfo?.available ? (
+                  <div className="flex items-center gap-3">
+                    <Icons.CreditCard size={20} style={{ color: 'var(--color-text-secondary)' }} />
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        {paymentInfo.brand ? paymentInfo.brand.charAt(0).toUpperCase() + paymentInfo.brand.slice(1) : 'Card'} •••• {paymentInfo.last4}
+                      </p>
+                      {paymentInfo.expMonth && paymentInfo.expYear && (
+                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          Exp {String(paymentInfo.expMonth).padStart(2, '0')}/{String(paymentInfo.expYear).slice(-2)}
+                          {paymentInfo.country ? ` · ${paymentInfo.country.toUpperCase()}` : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {selectedOrder.status === 'paid' ? t('orders.detail.paymentInfoUnavailable') : t('orders.detail.notPaidYet')}
+                  </p>
+                )}
+                {selectedOrder.billingAddress && Object.keys(selectedOrder.billingAddress).length > 0 && (
+                  <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+                    <p className="text-[10px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('orders.detail.billingAddress')}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      {Object.values(selectedOrder.billingAddress).filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                )}
+              </div>
 
-            {/* Line Items */}
-            <div
-              className="rounded-xl p-5"
-              style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
-            >
-              <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-                {t('orders.detail.lineItems')}
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              {/* Line Items */}
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.lineItems')}
+                </h2>
+                <table className="w-full text-xs">
                   <thead>
                     <tr style={{ color: 'var(--color-text-secondary)', borderBottom: '1px solid var(--color-border)' }}>
-                      <th className="pb-2 text-left font-medium">{t('orders.detail.ticketType')}</th>
-                      <th className="pb-2 text-right font-medium">{t('orders.detail.qty')}</th>
-                      <th className="pb-2 text-right font-medium">{t('orders.detail.unitPrice')}</th>
-                      <th className="pb-2 text-right font-medium">{t('orders.detail.subtotal')}</th>
+                      <th className="pb-1.5 text-left font-medium">{t('orders.detail.ticketType')}</th>
+                      <th className="pb-1.5 text-right font-medium">{t('orders.detail.qty')}</th>
+                      <th className="pb-1.5 text-right font-medium">{t('orders.detail.unitPrice')}</th>
+                      <th className="pb-1.5 text-right font-medium">{t('orders.detail.subtotal')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedOrder.items.map((item) => (
                       <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td className="py-2" style={{ color: 'var(--color-text)' }}>
+                        <td className="py-1.5" style={{ color: 'var(--color-text)' }}>
                           {item.ticketType?.name ?? item.ticketTypeId}
                         </td>
-                        <td className="py-2 text-right" style={{ color: 'var(--color-text)' }}>
+                        <td className="py-1.5 text-right" style={{ color: 'var(--color-text)' }}>
                           {item.quantity}
                         </td>
-                        <td className="py-2 text-right" style={{ color: 'var(--color-text-secondary)' }}>
+                        <td className="py-1.5 text-right" style={{ color: 'var(--color-text-secondary)' }}>
                           {(item.unitPriceCents / 100).toFixed(2)} {selectedOrder.currency}
                         </td>
-                        <td className="py-2 text-right font-medium" style={{ color: 'var(--color-text)' }}>
+                        <td className="py-1.5 text-right font-medium" style={{ color: 'var(--color-text)' }}>
                           {(item.subtotalCents / 100).toFixed(2)} {selectedOrder.currency}
                         </td>
                       </tr>
@@ -404,10 +476,10 @@ export default function OrdersPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={3} className="py-2 text-right font-semibold" style={{ color: 'var(--color-text)' }}>
+                      <td colSpan={3} className="py-1.5 text-right font-semibold" style={{ color: 'var(--color-text)' }}>
                         {t('orders.column.total')}
                       </td>
-                      <td className="py-2 text-right font-bold" style={{ color: 'var(--color-text)' }}>
+                      <td className="py-1.5 text-right font-bold" style={{ color: 'var(--color-text)' }}>
                         {(selectedOrder.totalCents / 100).toFixed(2)} {selectedOrder.currency}
                       </td>
                     </tr>
@@ -416,25 +488,25 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Tickets */}
+            {/* ── Tickets ── */}
             {(selectedOrder.tickets?.length ?? 0) > 0 && (
               <div
-                className="rounded-xl p-5"
+                className="rounded-xl p-4"
                 style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
               >
-                <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
-                  {t('orders.detail.tickets')}
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.tickets')} ({selectedOrder.tickets!.length})
                 </h2>
-                <div className="space-y-2">
+                <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                   {selectedOrder.tickets!.map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="flex items-center justify-between rounded-lg px-3 py-2"
+                      className="flex items-center justify-between rounded-lg px-3 py-1.5"
                       style={{ background: 'var(--color-bg-subtle)' }}
                     >
-                      <span className="font-mono text-sm" style={{ color: 'var(--color-text)' }}>
+                      <code className="text-xs font-mono" style={{ color: 'var(--color-text)' }}>
                         {ticket.code}
-                      </span>
+                      </code>
                       <StatusBadge status={ticket.status} />
                     </div>
                   ))}
@@ -442,12 +514,54 @@ export default function OrdersPage() {
               </div>
             )}
 
-            {/* Notes */}
+            {/* ── Form Submissions ── */}
+            {formSubs.length > 0 && (
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.formData')}
+                </h2>
+                {formSubs.map((sub) => {
+                  const schemaFields = Array.isArray(sub.formSchema?.fields) ? sub.formSchema!.fields as Array<{ key: string; label?: string; type?: string }> : [];
+                  const labelMap = new Map(schemaFields.map((f) => [f.key, f.label ?? f.key]));
+                  const entries = Object.entries(sub.data).filter(([k]) => !k.startsWith('_'));
+                  return (
+                    <div key={sub.id} className="mb-3 last:mb-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wide mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                        {sub.formSchema?.name ?? 'Form'} v{sub.formSchema?.version ?? 1}
+                        <span className="ml-2 font-normal normal-case">
+                          {new Date(sub.submittedAt).toLocaleDateString('en-CH', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                        {entries.map(([key, value]) => (
+                          <InfoField
+                            key={key}
+                            label={labelMap.get(key) ?? key}
+                            value={
+                              typeof value === 'boolean'
+                                ? (value ? '✓' : '✗')
+                                : Array.isArray(value)
+                                  ? value.join(', ')
+                                  : String(value ?? '—')
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Notes ── */}
             <div
-              className="rounded-xl p-5"
+              className="rounded-xl p-4"
               style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
             >
-              <h2 className="mb-4 text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+              <h2 className="mb-2 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
                 {t('orders.detail.notes')}
               </h2>
               {viewMode === 'edit' ? (
@@ -455,7 +569,7 @@ export default function OrdersPage() {
                   value={fNotes}
                   onChange={(e) => setFNotes(e.target.value)}
                   placeholder={t('orders.detail.notesPlaceholder')}
-                  rows={3}
+                  rows={2}
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={{
                     background: 'var(--color-bg-subtle)',
@@ -464,11 +578,74 @@ export default function OrdersPage() {
                   }}
                 />
               ) : (
-                <p className="text-sm" style={{ color: selectedOrder.notes ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
+                <p className="text-xs" style={{ color: selectedOrder.notes ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
                   {selectedOrder.notes || t('orders.detail.notesPlaceholder')}
                 </p>
               )}
             </div>
+
+            {/* ── Email Actions ── */}
+            {viewMode === 'detail' && selectedOrder.status === 'paid' && (
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <h2 className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.emailActions')}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleResendConfirmation}
+                    disabled={sendingEmail !== null}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                  >
+                    {sendingEmail === 'confirmation' ? (
+                      <Icons.RefreshCw size={13} className="animate-spin" />
+                    ) : (
+                      <Icons.Mail size={13} />
+                    )}
+                    {t('orders.email.resendConfirmation')}
+                  </button>
+                  {hasGiftRecipients && (
+                    <button
+                      onClick={handleResendGiftNotifications}
+                      disabled={sendingEmail !== null}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+                      style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                    >
+                      {sendingEmail === 'gift' ? (
+                        <Icons.RefreshCw size={13} className="animate-spin" />
+                      ) : (
+                        <Icons.Mail size={13} />
+                      )}
+                      {t('orders.email.resendGiftNotifications')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Metadata ── */}
+            {Object.keys(meta).filter((k) => !['isTestOrder', 'recipientAttendees', 'registrationBaseUrl'].includes(k)).length > 0 && (
+              <details
+                className="rounded-xl overflow-hidden"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)' }}
+              >
+                <summary className="cursor-pointer px-4 py-3 text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {t('orders.detail.metadata')}
+                </summary>
+                <div className="px-4 pb-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+                    {Object.entries(meta)
+                      .filter(([k]) => !['isTestOrder', 'recipientAttendees', 'registrationBaseUrl'].includes(k))
+                      .map(([key, value]) => (
+                        <InfoField key={key} label={key} value={typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')} />
+                      ))}
+                  </div>
+                </div>
+              </details>
+            )}
 
             {/* Edit action buttons */}
             {viewMode === 'edit' && (
