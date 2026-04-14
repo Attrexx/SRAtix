@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import { api, type Attendee, type FormSubmission, type FormSchema } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
@@ -45,6 +45,35 @@ export default function AttendeesPage() {
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [formSchemas, setFormSchemas] = useState<Record<string, FormSchema>>({});
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+
+  // Filter state
+  const [filterType, setFilterType] = useState<string>('all');
+
+  /** Derive attendee type from the first ticket's category */
+  const getAttendeeType = (a: Attendee): string => {
+    const category = a.tickets?.[0]?.ticketType?.category;
+    if (!category) return 'unknown';
+    // Map ticket categories to attendee type labels
+    if (category === 'exhibitor') return 'exhibitor';
+    if (category === 'staff') return 'staff';
+    if (category === 'volunteer') return 'volunteer';
+    if (category === 'partner') return 'partner';
+    if (category === 'sponsor') return 'sponsor';
+    // general, individual, legal → visitor
+    return 'visitor';
+  };
+
+  /** Get unique attendee types from current data for filter options */
+  const availableTypes = useMemo(() => {
+    const types = new Set(attendees.map(getAttendeeType));
+    return Array.from(types).sort();
+  }, [attendees]);
+
+  /** Filtered attendees based on type filter */
+  const filteredAttendees = useMemo(() => {
+    if (filterType === 'all') return attendees;
+    return attendees.filter((a) => getAttendeeType(a) === filterType);
+  }, [attendees, filterType]);
 
   const loadData = useCallback(async () => {
     if (!eventId) return;
@@ -222,10 +251,32 @@ export default function AttendeesPage() {
             {t('attendees.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {t('attendees.subtitle').replace('{count}', String(attendees.length))}
+            {filterType === 'all'
+              ? t('attendees.subtitle').replace('{count}', String(attendees.length))
+              : t('attendees.subtitleFiltered')
+                  .replace('{shown}', String(filteredAttendees.length))
+                  .replace('{total}', String(attendees.length))}
           </p>
         </div>
         <div className="flex gap-2">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="rounded-lg px-3 py-2 text-sm transition-colors"
+            style={{
+              background: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+            aria-label={t('attendees.filterByType')}
+          >
+            <option value="all">{t('attendees.filter.allTypes')}</option>
+            {availableTypes.map((type) => (
+              <option key={type} value={type}>
+                {t(`attendees.type.${type}`)}
+              </option>
+            ))}
+          </select>
           <a
             href={api.exportAttendees(eventId)}
             target="_blank"
@@ -283,6 +334,41 @@ export default function AttendeesPage() {
                   {status}
                 </span>
               );
+            },
+          },
+          {
+            key: '_attendeeType',
+            header: t('attendees.column.type'),
+            render: (row) => {
+              const type = getAttendeeType(row as Attendee);
+              const typeColors: Record<string, { bg: string; text: string }> = {
+                visitor:   { bg: '#e0f2fe', text: '#0369a1' },
+                exhibitor: { bg: '#fce7f3', text: '#9d174d' },
+                staff:     { bg: '#f3e8ff', text: '#6b21a8' },
+                volunteer: { bg: '#dcfce7', text: '#166534' },
+                partner:   { bg: '#fef3c7', text: '#92400e' },
+                sponsor:   { bg: '#ffe4e6', text: '#9f1239' },
+                unknown:   { bg: '#f3f4f6', text: '#6b7280' },
+              };
+              const c = typeColors[type] || typeColors.unknown;
+              return (
+                <span
+                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ background: c.bg, color: c.text }}
+                >
+                  {t(`attendees.type.${type}`)}
+                </span>
+              );
+            },
+          },
+          {
+            key: '_ticketType',
+            header: t('attendees.column.ticketType'),
+            render: (row) => {
+              const att = row as unknown as Attendee;
+              const name = att.tickets?.[0]?.ticketType?.name;
+              if (!name) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+              return <span className="text-xs">{name}</span>;
             },
           },
           {
@@ -344,7 +430,7 @@ export default function AttendeesPage() {
             ),
           },
         ]}
-        data={attendees as (Attendee & Record<string, unknown>)[]}
+        data={filteredAttendees as (Attendee & Record<string, unknown>)[]}
         searchKeys={['firstName', 'lastName', 'email', 'company']}
         emptyMessage={t('attendees.empty')}
       />

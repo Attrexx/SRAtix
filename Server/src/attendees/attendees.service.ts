@@ -19,7 +19,13 @@ export class AttendeesService {
       orderBy: { createdAt: 'desc' },
       include: {
         tickets: {
-          select: { code: true, status: true },
+          select: {
+            code: true,
+            status: true,
+            ticketType: {
+              select: { name: true, category: true },
+            },
+          },
           take: 5,
         },
       },
