@@ -351,7 +351,7 @@ export default function OrdersPage() {
                       <code className="text-[10px] break-all">{selectedOrder.stripePaymentId}</code>
                     } />
                   )}
-                  {meta.promoCodeId && (
+                  {!!meta.promoCodeId && (
                     <InfoField label={t('orders.detail.promoCode')} value={String(meta.promoCodeLabel ?? meta.promoCodeId)} />
                   )}
                 </div>
