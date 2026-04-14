@@ -332,6 +332,13 @@ export default function AttendeesPage() {
             ),
           },
           {
+            key: 'email',
+            header: t('attendees.column.email'),
+            render: (row) => (
+              <span className="text-xs">{(row.email as string) || '—'}</span>
+            ),
+          },
+          {
             key: 'status',
             header: 'Status',
             render: (row) => {
@@ -396,12 +403,15 @@ export default function AttendeesPage() {
               const ticket = att.tickets?.[0];
               if (!ticket) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
               return (
-                <span className="inline-flex items-center gap-1">
-                  <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px] font-mono dark:bg-gray-800">
+                <span className="inline-flex items-center gap-1" style={{ maxWidth: 190 }}>
+                  <code
+                    className="block overflow-x-auto rounded bg-gray-100 px-1 py-0.5 text-[11px] font-mono dark:bg-gray-800"
+                    style={{ maxWidth: 150, whiteSpace: 'nowrap' }}
+                  >
                     {ticket.code}
                   </code>
                   <button
-                    className="opacity-60 hover:opacity-100 transition-opacity"
+                    className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity"
                     title={t('staffPartners.viewQr') ?? 'View QR Code'}
                     onClick={(e) => { e.stopPropagation(); setQrAttendee(att); }}
                   >
@@ -436,8 +446,8 @@ export default function AttendeesPage() {
               <span className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                 {new Date(row.createdAt as string).toLocaleDateString('en-CH', {
                   day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
+                  month: '2-digit',
+                  year: '2-digit',
                 })}
               </span>
             ),
