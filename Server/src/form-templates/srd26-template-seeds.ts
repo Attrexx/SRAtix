@@ -43,6 +43,7 @@ function f(
   order: number,
   opts?: {
     required?: boolean;
+    width?: number;
     conditions?: Array<{ field: string; operator: string; value: unknown }>;
     options?: Array<{ value: string; label: Record<string, string> }>;
     helpText?: Record<string, string>;
@@ -57,6 +58,7 @@ function f(
     label,
     section: sectionId,
     order,
+    width: opts?.width,
     required: opts?.required,
     conditions: opts?.conditions,
     options: opts?.options,
@@ -76,9 +78,9 @@ function personalSection(startOrder: number): FormField[] {
     f('last_name', 'text', { en: 'Last Name', de: 'Nachname', fr: 'Nom', it: 'Cognome', 'zh-TW': '姓氏' }, 'personal', startOrder + 1, { required: true }),
     f('email', 'email', { en: 'Email Address', de: 'E-Mail-Adresse', fr: 'Adresse e-mail', it: 'Indirizzo e-mail', 'zh-TW': '電子郵件' }, 'personal', startOrder + 2, { required: true }),
     f('phone', 'phone', { en: 'Phone', de: 'Telefon', fr: 'Téléphone', it: 'Telefono', 'zh-TW': '電話' }, 'personal', startOrder + 3),
-    f('city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'personal', startOrder + 4),
-    f('state_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'personal', startOrder + 5),
-    f('country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'personal', startOrder + 6, { required: true }),
+    f('city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'personal', startOrder + 4, { width: 50 }),
+    f('state_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'personal', startOrder + 5, { width: 33, conditions: [{ field: 'country', operator: 'eq', value: 'ch' }] }),
+    f('country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'personal', startOrder + 6, { required: true, width: 50 }),
     f('personal_linkedin', 'url', { en: 'Website / LinkedIn', de: 'Webseite / LinkedIn', fr: 'Site web / LinkedIn', it: 'Sito web / LinkedIn', 'zh-TW': '網站 / LinkedIn' }, 'personal', startOrder + 7),
   ];
 }
@@ -253,9 +255,9 @@ function sraMapListingSection(startOrder: number): FormField[] {
       ],
     }),
     f('org_address', 'text', { en: 'Address', de: 'Adresse', fr: 'Adresse', it: 'Indirizzo', 'zh-TW': '地址' }, 'sra_map_listing', startOrder + 2, { conditions: mapConditions }),
-    f('org_city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'sra_map_listing', startOrder + 3, { conditions: mapConditions }),
-    f('org_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'sra_map_listing', startOrder + 4, { conditions: mapConditions }),
-    f('org_country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'sra_map_listing', startOrder + 5, { conditions: mapConditions }),
+    f('org_city', 'text', { en: 'City', de: 'Stadt', fr: 'Ville', it: 'Città', 'zh-TW': '城市' }, 'sra_map_listing', startOrder + 3, { conditions: mapConditions, width: 50 }),
+    f('org_canton', 'select', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'sra_map_listing', startOrder + 4, { conditions: [...mapConditions, { field: 'org_country', operator: 'eq', value: 'ch' }], width: 33 }),
+    f('org_country', 'country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'sra_map_listing', startOrder + 5, { conditions: mapConditions, width: 50 }),
     f('org_robotics_fields', 'multi-select', { en: 'Robotics Fields', de: 'Robotik-Bereiche', fr: 'Domaines robotique', it: 'Campi robotica', 'zh-TW': '機器人領域' }, 'sra_map_listing', startOrder + 6, { conditions: mapConditions }),
     f('org_robotics_subfields', 'multi-select', { en: 'Sub-fields', de: 'Unterbereiche', fr: 'Sous-domaines', it: 'Sotto-campi', 'zh-TW': '子領域' }, 'sra_map_listing', startOrder + 7, { conditions: mapConditions }),
   ];

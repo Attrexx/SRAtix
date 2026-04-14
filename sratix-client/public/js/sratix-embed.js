@@ -1561,6 +1561,38 @@
       var visible = evalConditions(field.conditions, answers);
       wrap.style.display = visible ? '' : 'none';
     });
+    adjustCantonRowWidths(form);
+  }
+
+  /**
+   * Canton–City–Country row width adjustment.
+   * When a canton field is visible (Switzerland selected), all three fields
+   * share 33 % width; when canton is hidden, city and country get 50 % each.
+   */
+  var CANTON_FIELD_GROUPS = [
+    { canton: 'state_canton', country: 'country', city: 'city' },
+    { canton: 'org_canton',   country: 'org_country', city: 'org_city' },
+  ];
+  function adjustCantonRowWidths(form) {
+    CANTON_FIELD_GROUPS.forEach(function (g) {
+      var cantonWrap  = form.querySelector('[data-df-id="' + g.canton  + '"]');
+      var countryWrap = form.querySelector('[data-df-id="' + g.country + '"]');
+      var cityWrap    = form.querySelector('[data-df-id="' + g.city    + '"]');
+      if (!countryWrap || !cityWrap) return;
+      var cantonVisible = cantonWrap && cantonWrap.style.display !== 'none';
+      if (cantonVisible) {
+        setFieldFlex(cantonWrap, 33);
+        setFieldFlex(countryWrap, 33);
+        setFieldFlex(cityWrap, 33);
+      } else {
+        setFieldFlex(countryWrap, 50);
+        setFieldFlex(cityWrap, 50);
+      }
+    });
+  }
+  function setFieldFlex(el, pct) {
+    el.style.flex = '0 0 calc(' + pct + '% - 14px)';
+    el.style.minWidth = '140px';
   }
 
   // ─── Registration modal (Stage B) ────────────────────────────────────────────
