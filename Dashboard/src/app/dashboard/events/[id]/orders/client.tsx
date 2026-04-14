@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import { api, type Order, type OrderDetails } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
@@ -30,6 +30,32 @@ export default function OrdersPage() {
   const [fCustomerEmail, setFCustomerEmail] = useState('');
   const [fNotes, setFNotes] = useState('');
 
+  // Ticket type filter state
+  const [filterTicketType, setFilterTicketType] = useState<string>('all');
+
+  /** Get the primary ticket type name for an order (first item) */
+  const getOrderTicketTypeName = (o: Order): string | null =>
+    o.items?.[0]?.ticketType?.name ?? null;
+
+  /** Unique ticket type names from current orders */
+  const availableTicketTypes = useMemo(() => {
+    const names = new Set<string>();
+    for (const o of orders) {
+      for (const item of o.items) {
+        if (item.ticketType?.name) names.add(item.ticketType.name);
+      }
+    }
+    return Array.from(names).sort();
+  }, [orders]);
+
+  /** Filtered orders based on ticket type */
+  const filteredOrders = useMemo(() => {
+    if (filterTicketType === 'all') return orders;
+    return orders.filter((o) =>
+      o.items.some((item) => item.ticketType?.name === filterTicketType),
+    );
+  }, [orders, filterTicketType]);
+
   useEffect(() => {
     if (!eventId) return;
     const ac = new AbortController();
@@ -50,7 +76,7 @@ export default function OrdersPage() {
 
   const { isConnected } = useSSE(`events/${eventId}/orders`, handleNewOrder, !!eventId);
 
-  const totalRevenue = orders
+  const totalRevenue = filteredOrders
     .filter((o) => o.status === 'paid')
     .reduce((sum, o) => sum + o.totalCents, 0);
 
@@ -429,11 +455,15 @@ export default function OrdersPage() {
             {t('orders.title')}
           </h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {totalRevenue > 0
-              ? t('orders.revenueSubtitle')
-                  .replace('{count}', String(orders.length))
-                  .replace('{revenue}', (totalRevenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 }))
-              : t('orders.subtitle').replace('{count}', String(orders.length))}
+            {filterTicketType !== 'all'
+              ? t('orders.subtitleFiltered')
+                  .replace('{shown}', String(filteredOrders.length))
+                  .replace('{total}', String(orders.length))
+              : totalRevenue > 0
+                ? t('orders.revenueSubtitle')
+                    .replace('{count}', String(orders.length))
+                    .replace('{revenue}', (totalRevenue / 100).toLocaleString('de-CH', { minimumFractionDigits: 2 }))
+                : t('orders.subtitle').replace('{count}', String(orders.length))}
             {isConnected && (
               <span
                 className="ml-2 inline-flex items-center gap-1 text-xs"
@@ -445,19 +475,37 @@ export default function OrdersPage() {
             )}
           </p>
         </div>
-        <a
-          href={api.exportOrders(eventId)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-          style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text)',
-          }}
-        >
+        <div className="flex gap-2">
+          <select
+            value={filterTicketType}
+            onChange={(e) => setFilterTicketType(e.target.value)}
+            className="rounded-lg px-3 py-2 text-sm transition-colors"
+            style={{
+              background: 'var(--color-bg-subtle)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+            aria-label={t('orders.filterByTicketType')}
+          >
+            <option value="all">{t('orders.filter.allTicketTypes')}</option>
+            {availableTicketTypes.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <a
+            href={api.exportOrders(eventId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            style={{
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+          >
                     <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
-        </a>
+          </a>
+        </div>
       </div>
 
       <DataTable<Order & Record<string, unknown>>
@@ -496,6 +544,19 @@ export default function OrdersPage() {
             key: 'status',
             header: t('orders.column.status'),
             render: (row) => <StatusBadge status={row.status as string} />,
+          },
+          {
+            key: '_ticketType',
+            header: t('orders.column.ticketType'),
+            render: (row) => {
+              const o = row as Order;
+              const names = o.items
+                ?.map((item) => item.ticketType?.name)
+                .filter(Boolean);
+              if (!names || names.length === 0)
+                return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+              return <span className="text-xs">{names.join(', ')}</span>;
+            },
           },
           {
             key: 'createdAt',
@@ -546,7 +607,7 @@ export default function OrdersPage() {
             ),
           },
         ]}
-        data={orders as (Order & Record<string, unknown>)[]}
+        data={filteredOrders as (Order & Record<string, unknown>)[]}
         searchKeys={['orderNumber', 'customerName', 'customerEmail']}
         emptyMessage={t('orders.empty')}
       />

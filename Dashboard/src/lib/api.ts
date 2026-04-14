@@ -363,6 +363,7 @@ export interface OrderItem {
   quantity: number;
   unitPriceCents: number;
   subtotalCents: number;
+  ticketType?: { name: string; category?: string; priceCents?: number };
 }
 
 export interface OrderDetails extends Order {
