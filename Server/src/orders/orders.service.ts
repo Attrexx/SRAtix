@@ -335,12 +335,36 @@ export class OrdersService {
       include: {
         items: {
           include: {
-            ticketType: { select: { name: true, priceCents: true } },
+            ticketType: { select: { name: true, priceCents: true, category: true } },
           },
         },
-        event: { select: { name: true, startDate: true, venue: true, orgId: true } },
-        attendee: { select: { firstName: true, lastName: true, email: true, company: true } },
-        tickets: { select: { id: true, code: true, status: true } },
+        event: { select: { name: true, startDate: true, endDate: true, venue: true, venueAddress: true, orgId: true } },
+        attendee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            company: true,
+            phone: true,
+            badgeName: true,
+            jobTitle: true,
+            orgRole: true,
+            dietaryNeeds: true,
+            accessibilityNeeds: true,
+            consentMarketing: true,
+            consentDataSharing: true,
+            status: true,
+            formSubmissions: {
+              include: { formSchema: { select: { name: true, version: true, fields: true } } },
+              orderBy: { submittedAt: 'desc' },
+            },
+          },
+        },
+        tickets: {
+          select: { id: true, code: true, status: true, meta: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
     if (!order) throw new NotFoundException(`Order ${id} not found`);

@@ -176,6 +176,38 @@ export class StripeService implements OnModuleInit {
   }
 
   /**
+   * Retrieve payment method details (card brand, last4) for a payment intent.
+   */
+  async getPaymentMethodDetails(paymentIntentId: string): Promise<{
+    brand: string | null;
+    last4: string | null;
+    expMonth: number | null;
+    expYear: number | null;
+    country: string | null;
+  } | null> {
+    const stripe = await this.ensureStripe();
+    try {
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['latest_charge'],
+      });
+      const charge = pi.latest_charge;
+      if (charge && typeof charge !== 'string' && charge.payment_method_details?.card) {
+        const card = charge.payment_method_details.card;
+        return {
+          brand: card.brand ?? null,
+          last4: card.last4 ?? null,
+          expMonth: card.exp_month ?? null,
+          expYear: card.exp_year ?? null,
+          country: card.country ?? null,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Issue a full or partial refund for a payment intent.
    */
   async refund(

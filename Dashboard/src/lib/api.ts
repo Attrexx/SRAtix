@@ -407,10 +407,44 @@ export interface OrderItem {
 }
 
 export interface OrderDetails extends Order {
-  event?: { name: string; startDate: string; venue?: string; orgId: string };
-  attendee?: { firstName: string; lastName: string; email: string; company?: string };
-  tickets?: Array<{ id: string; code: string; status: string }>;
-  items: Array<OrderItem & { ticketType?: { name: string; priceCents: number } }>;
+  event?: { name: string; startDate: string; endDate?: string; venue?: string; venueAddress?: string; orgId: string };
+  attendee?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    company?: string;
+    phone?: string;
+    badgeName?: string;
+    jobTitle?: string;
+    orgRole?: string;
+    dietaryNeeds?: string;
+    accessibilityNeeds?: string;
+    consentMarketing?: boolean;
+    consentDataSharing?: boolean;
+    status?: string;
+    formSubmissions?: Array<{
+      id: string;
+      data: Record<string, unknown>;
+      submittedAt: string;
+      formSchema?: { name: string; version: number; fields: unknown };
+    }>;
+  };
+  tickets?: Array<{ id: string; code: string; status: string; meta?: Record<string, unknown> | null }>;
+  items: Array<OrderItem & { ticketType?: { name: string; priceCents: number; category?: string } }>;
+  stripeSessionId?: string;
+  stripePaymentId?: string;
+  billingAddress?: Record<string, unknown> | null;
+}
+
+export interface PaymentInfo {
+  available: boolean;
+  method?: string;
+  brand?: string | null;
+  last4?: string | null;
+  expMonth?: number | null;
+  expYear?: number | null;
+  country?: string | null;
 }
 
 export interface FormSubmission {
@@ -987,6 +1021,15 @@ export const api = {
 
   deleteOrder: (id: string) =>
     request<{ success: boolean }>(`/orders/${id}`, { method: 'DELETE' }),
+
+  getPaymentInfo: (id: string, signal?: AbortSignal) =>
+    request<PaymentInfo>(`/orders/${id}/payment-info`, { signal }),
+
+  resendConfirmation: (id: string) =>
+    request<{ success: boolean; email?: string; message?: string }>(`/orders/${id}/resend-confirmation`, { method: 'POST' }),
+
+  resendGiftNotifications: (id: string) =>
+    request<{ sent: number; total: number; results: Array<{ email: string; success: boolean; error?: string }> }>(`/orders/${id}/resend-gift-notifications`, { method: 'POST' }),
 
   // Check-Ins
   // Server returns { totalTickets, checkedIn, totalCheckIns, percentCheckedIn }

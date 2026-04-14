@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Order, type OrderDetails } from '@/lib/api';
+import { api, type Order, type OrderDetails, type PaymentInfo } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TestBadge } from '@/components/test-badge';
@@ -29,6 +29,11 @@ export default function OrdersPage() {
   const [fCustomerName, setFCustomerName] = useState('');
   const [fCustomerEmail, setFCustomerEmail] = useState('');
   const [fNotes, setFNotes] = useState('');
+
+  // Payment info + email actions
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null); // which email action is in progress
+  const [emailResult, setEmailResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Ticket type filter state
   const [filterTicketType, setFilterTicketType] = useState<string>('all');
@@ -83,10 +88,16 @@ export default function OrdersPage() {
   const openDetail = async (order: Order) => {
     setDetailLoading(true);
     setError(null);
+    setEmailResult(null);
+    setPaymentInfo(null);
     setViewMode('detail');
     try {
-      const details = await api.getOrderDetails(order.id);
+      const [details, pmInfo] = await Promise.all([
+        api.getOrderDetails(order.id),
+        order.status === 'paid' ? api.getPaymentInfo(order.id).catch(() => null) : Promise.resolve(null),
+      ]);
       setSelectedOrder(details);
+      setPaymentInfo(pmInfo);
     } catch {
       setError('Failed to load order details.');
     } finally {
@@ -163,6 +174,45 @@ export default function OrdersPage() {
     setViewMode('list');
     setSelectedOrder(null);
     setError(null);
+    setEmailResult(null);
+    setPaymentInfo(null);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!selectedOrder) return;
+    setSendingEmail('confirmation');
+    setEmailResult(null);
+    try {
+      const result = await api.resendConfirmation(selectedOrder.id);
+      if (result.success) {
+        setEmailResult({ type: 'success', message: t('orders.email.confirmationSent').replace('{email}', result.email ?? '') });
+      } else {
+        setEmailResult({ type: 'error', message: result.message ?? t('orders.email.sendFailed') });
+      }
+    } catch {
+      setEmailResult({ type: 'error', message: t('orders.email.sendFailed') });
+    } finally {
+      setSendingEmail(null);
+    }
+  };
+
+  const handleResendGiftNotifications = async () => {
+    if (!selectedOrder) return;
+    setSendingEmail('gift');
+    setEmailResult(null);
+    try {
+      const result = await api.resendGiftNotifications(selectedOrder.id);
+      const failed = result.results.filter((r) => !r.success);
+      if (failed.length === 0) {
+        setEmailResult({ type: 'success', message: t('orders.email.giftSent').replace('{count}', String(result.sent)) });
+      } else {
+        setEmailResult({ type: 'error', message: t('orders.email.giftPartial').replace('{sent}', String(result.sent)).replace('{total}', String(result.total)) });
+      }
+    } catch {
+      setEmailResult({ type: 'error', message: t('orders.email.sendFailed') });
+    } finally {
+      setSendingEmail(null);
+    }
   };
 
   if (loading) {

@@ -15,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OrdersService } from './orders.service';
 import { EmailService } from '../email/email.service';
+import { StripeService } from '../payments/stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { IsString, IsNumber, IsArray, IsOptional, ValidateNested, Min } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -72,6 +73,7 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly email: EmailService,
+    private readonly stripe: StripeService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -133,6 +135,87 @@ export class OrdersController {
   @Roles('super_admin', 'admin')
   delete(@Param('id') id: string) {
     return this.ordersService.delete(id);
+  }
+
+  @Get(':id/payment-info')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async getPaymentInfo(@Param('id') id: string) {
+    const order = await this.ordersService.findOne(id);
+    if (!order.stripePaymentId) {
+      return { available: false };
+    }
+    try {
+      const details = await this.stripe.getPaymentMethodDetails(order.stripePaymentId);
+      if (details) {
+        return { available: true, method: 'card', ...details };
+      }
+      return { available: false };
+    } catch (err) {
+      this.logger.warn(`Failed to fetch payment info for order ${id}: ${err}`);
+      return { available: false };
+    }
+  }
+
+  @Post(':id/resend-confirmation')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async resendConfirmation(@Param('id') id: string) {
+    const order = await this.ordersService.findOneWithDetails(id);
+    if (order.status !== 'paid') {
+      return { success: false, message: 'Order is not paid — cannot resend confirmation' };
+    }
+    const email = order.customerEmail ?? order.attendee?.email;
+    if (!email) {
+      return { success: false, message: 'No customer email available' };
+    }
+
+    const event = await this.ordersService.findEventForOrder(id);
+    const eventMeta = (event?.meta as Record<string, any>) ?? {};
+
+    // Resolve ticket type names
+    const ttIds = order.items.map((item: any) => item.ticketTypeId);
+    const ticketTypes = ttIds.length > 0
+      ? await this.prisma.ticketType.findMany({
+          where: { id: { in: ttIds } },
+          select: { id: true, name: true, category: true },
+        })
+      : [];
+    const ttNameMap = new Map(ticketTypes.map((tt) => [tt.id, tt.name]));
+    const isExhibitorOrder = ticketTypes.some((tt) => tt.category === 'exhibitor');
+
+    // Get ticket codes for this order
+    const tickets = await this.prisma.ticket.findMany({
+      where: { orderId: id },
+      select: { code: true },
+    });
+
+    const ticketDetails = order.items.map((item: any) => ({
+      typeName: ttNameMap.get(item.ticketTypeId) ?? 'Ticket',
+      quantity: item.quantity,
+      qrPayload: '',
+    }));
+
+    try {
+      await this.email.sendOrderConfirmation(email, {
+        customerName: order.customerName ?? order.attendee?.firstName ?? 'Guest',
+        orderNumber: order.orderNumber,
+        totalFormatted: (order.totalCents / 100).toFixed(2),
+        currency: order.currency,
+        tickets: ticketDetails,
+        ticketCodes: tickets.map((t) => t.code),
+        apiBaseUrl: 'https://tix.swiss-robotics.org',
+        eventName: event?.name ?? 'Event',
+        eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+        eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
+        eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
+        isExhibitor: isExhibitorOrder,
+      });
+      this.logger.log(`Resent confirmation email to ${email} for order ${order.orderNumber}`);
+      return { success: true, email };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Resend confirmation failed for order ${order.orderNumber}: ${errorMsg}`);
+      return { success: false, message: errorMsg };
+    }
   }
 
   @Post(':id/resend-gift-notifications')
