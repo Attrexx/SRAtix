@@ -338,6 +338,46 @@ export interface Attendee {
   createdAt: string;
 }
 
+export interface AttendeeDetails extends Attendee {
+  badgeName?: string;
+  jobTitle?: string;
+  orgRole?: string;
+  dietaryNeeds?: string;
+  accessibilityNeeds?: string;
+  consentMarketing?: boolean;
+  consentDataSharing?: boolean;
+  consentTimestamp?: string;
+  tags?: unknown;
+  meta?: Record<string, unknown> | null;
+  updatedAt?: string;
+  tickets?: {
+    id: string;
+    code: string;
+    status: string;
+    ticketType?: { name: string; category: string };
+  }[];
+  formSubmissions?: {
+    id: string;
+    data: Record<string, unknown>;
+    submittedAt: string;
+    formSchema?: { id: string; name: string; version: number; fields: unknown };
+  }[];
+  orders?: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    totalCents: number;
+    currency: string;
+    createdAt: string;
+  }[];
+  checkIns?: {
+    id: string;
+    method: string;
+    direction: string;
+    createdAt: string;
+  }[];
+}
+
 export interface Order {
   id: string;
   eventId: string;
@@ -896,6 +936,9 @@ export const api = {
   // Attendees
   getAttendees: (eventId: string, signal?: AbortSignal) =>
     request<Attendee[]>(`/attendees/event/${eventId}`, { signal }),
+
+  getAttendee: (id: string, signal?: AbortSignal) =>
+    request<AttendeeDetails>(`/attendees/${id}`, { signal }),
 
   createAttendee: (data: {
     eventId: string;

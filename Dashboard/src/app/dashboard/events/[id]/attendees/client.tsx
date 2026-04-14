@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Attendee, type FormSubmission, type FormSchema } from '@/lib/api';
+import { api, type Attendee, type AttendeeDetails, type FormSubmission, type FormSchema } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -33,6 +33,10 @@ export default function AttendeesPage() {
 
   // QR modal state
   const [qrAttendee, setQrAttendee] = useState<Attendee | null>(null);
+
+  // View details modal state
+  const [detailAttendee, setDetailAttendee] = useState<AttendeeDetails | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   // Form state
   const [fFirst, setFFirst] = useState('');
@@ -153,6 +157,19 @@ export default function AttendeesPage() {
       // Non-critical — submissions just won't show
     } finally {
       setSubmissionsLoading(false);
+    }
+  };
+
+  const openDetails = async (a: Attendee) => {
+    setDetailLoading(true);
+    setDetailAttendee(null);
+    try {
+      const details = await api.getAttendee(a.id);
+      setDetailAttendee(details);
+    } catch {
+      // silent
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -307,14 +324,13 @@ export default function AttendeesPage() {
             header: t('attendees.column.name'),
             render: (row) => (
               <span
-                className="cursor-pointer font-medium hover:underline"
+                className="cursor-pointer font-medium hover:underline whitespace-nowrap"
                 onClick={() => openEdit(row as Attendee)}
               >
                 {row.firstName} {row.lastName}
               </span>
             ),
           },
-          { key: 'email', header: t('attendees.column.email') },
           {
             key: 'status',
             header: 'Status',
@@ -324,11 +340,12 @@ export default function AttendeesPage() {
                 registered: { bg: '#d4edda', text: '#155724' },
                 invited: { bg: '#fff3cd', text: '#856404' },
                 confirmed: { bg: '#cce5ff', text: '#004085' },
+                cancelled: { bg: '#f8d7da', text: '#721c24' },
               };
               const c = colors[status] || { bg: '#f8f9fa', text: '#6c757d' };
               return (
                 <span
-                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
                   style={{ background: c.bg, color: c.text }}
                 >
                   {status}
@@ -353,7 +370,7 @@ export default function AttendeesPage() {
               const c = typeColors[type] || typeColors.unknown;
               return (
                 <span
-                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                  className="inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
                   style={{ background: c.bg, color: c.text }}
                 >
                   {t(`attendees.type.${type}`)}
@@ -368,7 +385,7 @@ export default function AttendeesPage() {
               const att = row as unknown as Attendee;
               const name = att.tickets?.[0]?.ticketType?.name;
               if (!name) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
-              return <span className="text-xs">{name}</span>;
+              return <span className="text-xs whitespace-nowrap">{name}</span>;
             },
           },
           {
@@ -379,8 +396,8 @@ export default function AttendeesPage() {
               const ticket = att.tickets?.[0];
               if (!ticket) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
               return (
-                <span className="inline-flex items-center gap-1.5">
-                  <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono dark:bg-gray-800">
+                <span className="inline-flex items-center gap-1">
+                  <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px] font-mono dark:bg-gray-800">
                     {ticket.code}
                   </code>
                   <button
@@ -388,39 +405,67 @@ export default function AttendeesPage() {
                     title={t('staffPartners.viewQr') ?? 'View QR Code'}
                     onClick={(e) => { e.stopPropagation(); setQrAttendee(att); }}
                   >
-                    <Icons.QrCode size={16} />
+                    <Icons.QrCode size={14} />
                   </button>
                 </span>
               );
             },
           },
-          { key: 'phone', header: t('attendees.column.phone') },
-          { key: 'company', header: t('attendees.column.company') },
+          {
+            key: 'phone',
+            header: t('attendees.column.phone'),
+            render: (row) => (
+              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                {(row.phone as string) || '—'}
+              </span>
+            ),
+          },
+          {
+            key: 'company',
+            header: t('attendees.column.company'),
+            render: (row) => (
+              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                {(row.company as string) || '—'}
+              </span>
+            ),
+          },
           {
             key: 'createdAt',
             header: t('attendees.column.registered'),
-            render: (row) =>
-              new Date(row.createdAt as string).toLocaleDateString('en-CH', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              }),
+            render: (row) => (
+              <span className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
+                {new Date(row.createdAt as string).toLocaleDateString('en-CH', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            ),
           },
           {
             key: 'id',
             header: '',
+            sortable: false,
             render: (row) => (
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-0.5">
+                <button
+                  onClick={() => openDetails(row as Attendee)}
+                  className="rounded px-1.5 py-1 text-xs"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  title={t('attendees.viewDetails')}
+                >
+                  <Icons.Eye size={14} />
+                </button>
                 <button
                   onClick={() => openEdit(row as Attendee)}
-                  className="rounded px-2 py-1 text-xs"
+                  className="rounded px-1.5 py-1 text-xs"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
                   <Icons.Edit size={14} />
                 </button>
                 <button
                   onClick={() => handleDelete(row as Attendee)}
-                  className="rounded px-2 py-1 text-xs hover:text-red-600"
+                  className="rounded px-1.5 py-1 text-xs hover:text-red-600"
                   style={{ color: 'var(--color-text-secondary)' }}
                   title={t('common.delete')}
                 >
@@ -651,6 +696,274 @@ export default function AttendeesPage() {
           </div>
         </div>
       )}
+
+      {/* ── View Details Modal ── */}
+      {(detailAttendee || detailLoading) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) { setDetailAttendee(null); }
+          }}
+        >
+          <div
+            className="w-full max-w-3xl overflow-hidden rounded-2xl"
+            style={{
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-lg, 0 25px 50px -12px rgba(0,0,0,0.25))',
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between border-b px-6 py-4"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+                {detailAttendee
+                  ? `${detailAttendee.firstName} ${detailAttendee.lastName}`
+                  : t('attendees.viewDetails')}
+              </h2>
+              <button
+                onClick={() => setDetailAttendee(null)}
+                className="text-xl leading-none"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] overflow-y-auto px-6 py-4">
+              {detailLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-10 animate-pulse rounded-lg" style={{ background: 'var(--color-bg-muted)' }} />
+                  ))}
+                </div>
+              ) : detailAttendee ? (
+                <div className="space-y-6">
+                  {/* ── Profile Info ── */}
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('attendees.details.profile')}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <DetailField label={t('attendees.column.name')} value={`${detailAttendee.firstName} ${detailAttendee.lastName}`} />
+                      <DetailField label={t('attendees.column.email')} value={detailAttendee.email} />
+                      <DetailField label={t('attendees.column.phone')} value={detailAttendee.phone} />
+                      <DetailField label={t('attendees.column.company')} value={detailAttendee.company} />
+                      <DetailField label="Status" value={detailAttendee.status} />
+                      <DetailField label={t('attendees.column.type')} value={t(`attendees.type.${getAttendeeType(detailAttendee)}`)} />
+                      {detailAttendee.badgeName && (
+                        <DetailField label={t('attendees.details.badgeName')} value={detailAttendee.badgeName} />
+                      )}
+                      {detailAttendee.jobTitle && (
+                        <DetailField label={t('attendees.details.jobTitle')} value={detailAttendee.jobTitle} />
+                      )}
+                      {detailAttendee.orgRole && (
+                        <DetailField label={t('attendees.details.orgRole')} value={detailAttendee.orgRole} />
+                      )}
+                      {detailAttendee.dietaryNeeds && (
+                        <DetailField label={t('attendees.details.dietaryNeeds')} value={detailAttendee.dietaryNeeds} />
+                      )}
+                      {detailAttendee.accessibilityNeeds && (
+                        <DetailField label={t('attendees.details.accessibilityNeeds')} value={detailAttendee.accessibilityNeeds} />
+                      )}
+                      <DetailField label={t('attendees.details.marketing')} value={detailAttendee.consentMarketing ? 'Yes' : 'No'} />
+                      <DetailField label={t('attendees.details.dataSharing')} value={detailAttendee.consentDataSharing ? 'Yes' : 'No'} />
+                      <DetailField
+                        label={t('attendees.column.registered')}
+                        value={new Date(detailAttendee.createdAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ── Tickets ── */}
+                  {(detailAttendee.tickets?.length ?? 0) > 0 && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('attendees.column.ticket')}
+                      </h3>
+                      <div className="space-y-2">
+                        {detailAttendee.tickets!.map((ticket) => (
+                          <div
+                            key={ticket.id}
+                            className="flex items-center justify-between rounded-lg px-3 py-2"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+                          >
+                            <div>
+                              <code className="text-xs font-mono" style={{ color: 'var(--color-text)' }}>{ticket.code}</code>
+                              {ticket.ticketType?.name && (
+                                <span className="ml-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  {ticket.ticketType.name}
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                              style={{
+                                background: ticket.status === 'valid' ? '#d4edda' : '#f8d7da',
+                                color: ticket.status === 'valid' ? '#155724' : '#721c24',
+                              }}
+                            >
+                              {ticket.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Orders ── */}
+                  {(detailAttendee.orders?.length ?? 0) > 0 && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('orders.title')}
+                      </h3>
+                      <div className="space-y-2">
+                        {detailAttendee.orders!.map((order) => (
+                          <div
+                            key={order.id}
+                            className="flex items-center justify-between rounded-lg px-3 py-2"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+                          >
+                            <div>
+                              <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>{order.orderNumber}</span>
+                              <span className="ml-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {(order.totalCents / 100).toFixed(2)} {order.currency}
+                              </span>
+                            </div>
+                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              {order.status} · {new Date(order.createdAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Check-Ins ── */}
+                  {(detailAttendee.checkIns?.length ?? 0) > 0 && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('attendees.details.checkIns')}
+                      </h3>
+                      <div className="space-y-1">
+                        {detailAttendee.checkIns!.map((ci) => (
+                          <div
+                            key={ci.id}
+                            className="flex items-center justify-between rounded px-3 py-1.5 text-xs"
+                            style={{ background: 'var(--color-bg-subtle)' }}
+                          >
+                            <span style={{ color: 'var(--color-text)' }}>
+                              {ci.direction === 'in' ? '→ In' : '← Out'} ({ci.method})
+                            </span>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>
+                              {new Date(ci.createdAt).toLocaleString('en-CH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Form Submissions ── */}
+                  {(detailAttendee.formSubmissions?.length ?? 0) > 0 && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('attendees.submissionsTitle')}
+                      </h3>
+                      <div className="space-y-4">
+                        {detailAttendee.formSubmissions!.map((sub) => {
+                          const schemaDef = sub.formSchema?.fields as unknown as FormSchemaDefinition | null;
+                          const fields = schemaDef?.fields ?? [];
+
+                          return (
+                            <div
+                              key={sub.id}
+                              className="rounded-lg p-4"
+                              style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}
+                            >
+                              <div className="mb-3 flex items-center justify-between">
+                                <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                                  {sub.formSchema?.name ?? 'Form'}
+                                  {' '}
+                                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                    v{sub.formSchema?.version ?? 1}
+                                  </span>
+                                </span>
+                                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                                  {new Date(sub.submittedAt).toLocaleDateString('en-CH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+
+                              {fields.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  {fields.map((field) => (
+                                    <div key={field.id}>
+                                      <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                                        {resolveLabel(field.label)}
+                                      </p>
+                                      <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                                        {renderAnswerValue(field, sub.data[field.id])}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                  {Object.entries(sub.data).map(([key, value]) => (
+                                    <div key={key}>
+                                      <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
+                                        {key}
+                                      </p>
+                                      <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                                        {value === null || value === undefined ? '—' : String(value)}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Raw Meta ── */}
+                  {detailAttendee.meta && Object.keys(detailAttendee.meta).length > 0 && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('attendees.details.metadata')}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {Object.entries(detailAttendee.meta).map(([key, value]) => (
+                          <DetailField key={key} label={key} value={value === null || value === undefined ? '—' : String(value)} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div
+              className="flex justify-end border-t px-6 py-4"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <button
+                onClick={() => setDetailAttendee(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+              >
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -689,6 +1002,19 @@ function FieldInput({
           cursor: disabled ? 'not-allowed' : undefined,
         }}
       />
+    </div>
+  );
+}
+
+function DetailField({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm" style={{ color: 'var(--color-text)' }}>
+        {value || '—'}
+      </p>
     </div>
   );
 }

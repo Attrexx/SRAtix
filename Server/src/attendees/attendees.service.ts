@@ -35,6 +35,31 @@ export class AttendeesService {
   async findOne(id: string) {
     const attendee = await this.prisma.attendee.findUnique({
       where: { id },
+      include: {
+        tickets: {
+          select: {
+            id: true,
+            code: true,
+            status: true,
+            ticketType: { select: { name: true, category: true } },
+          },
+        },
+        formSubmissions: {
+          include: {
+            formSchema: { select: { id: true, name: true, version: true, fields: true } },
+          },
+          orderBy: { submittedAt: 'desc' },
+        },
+        orders: {
+          select: { id: true, orderNumber: true, status: true, totalCents: true, currency: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+        },
+        checkIns: {
+          select: { id: true, method: true, direction: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
     });
     if (!attendee) throw new NotFoundException(`Attendee ${id} not found`);
     return attendee;
