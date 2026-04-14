@@ -10,13 +10,19 @@ import { getSRD26TemplateSeedData } from '../src/form-templates/srd26-template-s
 const prisma = new PrismaClient();
 
 async function main() {
-  // Find the SRA organizer org
-  const org = await prisma.organization.findFirst({ where: { slug: 'sra' } });
+  // Find an organizer org — try slug 'sra' first, then fall back to any organizer
+  let org = await prisma.organization.findFirst({ where: { slug: 'sra' } });
   if (!org) {
-    console.error('No organization with slug "sra" found.');
+    org = await prisma.organization.findFirst({ where: { type: 'organizer' } });
+  }
+  if (!org) {
+    // List all orgs so the user can pick
+    const all = await prisma.organization.findMany({ select: { id: true, name: true, slug: true, type: true } });
+    console.error('No organizer org found. All organizations in DB:');
+    console.table(all);
     process.exit(1);
   }
-  console.log(`Found org: ${org.name} (${org.id})`);
+  console.log(`Found org: ${org.name} (slug: ${org.slug}, id: ${org.id})`);
 
   const templates = getSRD26TemplateSeedData();
   let created = 0, updated = 0;
