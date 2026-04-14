@@ -106,7 +106,7 @@ export class PublicRegistrationController {
       where: { attendeeId: attendee.id, status: 'valid' },
       include: {
         ticketType: { select: { id: true, name: true, formSchemaId: true } },
-        event: { select: { id: true, name: true, startDate: true, endDate: true, venue: true } },
+        event: { select: { id: true, name: true, startDate: true, endDate: true, venue: true, venueAddress: true, meta: true } },
       },
     });
 
@@ -168,7 +168,7 @@ export class PublicRegistrationController {
       where: { attendeeId: attendee.id, status: 'valid' },
       include: {
         ticketType: { select: { id: true, name: true, formSchemaId: true } },
-        event: { select: { id: true, name: true, startDate: true, endDate: true, venue: true } },
+        event: { select: { id: true, name: true, startDate: true, endDate: true, venue: true, venueAddress: true, meta: true } },
         order: { select: { orderNumber: true } },
       },
     });
@@ -244,6 +244,9 @@ export class PublicRegistrationController {
         };
         const attendeeMeta = attendee.meta as Record<string, unknown> | null;
 
+        const regEventMeta = (ticket.event.meta as Record<string, any>) ?? {};
+        const regFullVenue = [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', ');
+
         this.email
           .sendCompEntryConfirmation(attendee.email, {
             recipientName: finalFirstName,
@@ -257,19 +260,22 @@ export class PublicRegistrationController {
               month: 'long',
               day: 'numeric',
             }),
-            eventVenue: ticket.event.venue ?? '',
+            eventVenue: regFullVenue,
+            eventVenueMapUrl: regEventMeta.venueMapUrl || undefined,
             ticketCode: ticket.code,
             orderNumber: ticket.order?.orderNumber ?? '',
           })
           .catch((err) => console.error('[Registration] Comp confirmation email failed:', err));
       } else {
         // Regular recipient — send standard confirmation
+        const regEventMeta2 = (ticket.event.meta as Record<string, any>) ?? {};
         this.email
           .sendRecipientRegistrationConfirmation(attendee.email, {
             recipientName: finalFirstName,
             eventName: ticket.event.name,
             eventDate: ticket.event.startDate.toISOString().split('T')[0],
-            eventVenue: ticket.event.venue ?? '',
+            eventVenue: [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', '),
+            eventVenueMapUrl: regEventMeta2.venueMapUrl || undefined,
             ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
           })
           .catch((err) => console.error('[Registration] Confirmation email failed:', err));

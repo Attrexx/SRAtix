@@ -224,7 +224,7 @@ export class OrdersService {
       where: { id: orderId },
       select: {
         event: {
-          select: { id: true, name: true, startDate: true, endDate: true, venue: true },
+          select: { id: true, name: true, startDate: true, endDate: true, venue: true, venueAddress: true, meta: true },
         },
       },
     });

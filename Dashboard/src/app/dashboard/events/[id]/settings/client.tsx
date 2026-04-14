@@ -64,6 +64,7 @@ export default function EventSettingsPage() {
   const [timezone, setTimezone] = useState('Europe/Zurich');
   const [venue, setVenue] = useState('');
   const [venueAddress, setVenueAddress] = useState('');
+  const [venueMapUrl, setVenueMapUrl] = useState('');
   const [maxCapacity, setMaxCapacity] = useState('');
   const [currency, setCurrency] = useState('CHF');
   const [status, setStatus] = useState('draft');
@@ -124,6 +125,7 @@ export default function EventSettingsPage() {
     setCurrency(ev.currency);
     setStatus(ev.status);
     const meta = (ev.meta ?? {}) as Record<string, unknown>;
+    setVenueMapUrl((meta.venueMapUrl as string) ?? '');
     setTicketTitle((meta.ticketTitle as string) ?? '');
     setTicketTitleSize((meta.ticketTitleSize as string) ?? '1.75');
     setTicketIntro((meta.ticketIntro as string) ?? '');
@@ -193,6 +195,7 @@ export default function EventSettingsPage() {
           memberGateSubtitle: memberGateSubtitle.trim() || undefined,
           memberGateDisclaimer: memberGateDisclaimer.trim() || undefined,
           memberGateShowWhyJoin,
+          venueMapUrl: venueMapUrl.trim() || undefined,
           contactEmail: contactEmail.trim() || undefined,
           contactPhone: contactPhone.trim() || undefined,
           contactWhatsapp: contactWhatsapp.trim() || undefined,
@@ -301,6 +304,7 @@ export default function EventSettingsPage() {
         <Section title={t('events.settings.venue')}>
           <FieldInput label={t('events.settings.venueName')} value={venue} onChange={setVenue} placeholder="e.g. Bern Expo" />
           <FieldInput label={t('events.settings.venueAddress')} value={venueAddress} onChange={setVenueAddress} placeholder="e.g. Mingerstrasse 6, 3014 Bern" />
+          <FieldInput label="Venue Map URL" value={venueMapUrl} onChange={setVenueMapUrl} placeholder="e.g. https://maps.app.goo.gl/..." />
         </Section>
 
         {/* ── Capacity & Currency ── */}

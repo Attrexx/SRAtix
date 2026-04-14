@@ -159,6 +159,7 @@ export class OrdersController {
 
     const event = await this.ordersService.findEventForOrder(id);
     const purchaserName = order.customerName ?? 'Someone';
+    const resendEventMeta = (event?.meta as Record<string, any>) ?? {};
 
     const ttIds = (order.items ?? []).map((item: any) => item.ticketTypeId);
     const tt = ttIds.length > 0
@@ -174,7 +175,8 @@ export class OrdersController {
           purchaserName,
           eventName: event?.name ?? 'Event',
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
-          eventVenue: event?.venue ?? '',
+          eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
+          eventVenueMapUrl: resendEventMeta.venueMapUrl || undefined,
           ticketTypeName: tt?.name ?? 'Ticket',
           registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
         });

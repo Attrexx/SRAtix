@@ -108,6 +108,7 @@ export class CompEntriesService {
         endDate: true,
         timezone: true,
         currency: true,
+        meta: true,
       },
     });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
@@ -607,8 +608,10 @@ export class CompEntriesService {
       id: string;
       name: string;
       venue: string | null;
+      venueAddress: string | null;
       startDate: Date;
       endDate: Date;
+      meta: unknown;
     },
     data: {
       compType: CompType;
@@ -627,6 +630,8 @@ export class CompEntriesService {
       day: 'numeric',
     });
 
+    const compEventMeta = (event.meta as Record<string, any>) ?? {};
+
     return this.emailService.sendCompEntryConfirmation(data.email, {
       recipientName: `${data.firstName} ${data.lastName}`,
       compType: data.compType,
@@ -634,7 +639,8 @@ export class CompEntriesService {
       organization: data.organization,
       eventName: event.name,
       eventDate,
-      eventVenue: event.venue || '',
+      eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
+      eventVenueMapUrl: compEventMeta.venueMapUrl || undefined,
       ticketCode,
       orderNumber,
     });
@@ -649,8 +655,10 @@ export class CompEntriesService {
       id: string;
       name: string;
       venue: string | null;
+      venueAddress: string | null;
       startDate: Date;
       endDate: Date;
+      meta: unknown;
     },
     data: {
       compType: CompType;
@@ -682,6 +690,8 @@ export class CompEntriesService {
       day: 'numeric',
     });
 
+    const compInviteMeta = (event.meta as Record<string, any>) ?? {};
+
     return this.emailService.sendCompEntryInvitation(data.email, {
       recipientName: `${data.firstName} ${data.lastName}`,
       compType: data.compType,
@@ -689,7 +699,8 @@ export class CompEntriesService {
       organization: data.organization,
       eventName: event.name,
       eventDate,
-      eventVenue: event.venue || '',
+      eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
+      eventVenueMapUrl: compInviteMeta.venueMapUrl || undefined,
       orderNumber,
       registrationUrl,
     });

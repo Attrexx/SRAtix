@@ -22,6 +22,7 @@ interface OrderConfirmationData {
   eventName: string;
   eventDate: string;
   eventVenue: string;
+  eventVenueMapUrl?: string;
   isExhibitor?: boolean;
 }
 
@@ -43,6 +44,20 @@ export class EmailService {
     @Inject('EMAIL_TRANSPORT')
     private readonly transport: EmailTransport,
   ) {}
+
+  /** Format venue for HTML emails — wraps in a link if mapUrl is provided. */
+  private venueHtml(venue: string, mapUrl?: string): string {
+    if (!venue) return '—';
+    return mapUrl
+      ? `<a href="${mapUrl}" style="color: #4f46e5; text-decoration: underline;" target="_blank">${venue}</a>`
+      : venue;
+  }
+
+  /** Format venue for plain-text emails — appends URL if mapUrl is provided. */
+  private venueText(venue: string, mapUrl?: string): string {
+    if (!venue) return '—';
+    return mapUrl ? `${venue} — ${mapUrl}` : venue;
+  }
 
   /**
    * Send an order confirmation email with ticket QR codes.
@@ -245,6 +260,7 @@ export class EmailService {
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       ticketCode: string;
       orderNumber: string;
       apiBaseUrl?: string;
@@ -286,7 +302,7 @@ export class EmailService {
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           ${this.adminInfoRow('Event', data.eventName)}
           ${this.adminInfoRow('Date', data.eventDate)}
-          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+          ${this.adminInfoRow('Venue', this.venueHtml(data.eventVenue, data.eventVenueMapUrl))}
         </table>
       </div>
 
@@ -307,7 +323,7 @@ export class EmailService {
     `);
 
     const orgLine = data.organization ? `Organization: ${data.organization}\n` : '';
-    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName}\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\nTicket Code: ${data.ticketCode}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nPresent your ticket code at the event entrance for check-in.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName}\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\nTicket Code: ${data.ticketCode}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n\nPresent your ticket code at the event entrance for check-in.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
 
     return this.send({
       to,
@@ -332,6 +348,7 @@ export class EmailService {
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       orderNumber: string;
       registrationUrl: string;
     },
@@ -389,7 +406,7 @@ export class EmailService {
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           ${this.adminInfoRow('Event', data.eventName)}
           ${this.adminInfoRow('Date', data.eventDate)}
-          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+          ${this.adminInfoRow('Venue', this.venueHtml(data.eventVenue, data.eventVenueMapUrl))}
         </table>
       </div>
 
@@ -405,7 +422,7 @@ export class EmailService {
     const registrationLine = data.registrationUrl
       ? `\nTo complete your registration, visit:\n${data.registrationUrl}\n`
       : '';
-    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName} — Registration Required\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n${registrationLine}\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+    const text = `Your ${data.compTypeLabel} Pass for ${data.eventName} — Registration Required\n\nHi ${data.recipientName},\n\n${intro.replace(/<\/?strong>/g, '')}\n\nPass Details\n──────────────\nType: ${data.compTypeLabel}\n${orgLine}Order: #${data.orderNumber}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n${registrationLine}\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
 
     return this.send({
       to,
@@ -429,6 +446,7 @@ export class EmailService {
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       ticketTypeName: string;
       registrationUrl: string;
     },
@@ -458,7 +476,7 @@ export class EmailService {
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
           ${this.adminInfoRow('Event', data.eventName)}
           ${this.adminInfoRow('Date', data.eventDate)}
-          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+          ${this.adminInfoRow('Venue', this.venueHtml(data.eventVenue, data.eventVenueMapUrl))}
         </table>
       </div>
 
@@ -484,7 +502,7 @@ export class EmailService {
         If you believe you received this email in error, you can safely ignore it.
       </p>
     `);
-    const text = `You've Been Assigned a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has assigned you a ticket for ${data.eventName}.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue || '—'}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
+    const text = `You've Been Assigned a Ticket!\n\nHi ${data.recipientName},\n\nYou are receiving this email because ${data.purchaserName} has assigned you a ticket for ${data.eventName}.\n\nTicket Details\n──────────────\nTicket Type: ${data.ticketTypeName}\nPurchased by: ${data.purchaserName}\n\nEvent Information\n─────────────────\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n\nAction Required\n───────────────\nTo finalize your attendance, please complete a short registration form. Your details help the organizers with badge printing, matchmaking opportunities, and improved conference experiences.\n\nComplete your registration here:\n${data.registrationUrl}\n\nIf you don't see this email in your inbox, please check your spam/junk folder.\nIf you believe you received this email in error, you can safely ignore it.\n\n— Swiss Robotics Association / SRAtix Ticketing Platform`;
 
     return this.send({
       to,
@@ -504,6 +522,7 @@ export class EmailService {
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       ticketTypeName: string;
     },
   ): Promise<DeliveryResult> {
@@ -517,14 +536,14 @@ export class EmailService {
           ${this.adminInfoRow('Ticket', data.ticketTypeName)}
           ${this.adminInfoRow('Event', data.eventName)}
           ${this.adminInfoRow('Date', data.eventDate)}
-          ${this.adminInfoRow('Venue', data.eventVenue || '—')}
+          ${this.adminInfoRow('Venue', this.venueHtml(data.eventVenue, data.eventVenueMapUrl))}
         </table>
       </div>
       <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
         Your ticket QR code will be available for check-in at the event entrance.
       </p>
     `);
-    const text = `Registration Confirmed\n\nHi ${data.recipientName},\n\nYour registration for ${data.eventName} is confirmed!\n\nTicket: ${data.ticketTypeName}\nDate: ${data.eventDate}\nVenue: ${data.eventVenue}\n\nYour ticket QR code will be available for check-in at the event.\n\n— Swiss Robotics Association / SRAtix`;
+    const text = `Registration Confirmed\n\nHi ${data.recipientName},\n\nYour registration for ${data.eventName} is confirmed!\n\nTicket: ${data.ticketTypeName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n\nYour ticket QR code will be available for check-in at the event.\n\n— Swiss Robotics Association / SRAtix`;
 
     return this.send({
       to,
@@ -613,6 +632,7 @@ export class EmailService {
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       orderNumber: string;
       portalUrl: string;
       passwordSetupUrl?: string;
@@ -642,7 +662,7 @@ export class EmailService {
         <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
         <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
         <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-        <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
+        <p style="margin: 4px 0;"><strong>Venue:</strong> ${this.venueHtml(data.eventVenue, data.eventVenueMapUrl)}</p>
         <p style="margin: 4px 0;"><strong>Order:</strong> #${data.orderNumber}</p>
       </div>
 
@@ -720,7 +740,7 @@ Thank you for registering ${data.companyName} as an exhibitor at ${data.eventNam
 
 Event: ${data.eventName}
 Date: ${data.eventDate}
-Venue: ${data.eventVenue}
+Venue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
 Order: #${data.orderNumber}
 ${passwordText}
 ${portalText}
@@ -748,6 +768,7 @@ Questions? Contact contact@swissroboticsday.ch
       eventName: string;
       eventDate: string;
       eventVenue: string;
+      eventVenueMapUrl?: string;
       role: string;
       portalUrl: string;
       passwordSetupUrl: string;
@@ -764,7 +785,7 @@ Questions? Contact contact@swissroboticsday.ch
         <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
         <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
         <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-        <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
+        <p style="margin: 4px 0;"><strong>Venue:</strong> ${this.venueHtml(data.eventVenue, data.eventVenueMapUrl)}</p>
       </div>
 
       <div style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
@@ -803,7 +824,7 @@ You have been added as ${data.role} for ${data.companyName} at ${data.eventName}
 
 Event: ${data.eventName}
 Date: ${data.eventDate}
-Venue: ${data.eventVenue}
+Venue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
 
 Set Up Your Account
 -----------------------------
@@ -1076,7 +1097,7 @@ ${data.message}
               <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
               <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
               <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-              <p style="margin: 4px 0;"><strong>Venue:</strong> ${data.eventVenue}</p>
+              <p style="margin: 4px 0;"><strong>Venue:</strong> ${this.venueHtml(data.eventVenue, data.eventVenueMapUrl)}</p>
             </div>
           </td>
         </tr>
@@ -1118,7 +1139,7 @@ Total: ${data.totalFormatted} ${data.currency}
 ${showTicketCodes ? `\nTicket Code${data.ticketCodes!.length > 1 ? 's' : ''}:\n${data.ticketCodes!.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
 Event: ${data.eventName}
 Date: ${data.eventDate}
-Venue: ${data.eventVenue}
+Venue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
 
 — Swiss Robotics Association / SRAtix
     `.trim();

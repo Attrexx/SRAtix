@@ -544,7 +544,7 @@ export class ExhibitorPortalService {
     // Load event for email details and the exhibitor ticket type
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, orgId: true, name: true, startDate: true, endDate: true, venue: true, currency: true, meta: true },
+      select: { id: true, orgId: true, name: true, startDate: true, endDate: true, venue: true, venueAddress: true, currency: true, meta: true },
     });
     if (!event) throw new NotFoundException('Event not found');
 
@@ -642,6 +642,8 @@ export class ExhibitorPortalService {
     const eventDate = event.startDate.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
     });
+    const staffEventMeta = (event.meta as Record<string, any>) ?? {};
+    const fullVenue = [event.venue, event.venueAddress].filter(Boolean).join(', ');
 
     if (passwordSetupUrl) {
       // New user: send staff portal invite with password setup
@@ -650,7 +652,8 @@ export class ExhibitorPortalService {
         companyName: profile?.companyName ?? 'Your Company',
         eventName: event.name,
         eventDate,
-        eventVenue: event.venue ?? '',
+        eventVenue: fullVenue,
+        eventVenueMapUrl: staffEventMeta.venueMapUrl || undefined,
         role: staff.role,
         portalUrl: portalBaseUrl,
         passwordSetupUrl,
@@ -664,7 +667,8 @@ export class ExhibitorPortalService {
         purchaserName: profile?.companyName ?? 'Your exhibitor company',
         eventName: event.name,
         eventDate,
-        eventVenue: event.venue ?? '',
+        eventVenue: fullVenue,
+        eventVenueMapUrl: staffEventMeta.venueMapUrl || undefined,
         ticketTypeName: ticketType.name,
         registrationUrl: portalBaseUrl,
       }).catch((err) => {

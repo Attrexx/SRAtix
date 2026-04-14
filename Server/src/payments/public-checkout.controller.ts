@@ -185,7 +185,7 @@ export class PublicCheckoutController {
     // ── 1. Find event ────────────────────────────────────────────────────
     const event = await this.prisma.event.findUnique({
       where: { id: dto.eventId },
-      select: { id: true, orgId: true, currency: true, status: true, name: true, endDate: true, startDate: true, venue: true, meta: true },
+      select: { id: true, orgId: true, currency: true, status: true, name: true, endDate: true, startDate: true, venue: true, venueAddress: true, meta: true },
     });
     if (!event) throw new NotFoundException('Event not found');
     if (event.status !== 'published') {
@@ -196,8 +196,13 @@ export class PublicCheckoutController {
     const now = new Date();
     const tt = await this.prisma.ticketType.findFirst({
       where: { id: dto.ticketTypeId, eventId: dto.eventId, status: 'active' },
+      include: { pricingVariants: { orderBy: { sortOrder: 'asc' } } },
     });
     if (!tt) throw new NotFoundException('Ticket type not found or unavailable');
+
+    // Resolve early-bird / active pricing variant
+    const resolved = this.ticketTypesService.resolvePrice(tt, tt.pricingVariants, now);
+    const effectivePriceCents = resolved.activePriceCents;
 
     if (tt.salesStart && tt.salesStart > now) {
       throw new BadRequestException('Ticket sales have not started yet');
@@ -318,7 +323,7 @@ export class PublicCheckoutController {
       }
     }
     // ── 4. Create order ──────────────────────────────────────────────────
-    const totalCents = tt.priceCents * dto.quantity;
+    const totalCents = effectivePriceCents * dto.quantity;
     const isTestMode = await this.settings.isTestMode();
     const order = await this.orders.create({
       eventId: dto.eventId,
@@ -330,7 +335,7 @@ export class PublicCheckoutController {
         {
           ticketTypeId: dto.ticketTypeId,
           quantity: dto.quantity,
-          unitPriceCents: tt.priceCents,
+          unitPriceCents: effectivePriceCents,
         },
       ],
     });
@@ -404,7 +409,7 @@ export class PublicCheckoutController {
       if (ttWithDiscounts) {
         const discount = this.ticketTypesService.calculateMemberDiscount(
           ttWithDiscounts,
-          tt.priceCents, // use resolved base price
+          effectivePriceCents, // use resolved price (early-bird if applicable)
           validatedMemberGroup,
           validatedMemberTier,
           validatedPartnerId,
@@ -484,7 +489,8 @@ export class PublicCheckoutController {
                 purchaserName,
                 eventName: event.name,
                 eventDate: event.startDate.toISOString().split('T')[0],
-                eventVenue: event.venue ?? '',
+                eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
+                eventVenueMapUrl: eventMetaFree.venueMapUrl || undefined,
                 ticketTypeName: tt.name,
                 registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
               })
@@ -529,7 +535,7 @@ export class PublicCheckoutController {
             ? `${tt.name} (${appliedDiscountLabel})`
             : tt.name,
           description: tt.description ?? undefined,
-          unitAmountCents: tt.priceCents,
+          unitAmountCents: effectivePriceCents,
           quantity: dto.quantity,
         },
       ],

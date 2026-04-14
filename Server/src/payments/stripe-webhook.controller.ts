@@ -233,6 +233,7 @@ export class StripeWebhookController {
       if (registrationBaseUrl) {
         const eventForGift = await this.orders.findEventForOrder(orderId);
         const purchaserName = registrationName;
+        const giftEventMeta = (eventForGift?.meta as Record<string, any>) ?? {};
 
         // Get ticket type name
         const ttIds = (orderForMeta.items ?? []).map((item: any) => item.ticketTypeId);
@@ -247,7 +248,8 @@ export class StripeWebhookController {
               purchaserName,
               eventName: eventForGift?.name ?? 'Event',
               eventDate: eventForGift?.startDate?.toISOString().split('T')[0] ?? '',
-              eventVenue: eventForGift?.venue ?? '',
+              eventVenue: [eventForGift?.venue, eventForGift?.venueAddress].filter(Boolean).join(', '),
+              eventVenueMapUrl: giftEventMeta.venueMapUrl || undefined,
               ticketTypeName: ttForGift?.name ?? 'Ticket',
               registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
             })
@@ -285,6 +287,7 @@ export class StripeWebhookController {
 
     // Send order confirmation email (real in both modes — user needs their ticket)
     const event = await this.orders.findEventForOrder(orderId);
+    const eventMeta = (event?.meta as Record<string, any>) ?? {};
     if (paidOrder && paidOrder.customerEmail) {
       try {
         // Resolve ticket type names (avoid showing raw UUIDs)
@@ -313,7 +316,8 @@ export class StripeWebhookController {
           apiBaseUrl: 'https://tix.swiss-robotics.org',
           eventName: event?.name ?? 'Event',
           eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
-          eventVenue: event?.venue ?? '',
+          eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
+          eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
           isExhibitor: isExhibitorOrder,
         });
       } catch (err) {
@@ -520,7 +524,7 @@ export class StripeWebhookController {
     companyName: string,
     eventOrgId: string,
     eventId: string,
-    event: { name?: string; startDate?: Date; venue?: string | null },
+    event: { name?: string; startDate?: Date; venue?: string | null; venueAddress?: string | null; meta?: unknown },
     orderNumber: string,
     orderId: string,
   ): Promise<void> {
@@ -630,12 +634,14 @@ export class StripeWebhookController {
         'exhibitor_portal_url',
         'https://swissroboticsday.ch/exhibitor-portal',
       );
+      const provisionMeta = (event.meta as Record<string, any>) ?? {};
       await this.email.sendExhibitorWelcome(email, {
         contactName: displayName,
         companyName,
         eventName: event.name ?? 'Event',
         eventDate: event.startDate?.toISOString().split('T')[0] ?? '',
-        eventVenue: event.venue ?? '',
+        eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
+        eventVenueMapUrl: provisionMeta.venueMapUrl || undefined,
         orderNumber,
         portalUrl: portalBaseUrl,
         passwordSetupUrl,
