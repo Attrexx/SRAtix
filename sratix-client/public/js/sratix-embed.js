@@ -1486,6 +1486,26 @@
         }
       }
 
+      // Position the fixed panel below (or above) the trigger
+      function positionPanel() {
+        var rect = trigger.getBoundingClientRect();
+        var spaceBelow = window.innerHeight - rect.bottom - 8;
+        var spaceAbove = rect.top - 8;
+        var panelH = Math.min(panel.scrollHeight, window.innerHeight * 0.45);
+        var openBelow = spaceBelow >= panelH || spaceBelow >= spaceAbove;
+
+        panel.style.left = rect.left + 'px';
+        if (openBelow) {
+          panel.style.top = (rect.bottom + 4) + 'px';
+          panel.style.bottom = 'auto';
+          panel.style.maxHeight = Math.min(spaceBelow, window.innerHeight * 0.45) + 'px';
+        } else {
+          panel.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+          panel.style.top = 'auto';
+          panel.style.maxHeight = Math.min(spaceAbove, window.innerHeight * 0.45) + 'px';
+        }
+      }
+
       // Toggle panel
       trigger.addEventListener('click', function (e) {
         e.preventDefault();
@@ -1499,6 +1519,7 @@
               other.querySelector('.sratix-msd-trigger').setAttribute('aria-expanded', 'false');
             }
           });
+          positionPanel();
         }
       });
 
@@ -1510,6 +1531,15 @@
       // Close on click outside
       document.addEventListener('click', function (e) {
         if (!dd.contains(e.target)) {
+          dd.classList.remove('sratix-msd-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Close on scroll of any ancestor (modal body etc.)
+      var scrollParent = trigger.closest('.sratix-modal-box') || window;
+      scrollParent.addEventListener('scroll', function () {
+        if (dd.classList.contains('sratix-msd-open')) {
           dd.classList.remove('sratix-msd-open');
           trigger.setAttribute('aria-expanded', 'false');
         }

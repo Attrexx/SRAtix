@@ -3071,16 +3071,35 @@ text-align: center;
 	position: relative;
 }
 
+/* Override Elementor / theme button styling on the trigger */
+button.sratix-msd-trigger,
 .sratix-msd-trigger {
-	display: flex;
+	display: flex !important;
 	align-items: center;
 	justify-content: space-between;
+	width: 100%;
 	cursor: pointer;
 	text-align: left;
 	appearance: none;
 	-webkit-appearance: none;
 	min-width: 0;
 	overflow: hidden;
+	background: var(--sratix-navy) !important;
+	color: var(--sratix-text) !important;
+	border: 1px solid var(--sratix-border-h) !important;
+	border-radius: 10px !important;
+	padding: 10px 14px !important;
+	font-size: 1em !important;
+	font-family: 'Outfit', sans-serif !important;
+	box-sizing: border-box;
+	transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+button.sratix-msd-trigger:focus,
+.sratix-msd-trigger:focus {
+	outline: none;
+	border-color: var(--sratix-red) !important;
+	box-shadow: 0 0 0 3px rgba(224, 32, 32, 0.15);
 }
 
 .sratix-msd-text {
@@ -3109,20 +3128,18 @@ text-align: center;
 
 .sratix-msd-panel {
 	display: none;
-	position: absolute;
-	z-index: 50;
-	top: calc(100% + 4px);
-	left: 0;
-	min-width: 340px;
+	position: fixed;
+	z-index: 100000;
+	min-width: 320px;
 	width: max-content;
-	max-width: 480px;
-	max-height: 300px;
+	max-width: min(480px, 90vw);
+	max-height: 45vh;
 	overflow-y: auto;
 	background: var(--sratix-navy-light);
 	border: 1px solid var(--sratix-border-h);
 	border-radius: 10px;
 	padding: 4px 0;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
 .sratix-msd-open .sratix-msd-panel {
