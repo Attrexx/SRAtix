@@ -3079,10 +3079,13 @@ text-align: center;
 	text-align: left;
 	appearance: none;
 	-webkit-appearance: none;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .sratix-msd-text {
 	flex: 1;
+	min-width: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;

@@ -1480,12 +1480,6 @@
         if (checked.length === 0) {
           textEl.textContent = placeholder;
           textEl.classList.remove('sratix-msd-has-value');
-        } else if (checked.length <= 2) {
-          var labels = Array.from(checked).map(function (cb) {
-            return cb.parentElement.textContent.trim();
-          });
-          textEl.textContent = labels.join(', ');
-          textEl.classList.add('sratix-msd-has-value');
         } else {
           textEl.textContent = checked.length + ' ' + (t('reg.form.selected') || 'selected');
           textEl.classList.add('sratix-msd-has-value');
