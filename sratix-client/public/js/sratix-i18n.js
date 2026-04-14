@@ -142,7 +142,7 @@ const sratixI18n = (function () {
       // Role choice
       'roleChoice.title':          'How are you attending Swiss Robotics Day?',
       'roleChoice.subtitle':       'Select your role to see the right tickets for you.',
-      'roleChoice.visitorLabel':   'Conference Visitor',
+      'roleChoice.visitorLabel':   'Conference visitor',
       'roleChoice.visitorDesc':    'Attend talks, demos, and networking sessions.',
       'roleChoice.exhibitorLabel': 'Exhibitor',
       'roleChoice.exhibitorDesc':  'Purchase a booth package and register your exhibition team.',
