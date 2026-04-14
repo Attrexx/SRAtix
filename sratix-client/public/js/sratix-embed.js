@@ -1399,6 +1399,9 @@
       if (field.type === 'group') return;
       // Skip conditionally hidden fields
       if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, answers)) return;
+      // Skip fields hidden by client-side logic (e.g. canton when country ≠ CH)
+      var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+      if (wrap && wrap.style.display === 'none') return;
 
       var id = 'sratix-df-' + field.id;
       var el;
@@ -1561,26 +1564,32 @@
       var visible = evalConditions(field.conditions, answers);
       wrap.style.display = visible ? '' : 'none';
     });
-    adjustCantonRowWidths(form);
+    applyCantonVisibility(form);
   }
 
   /**
-   * Canton–City–Country row width adjustment.
-   * When a canton field is visible (Switzerland selected), all three fields
-   * share 33 % width; when canton is hidden, city and country get 50 % each.
+   * Canton visibility & row width adjustment (pure client-side).
+   * Reads the country <select> value directly — no schema conditions needed.
+   * When Switzerland ('ch') is selected → show canton, all three fields 33%.
+   * Otherwise → hide canton, city + country 50% each.
    */
   var CANTON_FIELD_GROUPS = [
     { canton: 'state_canton', country: 'country', city: 'city' },
     { canton: 'org_canton',   country: 'org_country', city: 'org_city' },
   ];
-  function adjustCantonRowWidths(form) {
+  function applyCantonVisibility(form) {
     CANTON_FIELD_GROUPS.forEach(function (g) {
       var cantonWrap  = form.querySelector('[data-df-id="' + g.canton  + '"]');
       var countryWrap = form.querySelector('[data-df-id="' + g.country + '"]');
       var cityWrap    = form.querySelector('[data-df-id="' + g.city    + '"]');
-      if (!countryWrap || !cityWrap) return;
-      var cantonVisible = cantonWrap && cantonWrap.style.display !== 'none';
-      if (cantonVisible) {
+      if (!cantonWrap || !countryWrap || !cityWrap) return;
+      // Read country value from the select element inside the wrapper
+      var countrySel = countryWrap.querySelector('select');
+      var isSwitzerland = countrySel && countrySel.value === 'ch';
+      // Show/hide canton
+      cantonWrap.style.display = isSwitzerland ? '' : 'none';
+      // Adjust widths
+      if (isSwitzerland) {
         setFieldFlex(cantonWrap, 33);
         setFieldFlex(countryWrap, 33);
         setFieldFlex(cityWrap, 33);
@@ -1723,6 +1732,10 @@
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
       }
+
+      // Canton: show only when country=CH (runs independently of schema conditions)
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      applyCantonVisibility(formEl);
 
       // Initialize richtext editors and multi-select dropdowns
       initRichtextEditors(formEl);
@@ -2137,6 +2150,10 @@
             var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
             applyConditionVisibility(formEl, schemaFields, initSnap);
           }
+          // Canton: show only when country=CH
+          var formElCanton = modal.querySelector('.sratix-form-fields') || modal;
+          formElCanton.addEventListener('change', function () { applyCantonVisibility(formElCanton); });
+          applyCantonVisibility(formElCanton);
         }
       }
 
@@ -2758,6 +2775,10 @@
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
       }
+
+      // Canton: show only when country=CH
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      applyCantonVisibility(formEl);
 
       formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
