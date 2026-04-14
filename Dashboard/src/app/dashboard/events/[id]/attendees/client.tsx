@@ -869,7 +869,7 @@ export default function AttendeesPage() {
                               {ci.direction === 'in' ? '→ In' : '← Out'} ({ci.method})
                             </span>
                             <span style={{ color: 'var(--color-text-secondary)' }}>
-                              {new Date(ci.createdAt).toLocaleString('en-CH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(ci.timestamp).toLocaleString('en-CH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         ))}

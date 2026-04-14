@@ -55,8 +55,8 @@ export class AttendeesService {
           orderBy: { createdAt: 'desc' },
         },
         checkIns: {
-          select: { id: true, method: true, direction: true, createdAt: true },
-          orderBy: { createdAt: 'desc' },
+          select: { id: true, method: true, direction: true, timestamp: true },
+          orderBy: { timestamp: 'desc' },
           take: 10,
         },
       },

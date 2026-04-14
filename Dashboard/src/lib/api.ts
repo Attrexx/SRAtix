@@ -374,7 +374,7 @@ export interface AttendeeDetails extends Attendee {
     id: string;
     method: string;
     direction: string;
-    createdAt: string;
+    timestamp: string;
   }[];
 }
 
