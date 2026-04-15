@@ -3018,8 +3018,9 @@ margin-bottom: 4px;
 }
 
 .sratix-confirmation-note {
-color: #64748b;
-font-size: 0.85em;
+color: #334155;
+font-size: 0.9em;
+line-height: 1.5;
 margin: 0 0 20px;
 }
 

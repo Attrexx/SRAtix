@@ -2844,7 +2844,7 @@
           }
           container.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
             + '<div style="font-size:48px;margin-bottom:16px;">✅</div>'
-            + '<h3>Registration Complete!</h3>'
+            + '<h3>Registration complete!</h3>'
             + '<p style="opacity:0.7;">You are now registered for <strong>' + escHtml(event.name || 'the event') + '</strong>.</p>'
             + '<p style="opacity:0.7;">A confirmation email has been sent to <strong>' + escHtml(attendee.email || '') + '</strong>.</p>'
             + '</div>';
