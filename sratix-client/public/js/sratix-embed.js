@@ -370,11 +370,14 @@
       }
       if (memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') {
         html += renderWelcomeBanner(memberSession, ticketTypes);
-      } else if (config.memberGateEnabled) {
+      }
+      // Navigation links row
+      html += '<div class="sratix-nav-links">';
+      if (!(memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') && config.memberGateEnabled) {
         html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">${escHtml(t('memberGate.backToMembership'))}</a>`;
       }
-      // "Change role" link
       html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
+      html += '</div>';
       html += renderTicketCards(ticketTypes, layout, memberSession, role);
       container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
