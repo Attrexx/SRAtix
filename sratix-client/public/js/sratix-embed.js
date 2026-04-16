@@ -939,6 +939,13 @@
               <span>Include a ticket for myself</span>
             </label>
           </div>
+          <div class="sratix-optout-box" id="sratix-membership-optout">
+            <label class="sratix-optout-label">
+              <input type="checkbox" id="sratix-optout-check" />
+              <span>${escHtml(t('optOut.label'))}</span>
+            </label>
+            <p class="sratix-optout-desc">${escHtml(t('optOut.description'))}</p>
+          </div>
           <p class="sratix-error" id="sratix-qty-error" style="display:none"></p>
         </div>
         <div class="sratix-modal-footer">
@@ -1024,11 +1031,13 @@
         return;
       }
       var includeForSelf = selfTicketCheckbox ? selfTicketCheckbox.checked : true;
+      var optOutCheck = modal.querySelector('#sratix-optout-check');
+      var membershipOptOut = optOutCheck ? optOutCheck.checked : false;
       closeModal();
       if (qty > 1) {
-        openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf);
+        openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut);
       } else {
-        openRegistrationModal(eventId, tt, qty, promoCode, discountCents, true, []);
+        openRegistrationModal(eventId, tt, qty, promoCode, discountCents, true, [], membershipOptOut);
       }
     });
 
@@ -1038,10 +1047,10 @@
 
   // ─── Recipient details modal (between qty and registration) ──────────────────
 
-  function openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf) {
+  function openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut) {
     var recipientCount = includeForSelf ? qty - 1 : qty;
     if (recipientCount < 1) {
-      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, []);
+      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, [], membershipOptOut);
       return;
     }
 
@@ -1124,7 +1133,7 @@
       }
 
       closeModal();
-      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients);
+      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients, membershipOptOut);
     });
 
     requestAnimationFrame(function() { modal.classList.add('sratix-modal--visible'); });
@@ -1610,7 +1619,7 @@
 
   // ─── Registration modal (Stage B) ────────────────────────────────────────────
 
-  async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeTicketForSelf, additionalAttendees) {
+  async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeTicketForSelf, additionalAttendees, membershipOptOut) {
     if (typeof includeTicketForSelf === 'undefined') includeTicketForSelf = true;
     if (!additionalAttendees) additionalAttendees = [];
     var subtotal  = tt.priceCents * qty;
@@ -1857,6 +1866,11 @@
         if (additionalAttendees && additionalAttendees.length > 0) {
           payload.includeTicketForSelf = includeTicketForSelf;
           payload.additionalAttendees = additionalAttendees;
+        }
+
+        // Membership opt-out flag
+        if (membershipOptOut) {
+          payload.membershipOptOut = true;
         }
 
         var result = await apiFetch('payments/checkout/public', {

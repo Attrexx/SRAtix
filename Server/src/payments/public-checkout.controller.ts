@@ -142,6 +142,12 @@ class PublicCheckoutDto {
   @IsString()
   @IsOptional()
   billingName?: string; // required when includeTicketForSelf is false
+
+  // ── Membership opt-out ─────────────────────────────────────────────
+
+  @IsBoolean()
+  @IsOptional()
+  membershipOptOut?: boolean; // true = attendee does not want SRA membership
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -344,6 +350,7 @@ export class PublicCheckoutController {
     {
       const orderMeta: Record<string, unknown> = {};
       if (isTestMode) orderMeta.isTestOrder = true;
+      if (dto.membershipOptOut) orderMeta.membershipOptOut = true;
       if (dto.attendeeData.company) orderMeta.companyName = dto.attendeeData.company;
       if (recipientAttendees.length > 0) {
         orderMeta.recipientAttendees = recipientAttendees;
@@ -450,6 +457,7 @@ export class PublicCheckoutController {
     if (validatedMemberTier) metadata.sratix_member_tier = validatedMemberTier;
     if (validatedPartnerId) metadata.sratix_partner_id = validatedPartnerId;
     if (isTestMode) metadata.sratix_test_mode = '1';
+    if (dto.membershipOptOut) metadata.sratix_membership_opt_out = '1';
 
     const finalTotal = totalCents - discountCents;
 
