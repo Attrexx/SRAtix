@@ -93,6 +93,11 @@
 	margin: 0 auto;
 }
 
+/* Wider container for visitor ticket grid (3 columns need more room) */
+.sratix-page-inner:has(.sratix-cards--visitor) {
+	max-width: 1280px;
+}
+
 /* Override parent #content background when sratix page is present */
 #content:has(.sratix-page-wrap),
 .page-content:has(.sratix-page-wrap),
@@ -141,6 +146,23 @@
 	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 	gap: 16px;
 	margin: 20px 0;
+}
+
+/* Visitor tickets: 3 per row in a wider container */
+.sratix-cards--visitor {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 900px) {
+	.sratix-cards--visitor {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 560px) {
+	.sratix-cards--visitor {
+		grid-template-columns: 1fr;
+	}
 }
 
 .sratix-list {

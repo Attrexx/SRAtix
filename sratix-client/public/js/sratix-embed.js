@@ -375,7 +375,7 @@
       }
       // "Change role" link
       html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
-      html += renderTicketCards(ticketTypes, layout, memberSession);
+      html += renderTicketCards(ticketTypes, layout, memberSession, role);
       container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
       // Bind "change member type" link
@@ -811,9 +811,10 @@
     others: 'Professional',
   };
 
-  function renderTicketCards(types, layout, memberSession) {
+  function renderTicketCards(types, layout, memberSession, role) {
     const cls = layout === 'list' ? 'sratix-list' : 'sratix-cards';
-    return `<div class="${cls}">${types.map(function (tt) { return renderCard(tt, memberSession); }).join('')}</div>`;
+    const roleCls = role ? ' sratix-cards--' + role : '';
+    return `<div class="${cls}${roleCls}">${types.map(function (tt) { return renderCard(tt, memberSession); }).join('')}</div>`;
   }
 
   function renderCard(tt, memberSession) {
