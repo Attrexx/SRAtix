@@ -50,7 +50,7 @@ const sratixI18n = (function () {
       // Membership opt-out
       'optOut.heading':          'Your ticket includes a <strong>free</strong> membership in the Swiss Robotics Association',
       'optOut.label':            'I do not wish to become an SRA member',
-      'optOut.description':      'All tickets include a complimentary individual membership in the Swiss Robotics Association, valid until the end of the current year. If you prefer not to join, check this box. The ticket price remains the same — you simply won\'t be enrolled as an SRA member.',
+      'optOut.description':      'All tickets include a complimentary individual membership in the Swiss Robotics Association, valid until the end of the current year. If you prefer not to join, check this box. The ticket price <strong>remains the same</strong> — you simply won\'t be enrolled as an SRA member.',
 
       // Registration modal
       'reg.title':               'Registration details',
@@ -383,7 +383,7 @@ const sratixI18n = (function () {
       // Membership opt-out
       'optOut.heading':          'Votre billet inclut une adhésion <strong>gratuite</strong> à la Swiss Robotics Association',
       'optOut.label':            'Je ne souhaite pas devenir membre de la SRA',
-      'optOut.description':      'Tous les billets incluent une adhésion individuelle gratuite à la Swiss Robotics Association, valable jusqu\'à la fin de l\'année en cours. Si vous préférez ne pas adhérer, cochez cette case. Le prix du billet reste inchangé — vous ne serez simplement pas inscrit(e) en tant que membre SRA.',
+      'optOut.description':      'Tous les billets incluent une adhésion individuelle gratuite à la Swiss Robotics Association, valable jusqu\'à la fin de l\'année en cours. Si vous préférez ne pas adhérer, cochez cette case. Le prix du billet <strong>reste inchangé</strong> — vous ne serez simplement pas inscrit(e) en tant que membre SRA.',
 
       'reg.title':               'Détails d\'inscription',
       'reg.firstName':           'Prénom',
@@ -702,7 +702,7 @@ const sratixI18n = (function () {
       // Membership opt-out
       'optOut.heading':          'Ihr Ticket beinhaltet eine <strong>kostenlose</strong> Mitgliedschaft bei der Swiss Robotics Association',
       'optOut.label':            'Ich möchte kein SRA-Mitglied werden',
-      'optOut.description':      'Alle Tickets beinhalten eine kostenlose individuelle Mitgliedschaft bei der Swiss Robotics Association, gültig bis Ende des laufenden Jahres. Wenn Sie nicht beitreten möchten, aktivieren Sie dieses Kästchen. Der Ticketpreis bleibt gleich — Sie werden lediglich nicht als SRA-Mitglied registriert.',
+      'optOut.description':      'Alle Tickets beinhalten eine kostenlose individuelle Mitgliedschaft bei der Swiss Robotics Association, gültig bis Ende des laufenden Jahres. Wenn Sie nicht beitreten möchten, aktivieren Sie dieses Kästchen. Der Ticketpreis <strong>bleibt gleich</strong> — Sie werden lediglich nicht als SRA-Mitglied registriert.',
 
       'reg.title':               'Anmeldedaten',
       'reg.firstName':           'Vorname',
@@ -1021,7 +1021,7 @@ const sratixI18n = (function () {
       // Membership opt-out
       'optOut.heading':          'Il tuo biglietto include un\'iscrizione <strong>gratuita</strong> alla Swiss Robotics Association',
       'optOut.label':            'Non desidero diventare membro della SRA',
-      'optOut.description':      'Tutti i biglietti includono un\'iscrizione individuale gratuita alla Swiss Robotics Association, valida fino alla fine dell\'anno in corso. Se preferisci non iscriverti, seleziona questa casella. Il prezzo del biglietto resta invariato — semplicemente non sarai registrato/a come membro SRA.',
+      'optOut.description':      'Tutti i biglietti includono un\'iscrizione individuale gratuita alla Swiss Robotics Association, valida fino alla fine dell\'anno in corso. Se preferisci non iscriverti, seleziona questa casella. Il prezzo del biglietto <strong>resta invariato</strong> — semplicemente non sarai registrato/a come membro SRA.',
 
       'reg.title':               'Dettagli di registrazione',
       'reg.firstName':           'Nome',
@@ -1340,7 +1340,7 @@ const sratixI18n = (function () {
       // Membership opt-out
       'optOut.heading':          '您的票券包含瑞士機器人協會的<strong>免費</strong>會員資格',
       'optOut.label':            '我不希望成為 SRA 會員',
-      'optOut.description':      '所有票券均包含瑞士機器人協會（Swiss Robotics Association）的免費個人會員資格，有效期至當年年底。如果您不想加入，請勾選此方塊。票價不變——您只是不會被註冊為 SRA 會員。',
+      'optOut.description':      '所有票券均包含瑞士機器人協會（Swiss Robotics Association）的免費個人會員資格，有效期至當年年底。如果您不想加入，請勾選此方塊。<strong>票價不變</strong>——您只是不會被註冊為 SRA 會員。',
 
       'reg.title':               '報名資料',
       'reg.firstName':           '名字',

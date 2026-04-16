@@ -945,7 +945,7 @@
               <input type="checkbox" id="sratix-optout-check" />
               <span>${escHtml(t('optOut.label'))}</span>
             </label>
-            <p class="sratix-optout-desc">${escHtml(t('optOut.description'))}</p>
+            <p class="sratix-optout-desc">${t('optOut.description')}</p>
           </div>
           <p class="sratix-error" id="sratix-qty-error" style="display:none"></p>
         </div>
