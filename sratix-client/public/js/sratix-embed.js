@@ -940,6 +940,7 @@
             </label>
           </div>
           <div class="sratix-optout-box" id="sratix-membership-optout">
+            <p class="sratix-optout-heading">${t('optOut.heading')}</p>
             <label class="sratix-optout-label">
               <input type="checkbox" id="sratix-optout-check" />
               <span>${escHtml(t('optOut.label'))}</span>
