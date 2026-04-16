@@ -165,9 +165,6 @@ export class CompEntriesService {
     const result = await this.prisma.$transaction(async (tx) => {
       // Generate registration token (64-char hex, like gift tickets)
       const registrationToken = randomBytes(32).toString('hex');
-      // Token expires at event end date 23:59:59
-      const tokenExpiry = new Date(event.endDate);
-      tokenExpiry.setHours(23, 59, 59, 999);
 
       // 1. Attendee — status 'invited', with registration token
       const attendee = await tx.attendee.create({
@@ -180,7 +177,6 @@ export class CompEntriesService {
           company: data.organization || undefined,
           status: 'invited',
           registrationToken,
-          registrationTokenExpiresAt: tokenExpiry,
           tags: [`comp:${data.compType}`],
           meta: {
             compType: data.compType,

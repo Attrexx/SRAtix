@@ -24,6 +24,7 @@ import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 import { AuthService } from '../auth/auth.service';
 import { LogisticsService } from '../logistics/logistics.service';
+import { InvoicesService } from '../invoices/invoices.service';
 import { randomBytes } from 'crypto';
 
 /**
@@ -55,6 +56,7 @@ export class StripeWebhookController {
     private readonly registrationReminder: RegistrationReminderWorker,
     private readonly auth: AuthService,
     private readonly logistics: LogisticsService,
+    private readonly invoices: InvoicesService,
   ) {}
 
   @Post()
@@ -306,6 +308,36 @@ export class StripeWebhookController {
           quantity: item.quantity,
           qrPayload: '',
         }));
+
+        // ── Generate invoice PDF & public access token ──
+        let invoicePdf: { bytes: Uint8Array; fileName: string } | undefined;
+        let invoiceUrl: string | undefined;
+        try {
+          // Create a unique invoice access token and store it in order meta
+          const invoiceToken = randomBytes(16).toString('hex');
+          const invoiceTokenUuid = [
+            invoiceToken.slice(0, 8),
+            invoiceToken.slice(8, 12),
+            '4' + invoiceToken.slice(13, 16),
+            ((parseInt(invoiceToken[16], 16) & 0x3) | 0x8).toString(16) + invoiceToken.slice(17, 20),
+            invoiceToken.slice(20, 32),
+          ].join('-');
+
+          const existingMeta = (paidOrder.meta as Record<string, any>) ?? {};
+          await this.prisma.order.update({
+            where: { id: orderId },
+            data: { meta: { ...existingMeta, invoiceToken: invoiceTokenUuid } },
+          });
+
+          const result = await this.invoices.generateInvoice(orderId);
+          invoicePdf = { bytes: result.pdfBytes, fileName: result.fileName };
+          invoiceUrl = `https://tix.swiss-robotics.org/api/invoices/t/${invoiceTokenUuid}`;
+          this.logger.log(`Invoice ${result.invoiceNumber} generated for order ${orderId}`);
+        } catch (invoiceErr) {
+          this.logger.error(`Invoice generation failed for order ${orderId}: ${invoiceErr}`);
+          // Non-blocking: email still goes out without invoice
+        }
+
         await this.email.sendOrderConfirmation(paidOrder.customerEmail, {
           customerName: registrationName,
           orderNumber: paidOrder.orderNumber,
@@ -319,6 +351,8 @@ export class StripeWebhookController {
           eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
           eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
           isExhibitor: isExhibitorOrder,
+          invoicePdf,
+          invoiceUrl,
         });
       } catch (err) {
         this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);

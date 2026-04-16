@@ -73,6 +73,43 @@ class AdditionalAttendeeDto {
   lastName!: string;
 }
 
+class BillingDataDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  street!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  city!: string;
+
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  country!: string;
+
+  @IsString()
+  @IsOptional()
+  companyName?: string;
+
+  @IsString()
+  @IsOptional()
+  vatNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  bankAccount?: string;
+}
+
 class PublicCheckoutDto {
   @IsString()
   @IsNotEmpty()
@@ -148,6 +185,17 @@ class PublicCheckoutDto {
   @IsBoolean()
   @IsOptional()
   membershipOptOut?: boolean; // true = attendee does not want SRA membership
+
+  // ── Billing data (for paid tickets) ────────────────────────────────
+
+  @ValidateNested()
+  @Type(() => BillingDataDto)
+  @IsOptional()
+  billingData?: BillingDataDto;
+
+  @IsString()
+  @IsOptional()
+  invoiceLanguage?: string; // en, fr, de, it, zh-TW
 }
 
 // ─── Controller ───────────────────────────────────────────────────────────
@@ -302,10 +350,6 @@ export class PublicCheckoutController {
         }
       }
 
-      // Token expires at end of event day (23:59:59)
-      const tokenExpiry = new Date(event.endDate);
-      tokenExpiry.setHours(23, 59, 59, 999);
-
       for (const recipient of dto.additionalAttendees) {
         const token = randomBytes(32).toString('hex');
         const recipientAttendee = await this.attendees.upsertRecipient({
@@ -315,7 +359,6 @@ export class PublicCheckoutController {
           firstName: recipient.firstName,
           lastName: recipient.lastName,
           registrationToken: token,
-          registrationTokenExpiresAt: tokenExpiry,
           purchasedByAttendeeId: attendee.id,
         });
 
@@ -361,6 +404,18 @@ export class PublicCheckoutController {
       }
       if (Object.keys(orderMeta).length > 0) {
         await this.orders.updateMeta(order.id, orderMeta);
+      }
+    }
+
+    // Store billing data on the order (if provided)
+    if (dto.billingData) {
+      await this.orders.update(order.id, {
+        billingAddress: dto.billingData as unknown as Record<string, unknown>,
+        customerName: dto.billingData.name,
+        customerEmail: dto.billingData.email,
+      });
+      if (dto.invoiceLanguage) {
+        await this.orders.updateMeta(order.id, { invoiceLanguage: dto.invoiceLanguage });
       }
     }
 
@@ -535,7 +590,7 @@ export class PublicCheckoutController {
     const { sessionId, url } = await this.stripe.createCheckoutSession({
       orderId: order.id,
       orderNumber: order.orderNumber,
-      customerEmail: dto.attendeeData.email,
+      customerEmail: dto.billingData?.email || dto.attendeeData.email,
       currency: event.currency,
       lineItems: [
         {

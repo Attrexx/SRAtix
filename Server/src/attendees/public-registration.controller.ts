@@ -6,7 +6,6 @@ import {
   Body,
   BadRequestException,
   NotFoundException,
-  GoneException,
 } from '@nestjs/common';
 import { IsObject, IsOptional, IsString } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -88,11 +87,6 @@ export class PublicRegistrationController {
       return { tokenConsumed: true };
     }
 
-    // Check token expiry
-    if (attendee.registrationTokenExpiresAt && attendee.registrationTokenExpiresAt < new Date()) {
-      throw new GoneException('This registration link has expired');
-    }
-
     // Check if already registered — return friendly response instead of error
     if (attendee.status === 'registered') {
       return {
@@ -155,10 +149,6 @@ export class PublicRegistrationController {
       return { tokenConsumed: true };
     }
 
-    if (attendee.registrationTokenExpiresAt && attendee.registrationTokenExpiresAt < new Date()) {
-      throw new GoneException('This registration link has expired');
-    }
-
     if (attendee.status === 'registered') {
       throw new BadRequestException('You have already completed registration');
     }
@@ -214,12 +204,11 @@ export class PublicRegistrationController {
       }
     }
 
-    // Mark registered and clear token (direct Prisma — status isn't in update() interface)
+    // Mark registered (direct Prisma — status isn't in update() interface)
     await this.prisma.attendee.update({
       where: { id: attendee.id },
       data: {
         status: 'registered',
-        registrationTokenExpiresAt: null,
       },
     });
 

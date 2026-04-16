@@ -526,6 +526,75 @@
 	margin-top: 4px;
 }
 
+/* ── Include-ticket-for-myself toggle ── */
+.sratix-self-ticket-row {
+	margin: 12px 0 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--sratix-primary);
+	border-radius: 8px;
+	background: rgba(224, 32, 32, 0.08);
+}
+
+.sratix-toggle-label {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+	font-size: 0.92em;
+	font-weight: 500;
+	color: var(--sratix-text);
+	user-select: none;
+}
+
+.sratix-toggle-switch {
+	position: relative;
+	flex-shrink: 0;
+}
+
+.sratix-toggle-switch input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.sratix-toggle-track {
+	display: block;
+	width: 40px;
+	height: 22px;
+	border-radius: 11px;
+	background: var(--sratix-navy-mid);
+	border: 1px solid var(--sratix-border-h);
+	transition: background 0.2s, border-color 0.2s;
+	position: relative;
+}
+
+.sratix-toggle-thumb {
+	display: block;
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--sratix-text-muted);
+	transition: transform 0.2s, background 0.2s;
+}
+
+.sratix-toggle-switch input:checked + .sratix-toggle-track {
+	background: var(--sratix-primary);
+	border-color: var(--sratix-primary);
+}
+
+.sratix-toggle-switch input:checked + .sratix-toggle-track .sratix-toggle-thumb {
+	transform: translateX(18px);
+	background: #fff;
+}
+
+.sratix-toggle-text {
+	line-height: 1.3;
+}
+
 .sratix-promo-field {
 	display: flex;
 	gap: 8px;

@@ -111,6 +111,19 @@ export default function EventSettingsPage() {
   const [pagePathSchedule, setPagePathSchedule] = useState('/schedule/');
   const [pagePathExhibitorPortal, setPagePathExhibitorPortal] = useState('/exhibitor-portal/');
 
+  // Invoice & Billing (issuer details stored in event.meta.issuerDetails)
+  const [issuerName, setIssuerName] = useState('');
+  const [issuerVat, setIssuerVat] = useState('');
+  const [issuerUid, setIssuerUid] = useState('');
+  const [issuerStreet, setIssuerStreet] = useState('');
+  const [issuerCity, setIssuerCity] = useState('');
+  const [issuerPostalCode, setIssuerPostalCode] = useState('');
+  const [issuerCountry, setIssuerCountry] = useState('Switzerland');
+  const [issuerBankName, setIssuerBankName] = useState('');
+  const [issuerIban, setIssuerIban] = useState('');
+  const [issuerBic, setIssuerBic] = useState('');
+  const [issuerEmail, setIssuerEmail] = useState('');
+
   const populateForm = useCallback((ev: Event) => {
     setName(ev.name);
     setSlug(ev.slug);
@@ -145,6 +158,18 @@ export default function EventSettingsPage() {
     setPagePathMyTickets(paths.myTickets ?? '/my-tickets/');
     setPagePathSchedule(paths.schedule ?? '/schedule/');
     setPagePathExhibitorPortal(paths.exhibitorPortal ?? '/exhibitor-portal/');
+    const issuer = (meta.issuerDetails ?? {}) as Record<string, string>;
+    setIssuerName(issuer.name ?? '');
+    setIssuerVat(issuer.vatNumber ?? '');
+    setIssuerUid(issuer.uid ?? '');
+    setIssuerStreet(issuer.street ?? '');
+    setIssuerCity(issuer.city ?? '');
+    setIssuerPostalCode(issuer.postalCode ?? '');
+    setIssuerCountry(issuer.country ?? 'Switzerland');
+    setIssuerBankName(issuer.bankName ?? '');
+    setIssuerIban(issuer.iban ?? '');
+    setIssuerBic(issuer.bic ?? '');
+    setIssuerEmail(issuer.email ?? '');
   }, []);
 
   useEffect(() => {
@@ -205,6 +230,19 @@ export default function EventSettingsPage() {
             myTickets: pagePathMyTickets.trim() || '/my-tickets/',
             schedule: pagePathSchedule.trim() || '/schedule/',
             exhibitorPortal: pagePathExhibitorPortal.trim() || '/exhibitor-portal/',
+          },
+          issuerDetails: {
+            name: issuerName.trim() || undefined,
+            vatNumber: issuerVat.trim() || undefined,
+            uid: issuerUid.trim() || undefined,
+            street: issuerStreet.trim() || undefined,
+            city: issuerCity.trim() || undefined,
+            postalCode: issuerPostalCode.trim() || undefined,
+            country: issuerCountry.trim() || 'Switzerland',
+            bankName: issuerBankName.trim() || undefined,
+            iban: issuerIban.trim() || undefined,
+            bic: issuerBic.trim() || undefined,
+            email: issuerEmail.trim() || undefined,
           },
         },
       };
@@ -989,6 +1027,156 @@ export default function EventSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* ── Invoice & Billing (Issuer Details) ── */}
+        <Section title={t('events.settings.invoiceBilling')}>
+          <p className="mb-4 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {t('events.settings.invoiceBillingHint')}
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerName')} *
+              </label>
+              <input
+                value={issuerName}
+                onChange={(e) => setIssuerName(e.target.value)}
+                placeholder={t('events.settings.issuerNamePlaceholder')}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerEmail')}
+              </label>
+              <input
+                type="email"
+                value={issuerEmail}
+                onChange={(e) => setIssuerEmail(e.target.value)}
+                placeholder={t('events.settings.issuerEmailPlaceholder')}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerVat')}
+              </label>
+              <input
+                value={issuerVat}
+                onChange={(e) => setIssuerVat(e.target.value)}
+                placeholder="CHE-123.456.789 MWST"
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerUid')}
+              </label>
+              <input
+                value={issuerUid}
+                onChange={(e) => setIssuerUid(e.target.value)}
+                placeholder="CHE-123.456.789"
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+          </div>
+
+          <h3 className="mb-2 mt-5 text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('events.settings.issuerAddress')}
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerStreet')} *
+              </label>
+              <input
+                value={issuerStreet}
+                onChange={(e) => setIssuerStreet(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerCity')} *
+              </label>
+              <input
+                value={issuerCity}
+                onChange={(e) => setIssuerCity(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerPostalCode')}
+              </label>
+              <input
+                value={issuerPostalCode}
+                onChange={(e) => setIssuerPostalCode(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerCountry')} *
+              </label>
+              <input
+                value={issuerCountry}
+                onChange={(e) => setIssuerCountry(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+          </div>
+
+          <h3 className="mb-2 mt-5 text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('events.settings.issuerBankDetails')}
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerBankName')}
+              </label>
+              <input
+                value={issuerBankName}
+                onChange={(e) => setIssuerBankName(e.target.value)}
+                placeholder={t('events.settings.issuerBankNamePlaceholder')}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerIban')}
+              </label>
+              <input
+                value={issuerIban}
+                onChange={(e) => setIssuerIban(e.target.value)}
+                placeholder="CH93 0076 2011 6238 5295 7"
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('events.settings.issuerBic')}
+              </label>
+              <input
+                value={issuerBic}
+                onChange={(e) => setIssuerBic(e.target.value)}
+                placeholder="POFICHBEXXX"
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ background: 'var(--color-bg-subtle)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+            </div>
+          </div>
+        </Section>
 
         {/* ── Danger Zone ── */}
         <div

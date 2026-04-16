@@ -200,7 +200,6 @@ export class AttendeesService {
     firstName: string;
     lastName: string;
     registrationToken: string;
-    registrationTokenExpiresAt: Date;
     purchasedByAttendeeId: string;
   }) {
     const existing = await this.prisma.attendee.findFirst({
@@ -213,7 +212,6 @@ export class AttendeesService {
         data: {
           status: 'invited',
           registrationToken: data.registrationToken,
-          registrationTokenExpiresAt: data.registrationTokenExpiresAt,
           purchasedByAttendeeId: data.purchasedByAttendeeId,
         },
       });
@@ -228,7 +226,6 @@ export class AttendeesService {
         lastName: data.lastName,
         status: 'invited',
         registrationToken: data.registrationToken,
-        registrationTokenExpiresAt: data.registrationTokenExpiresAt,
         purchasedByAttendeeId: data.purchasedByAttendeeId,
       },
     });

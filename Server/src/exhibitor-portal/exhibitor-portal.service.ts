@@ -562,9 +562,6 @@ export class ExhibitorPortalService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Token expires at event end
-    const tokenExpiry = new Date(event.endDate);
-    tokenExpiry.setHours(23, 59, 59, 999);
     const registrationToken = randomBytes(32).toString('hex');
 
     // Create or update attendee for the staff member
@@ -575,7 +572,6 @@ export class ExhibitorPortalService {
       firstName: staff.firstName,
       lastName: staff.lastName,
       registrationToken,
-      registrationTokenExpiresAt: tokenExpiry,
       purchasedByAttendeeId: purchaser?.id ?? userId,
     });
 

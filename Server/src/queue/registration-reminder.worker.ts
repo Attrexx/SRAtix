@@ -98,11 +98,6 @@ export class RegistrationReminderWorker implements OnModuleInit {
       return;
     }
 
-    if (attendee.registrationTokenExpiresAt && attendee.registrationTokenExpiresAt < new Date()) {
-      this.logger.debug(`Skipping reminder for ${data.attendeeId} — token expired`);
-      return;
-    }
-
     // Find ticket + event for context
     const ticket = await this.prisma.ticket.findFirst({
       where: { attendeeId: attendee.id, status: 'valid' },

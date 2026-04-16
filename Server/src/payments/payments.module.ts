@@ -16,9 +16,10 @@ import { FormsModule } from '../forms/forms.module';
 import { AuthModule } from '../auth/auth.module';
 import { TicketTypesModule } from '../ticket-types/ticket-types.module';
 import { LogisticsModule } from '../logistics/logistics.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
-  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule, forwardRef(() => LogisticsModule)],
+  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule, forwardRef(() => LogisticsModule), InvoicesModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController, ExhibitorSetupController],
   providers: [StripeService],
   exports: [StripeService],

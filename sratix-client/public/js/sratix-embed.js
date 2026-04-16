@@ -925,6 +925,15 @@
             </div>
           </div>
           <div class="sratix-price-row" id="sratix-price-display"></div>
+          <div class="sratix-self-ticket-row" id="sratix-self-ticket-row" style="display:none">
+            <label class="sratix-toggle-label" for="sratix-include-self">
+              <span class="sratix-toggle-switch">
+                <input type="checkbox" id="sratix-include-self" checked />
+                <span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>
+              </span>
+              <span class="sratix-toggle-text">${escHtml(t('qty.includeMyself'))}</span>
+            </label>
+          </div>
           <div class="sratix-promo-row">
             <label class="sratix-label" for="sratix-promo-input">${escHtml(t('qty.promoLabel'))} <span style="font-weight:400;opacity:.7">${escHtml(t('qty.promoOptional'))}</span></label>
             <div class="sratix-promo-field">
@@ -932,12 +941,6 @@
               <button class="sratix-btn sratix-btn--outline" id="sratix-promo-apply">${escHtml(t('qty.promoApply'))}</button>
             </div>
             <p class="sratix-promo-msg" id="sratix-promo-msg"></p>
-          </div>
-          <div class="sratix-self-ticket-row" id="sratix-self-ticket-row" style="display:none;margin-top:12px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
-              <input type="checkbox" id="sratix-include-self" checked style="width:16px;height:16px" />
-              <span>Include a ticket for myself</span>
-            </label>
           </div>
           <div class="sratix-optout-box" id="sratix-membership-optout">
             <p class="sratix-optout-heading">${t('optOut.heading')}</p>
@@ -1038,7 +1041,8 @@
       if (qty > 1) {
         openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut);
       } else {
-        openRegistrationModal(eventId, tt, qty, promoCode, discountCents, true, [], membershipOptOut);
+        // Single ticket — buyer always gets it, skip recipients, go to attendee form or billing
+        proceedAfterRecipients(eventId, tt, qty, promoCode, discountCents, true, [], membershipOptOut);
       }
     });
 
@@ -1051,7 +1055,8 @@
   function openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut) {
     var recipientCount = includeForSelf ? qty - 1 : qty;
     if (recipientCount < 1) {
-      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, [], membershipOptOut);
+      // No recipients to collect — skip to attendee form or billing
+      proceedAfterRecipients(eventId, tt, qty, promoCode, discountCents, includeForSelf, [], membershipOptOut);
       return;
     }
 
@@ -1059,28 +1064,30 @@
     var rows = '';
     for (var i = 0; i < recipientCount; i++) {
       rows += '<div class="sratix-recipient-row">'
-        + '<span class="sratix-label">Recipient ' + (i + 1) + '</span>'
+        + '<span class="sratix-label">' + escHtml(t('recipients.recipient', { n: i + 1 })) + '</span>'
         + '<div class="sratix-rcpt-name-row">'
-        + '<input type="text" class="sratix-input sratix-rcpt-first" data-idx="' + i + '" placeholder="First name" />'
-        + '<input type="text" class="sratix-input sratix-rcpt-last" data-idx="' + i + '" placeholder="Last name" />'
+        + '<input type="text" class="sratix-input sratix-rcpt-first" data-idx="' + i + '" placeholder="' + escAttr(t('recipients.firstName')) + '" />'
+        + '<input type="text" class="sratix-input sratix-rcpt-last" data-idx="' + i + '" placeholder="' + escAttr(t('recipients.lastName')) + '" />'
         + '</div>'
-        + '<input type="email" class="sratix-input sratix-rcpt-email" data-idx="' + i + '" placeholder="Email address" />'
+        + '<input type="email" class="sratix-input sratix-rcpt-email" data-idx="' + i + '" placeholder="' + escAttr(t('recipients.email')) + '" />'
         + '</div>';
     }
 
     modal.innerHTML =
       '<div class="sratix-modal-box">'
-      + '<button class="sratix-modal-close" aria-label="Close">&times;</button>'
-      + '<h2 class="sratix-modal-title">Recipient Details</h2>'
+      + '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
+      + '<h2 class="sratix-modal-title">' + escHtml(t('recipients.title')) + '</h2>'
       + '<div class="sratix-modal-body">'
-      + '<p class="sratix-info" style="margin-bottom:16px">Enter details for each ticket recipient. They\u2019ll receive an email to complete their registration.</p>'
+      + '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
+      + '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('recipients.info')) + '</p>'
+      + '</div>'
       + '<div id="sratix-recipient-list">' + rows + '</div>'
       + '<div id="sratix-rcpt-warn" class="sratix-promo-msg" style="display:none;color:#856d0a;"></div>'
       + '<p class="sratix-error" id="sratix-rcpt-error" style="display:none"></p>'
       + '</div>'
       + '<div class="sratix-modal-footer">'
-      + '<button id="sratix-rcpt-back" class="sratix-btn sratix-btn--ghost">\u2190 Back</button>'
-      + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn--primary">Continue</button>'
+      + '<button id="sratix-rcpt-back" class="sratix-btn sratix-btn--ghost">' + escHtml(t('recipients.back')) + '</button>'
+      + '<button id="sratix-rcpt-continue" class="sratix-btn sratix-btn--primary">' + escHtml(t('recipients.continue')) + '</button>'
       + '</div>'
       + '</div>';
 
@@ -1112,12 +1119,12 @@
         var ln = lasts[j].value.trim();
         var em = emails[j].value.trim().toLowerCase();
         if (!fn || !ln || !em) {
-          errorEl.textContent = 'Please fill in all fields for every recipient.';
+          errorEl.textContent = t('recipients.fillAll');
           errorEl.style.display = '';
           return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
-          errorEl.textContent = 'Invalid email for recipient ' + (j + 1) + '.';
+          errorEl.textContent = t('recipients.invalidEmail', { n: j + 1 });
           errorEl.style.display = '';
           return;
         }
@@ -1129,15 +1136,554 @@
       }
 
       if (hasDupes) {
-        warnEl.textContent = 'Warning: some recipients share the same email address.';
+        warnEl.textContent = t('recipients.duplicateWarn');
         warnEl.style.display = '';
       }
 
       closeModal();
-      openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients, membershipOptOut);
+      proceedAfterRecipients(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients, membershipOptOut);
     });
 
     requestAnimationFrame(function() { modal.classList.add('sratix-modal--visible'); });
+  }
+
+  /**
+   * Routing helper: after recipient details are collected, decide next step.
+   * - If buyer included themselves → attendee form modal
+   * - Else if paid → billing modal
+   * - Else (free, no self) → direct checkout (submitCheckout)
+   */
+  function proceedAfterRecipients(eventId, tt, qty, promoCode, discountCents, includeForSelf, recipients, membershipOptOut) {
+    var flowCtx = {
+      eventId: eventId, tt: tt, qty: qty, promoCode: promoCode,
+      discountCents: discountCents, includeForSelf: includeForSelf,
+      recipients: recipients, membershipOptOut: membershipOptOut,
+      attendeeData: null, formSchemaId: null, formData: null,
+    };
+    if (includeForSelf) {
+      openAttendeeFormModal(flowCtx);
+    } else {
+      var finalPrice = Math.max(0, tt.priceCents * qty - discountCents);
+      if (finalPrice > 0) {
+        openBillingModal(flowCtx);
+      } else {
+        submitCheckout(flowCtx);
+      }
+    }
+  }
+
+  // ─── Attendee Form Modal (buyer's own registration form) ─────────────────────
+
+  async function openAttendeeFormModal(flowCtx) {
+    var tt = flowCtx.tt;
+    var eventId = flowCtx.eventId;
+    var modal = createModalShell('sratix-modal-attendee');
+
+    // ── Fetch form schema if ticket type has one ──
+    var schema = null;
+    var schemaFields = null;
+    if (tt.formSchemaId) {
+      try {
+        schema = await apiFetch(
+          'public/forms/ticket-type/' + encodeURIComponent(tt.id)
+          + '/event/' + encodeURIComponent(eventId),
+        );
+        if (schema && schema.fields && schema.fields.fields) {
+          schemaFields = schema.fields.fields;
+        }
+      } catch (err) {
+        console.warn('[SRAtix] Could not load form schema, using default form:', err);
+      }
+    }
+
+    var useCustomForm = !!(schemaFields && schemaFields.length > 0);
+
+    // ── Build form body ──
+    var formBodyHtml;
+    if (useCustomForm) {
+      var sorted = schemaFields.slice();
+      sorted.sort(function (a, b) {
+        var oa = typeof a.order === 'number' ? a.order : Infinity;
+        var ob = typeof b.order === 'number' ? b.order : Infinity;
+        if (oa !== Infinity || ob !== Infinity) return oa - ob;
+        return 0;
+      });
+      formBodyHtml = '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
+    } else {
+      formBodyHtml = ''
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-first-name">' + escHtml(t('reg.firstName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-first-name" type="text" autocomplete="given-name" required />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-last-name">' + escHtml(t('reg.lastName')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-last-name" type="text" autocomplete="family-name" required />'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-email">' + escHtml(t('reg.email')) + ' <span class="sratix-req">*</span></label>'
+        +   '<input class="sratix-input" id="sratix-email" type="email" autocomplete="email" required />'
+        + '</div>'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-phone">' + escHtml(t('reg.phone')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-phone" type="tel" autocomplete="tel" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-company">' + escHtml(t('reg.organization')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-company" type="text" autocomplete="organization" />'
+        +   '</div>'
+        + '</div>';
+    }
+
+    modal.innerHTML = ''
+      + '<div class="sratix-modal-box">'
+      +   '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
+      +   '<h2 class="sratix-modal-title">' + escHtml(t('attendee.title')) + '</h2>'
+      +   '<div class="sratix-modal-body">'
+      +     '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
+      +       '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('attendee.selfNote')) + '</p>'
+      +     '</div>'
+      +     '<form id="sratix-attendee-form" novalidate>'
+      +       formBodyHtml
+      +       '<p class="sratix-error-msg" id="sratix-attendee-error" style="display:none"></p>'
+      +     '</form>'
+      +   '</div>'
+      +   '<div class="sratix-modal-footer">'
+      +     '<button class="sratix-btn sratix-btn--ghost" id="sratix-attendee-back">' + escHtml(t('billing.back')) + '</button>'
+      +     '<button class="sratix-btn sratix-btn--primary" id="sratix-attendee-continue">' + escHtml(t('recipients.continue')) + '</button>'
+      +   '</div>'
+      + '</div>';
+
+    document.body.appendChild(modal);
+
+    var formEl = modal.querySelector('#sratix-attendee-form');
+
+    // ── Pre-fill from WP user context ──
+    if (!useCustomForm) {
+      if (config.userEmail)     modal.querySelector('#sratix-email').value     = config.userEmail;
+      if (config.userFirstName) modal.querySelector('#sratix-first-name').value = config.userFirstName;
+      if (config.userLastName)  modal.querySelector('#sratix-last-name').value  = config.userLastName;
+    } else {
+      var prefillMap = {
+        'email': config.userEmail, 'first_name': config.userFirstName,
+        'last_name': config.userLastName, 'firstName': config.userFirstName,
+        'lastName': config.userLastName,
+      };
+      Object.keys(prefillMap).forEach(function (fid) {
+        if (!prefillMap[fid]) return;
+        var el = formEl.querySelector('#sratix-df-' + CSS.escape(fid));
+        if (el) el.value = prefillMap[fid];
+      });
+
+      if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, snap);
+        });
+        var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+        applyConditionVisibility(formEl, schemaFields, initSnap);
+      }
+
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      applyCantonVisibility(formEl);
+
+      initRichtextEditors(formEl);
+      initMultiSelectDropdowns(formEl);
+    }
+
+    modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
+    modal.querySelector('#sratix-attendee-back').addEventListener('click', function () {
+      closeModal();
+      if (flowCtx.qty > 1) {
+        openRecipientDetailsModal(flowCtx.eventId, tt, flowCtx.qty, flowCtx.promoCode, flowCtx.discountCents, flowCtx.includeForSelf, flowCtx.membershipOptOut);
+      } else {
+        openQuantityModal(flowCtx.eventId, tt);
+      }
+    });
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+    var continueBtn = modal.querySelector('#sratix-attendee-continue');
+    var errorEl = modal.querySelector('#sratix-attendee-error');
+
+    continueBtn.addEventListener('click', function () {
+      errorEl.style.display = 'none';
+
+      var firstName, lastName, email, phone, company;
+      var formData = null;
+
+      if (useCustomForm) {
+        var rawAnswers = collectDynamicAnswers(formEl, schemaFields, {});
+        var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
+
+        firstName = answers.first_name || answers.firstName || '';
+        lastName  = answers.last_name  || answers.lastName  || '';
+        email     = answers.email      || '';
+        phone     = answers.phone      || '';
+        company   = answers.company    || answers.organization || '';
+
+        for (var i = 0; i < schemaFields.length; i++) {
+          var f = schemaFields[i];
+          if (f.type === 'group') continue;
+          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (f.required) {
+            var val = answers[f.id];
+            if (val === undefined || val === null || val === ''
+              || (Array.isArray(val) && val.length === 0)
+              || (f.type === 'consent' && val && !val.granted)) {
+              errorEl.textContent = t('reg.form.fieldRequired', { field: resolveLabel(f.label) });
+              errorEl.style.display = '';
+              return;
+            }
+          }
+        }
+
+        var coreIds = ['first_name', 'firstName', 'last_name', 'lastName', 'email', 'phone', 'company', 'organization'];
+        formData = {};
+        Object.keys(answers).forEach(function (k) {
+          if (coreIds.indexOf(k) === -1) {
+            formData[k] = answers[k];
+          }
+        });
+      } else {
+        firstName = modal.querySelector('#sratix-first-name').value.trim();
+        lastName  = modal.querySelector('#sratix-last-name').value.trim();
+        email     = modal.querySelector('#sratix-email').value.trim();
+        phone     = modal.querySelector('#sratix-phone').value.trim();
+        company   = modal.querySelector('#sratix-company').value.trim();
+      }
+
+      if (!firstName || !lastName) {
+        errorEl.textContent = t('reg.nameRequired');
+        errorEl.style.display = '';
+        return;
+      }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorEl.textContent = t('reg.emailInvalid');
+        errorEl.style.display = '';
+        return;
+      }
+
+      // Save attendee data to flow context
+      flowCtx.attendeeData = {
+        email: email, firstName: firstName, lastName: lastName,
+        phone: phone || undefined, company: company || undefined,
+      };
+      if (useCustomForm && schema && formData && Object.keys(formData).length > 0) {
+        flowCtx.formSchemaId = schema.id;
+        flowCtx.formData = formData;
+      }
+
+      closeModal();
+      var finalPrice = Math.max(0, tt.priceCents * flowCtx.qty - flowCtx.discountCents);
+      if (finalPrice > 0) {
+        openBillingModal(flowCtx);
+      } else {
+        submitCheckout(flowCtx);
+      }
+    });
+
+    requestAnimationFrame(function () { modal.classList.add('sratix-modal--visible'); });
+  }
+
+  // ─── Billing Modal (collects billing/invoice data before payment) ────────────
+
+  function openBillingModal(flowCtx) {
+    var tt = flowCtx.tt;
+    var subtotal = tt.priceCents * flowCtx.qty;
+    var finalPrice = Math.max(0, subtotal - flowCtx.discountCents);
+    var modal = createModalShell('sratix-modal-billing');
+
+    // Default invoice language to current widget locale
+    var currentLang = (typeof LANG !== 'undefined' && LANG) || 'en';
+
+    var langOptions = [
+      { value: 'en', label: 'English' },
+      { value: 'fr', label: 'Français' },
+      { value: 'de', label: 'Deutsch' },
+      { value: 'it', label: 'Italiano' },
+      { value: 'zh-TW', label: '中文 (繁體)' },
+    ];
+    var langSelectHtml = langOptions.map(function (o) {
+      var sel = o.value === currentLang ? ' selected' : '';
+      return '<option value="' + escAttr(o.value) + '"' + sel + '>' + escHtml(o.label) + '</option>';
+    }).join('');
+
+    // Pre-fill name/email from attendee data if available
+    var prefillName = '';
+    var prefillEmail = '';
+    if (flowCtx.attendeeData) {
+      prefillName = (flowCtx.attendeeData.firstName || '') + ' ' + (flowCtx.attendeeData.lastName || '');
+      prefillName = prefillName.trim();
+      prefillEmail = flowCtx.attendeeData.email || '';
+    } else if (config.userFirstName || config.userLastName) {
+      prefillName = ((config.userFirstName || '') + ' ' + (config.userLastName || '')).trim();
+      prefillEmail = config.userEmail || '';
+    }
+
+    modal.innerHTML = ''
+      + '<div class="sratix-modal-box">'
+      +   '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
+      +   '<h2 class="sratix-modal-title">' + escHtml(t('billing.title')) + '</h2>'
+      +   '<p class="sratix-modal-subtitle">'
+      +     escHtml(tt.name) + ' &times; ' + flowCtx.qty + ' — '
+      +     '<strong>' + formatPrice(finalPrice, tt.currency) + '</strong>'
+      +   '</p>'
+      +   '<div class="sratix-modal-body">'
+      +     '<form id="sratix-billing-form" novalidate>'
+      +       '<div class="sratix-field-row">'
+      +         '<div class="sratix-field">'
+      +           '<label class="sratix-label" for="sratix-bill-name">' + escHtml(t('billing.name')) + ' <span class="sratix-req">*</span></label>'
+      +           '<input class="sratix-input" id="sratix-bill-name" type="text" autocomplete="name" value="' + escAttr(prefillName) + '" required />'
+      +         '</div>'
+      +         '<div class="sratix-field">'
+      +           '<label class="sratix-label" for="sratix-bill-email">' + escHtml(t('billing.email')) + ' <span class="sratix-req">*</span></label>'
+      +           '<input class="sratix-input" id="sratix-bill-email" type="email" autocomplete="email" value="' + escAttr(prefillEmail) + '" required />'
+      +         '</div>'
+      +       '</div>'
+      +       '<div class="sratix-field">'
+      +         '<label class="sratix-label" for="sratix-bill-street">' + escHtml(t('billing.street')) + ' <span class="sratix-req">*</span></label>'
+      +         '<input class="sratix-input" id="sratix-bill-street" type="text" autocomplete="street-address" required />'
+      +       '</div>'
+      +       '<div class="sratix-field-row">'
+      +         '<div class="sratix-field">'
+      +           '<label class="sratix-label" for="sratix-bill-city">' + escHtml(t('billing.city')) + ' <span class="sratix-req">*</span></label>'
+      +           '<input class="sratix-input" id="sratix-bill-city" type="text" autocomplete="address-level2" required />'
+      +         '</div>'
+      +         '<div class="sratix-field">'
+      +           '<label class="sratix-label" for="sratix-bill-postal">' + escHtml(t('billing.postalCode')) + '</label>'
+      +           '<input class="sratix-input" id="sratix-bill-postal" type="text" autocomplete="postal-code" />'
+      +         '</div>'
+      +       '</div>'
+      +       '<div class="sratix-field">'
+      +         '<label class="sratix-label" for="sratix-bill-country">' + escHtml(t('billing.country')) + ' <span class="sratix-req">*</span></label>'
+      +         '<input class="sratix-input" id="sratix-bill-country" type="text" autocomplete="country-name" value="Switzerland" required />'
+      +       '</div>'
+      // Company section (collapsible)
+      +       '<div class="sratix-billing-company-toggle" style="margin-top:12px">'
+      +         '<button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--sm" id="sratix-bill-company-toggle" style="font-size:13px;padding:4px 10px">'
+      +           escHtml(t('billing.companyToggle'))
+      +         '</button>'
+      +       '</div>'
+      +       '<div id="sratix-bill-company-section" style="display:none;margin-top:8px">'
+      +         '<div class="sratix-field">'
+      +           '<label class="sratix-label" for="sratix-bill-company">' + escHtml(t('billing.companyName')) + '</label>'
+      +           '<input class="sratix-input" id="sratix-bill-company" type="text" autocomplete="organization" />'
+      +         '</div>'
+      +         '<div class="sratix-field-row">'
+      +           '<div class="sratix-field">'
+      +             '<label class="sratix-label" for="sratix-bill-vat">' + escHtml(t('billing.vatNumber')) + '</label>'
+      +             '<input class="sratix-input" id="sratix-bill-vat" type="text" placeholder="CHE-123.456.789 MWST" />'
+      +           '</div>'
+      +           '<div class="sratix-field">'
+      +             '<label class="sratix-label" for="sratix-bill-bank">' + escHtml(t('billing.bankAccount')) + '</label>'
+      +             '<input class="sratix-input" id="sratix-bill-bank" type="text" placeholder="CH93 0076 2011 6238 5295 7" />'
+      +           '</div>'
+      +         '</div>'
+      +       '</div>'
+      // Invoice language
+      +       '<div class="sratix-field" style="margin-top:16px">'
+      +         '<label class="sratix-label" for="sratix-bill-lang">' + escHtml(t('billing.invoiceLang')) + ' <span class="sratix-req">*</span></label>'
+      +         '<select class="sratix-input" id="sratix-bill-lang" autocomplete="language">' + langSelectHtml + '</select>'
+      +       '</div>'
+      +       '<p class="sratix-error-msg" id="sratix-billing-error" style="display:none"></p>'
+      +     '</form>'
+      +   '</div>'
+      +   '<div class="sratix-modal-footer">'
+      +     '<button class="sratix-btn sratix-btn--ghost" id="sratix-billing-back">' + escHtml(t('billing.back')) + '</button>'
+      +     '<button class="sratix-btn sratix-btn--primary" id="sratix-billing-submit">' + escHtml(t('billing.continueToPay')) + '</button>'
+      +   '</div>'
+      + '</div>';
+
+    document.body.appendChild(modal);
+
+    // Company toggle
+    var companyToggle = modal.querySelector('#sratix-bill-company-toggle');
+    var companySection = modal.querySelector('#sratix-bill-company-section');
+    companyToggle.addEventListener('click', function () {
+      var isHidden = companySection.style.display === 'none';
+      companySection.style.display = isHidden ? '' : 'none';
+      companyToggle.textContent = isHidden ? t('billing.companyHide') : t('billing.companyToggle');
+    });
+
+    modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
+    modal.querySelector('#sratix-billing-back').addEventListener('click', function () {
+      closeModal();
+      if (flowCtx.includeForSelf) {
+        openAttendeeFormModal(flowCtx);
+      } else if (flowCtx.qty > 1) {
+        openRecipientDetailsModal(flowCtx.eventId, tt, flowCtx.qty, flowCtx.promoCode, flowCtx.discountCents, flowCtx.includeForSelf, flowCtx.membershipOptOut);
+      } else {
+        openQuantityModal(flowCtx.eventId, tt);
+      }
+    });
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+    var submitBtn = modal.querySelector('#sratix-billing-submit');
+    var errorEl = modal.querySelector('#sratix-billing-error');
+
+    submitBtn.addEventListener('click', function () {
+      errorEl.style.display = 'none';
+
+      var billName = modal.querySelector('#sratix-bill-name').value.trim();
+      var billEmail = modal.querySelector('#sratix-bill-email').value.trim();
+      var billStreet = modal.querySelector('#sratix-bill-street').value.trim();
+      var billCity = modal.querySelector('#sratix-bill-city').value.trim();
+      var billPostal = modal.querySelector('#sratix-bill-postal').value.trim();
+      var billCountry = modal.querySelector('#sratix-bill-country').value.trim();
+      var billCompany = modal.querySelector('#sratix-bill-company').value.trim();
+      var billVat = modal.querySelector('#sratix-bill-vat').value.trim();
+      var billBank = modal.querySelector('#sratix-bill-bank').value.trim();
+      var invoiceLang = modal.querySelector('#sratix-bill-lang').value;
+
+      if (!billName) {
+        errorEl.textContent = t('billing.nameRequired');
+        errorEl.style.display = '';
+        return;
+      }
+      if (!billEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billEmail)) {
+        errorEl.textContent = t('billing.emailInvalid');
+        errorEl.style.display = '';
+        return;
+      }
+      if (!billStreet) {
+        errorEl.textContent = t('billing.streetRequired');
+        errorEl.style.display = '';
+        return;
+      }
+      if (!billCity) {
+        errorEl.textContent = t('billing.cityRequired');
+        errorEl.style.display = '';
+        return;
+      }
+      if (!billCountry) {
+        errorEl.textContent = t('billing.countryRequired');
+        errorEl.style.display = '';
+        return;
+      }
+
+      flowCtx.billingData = {
+        name: billName,
+        email: billEmail,
+        street: billStreet,
+        city: billCity,
+        postalCode: billPostal || undefined,
+        country: billCountry,
+        companyName: billCompany || undefined,
+        vatNumber: billVat || undefined,
+        bankAccount: billBank || undefined,
+      };
+      flowCtx.invoiceLanguage = invoiceLang;
+
+      closeModal();
+      submitCheckout(flowCtx);
+    });
+
+    requestAnimationFrame(function () { modal.classList.add('sratix-modal--visible'); });
+  }
+
+  // ─── Submit Checkout (final POST to server) ─────────────────────────────────
+
+  async function submitCheckout(flowCtx) {
+    var tt = flowCtx.tt;
+    var submitLabel = tt.priceCents === 0 ? t('reg.completeRegistration') : t('reg.continueToPayment');
+
+    // If no attendeeData yet (buyer didn't include self), create minimal from billing or config
+    if (!flowCtx.attendeeData) {
+      var bName = (flowCtx.billingData && flowCtx.billingData.name) || '';
+      var bEmail = (flowCtx.billingData && flowCtx.billingData.email) || config.userEmail || '';
+      var nameParts = bName.split(/\s+/);
+      flowCtx.attendeeData = {
+        email: bEmail,
+        firstName: nameParts[0] || config.userFirstName || '',
+        lastName: nameParts.slice(1).join(' ') || config.userLastName || '',
+      };
+    }
+
+    // Show a loading overlay
+    var overlay = createModalShell('sratix-modal-loading');
+    overlay.innerHTML = '<div class="sratix-modal-box" style="text-align:center;padding:40px">'
+      + '<p style="font-size:16px">' + escHtml(t('reg.pleaseWait')) + '</p>'
+      + '</div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add('sratix-modal--visible'); });
+
+    try {
+      var successUrl = buildSuccessUrl(tt.category, flowCtx.attendeeData.email);
+      var payload = {
+        eventId: flowCtx.eventId,
+        ticketTypeId: tt.id,
+        quantity: flowCtx.qty,
+        attendeeData: flowCtx.attendeeData,
+        promoCode: flowCtx.promoCode || undefined,
+        successUrl: successUrl,
+        cancelUrl: window.location.href,
+      };
+
+      if (flowCtx.formSchemaId && flowCtx.formData) {
+        payload.formSchemaId = flowCtx.formSchemaId;
+        payload.formData = flowCtx.formData;
+      }
+
+      var memberSess = getMemberSession();
+      if (memberSess && memberSess.memberGroup && memberSess.memberGroup !== 'none') {
+        payload.memberGroup = memberSess.memberGroup;
+        if (memberSess.tier) payload.memberTier = memberSess.tier;
+        if (memberSess.sessionToken) payload.memberSessionToken = memberSess.sessionToken;
+      }
+
+      if (flowCtx.recipients && flowCtx.recipients.length > 0) {
+        payload.includeTicketForSelf = flowCtx.includeForSelf;
+        payload.additionalAttendees = flowCtx.recipients;
+      }
+
+      if (flowCtx.membershipOptOut) {
+        payload.membershipOptOut = true;
+      }
+
+      if (flowCtx.billingData) {
+        payload.billingData = flowCtx.billingData;
+      }
+      if (flowCtx.invoiceLanguage) {
+        payload.invoiceLanguage = flowCtx.invoiceLanguage;
+      }
+
+      var result = await apiFetch('payments/checkout/public', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      closeModal();
+
+      if (result.free) {
+        window.location.href = result.successUrl;
+      } else if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error('Unexpected response from server');
+      }
+    } catch (err) {
+      closeModal();
+      // Re-open billing modal with error if we have billing data, otherwise show alert
+      if (flowCtx.billingData) {
+        openBillingModal(flowCtx);
+        // Brief delay to let modal render, then show error
+        setTimeout(function () {
+          var errEl = document.querySelector('#sratix-billing-error');
+          if (errEl) {
+            errEl.textContent = err instanceof Error ? err.message : t('reg.genericError');
+            errEl.style.display = '';
+          }
+        }, 100);
+      } else {
+        alert(err instanceof Error ? err.message : t('reg.genericError'));
+      }
+    }
   }
 
   // ─── Conditions engine (client-side — mirrors Server/src/common/conditions.ts) ─
@@ -1925,13 +2471,15 @@
     }
 
     var currentStep = 1;
-    var totalSteps = 3;
+    var totalSteps = tt.priceCents > 0 ? 4 : 3;
 
     // State
     var purchaserData = { firstName: '', lastName: '', email: '', phone: '', company: '' };
     var formAnswers = {};
     var staffEntries = [];
     var staffCount = 0;
+    var exBillingData = null;
+    var exInvoiceLanguage = (typeof LANG !== 'undefined' && LANG) || 'en';
 
     /** Check if the exhibitor chose to assign staff passes now and maxStaff allows it. */
     function wantsStaffNow() {
@@ -1954,6 +2502,7 @@
         t('exhibitorForm.companyTitle'),
         t('exhibitorForm.staffTitle'),
       ];
+      if (totalSteps === 4) steps.push(t('billing.title'));
       return '<div class="sratix-wizard-steps">' + steps.map(function (label, idx) {
         var stepNum = idx + 1;
         var cls = 'sratix-wizard-step';
@@ -2095,11 +2644,88 @@
       });
     }
 
+    function renderStep4() {
+      var langOptions = [
+        { value: 'en', label: 'English' },
+        { value: 'fr', label: 'Français' },
+        { value: 'de', label: 'Deutsch' },
+        { value: 'it', label: 'Italiano' },
+        { value: 'zh-TW', label: '中文 (繁體)' },
+      ];
+      var langSelectHtml = langOptions.map(function (o) {
+        var sel = o.value === exInvoiceLanguage ? ' selected' : '';
+        return '<option value="' + escAttr(o.value) + '"' + sel + '>' + escHtml(o.label) + '</option>';
+      }).join('');
+
+      // Pre-fill from purchaser data or existing billing state
+      var prefillName = exBillingData ? exBillingData.name : ((purchaserData.firstName + ' ' + purchaserData.lastName).trim());
+      var prefillEmail = exBillingData ? exBillingData.email : purchaserData.email;
+      var prefillCompany = exBillingData ? (exBillingData.companyName || '') : (purchaserData.company || '');
+
+      var html = '<div class="sratix-wizard-body">'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-exbill-name">' + escHtml(t('billing.name')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-exbill-name" type="text" autocomplete="name" value="' + escAttr(prefillName) + '" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-exbill-email">' + escHtml(t('billing.email')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-exbill-email" type="email" autocomplete="email" value="' + escAttr(prefillEmail) + '" />'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-exbill-street">' + escHtml(t('billing.street')) + ' <span class="sratix-req">*</span></label>'
+        +   '<input class="sratix-input" id="sratix-exbill-street" type="text" autocomplete="street-address" value="' + escAttr(exBillingData ? exBillingData.street : '') + '" />'
+        + '</div>'
+        + '<div class="sratix-field-row">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-exbill-city">' + escHtml(t('billing.city')) + ' <span class="sratix-req">*</span></label>'
+        +     '<input class="sratix-input" id="sratix-exbill-city" type="text" autocomplete="address-level2" value="' + escAttr(exBillingData ? exBillingData.city : '') + '" />'
+        +   '</div>'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-exbill-postal">' + escHtml(t('billing.postalCode')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-exbill-postal" type="text" autocomplete="postal-code" value="' + escAttr(exBillingData ? (exBillingData.postalCode || '') : '') + '" />'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field">'
+        +   '<label class="sratix-label" for="sratix-exbill-country">' + escHtml(t('billing.country')) + ' <span class="sratix-req">*</span></label>'
+        +   '<input class="sratix-input" id="sratix-exbill-country" type="text" autocomplete="country-name" value="' + escAttr(exBillingData ? exBillingData.country : 'Switzerland') + '" />'
+        + '</div>'
+        + '<div class="sratix-billing-company-toggle" style="margin-top:12px">'
+        +   '<button type="button" class="sratix-btn sratix-btn--ghost sratix-btn--sm" id="sratix-exbill-company-toggle" style="font-size:13px;padding:4px 10px">'
+        +     escHtml(prefillCompany ? t('billing.companyHide') : t('billing.companyToggle'))
+        +   '</button>'
+        + '</div>'
+        + '<div id="sratix-exbill-company-section" style="' + (prefillCompany ? '' : 'display:none;') + 'margin-top:8px">'
+        +   '<div class="sratix-field">'
+        +     '<label class="sratix-label" for="sratix-exbill-company">' + escHtml(t('billing.companyName')) + '</label>'
+        +     '<input class="sratix-input" id="sratix-exbill-company" type="text" autocomplete="organization" value="' + escAttr(prefillCompany) + '" />'
+        +   '</div>'
+        +   '<div class="sratix-field-row">'
+        +     '<div class="sratix-field">'
+        +       '<label class="sratix-label" for="sratix-exbill-vat">' + escHtml(t('billing.vatNumber')) + '</label>'
+        +       '<input class="sratix-input" id="sratix-exbill-vat" type="text" placeholder="CHE-123.456.789 MWST" value="' + escAttr(exBillingData ? (exBillingData.vatNumber || '') : '') + '" />'
+        +     '</div>'
+        +     '<div class="sratix-field">'
+        +       '<label class="sratix-label" for="sratix-exbill-bank">' + escHtml(t('billing.bankAccount')) + '</label>'
+        +       '<input class="sratix-input" id="sratix-exbill-bank" type="text" placeholder="CH93 0076 2011 6238 5295 7" value="' + escAttr(exBillingData ? (exBillingData.bankAccount || '') : '') + '" />'
+        +     '</div>'
+        +   '</div>'
+        + '</div>'
+        + '<div class="sratix-field" style="margin-top:16px">'
+        +   '<label class="sratix-label" for="sratix-exbill-lang">' + escHtml(t('billing.invoiceLang')) + ' <span class="sratix-req">*</span></label>'
+        +   '<select class="sratix-input" id="sratix-exbill-lang" autocomplete="language">' + langSelectHtml + '</select>'
+        + '</div>'
+        + '</div>';
+      return html;
+    }
+
     function renderWizard() {
       var stepBody = '';
       if (currentStep === 1) stepBody = renderStep1();
       else if (currentStep === 2) stepBody = renderStep2();
-      else stepBody = renderStep3();
+      else if (currentStep === 3) stepBody = renderStep3();
+      else stepBody = renderStep4();
 
       var navLeft = currentStep > 1
         ? '<button class="sratix-btn sratix-btn--ghost" id="sratix-ex-back">' + escHtml(t('exhibitorForm.back')) + '</button>'
@@ -2201,8 +2827,25 @@
           e.preventDefault();
           staffCount = 0;
           staffEntries = [];
-          submitExhibitorCheckout();
+          if (totalSteps === 4) {
+            currentStep = 4;
+            renderWizard();
+          } else {
+            submitExhibitorCheckout();
+          }
         });
+      }
+
+      if (currentStep === 4) {
+        var compToggle = modal.querySelector('#sratix-exbill-company-toggle');
+        var compSection = modal.querySelector('#sratix-exbill-company-section');
+        if (compToggle && compSection) {
+          compToggle.addEventListener('click', function () {
+            var isHidden = compSection.style.display === 'none';
+            compSection.style.display = isHidden ? '' : 'none';
+            compToggle.textContent = isHidden ? t('billing.companyHide') : t('billing.companyToggle');
+          });
+        }
       }
 
       var backBtn = modal.querySelector('#sratix-ex-back');
@@ -2242,6 +2885,19 @@
         formAnswers = collectDynamicAnswers(formEl, schemaFields, {});
       } else if (currentStep === 3) {
         collectStaffFromDOM();
+      } else if (currentStep === 4) {
+        exBillingData = {
+          name: (modal.querySelector('#sratix-exbill-name')?.value || '').trim(),
+          email: (modal.querySelector('#sratix-exbill-email')?.value || '').trim(),
+          street: (modal.querySelector('#sratix-exbill-street')?.value || '').trim(),
+          city: (modal.querySelector('#sratix-exbill-city')?.value || '').trim(),
+          postalCode: (modal.querySelector('#sratix-exbill-postal')?.value || '').trim() || undefined,
+          country: (modal.querySelector('#sratix-exbill-country')?.value || '').trim(),
+          companyName: (modal.querySelector('#sratix-exbill-company')?.value || '').trim() || undefined,
+          vatNumber: (modal.querySelector('#sratix-exbill-vat')?.value || '').trim() || undefined,
+          bankAccount: (modal.querySelector('#sratix-exbill-bank')?.value || '').trim() || undefined,
+        };
+        exInvoiceLanguage = modal.querySelector('#sratix-exbill-lang')?.value || exInvoiceLanguage;
       }
     }
 
@@ -2315,6 +2971,39 @@
         }
       }
 
+      if (currentStep === 4) {
+        var bName = (modal.querySelector('#sratix-exbill-name')?.value || '').trim();
+        var bEmail = (modal.querySelector('#sratix-exbill-email')?.value || '').trim();
+        var bStreet = (modal.querySelector('#sratix-exbill-street')?.value || '').trim();
+        var bCity = (modal.querySelector('#sratix-exbill-city')?.value || '').trim();
+        var bCountry = (modal.querySelector('#sratix-exbill-country')?.value || '').trim();
+        if (!bName) {
+          errorEl.textContent = t('billing.nameRequired');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!bEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bEmail)) {
+          errorEl.textContent = t('billing.emailInvalid');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!bStreet) {
+          errorEl.textContent = t('billing.streetRequired');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!bCity) {
+          errorEl.textContent = t('billing.cityRequired');
+          errorEl.style.display = '';
+          return false;
+        }
+        if (!bCountry) {
+          errorEl.textContent = t('billing.countryRequired');
+          errorEl.style.display = '';
+          return false;
+        }
+      }
+
       return true;
     }
 
@@ -2364,6 +3053,14 @@
           payload.memberGroup = memberSess.memberGroup;
           if (memberSess.tier) payload.memberTier = memberSess.tier;
           if (memberSess.sessionToken) payload.memberSessionToken = memberSess.sessionToken;
+        }
+
+        // Include billing data (step 4)
+        if (exBillingData) {
+          payload.billingData = exBillingData;
+        }
+        if (exInvoiceLanguage) {
+          payload.invoiceLanguage = exInvoiceLanguage;
         }
 
         var result = await apiFetch('payments/checkout/public', {
