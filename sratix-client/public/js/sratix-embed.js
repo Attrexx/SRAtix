@@ -3327,6 +3327,8 @@
     if (category === 'exhibitor') {
       url.searchParams.set('sratix_type', 'exhibitor');
       if (email) url.searchParams.set('sratix_email', email);
+    } else if (category === 'visitor') {
+      url.searchParams.set('sratix_type', 'visitor');
     }
     return url.toString();
   }
@@ -5772,17 +5774,74 @@
     }
   }
 
+  function renderVisitorConfirmation() {
+    var params = new URLSearchParams(window.location.search);
+    var orderNumber = params.get('sratix_order') || '';
+
+    var container = document.createElement('div');
+    container.className = 'sratix-exhibitor-confirmation'; // reuse exhibitor confirmation styles
+    container.setAttribute('role', 'status');
+    container.innerHTML =
+      '<div class="sratix-confirmation-card">' +
+        '<div class="sratix-confirmation-header">' +
+          '<span class="sratix-confirmation-icon">✓</span>' +
+          '<h2>' + escHtml(t('visitorConfirmation.title')) + '</h2>' +
+          '<p>' + escHtml(t('visitorConfirmation.subtitle')) +
+            (orderNumber ? ' ' + escHtml(t('visitorConfirmation.orderNumber')) + ' <strong>' + escHtml(orderNumber) + '</strong>' : '') +
+          '</p>' +
+        '</div>' +
+        '<div id="sratix-confirmation-body">' +
+          '<div class="sratix-confirmation-ready">' +
+            '<p class="sratix-confirmation-note">' + escHtml(t('visitorConfirmation.emailNote')) + '</p>' +
+            '<div class="sratix-confirmation-actions">' +
+              '<button class="sratix-btn sratix-btn-secondary sratix-confirmation-dismiss">' +
+                escHtml(t('visitorConfirmation.dismiss')) +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // Insert at first widget or top of body
+    var target = document.getElementById('sratix-tickets-widget') ||
+      document.getElementById('sratix-my-tickets-widget') ||
+      document.body.firstChild;
+    if (target && target.parentNode) {
+      target.parentNode.insertBefore(container, target);
+    } else {
+      document.body.insertBefore(container, document.body.firstChild);
+    }
+
+    // Clean URL params
+    var cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('sratix_success');
+    cleanUrl.searchParams.delete('sratix_order');
+    cleanUrl.searchParams.delete('sratix_test');
+    cleanUrl.searchParams.delete('sratix_type');
+    window.history.replaceState(null, '', cleanUrl.toString());
+
+    var dismissBtn = container.querySelector('.sratix-confirmation-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function () {
+        container.remove();
+      });
+    }
+  }
+
   // ─── Boot ─────────────────────────────────────────────────────────────────────
 
   function init() {
     var params = new URLSearchParams(window.location.search);
     var isPostPurchase = params.get('sratix_success') === '1';
+    var purchaseType = params.get('sratix_type');
     if (isPostPurchase) {
-      if (params.get('sratix_type') === 'exhibitor') {
+      if (purchaseType === 'exhibitor') {
         renderExhibitorConfirmation();
         // Hide the portal login widget — the confirmation card handles the flow
         var portalWidget = document.getElementById('sratix-exhibitor-portal-widget');
         if (portalWidget) portalWidget.style.display = 'none';
+      } else if (purchaseType === 'visitor') {
+        renderVisitorConfirmation();
       } else {
         injectSuccessBanner();
       }
@@ -5793,7 +5852,7 @@
     initRegisterWidget();
     initAttendeeRegisterWidget();
     initSetPasswordWidget();
-    if (!isPostPurchase || params.get('sratix_type') !== 'exhibitor') {
+    if (!isPostPurchase || purchaseType !== 'exhibitor') {
       initExhibitorPortalWidget();
     }
   }

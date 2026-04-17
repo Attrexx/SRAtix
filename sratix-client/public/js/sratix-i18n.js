@@ -234,6 +234,12 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.loadingHint':    'Please keep this tab open — this usually takes under 30 seconds.',
       'exhibitorConfirmation.dismiss':        'Dismiss',
 
+      'visitorConfirmation.title':          'Payment confirmed!',
+      'visitorConfirmation.subtitle':       'Your tickets have been secured.',
+      'visitorConfirmation.orderNumber':    'Your order number is',
+      'visitorConfirmation.emailNote':      'A confirmation email has been sent to you. Each ticket recipient will also receive an email with a personal link to complete their registration.',
+      'visitorConfirmation.dismiss':        'Dismiss',
+
       'exhibitorPortal.portalWelcome':   'Welcome, {name}! Manage your exhibitor profile, booth details, staff, and media from here.',
       'exhibitorPortal.login':           'Please log in to access the Exhibitor Portal.',
       'exhibitorPortal.loading':         'Loading exhibitor portal…',
@@ -613,6 +619,12 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.loadingHint':    'Veuillez garder cet onglet ouvert — cela prend généralement moins de 30 secondes.',
       'exhibitorConfirmation.dismiss':        'Fermer',
 
+      'visitorConfirmation.title':          'Paiement confirmé !',
+      'visitorConfirmation.subtitle':       'Vos billets ont été réservés.',
+      'visitorConfirmation.orderNumber':    'Votre numéro de commande est',
+      'visitorConfirmation.emailNote':      'Un e-mail de confirmation vous a été envoyé. Chaque destinataire recevra également un e-mail avec un lien personnel pour compléter son inscription.',
+      'visitorConfirmation.dismiss':        'Fermer',
+
       'exhibitorPortal.portalWelcome':   'Bienvenue, {name} ! Gérez votre profil exposant, votre stand, votre équipe et vos médias ici.',
       'exhibitorPortal.login':           'Veuillez vous connecter pour accéder au Portail Exposant.',
       'exhibitorPortal.loading':         'Chargement du portail exposant…',
@@ -984,6 +996,12 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.emailNote':      'Wir haben Ihnen sowohl die Bestellbestätigung als auch die Zugangsinformationen für das Aussteller-Portal per E-Mail zugesandt. Sie können diese Seite schliessen und Ihren Posteingang prüfen.',
       'exhibitorConfirmation.loadingHint':    'Bitte lassen Sie diesen Tab geöffnet — dies dauert in der Regel weniger als 30 Sekunden.',
       'exhibitorConfirmation.dismiss':        'Schliessen',
+
+      'visitorConfirmation.title':          'Zahlung bestätigt!',
+      'visitorConfirmation.subtitle':       'Ihre Tickets wurden gesichert.',
+      'visitorConfirmation.orderNumber':    'Ihre Bestellnummer ist',
+      'visitorConfirmation.emailNote':      'Eine Bestätigungs-E-Mail wurde an Sie gesendet. Jeder Ticketempfänger erhält ebenfalls eine E-Mail mit einem persönlichen Link zur Vervollständigung seiner Registrierung.',
+      'visitorConfirmation.dismiss':        'Schliessen',
 
       'exhibitorPortal.portalWelcome':   'Willkommen, {name}! Verwalten Sie hier Ihr Ausstellerprofil, Standdetails, Team und Medien.',
       'exhibitorPortal.login':           'Bitte melden Sie sich an, um auf das Aussteller-Portal zuzugreifen.',
@@ -1357,6 +1375,12 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.loadingHint':    'Mantenete questa scheda aperta — di solito ci vogliono meno di 30 secondi.',
       'exhibitorConfirmation.dismiss':        'Chiudi',
 
+      'visitorConfirmation.title':          'Pagamento confermato!',
+      'visitorConfirmation.subtitle':       'I tuoi biglietti sono stati assicurati.',
+      'visitorConfirmation.orderNumber':    'Il tuo numero d\'ordine è',
+      'visitorConfirmation.emailNote':      'Ti è stata inviata un\'e-mail di conferma. Ogni destinatario del biglietto riceverà anche un\'e-mail con un link personale per completare la registrazione.',
+      'visitorConfirmation.dismiss':        'Chiudi',
+
       'exhibitorPortal.portalWelcome':   'Benvenuto, {name}! Gestisci il tuo profilo espositore, i dettagli dello stand, il team e i media da qui.',
       'exhibitorPortal.login':           'Accedi per accedere al Portale Espositore.',
       'exhibitorPortal.loading':         'Caricamento del portale espositore…',
@@ -1728,6 +1752,12 @@ const sratixI18n = (function () {
       'exhibitorConfirmation.emailNote':      '我們已將訂單確認以及展商入口存取說明透過電子郵件傳送給您。您可以關閉此頁面並查看您的信箱。',
       'exhibitorConfirmation.loadingHint':    '請保持此分頁開啟——通常不到 30 秒即可完成。',
       'exhibitorConfirmation.dismiss':        '關閉',
+
+      'visitorConfirmation.title':          '付款已確認！',
+      'visitorConfirmation.subtitle':       '您的門票已確保。',
+      'visitorConfirmation.orderNumber':    '您的訂單編號是',
+      'visitorConfirmation.emailNote':      '確認電子郵件已發送給您。每位門票接收者也將收到一封包含個人連結的電子郵件，以完成其註冊。',
+      'visitorConfirmation.dismiss':        '關閉',
 
       'exhibitorPortal.portalWelcome':   '歡迎，{name}！在此管理您的展商檔案、攝位詳情、團隊和媒體。',
       'exhibitorPortal.login':           '請登入以存取展商入口。',

@@ -210,6 +210,8 @@ export class AttendeesService {
       return this.prisma.attendee.update({
         where: { id: existing.id },
         data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
           status: 'invited',
           registrationToken: data.registrationToken,
           purchasedByAttendeeId: data.purchasedByAttendeeId,

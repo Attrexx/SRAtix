@@ -210,8 +210,8 @@ export class InvoicesService {
     if (this.mainLogoBytes) {
       try {
         const logoImage = await doc.embedPng(this.mainLogoBytes);
-        const logoScale = 60 / logoImage.height; // normalize to 60px tall
-        const logoDims = { width: logoImage.width * logoScale, height: 60 };
+        const logoScale = 48 / logoImage.height; // normalize to 48px tall
+        const logoDims = { width: logoImage.width * logoScale, height: 48 };
         page.drawImage(logoImage, {
           x: leftMargin,
           y: y - logoDims.height + 10,
@@ -247,7 +247,7 @@ export class InvoicesService {
     });
 
     // ─── Issuer Block (left) ────────────────────────────────
-    y -= 25;
+    y -= 32;
     const drawLabel = (label: string, x: number, yPos: number) => {
       page.drawText(label, { x, y: yPos, size: 8, font: helveticaBold, color: gray });
     };
@@ -362,10 +362,10 @@ export class InvoicesService {
     // ─── Line Items Table ───────────────────────────────────
     y -= 12;
     const colDesc = leftMargin;
-    const colQty = 350;
-    const colUnit = 420;
+    const colQty = 330;
+    const colUnit = 390;
     const colTotal = rightMargin;
-    const descMaxWidth = colQty - colDesc - 10; // max width for description text
+    const descMaxWidth = colQty - colDesc - 8; // max width for description text
 
     page.drawRectangle({
       x: leftMargin - 5, y: y - 4,
@@ -375,7 +375,11 @@ export class InvoicesService {
 
     page.drawText(L.description, { x: colDesc, y, size: 9, font: helveticaBold, color: black });
     page.drawText(L.qty, { x: colQty, y, size: 9, font: helveticaBold, color: black });
-    page.drawText(L.unitPrice, { x: colUnit, y, size: 9, font: helveticaBold, color: black });
+    const unitHeader = L.unitPrice;
+    page.drawText(unitHeader, {
+      x: colTotal - 85 - helveticaBold.widthOfTextAtSize(unitHeader, 9) / 2,
+      y, size: 9, font: helveticaBold, color: black,
+    });
     const totalHeader = L.total;
     page.drawText(totalHeader, {
       x: colTotal - helveticaBold.widthOfTextAtSize(totalHeader, 9),
@@ -384,24 +388,24 @@ export class InvoicesService {
     y -= 22;
 
     for (const line of invoiceLines) {
-      const descLines = wrapText(line.desc, helvetica, 10, descMaxWidth);
+      const descLines = wrapText(line.desc, helvetica, 9, descMaxWidth);
       const qty = String(line.qty);
       const unit = this.formatCurrency(line.unitCents, currency);
       const total = this.formatCurrency(line.totalCents, currency);
 
       // First line: description + qty/unit/total
-      page.drawText(descLines[0], { x: colDesc, y, size: 10, font: helvetica, color: black });
-      page.drawText(qty, { x: colQty, y, size: 10, font: helvetica, color: black });
-      page.drawText(unit, { x: colUnit, y, size: 10, font: helvetica, color: black });
+      page.drawText(descLines[0], { x: colDesc, y, size: 9, font: helvetica, color: black });
+      page.drawText(qty, { x: colQty, y, size: 9, font: helvetica, color: black });
+      page.drawText(unit, { x: colUnit, y, size: 9, font: helvetica, color: black });
       page.drawText(total, {
-        x: colTotal - helvetica.widthOfTextAtSize(total, 10),
-        y, size: 10, font: helvetica, color: black,
+        x: colTotal - helvetica.widthOfTextAtSize(total, 9),
+        y, size: 9, font: helvetica, color: black,
       });
       y -= 14;
 
       // Continuation lines (description only)
       for (let i = 1; i < descLines.length; i++) {
-        page.drawText(descLines[i], { x: colDesc, y, size: 10, font: helvetica, color: black });
+        page.drawText(descLines[i], { x: colDesc, y, size: 9, font: helvetica, color: black });
         y -= 14;
       }
       y -= 4;

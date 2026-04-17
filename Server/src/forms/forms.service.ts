@@ -270,8 +270,36 @@ export class FormsService {
       return null; // No custom form — just collect basic info
     }
 
+    return this.findSchemaById(ticketType.formSchemaId);
+  }
+
+  /**
+   * Find a form schema from ANY active ticket type in the event.
+   * Used as a fallback when the specific ticket type (e.g. Complimentary)
+   * doesn't have a formSchemaId assigned.
+   */
+  async findFallbackSchemaForEvent(eventId: string) {
+    const ticketType = await this.prisma.ticketType.findFirst({
+      where: {
+        eventId,
+        formSchemaId: { not: null },
+        status: 'active',
+      },
+      select: { formSchemaId: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    if (!ticketType?.formSchemaId) return null;
+
+    return this.findSchemaById(ticketType.formSchemaId);
+  }
+
+  /**
+   * Load and hydrate a form schema by its ID.
+   */
+  private async findSchemaById(schemaId: string) {
     const schema = await this.prisma.formSchema.findUnique({
-      where: { id: ticketType.formSchemaId },
+      where: { id: schemaId },
       select: { id: true, name: true, version: true, fields: true },
     });
 

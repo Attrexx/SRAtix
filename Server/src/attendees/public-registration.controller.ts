@@ -96,21 +96,27 @@ export class PublicRegistrationController {
       },
     });
 
-    // Load form schema if the ticket type has one
+    // Load form schema if the ticket type has one, with event-level fallback
     let formSchema = null;
-    if (ticket?.ticketType?.formSchemaId) {
+    let resolvedFormSchemaId: string | null = ticket?.ticketType?.formSchemaId ?? null;
+    if (resolvedFormSchemaId) {
       formSchema = await this.forms.findSchemaForTicketType(
         attendee.eventId,
-        ticket.ticketType.id,
+        ticket!.ticketType.id,
       );
+    }
+    // Fallback: if ticket type has no schema (e.g. Complimentary), try event's other ticket types
+    if (!formSchema) {
+      formSchema = await this.forms.findFallbackSchemaForEvent(attendee.eventId);
+      if (formSchema) resolvedFormSchemaId = formSchema.id;
     }
 
     // Load saved form answers for re-visit pre-population
     let savedFormData = null;
-    if (ticket?.ticketType?.formSchemaId) {
+    if (resolvedFormSchemaId) {
       const submission = await this.forms.findLatestSubmission(
         attendee.id,
-        ticket.ticketType.formSchemaId,
+        resolvedFormSchemaId,
       );
       if (submission) {
         savedFormData = submission.data;
@@ -173,11 +179,17 @@ export class PublicRegistrationController {
     });
 
     // Save or update form submission if custom form data provided
-    if (ticket?.ticketType?.formSchemaId && dto.formData && Object.keys(dto.formData).length > 0) {
+    let resolvedSchemaId = ticket?.ticketType?.formSchemaId ?? null;
+    if (!resolvedSchemaId && dto.formData && Object.keys(dto.formData).length > 0) {
+      // Fallback: find schema from event's other ticket types
+      const fallback = await this.forms.findFallbackSchemaForEvent(attendee.eventId);
+      if (fallback) resolvedSchemaId = fallback.id;
+    }
+    if (resolvedSchemaId && dto.formData && Object.keys(dto.formData).length > 0) {
       await this.forms.upsertSubmission({
         eventId: attendee.eventId,
         attendeeId: attendee.id,
-        formSchemaId: ticket.ticketType.formSchemaId,
+        formSchemaId: resolvedSchemaId,
         answers: dto.formData,
       });
     }
