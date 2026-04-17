@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { EmailTransport, EmailMessage, DeliveryResult } from './email-transport.interface';
+import { emailHeader, emailPreFooter, emailFooter, emailShell } from './email-templates.util';
 
 /**
  * Email templates — server-side HTML generation.
@@ -1058,13 +1059,7 @@ ${data.message}
     </head>
     <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <!-- Header -->
-        <tr>
-          <td style="padding: 30px 40px; background: #1a1a2e; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">🎫 SRAtix</h1>
-            <p style="margin: 8px 0 0; opacity: 0.8;">Order Confirmation</p>
-          </td>
-        </tr>
+        ${emailHeader('Order Confirmation')}
 
         <!-- Body -->
         <tr>
@@ -1127,12 +1122,8 @@ ${data.message}
         </tr>
 
         <!-- Footer -->
-        <tr>
-          <td style="padding: 20px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-            <p style="margin: 0;">Swiss Robotics Association — SRAtix Ticketing Platform</p>
-            <p style="margin: 4px 0 0;">This is an automated confirmation. Please do not reply to this email.</p>
-          </td>
-        </tr>
+        ${emailPreFooter()}
+        ${emailFooter()}
       </table>
     </body>
     </html>`;
@@ -1188,12 +1179,7 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
     </head>
     <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <tr>
-          <td style="padding: 30px 40px; background: #1a1a2e; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">🎫 SRAtix</h1>
-            <p style="margin: 8px 0 0; opacity: 0.8;">Ticket Voided</p>
-          </td>
-        </tr>
+        ${emailHeader('Ticket Voided')}
         <tr>
           <td style="padding: 30px 40px;">
             <p style="font-size: 16px; margin: 0 0 20px;">
@@ -1212,11 +1198,8 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
             </p>
           </td>
         </tr>
-        <tr>
-          <td style="padding: 20px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-            <p style="margin: 0;">Swiss Robotics Association — SRAtix Ticketing Platform</p>
-          </td>
-        </tr>
+        ${emailPreFooter()}
+        ${emailFooter()}
       </table>
     </body>
     </html>`;
@@ -1243,12 +1226,7 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
     </head>
     <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <tr>
-          <td style="padding: 30px 40px; background: #1a1a2e; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">🎫 SRAtix</h1>
-            <p style="margin: 8px 0 0; opacity: 0.8;">${refundType} Processed</p>
-          </td>
-        </tr>
+        ${emailHeader(`${refundType} Processed`)}
         <tr>
           <td style="padding: 30px 40px;">
             <p style="font-size: 16px; margin: 0 0 20px;">
@@ -1270,11 +1248,8 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
             </p>
           </td>
         </tr>
-        <tr>
-          <td style="padding: 20px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-            <p style="margin: 0;">Swiss Robotics Association — SRAtix Ticketing Platform</p>
-          </td>
-        </tr>
+        ${emailPreFooter()}
+        ${emailFooter()}
       </table>
     </body>
     </html>`;
@@ -1283,35 +1258,7 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
   // ─── Admin Notification Templates ─────────────────────────────
 
   private adminWrapper(subtitle: string, body: string): string {
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <tr>
-          <td style="padding: 24px 40px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white;">
-            <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">🎫 SRAtix</h1>
-            <p style="margin: 6px 0 0; opacity: 0.85; font-size: 14px;">${subtitle}</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 28px 40px;">
-            ${body}
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 16px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 11px; color: #999;">
-            <p style="margin: 0;">Swiss Robotics Association — SRAtix Admin Notification</p>
-            <p style="margin: 4px 0 0;">This is an automated notification. Do not reply.</p>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>`;
+    return emailShell(subtitle, body, 'admin');
   }
 
   private adminInfoRow(label: string, value: string): string {
@@ -1425,35 +1372,7 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
   // ─── Public-Facing Email Wrapper ──────────────────────────────
 
   private publicWrapper(subtitle: string, body: string): string {
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <tr>
-          <td style="padding: 30px 40px; background: #1a1a2e; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">🎫 SRAtix</h1>
-            <p style="margin: 8px 0 0; opacity: 0.8;">${subtitle}</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 30px 40px;">
-            ${body}
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 20px 40px; background: #f8f9fa; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-            <p style="margin: 0;">Swiss Robotics Association — SRAtix Ticketing Platform</p>
-            <p style="margin: 4px 0 0;">This is an automated message. Please do not reply to this email.</p>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>`;
+    return emailShell(subtitle, body, 'public');
   }
 
   private renderAdminLogisticsOrder(data: {

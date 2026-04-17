@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import { emailHeader, emailPreFooter, emailFooter } from '../email/email-templates.util';
 import { CreateContactDto } from './contact.dto';
 
 @Injectable()
@@ -64,27 +65,34 @@ export class ContactService {
 
   private buildEmailHtml(dto: CreateContactDto, timestamp: string): string {
     const org = dto.organization
-      ? `<tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">Organization</td><td style="padding:6px 12px">${this.esc(dto.organization)}</td></tr>`
+      ? `<tr><td style="padding:6px 12px;font-weight:600;color:#888">Organization</td><td style="padding:6px 12px">${this.esc(dto.organization)}</td></tr>`
       : '';
 
-    return `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;background:#1c1d21;color:#f1f5f9;border-radius:8px;overflow:hidden">
-  <div style="background:#c1272d;padding:20px 24px">
-    <h2 style="margin:0;font-size:18px;color:#fff">New Contact Lead — SRAtix</h2>
-  </div>
-  <div style="padding:24px">
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
-      <tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">Name</td><td style="padding:6px 12px">${this.esc(dto.name)}</td></tr>
-      <tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">Email</td><td style="padding:6px 12px"><a href="mailto:${this.esc(dto.email)}" style="color:#d63031">${this.esc(dto.email)}</a></td></tr>
+    const body = `
+    <h3 style="margin:0 0 16px;font-size:16px;color:#333;">New Contact Lead</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;color:#333;">
+      <tr><td style="padding:6px 12px;font-weight:600;color:#888">Name</td><td style="padding:6px 12px">${this.esc(dto.name)}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:600;color:#888">Email</td><td style="padding:6px 12px"><a href="mailto:${this.esc(dto.email)}" style="color:#4f46e5">${this.esc(dto.email)}</a></td></tr>
       ${org}
-      <tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8;vertical-align:top">Message</td><td style="padding:6px 12px;white-space:pre-wrap">${this.esc(dto.message)}</td></tr>
-      <tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">Submitted</td><td style="padding:6px 12px;color:#64748b">${timestamp}</td></tr>
-    </table>
-  </div>
-  <div style="padding:12px 24px;background:#16171a;text-align:center;font-size:12px;color:#64748b">
-    SRAtix — Swiss Robotics Association Ticketing Platform
-  </div>
-</div>`.trim();
+      <tr><td style="padding:6px 12px;font-weight:600;color:#888;vertical-align:top">Message</td><td style="padding:6px 12px;white-space:pre-wrap">${this.esc(dto.message)}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:600;color:#888">Submitted</td><td style="padding:6px 12px;color:#999">${timestamp}</td></tr>
+    </table>`;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;">
+    ${emailHeader('Contact Form Submission')}
+    <tr><td style="padding:30px 40px;">
+      ${body}
+    </td></tr>
+    ${emailPreFooter()}
+    ${emailFooter('admin')}
+  </table>
+</body>
+</html>`.trim();
   }
 
   private buildEmailText(dto: CreateContactDto, timestamp: string): string {
