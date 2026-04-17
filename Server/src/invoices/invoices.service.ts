@@ -14,13 +14,15 @@ import * as path from 'path';
  * - Issuer details from event.meta.issuerDetails
  * - Bill-to from order.billingAddress
  * - Discount line from order.meta.discountCents
- * - Embedded SRAtix logo
+ * - Per-ticket line items with attendee names
+ * - SRD event logo + SRAtix footer branding
  * - Swiss QR-bill section (informational — payments are via Stripe)
  */
 @Injectable()
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
-  private logoBytes: Uint8Array | null = null;
+  private mainLogoBytes: Uint8Array | null = null;
+  private sratixLogoBytes: Uint8Array | null = null;
 
   /** Fallback issuer (used when event.meta.issuerDetails is not configured) */
   private readonly fallbackIssuer = {
@@ -40,20 +42,36 @@ export class InvoicesService {
   ) {
     const vat = this.config.get('SRA_VAT_NUMBER', '');
     if (vat) this.fallbackIssuer.vatNumber = vat;
-    this.loadLogo();
+    this.loadLogos();
   }
 
-  private loadLogo() {
+  private loadLogos() {
+    const assetsDir = path.resolve(__dirname, '..', '..', 'assets');
+
+    // Main invoice logo (SRD event logo)
     try {
-      const logoPath = path.resolve(__dirname, '..', '..', 'assets', 'sratix-logo-lightbg.png');
-      if (fs.existsSync(logoPath)) {
-        this.logoBytes = new Uint8Array(fs.readFileSync(logoPath));
-        this.logger.log(`Logo loaded from ${logoPath} (${this.logoBytes.length} bytes)`);
+      const mainPath = path.join(assetsDir, 'srd-logo.png');
+      if (fs.existsSync(mainPath)) {
+        this.mainLogoBytes = new Uint8Array(fs.readFileSync(mainPath));
+        this.logger.log(`Main logo loaded (${this.mainLogoBytes.length} bytes)`);
       } else {
-        this.logger.warn(`Logo not found at ${logoPath} — invoices will not include a logo`);
+        this.logger.warn(`Main logo not found at ${mainPath}`);
       }
     } catch (err) {
-      this.logger.warn('Could not load logo:', err);
+      this.logger.warn('Could not load main logo:', err);
+    }
+
+    // SRAtix footer logo (dark version)
+    try {
+      const sratixPath = path.join(assetsDir, 'sratix-logo-lightbg.png');
+      if (fs.existsSync(sratixPath)) {
+        this.sratixLogoBytes = new Uint8Array(fs.readFileSync(sratixPath));
+        this.logger.log(`SRAtix logo loaded (${this.sratixLogoBytes.length} bytes)`);
+      } else {
+        this.logger.warn(`SRAtix logo not found at ${sratixPath}`);
+      }
+    } catch (err) {
+      this.logger.warn('Could not load SRAtix logo:', err);
     }
   }
 
@@ -79,7 +97,8 @@ export class InvoicesService {
       });
     }
 
-    return `INV-${year}-${String(newCount).padStart(4, '0')}`;
+    const shortYear = String(year).slice(-2);
+    return `SRD-${shortYear}-${String(newCount).padStart(4, '0')}`;
   }
 
   async generateInvoice(orderId: string): Promise<{
@@ -93,9 +112,15 @@ export class InvoicesService {
         items: {
           include: { ticketType: { select: { name: true, priceCents: true } } },
         },
+        tickets: {
+          include: {
+            ticketType: { select: { name: true } },
+            attendee: { select: { firstName: true, lastName: true } },
+          },
+        },
         event: {
           select: {
-            id: true, name: true, startDate: true, venue: true,
+            id: true, name: true, startDate: true, venue: true, venueAddress: true,
             currency: true, meta: true,
             org: { select: { name: true } },
           },
@@ -156,58 +181,76 @@ export class InvoicesService {
     const black = rgb(0, 0, 0);
     const gray = rgb(0.4, 0.4, 0.4);
     const lightGray = rgb(0.85, 0.85, 0.85);
-    const accent = rgb(0.0, 0.47, 0.84);
+    const accent = rgb(0.6, 0.05, 0.05); // dark red
 
     let y = height - 50;
     const leftMargin = 50;
     const rightMargin = width - 50;
 
-    // ─── Logo + Header ──────────────────────────────────────
-    if (this.logoBytes) {
+    // Helper: truncate text to fit within maxWidth
+    const truncate = (text: string, font: any, size: number, maxWidth: number): string => {
+      if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+      let truncated = text;
+      while (truncated.length > 0 && font.widthOfTextAtSize(truncated + '…', size) > maxWidth) {
+        truncated = truncated.slice(0, -1);
+      }
+      return truncated + '…';
+    };
+
+    // ─── Logo (left) ────────────────────────────────────────
+    if (this.mainLogoBytes) {
       try {
-        const logoImage = await doc.embedPng(this.logoBytes);
-        const logoDims = logoImage.scale(0.3);
+        const logoImage = await doc.embedPng(this.mainLogoBytes);
+        const logoScale = 60 / logoImage.height; // normalize to 60px tall
+        const logoDims = { width: logoImage.width * logoScale, height: 60 };
         page.drawImage(logoImage, {
           x: leftMargin,
           y: y - logoDims.height + 10,
           width: logoDims.width,
           height: logoDims.height,
         });
-        y -= logoDims.height + 5;
       } catch {
         // Logo embed failed — continue without
       }
     }
 
-    page.drawText(L.invoice.toUpperCase(), {
-      x: leftMargin, y, size: 22, font: helveticaBold, color: accent,
+    // ─── Right side: INVOICE title, number, date ────────────
+    const invoiceTitle = L.invoice.toUpperCase();
+    page.drawText(invoiceTitle, {
+      x: rightMargin - helveticaBold.widthOfTextAtSize(invoiceTitle, 18),
+      y, size: 18, font: helveticaBold, color: accent,
+    });
+    y -= 16;
+
+    page.drawText(invoiceNumber, {
+      x: rightMargin - helveticaBold.widthOfTextAtSize(invoiceNumber, 12),
+      y, size: 12, font: helveticaBold, color: black,
     });
 
-    // Invoice number & date (top right)
     const dateLocale = lang === 'de' ? 'de-CH' : lang === 'fr' ? 'fr-CH' : lang === 'it' ? 'it-CH' : 'en-CH';
     const dateStr = new Date().toLocaleDateString(dateLocale, {
       year: 'numeric', month: 'long', day: 'numeric',
     });
-
-    page.drawText(invoiceNumber, {
-      x: rightMargin - helveticaBold.widthOfTextAtSize(invoiceNumber, 12),
-      y: y + 5, size: 12, font: helveticaBold, color: black,
-    });
+    y -= 14;
     page.drawText(dateStr, {
       x: rightMargin - helvetica.widthOfTextAtSize(dateStr, 10),
-      y: y - 10, size: 10, font: helvetica, color: gray,
+      y, size: 10, font: helvetica, color: gray,
     });
 
     // ─── Issuer Block (left) ────────────────────────────────
-    y -= 35;
+    y -= 25;
     const drawLabel = (label: string, x: number, yPos: number) => {
       page.drawText(label, { x, y: yPos, size: 8, font: helveticaBold, color: gray });
     };
 
     drawLabel(L.from + ':', leftMargin, y);
     y -= 14;
+
+    // Company name in bold
+    page.drawText(issuer.companyName, { x: leftMargin, y, size: 10, font: helveticaBold, color: black });
+    y -= 14;
+
     const issuerLines = [
-      issuer.companyName,
       issuer.street,
       [issuer.postalCode, issuer.city].filter(Boolean).join(' '),
       issuer.country,
@@ -221,7 +264,8 @@ export class InvoicesService {
     }
 
     // ─── Bill-To Block (right column) ───────────────────────
-    let billY = y + issuerLines.length * 14 + 14;
+    // Start at same height as issuer block
+    let billY = y + (issuerLines.length + 1) * 14 + 14; // +1 for bold company name line
     const billX = 320;
     drawLabel(L.billTo + ':', billX, billY);
     billY -= 14;
@@ -259,15 +303,51 @@ export class InvoicesService {
     page.drawLine({ start: { x: leftMargin, y }, end: { x: rightMargin, y }, thickness: 1, color: lightGray });
     y -= 18;
 
+    // Venue line: name, address (comma separated)
+    const venueParts = [order.event.venue, order.event.venueAddress].filter(Boolean);
+    const venueStr = venueParts.join(', ');
+
     const refLines = [
       `${L.order}: ${order.orderNumber}`,
       `${L.event}: ${order.event.name}`,
       `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
-      ...(order.event.venue ? [`${L.venue}: ${order.event.venue}`] : []),
+      ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
     ];
     for (const line of refLines) {
       page.drawText(line, { x: leftMargin, y, size: 9, font: helvetica, color: gray });
       y -= 13;
+    }
+
+    // ─── Build per-ticket line items ────────────────────────
+    // Group tickets by ticketType, listing each attendee separately
+    interface InvoiceLine { desc: string; qty: number; unitCents: number; totalCents: number }
+    const invoiceLines: InvoiceLine[] = [];
+
+    if (order.tickets.length > 0) {
+      // We have individual tickets with attendee info — list each separately
+      for (const ticket of order.tickets) {
+        const typeName = ticket.ticketType?.name ?? 'Ticket';
+        const attendeeName = ticket.attendee
+          ? `${ticket.attendee.firstName} ${ticket.attendee.lastName}`.trim()
+          : '';
+        const desc = attendeeName ? `${typeName} — ${attendeeName}` : typeName;
+
+        // Find matching order item for pricing
+        const matchingItem = order.items.find(i => i.ticketTypeId === ticket.ticketTypeId);
+        const unitCents = matchingItem?.unitPriceCents ?? 0;
+
+        invoiceLines.push({ desc, qty: 1, unitCents, totalCents: unitCents });
+      }
+    } else {
+      // Fallback: use order items (no per-ticket breakdown)
+      for (const item of order.items) {
+        const desc = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
+        invoiceLines.push({
+          desc, qty: item.quantity,
+          unitCents: item.unitPriceCents,
+          totalCents: item.subtotalCents,
+        });
+      }
     }
 
     // ─── Line Items Table ───────────────────────────────────
@@ -276,6 +356,7 @@ export class InvoicesService {
     const colQty = 350;
     const colUnit = 420;
     const colTotal = rightMargin;
+    const descMaxWidth = colQty - colDesc - 10; // max width for description text
 
     page.drawRectangle({
       x: leftMargin - 5, y: y - 4,
@@ -293,11 +374,11 @@ export class InvoicesService {
     });
     y -= 22;
 
-    for (const item of order.items) {
-      const desc = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
-      const qty = String(item.quantity);
-      const unit = this.formatCurrency(item.unitPriceCents, currency);
-      const total = this.formatCurrency(item.subtotalCents, currency);
+    for (const line of invoiceLines) {
+      const desc = truncate(line.desc, helvetica, 10, descMaxWidth);
+      const qty = String(line.qty);
+      const unit = this.formatCurrency(line.unitCents, currency);
+      const total = this.formatCurrency(line.totalCents, currency);
 
       page.drawText(desc, { x: colDesc, y, size: 10, font: helvetica, color: black });
       page.drawText(qty, { x: colQty, y, size: 10, font: helvetica, color: black });
@@ -426,12 +507,43 @@ export class InvoicesService {
     const footerY = 40;
     page.drawLine({ start: { x: leftMargin, y: footerY + 15 }, end: { x: rightMargin, y: footerY + 15 }, thickness: 0.5, color: lightGray });
 
-    const footerParts = [issuer.companyName];
-    if (issuer.email) footerParts.push(issuer.email);
-    if (issuer.website) footerParts.push(issuer.website);
-    page.drawText(footerParts.join(' • '), {
-      x: leftMargin, y: footerY, size: 8, font: helvetica, color: gray,
+    // Left: event-specific footer
+    const footerText = 'Swiss Robotics Day • contact@swissroboticsday.com • https://swissroboticsday.com';
+    page.drawText(footerText, {
+      x: leftMargin, y: footerY, size: 7, font: helvetica, color: gray,
     });
+
+    // Right: "Powered by SRAtix" + tiny logo
+    const poweredText = 'Powered by SRAtix';
+    const poweredWidth = helvetica.widthOfTextAtSize(poweredText, 7);
+    let poweredX = rightMargin - poweredWidth;
+
+    if (this.sratixLogoBytes) {
+      try {
+        const sratixImg = await doc.embedPng(this.sratixLogoBytes);
+        const sratixScale = 12 / sratixImg.height; // 12px tall tiny logo
+        const sratixW = sratixImg.width * sratixScale;
+        const sratixH = 12;
+        poweredX = rightMargin - poweredWidth - sratixW - 4;
+        page.drawText(poweredText, {
+          x: poweredX, y: footerY, size: 7, font: helvetica, color: gray,
+        });
+        page.drawImage(sratixImg, {
+          x: rightMargin - sratixW,
+          y: footerY - 2,
+          width: sratixW,
+          height: sratixH,
+        });
+      } catch {
+        page.drawText(poweredText, {
+          x: poweredX, y: footerY, size: 7, font: helvetica, color: gray,
+        });
+      }
+    } else {
+      page.drawText(poweredText, {
+        x: poweredX, y: footerY, size: 7, font: helvetica, color: gray,
+      });
+    }
 
     // ─── Finalize ───────────────────────────────────────────
     const pdfBytes = await doc.save();
