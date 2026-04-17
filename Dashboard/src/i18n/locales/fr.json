@@ -250,6 +250,8 @@
   "events.settings.pathTicketsHint": "[sratix_tickets] — Où les visiteurs consultent et achètent des billets.",
   "events.settings.pathRegister": "Inscription des destinataires",
   "events.settings.pathRegisterHint": "[sratix_register] — Où les destinataires de billets complètent leurs infos via un lien token. Pas la page de création de compte WP.",
+  "events.settings.pathAttendeeRegister": "Inscription visiteurs",
+  "events.settings.pathAttendeeRegisterHint": "[sratix_attendee_register] — Où les destinataires de billets visiteurs complètent leurs données. Utilise le formulaire du type de billet.",
   "events.settings.pathMyTickets": "Mes billets (libre-service)",
   "events.settings.pathMyTicketsHint": "[sratix_my_tickets] — Où les participants consultent leurs billets et codes QR après l'achat.",
   "events.settings.pathSchedule": "Programme de l'événement",

@@ -1078,7 +1078,7 @@
       + '<h2 class="sratix-modal-title">' + escHtml(t('recipients.title')) + '</h2>'
       + '<div class="sratix-modal-body">'
       + '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
-      + '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('recipients.info')) + '</p>'
+      + '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(includeForSelf ? t('recipients.infoSelf') : t('recipients.info')) + '</p>'
       + '</div>'
       + '<div id="sratix-recipient-list">' + rows + '</div>'
       + '<div id="sratix-rcpt-warn" class="sratix-promo-msg" style="display:none;color:#856d0a;"></div>'
@@ -3576,6 +3576,292 @@
     }
   }
 
+  // ─── Attendee Register widget (visitor ticket recipients) ──────────────────
+  async function initAttendeeRegisterWidget() {
+    var container = document.getElementById('sratix-attendee-register-widget');
+    if (!container) return;
+
+    var apiUrl = container.getAttribute('data-api-url');
+    if (!apiUrl) {
+      container.innerHTML = '<p class="sratix-error">API URL not configured.</p>';
+      return;
+    }
+    apiUrl = apiUrl.replace(/\/$/, '');
+
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    if (!token) {
+      container.innerHTML = '<p class="sratix-info">No registration token provided.</p>';
+      return;
+    }
+
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      container.innerHTML = '<p class="sratix-error">Invalid registration link.</p>';
+      return;
+    }
+
+    container.innerHTML = '<p class="sratix-info">Loading registration…</p>';
+
+    try {
+      var res = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token));
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        container.innerHTML = '<p class="sratix-error">' + escHtml(data.message || 'This registration link is invalid or has expired.') + '</p>';
+        return;
+      }
+
+      if (data.tokenConsumed) {
+        container.innerHTML = '<div class="sratix-set-password__success">'
+          + '<h2>' + escHtml(t('reg.alreadyRegisteredTitle')) + '</h2>'
+          + '<p>' + escHtml(t('reg.alreadyRegisteredMsg').replace('{name}', t('reg.alreadyRegisteredFallbackName'))) + '</p>'
+          + '</div>';
+        return;
+      }
+
+      var attendee = data.attendee || {};
+      var event = data.event || {};
+      var ticketTypeName = data.ticketTypeName || '';
+      var isUpdate = !!data.alreadyRegistered;
+      var savedFormData = data.savedFormData || {};
+
+      // Extract form schema fields
+      var schemaFields = null;
+      if (data.formSchema && data.formSchema.fields && data.formSchema.fields.fields) {
+        schemaFields = data.formSchema.fields.fields;
+      }
+      var useCustomForm = !!(schemaFields && schemaFields.length > 0);
+
+      // ── Build form body ──
+      var formBodyHtml = '';
+
+      if (useCustomForm) {
+        var sorted = schemaFields.slice();
+        sorted.sort(function (a, b) {
+          var oa = typeof a.order === 'number' ? a.order : Infinity;
+          var ob = typeof b.order === 'number' ? b.order : Infinity;
+          if (oa !== Infinity || ob !== Infinity) return oa - ob;
+          return 0;
+        });
+        formBodyHtml = '<div class="sratix-form-fields">' + sorted.map(renderFormField).join('') + '</div>';
+      } else {
+        // Default: name (pre-filled), email (readonly), phone, company — NO password
+        formBodyHtml = ''
+          + '<div class="sratix-field-row">'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label" for="sratix-areg-first-name">' + escHtml(t('reg.firstName')) + ' <span class="sratix-req">*</span></label>'
+          +     '<input class="sratix-input" id="sratix-areg-first-name" type="text" name="firstName" value="' + escAttr(attendee.firstName || '') + '" required autocomplete="given-name" />'
+          +   '</div>'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label" for="sratix-areg-last-name">' + escHtml(t('reg.lastName')) + ' <span class="sratix-req">*</span></label>'
+          +     '<input class="sratix-input" id="sratix-areg-last-name" type="text" name="lastName" value="' + escAttr(attendee.lastName || '') + '" required autocomplete="family-name" />'
+          +   '</div>'
+          + '</div>'
+          + '<div class="sratix-field">'
+          +   '<label class="sratix-label" for="sratix-areg-email">' + escHtml(t('reg.email')) + '</label>'
+          +   '<input class="sratix-input" id="sratix-areg-email" type="email" value="' + escAttr(attendee.email || '') + '" readonly />'
+          + '</div>'
+          + '<div class="sratix-field-row">'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label" for="sratix-areg-phone">' + escHtml(t('reg.phone')) + '</label>'
+          +     '<input class="sratix-input" id="sratix-areg-phone" type="tel" name="phone" value="' + escAttr(attendee.phone || '') + '" placeholder="+41 ..." autocomplete="tel" />'
+          +   '</div>'
+          +   '<div class="sratix-field">'
+          +     '<label class="sratix-label" for="sratix-areg-company">' + escHtml(t('reg.organization')) + '</label>'
+          +     '<input class="sratix-input" id="sratix-areg-company" type="text" name="company" value="' + escAttr(attendee.company || '') + '" autocomplete="organization" />'
+          +   '</div>'
+          + '</div>';
+      }
+
+      var statusBanner = isUpdate
+        ? '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
+          + '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('reg.updateInfoNote')) + '</p>'
+          + '</div>'
+        : '';
+
+      var submitLabel = isUpdate ? t('reg.updateDetails') : t('reg.completeRegistration');
+
+      var formHtml = ''
+        + '<h2 class="sratix-modal-title">' + escHtml(event.name || 'Event Registration') + '</h2>'
+        + (ticketTypeName ? '<p class="sratix-modal-subtitle">' + escHtml(ticketTypeName) + '</p>' : '')
+        + statusBanner
+        + '<p style="margin-bottom:20px;opacity:0.7;">' + escHtml(isUpdate ? t('reg.updateSubtitle') : t('reg.completeSubtitle')) + '</p>'
+        + '<form id="sratix-areg-form" novalidate>'
+        +   formBodyHtml
+        +   '<p class="sratix-error-msg" id="sratix-areg-error" style="display:none"></p>'
+        +   '<div style="margin-top:20px;">'
+        +     '<button type="submit" class="sratix-btn sratix-btn--primary" style="width:100%;">' + escHtml(submitLabel) + '</button>'
+        +   '</div>'
+        + '</form>';
+
+      container.innerHTML = formHtml;
+
+      var formEl = container.querySelector('#sratix-areg-form');
+
+      // Pre-fill custom form fields from saved answers
+      if (useCustomForm) {
+        // Pre-fill attendee core fields
+        var prefillMap = {
+          'email': attendee.email, 'first_name': attendee.firstName,
+          'last_name': attendee.lastName, 'firstName': attendee.firstName,
+          'lastName': attendee.lastName, 'phone': attendee.phone,
+          'company': attendee.company, 'organization': attendee.company,
+        };
+        Object.keys(prefillMap).forEach(function (fid) {
+          if (!prefillMap[fid]) return;
+          var el = formEl.querySelector('#sratix-df-' + CSS.escape(fid));
+          if (el && !el.value) el.value = prefillMap[fid];
+        });
+
+        // Pre-fill from saved form data
+        if (savedFormData && typeof savedFormData === 'object') {
+          Object.keys(savedFormData).forEach(function (fid) {
+            var val = savedFormData[fid];
+            if (val === null || val === undefined) return;
+            var el = formEl.querySelector('#sratix-df-' + CSS.escape(fid));
+            if (!el) return;
+
+            if (el.type === 'checkbox') {
+              el.checked = !!val;
+            } else if (el.tagName === 'SELECT') {
+              el.value = String(val);
+            } else if (typeof val === 'object' && !Array.isArray(val) && val.granted !== undefined) {
+              el.checked = !!val.granted;
+            } else {
+              el.value = Array.isArray(val) ? val.join(', ') : String(val);
+            }
+          });
+
+          // Multi-select checkboxes
+          schemaFields.forEach(function (f) {
+            if (f.type !== 'multiselect_checkbox') return;
+            var saved = savedFormData[f.id];
+            if (!Array.isArray(saved)) return;
+            saved.forEach(function (sv) {
+              var cb = formEl.querySelector('input[name="sratix-df-' + CSS.escape(f.id) + '"][value="' + CSS.escape(sv) + '"]');
+              if (cb) cb.checked = true;
+            });
+          });
+        }
+
+        // Conditional visibility
+        if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
+          formEl.addEventListener('input', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyConditionVisibility(formEl, schemaFields, snap);
+          });
+          formEl.addEventListener('change', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyConditionVisibility(formEl, schemaFields, snap);
+          });
+          var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, initSnap);
+        }
+
+        formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+        applyCantonVisibility(formEl);
+
+        initRichtextEditors(formEl);
+        initMultiSelectDropdowns(formEl);
+      }
+
+      formEl.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var errorEl = container.querySelector('#sratix-areg-error');
+        errorEl.style.display = 'none';
+        var submitBtn = e.target.querySelector('button[type="submit"]');
+
+        var firstName, lastName, phone, company;
+        var formDataObj = {};
+
+        if (useCustomForm) {
+          var rawAnswers = collectDynamicAnswers(formEl, schemaFields, {});
+          var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
+
+          firstName = answers.first_name || answers.firstName || '';
+          lastName  = answers.last_name  || answers.lastName  || '';
+          phone     = answers.phone      || '';
+          company   = answers.company    || answers.organization || '';
+
+          for (var i = 0; i < schemaFields.length; i++) {
+            var f = schemaFields[i];
+            if (f.type === 'group') continue;
+            if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+            if (f.required) {
+              var val = answers[f.id];
+              if (val === undefined || val === null || val === ''
+                || (Array.isArray(val) && val.length === 0)
+                || (f.type === 'consent' && val && !val.granted)) {
+                errorEl.textContent = t('reg.form.fieldRequired', { field: resolveLabel(f.label) });
+                errorEl.style.display = '';
+                return;
+              }
+            }
+          }
+
+          var coreIds = ['first_name', 'firstName', 'last_name', 'lastName', 'email', 'phone', 'company', 'organization'];
+          Object.keys(answers).forEach(function (k) {
+            if (coreIds.indexOf(k) === -1) {
+              formDataObj[k] = answers[k];
+            }
+          });
+        } else {
+          firstName = (container.querySelector('#sratix-areg-first-name').value || '').trim();
+          lastName  = (container.querySelector('#sratix-areg-last-name').value || '').trim();
+          phone     = (container.querySelector('#sratix-areg-phone').value || '').trim();
+          company   = (container.querySelector('#sratix-areg-company').value || '').trim();
+        }
+
+        if (!firstName || !lastName) {
+          errorEl.textContent = t('reg.nameRequired');
+          errorEl.style.display = '';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = t('reg.pleaseWait');
+
+        try {
+          var postBody = { formData: formDataObj, firstName: firstName, lastName: lastName };
+          if (phone) postBody.phone = phone;
+          if (company) postBody.company = company;
+
+          var postRes = await fetch(apiUrl + '/public/register/' + encodeURIComponent(token), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(postBody),
+          });
+          var postData = await postRes.json().catch(function() { return {}; });
+          if (!postRes.ok) {
+            throw new Error(postData.message || 'Registration failed.');
+          }
+
+          if (postData.isUpdate) {
+            container.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
+              + '<div style="font-size:48px;margin-bottom:16px;">✅</div>'
+              + '<h3>' + escHtml(t('reg.updateSuccessTitle')) + '</h3>'
+              + '<p style="opacity:0.7;">' + escHtml(t('reg.updateSuccessMsg')) + '</p>'
+              + '</div>';
+          } else {
+            container.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
+              + '<div style="font-size:48px;margin-bottom:16px;">✅</div>'
+              + '<h3>' + escHtml(t('reg.completeSuccessTitle')) + '</h3>'
+              + '<p style="opacity:0.7;">' + escHtml(t('reg.completeSuccessMsg').replace('{event}', event.name || 'the event')) + '</p>'
+              + '<p style="opacity:0.7;">' + escHtml(t('reg.confirmationSent').replace('{email}', attendee.email || '')) + '</p>'
+              + '</div>';
+          }
+        } catch (err) {
+          errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+          errorEl.style.display = '';
+          submitBtn.disabled = false;
+          submitBtn.textContent = escHtml(submitLabel);
+        }
+      });
+
+    } catch (err) {
+      container.innerHTML = '<p class="sratix-error">Failed to load registration form. Please try again later.</p>';
+    }
+  }
+
   // ─── Set Password widget ─────────────────────────────────────────────────────
 
   // ─── Password strength ────────────────────────────────────────────────────────
@@ -5505,6 +5791,7 @@
     initMyTicketsWidget();
     initScheduleWidget();
     initRegisterWidget();
+    initAttendeeRegisterWidget();
     initSetPasswordWidget();
     if (!isPostPurchase || params.get('sratix_type') !== 'exhibitor') {
       initExhibitorPortalWidget();

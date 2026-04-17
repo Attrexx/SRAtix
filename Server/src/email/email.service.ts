@@ -29,6 +29,8 @@ interface OrderConfirmationData {
   invoicePdf?: { bytes: Uint8Array; fileName: string };
   /** Public URL to download the invoice */
   invoiceUrl?: string;
+  /** Number of other recipients who will receive their own ticket codes */
+  otherRecipientCount?: number;
 }
 
 /**
@@ -1099,6 +1101,7 @@ ${data.message}
                 <td style="vertical-align: middle; padding-right: 12px;">${data.apiBaseUrl ? `<img src="${data.apiBaseUrl}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
                 <td style="vertical-align: middle;"><div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div></td>
               </tr></table>`).join('')}
+              ${data.otherRecipientCount && data.otherRecipientCount > 0 ? `<p style="margin: 12px 0 0; font-size: 13px; color: #666;">ℹ️ ${data.otherRecipientCount} other recipient${data.otherRecipientCount > 1 ? 's' : ''} will receive ${data.otherRecipientCount > 1 ? 'their own' : 'a separate'} ticket code${data.otherRecipientCount > 1 ? 's' : ''} via email once they complete registration.</p>` : ''}
             </div>` : ''}
 
             <!-- Event Info -->

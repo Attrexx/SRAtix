@@ -366,6 +366,62 @@ export class FormsService {
   }
 
   /**
+   * Upsert form submission — update if one exists, create otherwise.
+   * Used when attendees re-visit their registration form.
+   */
+  async upsertSubmission(data: {
+    eventId: string;
+    attendeeId: string;
+    formSchemaId: string;
+    answers: Record<string, unknown>;
+  }) {
+    const existing = await this.prisma.formSubmission.findFirst({
+      where: {
+        eventId: data.eventId,
+        attendeeId: data.attendeeId,
+        formSchemaId: data.formSchemaId,
+      },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    const schema = await this.prisma.formSchema.findUnique({
+      where: { id: data.formSchemaId },
+    });
+    if (!schema)
+      throw new NotFoundException(`Form schema ${data.formSchemaId} not found`);
+
+    const fields = (schema.fields as unknown as FormSchemaDefinition).fields;
+    this.validateSubmission(fields, data.answers);
+
+    if (existing) {
+      return this.prisma.formSubmission.update({
+        where: { id: existing.id },
+        data: { data: data.answers as any, submittedAt: new Date() },
+      });
+    }
+
+    return this.prisma.formSubmission.create({
+      data: {
+        eventId: data.eventId,
+        attendeeId: data.attendeeId,
+        formSchemaId: data.formSchemaId,
+        data: data.answers as any,
+      },
+    });
+  }
+
+  /**
+   * Get the latest form submission for an attendee + schema combination.
+   */
+  async findLatestSubmission(attendeeId: string, formSchemaId: string) {
+    return this.prisma.formSubmission.findFirst({
+      where: { attendeeId, formSchemaId },
+      orderBy: { submittedAt: 'desc' },
+      select: { data: true, submittedAt: true },
+    });
+  }
+
+  /**
    * Get submissions for an attendee.
    */
   async findSubmissionsByAttendee(eventId: string, attendeeId: string) {

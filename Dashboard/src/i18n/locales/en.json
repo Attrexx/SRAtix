@@ -250,6 +250,8 @@
   "events.settings.pathTicketsHint": "[sratix_tickets] — Where visitors browse and buy tickets.",
   "events.settings.pathRegister": "Ticket Recipient Registration",
   "events.settings.pathRegisterHint": "[sratix_register] — Where ticket recipients complete their details via a token link. Not the WP account signup page.",
+  "events.settings.pathAttendeeRegister": "Visitor Attendee Registration",
+  "events.settings.pathAttendeeRegisterHint": "[sratix_attendee_register] — Where visitor ticket recipients complete their attendee details via a token link. Uses the ticket type's form schema.",
   "events.settings.pathMyTickets": "My Tickets (Self-Service)",
   "events.settings.pathMyTicketsHint": "[sratix_my_tickets] — Where attendees view their tickets and QR codes after purchase.",
   "events.settings.pathSchedule": "Event Schedule",

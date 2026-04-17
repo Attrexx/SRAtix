@@ -17,6 +17,7 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_my_tickets', array( $this, 'render_my_tickets' ) );
 		add_shortcode( 'sratix_schedule',   array( $this, 'render_schedule' ) );
 		add_shortcode( 'sratix_register',   array( $this, 'render_register' ) );
+		add_shortcode( 'sratix_attendee_register', array( $this, 'render_attendee_register' ) );
 		add_shortcode( 'sratix_exhibitor_portal', array( $this, 'render_exhibitor_portal' ) );
 		add_shortcode( 'sratix_set_password',     array( $this, 'render_set_password' ) );
 	}
@@ -34,6 +35,7 @@ class SRAtix_Client_Public {
 			|| has_shortcode( $post->post_content, 'sratix_my_tickets' )
 			|| has_shortcode( $post->post_content, 'sratix_schedule' )
 			|| has_shortcode( $post->post_content, 'sratix_register' )
+			|| has_shortcode( $post->post_content, 'sratix_attendee_register' )
 			|| has_shortcode( $post->post_content, 'sratix_exhibitor_portal' )
 			|| has_shortcode( $post->post_content, 'sratix_set_password' );
 
@@ -337,6 +339,29 @@ class SRAtix_Client_Public {
 		return sprintf(
 			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
 			. '<div id="sratix-register-widget" data-api-url="%s"></div>'
+			. '</div></div>',
+			esc_attr( rtrim( $api_url, '/' ) )
+		);
+	}
+
+	/**
+	 * [sratix_attendee_register] — Token-based attendee registration for visitors.
+	 *
+	 * Renders the ticket type's form schema (same as during purchase) so
+	 * recipients of gifted visitor tickets can complete their details.
+	 * Separate from [sratix_register] which handles booth staff registration.
+	 */
+	public function render_attendee_register( $atts ) {
+		$api_url = get_option( 'sratix_client_api_url', '' );
+		if ( empty( $api_url ) ) {
+			return '<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+				. '<p class="sratix-error">' . esc_html__( 'SRAtix API not configured.', 'sratix-client' ) . '</p>'
+				. '</div></div>';
+		}
+
+		return sprintf(
+			'<div class="sratix-page-wrap"><div class="sratix-page-inner">'
+			. '<div id="sratix-attendee-register-widget" data-api-url="%s"></div>'
 			. '</div></div>',
 			esc_attr( rtrim( $api_url, '/' ) )
 		);

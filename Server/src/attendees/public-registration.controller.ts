@@ -87,14 +87,6 @@ export class PublicRegistrationController {
       return { tokenConsumed: true };
     }
 
-    // Check if already registered — return friendly response instead of error
-    if (attendee.status === 'registered') {
-      return {
-        alreadyRegistered: true,
-        attendeeName: attendee.firstName,
-      };
-    }
-
     // Find the ticket to get ticket type + form schema
     const ticket = await this.prisma.ticket.findFirst({
       where: { attendeeId: attendee.id, status: 'valid' },
@@ -113,11 +105,29 @@ export class PublicRegistrationController {
       );
     }
 
+    // Load saved form answers for re-visit pre-population
+    let savedFormData = null;
+    if (ticket?.ticketType?.formSchemaId) {
+      const submission = await this.forms.findLatestSubmission(
+        attendee.id,
+        ticket.ticketType.formSchemaId,
+      );
+      if (submission) {
+        savedFormData = submission.data;
+      }
+    }
+
+    // Already registered — return full payload so form can be shown pre-filled
+    const isAlreadyRegistered = attendee.status === 'registered';
+
     return {
+      ...(isAlreadyRegistered ? { alreadyRegistered: true } : {}),
       attendee: {
         firstName: attendee.firstName,
         lastName: attendee.lastName,
         email: attendee.email,
+        phone: attendee.phone ?? '',
+        company: attendee.company ?? '',
       },
       event: ticket?.event ? {
         name: ticket.event.name,
@@ -126,6 +136,7 @@ export class PublicRegistrationController {
       } : null,
       ticketTypeName: ticket?.ticketType?.name ?? null,
       formSchema,
+      savedFormData,
     };
   }
 
@@ -149,9 +160,7 @@ export class PublicRegistrationController {
       return { tokenConsumed: true };
     }
 
-    if (attendee.status === 'registered') {
-      throw new BadRequestException('You have already completed registration');
-    }
+    const isUpdate = attendee.status === 'registered';
 
     // Find the ticket for context
     const ticket = await this.prisma.ticket.findFirst({
@@ -163,9 +172,9 @@ export class PublicRegistrationController {
       },
     });
 
-    // Save form submission if custom form data provided
+    // Save or update form submission if custom form data provided
     if (ticket?.ticketType?.formSchemaId && dto.formData && Object.keys(dto.formData).length > 0) {
-      await this.forms.createSubmission({
+      await this.forms.upsertSubmission({
         eventId: attendee.eventId,
         attendeeId: attendee.id,
         formSchemaId: ticket.ticketType.formSchemaId,
@@ -204,93 +213,89 @@ export class PublicRegistrationController {
       }
     }
 
-    // Mark registered (direct Prisma — status isn't in update() interface)
-    await this.prisma.attendee.update({
-      where: { id: attendee.id },
-      data: {
-        status: 'registered',
-      },
-    });
-
     // Use updated names for emails and response
     const finalFirstName = dto.firstName ?? attendee.firstName;
     const finalLastName = dto.lastName ?? attendee.lastName;
 
-    // Send confirmation email to recipient
-    if (ticket?.event) {
-      const ticketMeta = ticket.meta as Record<string, unknown> | null;
-      const isComp = ticketMeta?.isComp === true;
-
-      if (isComp) {
-        // Comp entry — send the full QR confirmation email
-        const compType = (ticketMeta?.compType as string) || 'staff';
-        const compTypeLabels: Record<string, string> = {
-          staff: 'Staff',
-          volunteer: 'Volunteer',
-          partner: 'Partner',
-          sponsor_no_booth: 'Sponsor',
-          sponsor_with_booth: 'Sponsor (Booth)',
-        };
-        const attendeeMeta = attendee.meta as Record<string, unknown> | null;
-
-        const regEventMeta = (ticket.event.meta as Record<string, any>) ?? {};
-        const regFullVenue = [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', ');
-
-        this.email
-          .sendCompEntryConfirmation(attendee.email, {
-            recipientName: finalFirstName,
-            compType,
-            compTypeLabel: compTypeLabels[compType] || compType,
-            organization: (attendeeMeta?.organization as string) || attendee.company || undefined,
-            eventName: ticket.event.name,
-            eventDate: ticket.event.startDate.toLocaleDateString('en-CH', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            }),
-            eventVenue: regFullVenue,
-            eventVenueMapUrl: regEventMeta.venueMapUrl || undefined,
-            ticketCode: ticket.code,
-            orderNumber: ticket.order?.orderNumber ?? '',
-          })
-          .catch((err) => console.error('[Registration] Comp confirmation email failed:', err));
-      } else {
-        // Regular recipient — send standard confirmation
-        const regEventMeta2 = (ticket.event.meta as Record<string, any>) ?? {};
-        this.email
-          .sendRecipientRegistrationConfirmation(attendee.email, {
-            recipientName: finalFirstName,
-            eventName: ticket.event.name,
-            eventDate: ticket.event.startDate.toISOString().split('T')[0],
-            eventVenue: [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', '),
-            eventVenueMapUrl: regEventMeta2.venueMapUrl || undefined,
-            ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
-          })
-          .catch((err) => console.error('[Registration] Confirmation email failed:', err));
-      }
-    }
-
-    // Notify the purchaser that the recipient registered
-    if (attendee.purchasedByAttendeeId) {
-      const purchaser = await this.prisma.attendee.findUnique({
-        where: { id: attendee.purchasedByAttendeeId },
+    // Only run first-time registration logic (mark registered, send emails)
+    if (!isUpdate) {
+      // Mark registered (direct Prisma — status isn't in update() interface)
+      await this.prisma.attendee.update({
+        where: { id: attendee.id },
+        data: { status: 'registered' },
       });
-      if (purchaser) {
-        this.email
-          .sendRecipientRegisteredNotification(purchaser.email, {
-            purchaserName: purchaser.firstName,
-            recipientName: `${finalFirstName} ${finalLastName}`,
-            recipientEmail: attendee.email,
-            eventName: ticket?.event?.name ?? 'Event',
-          })
-          .catch((err) => console.error('[Registration] Purchaser notification failed:', err));
+
+      // Send confirmation email to recipient
+      if (ticket?.event) {
+        const ticketMeta = ticket.meta as Record<string, unknown> | null;
+        const isComp = ticketMeta?.isComp === true;
+
+        if (isComp) {
+          const compType = (ticketMeta?.compType as string) || 'staff';
+          const compTypeLabels: Record<string, string> = {
+            staff: 'Staff',
+            volunteer: 'Volunteer',
+            partner: 'Partner',
+            sponsor_no_booth: 'Sponsor',
+            sponsor_with_booth: 'Sponsor (Booth)',
+          };
+          const attendeeMeta = attendee.meta as Record<string, unknown> | null;
+          const regEventMeta = (ticket.event.meta as Record<string, any>) ?? {};
+          const regFullVenue = [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', ');
+
+          this.email
+            .sendCompEntryConfirmation(attendee.email, {
+              recipientName: finalFirstName,
+              compType,
+              compTypeLabel: compTypeLabels[compType] || compType,
+              organization: (attendeeMeta?.organization as string) || attendee.company || undefined,
+              eventName: ticket.event.name,
+              eventDate: ticket.event.startDate.toLocaleDateString('en-CH', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+              }),
+              eventVenue: regFullVenue,
+              eventVenueMapUrl: regEventMeta.venueMapUrl || undefined,
+              ticketCode: ticket.code,
+              orderNumber: ticket.order?.orderNumber ?? '',
+            })
+            .catch((err) => console.error('[Registration] Comp confirmation email failed:', err));
+        } else {
+          const regEventMeta2 = (ticket.event.meta as Record<string, any>) ?? {};
+          this.email
+            .sendRecipientRegistrationConfirmation(attendee.email, {
+              recipientName: finalFirstName,
+              eventName: ticket.event.name,
+              eventDate: ticket.event.startDate.toISOString().split('T')[0],
+              eventVenue: [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', '),
+              eventVenueMapUrl: regEventMeta2.venueMapUrl || undefined,
+              ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
+            })
+            .catch((err) => console.error('[Registration] Confirmation email failed:', err));
+        }
+      }
+
+      // Notify the purchaser that the recipient registered
+      if (attendee.purchasedByAttendeeId) {
+        const purchaser = await this.prisma.attendee.findUnique({
+          where: { id: attendee.purchasedByAttendeeId },
+        });
+        if (purchaser) {
+          this.email
+            .sendRecipientRegisteredNotification(purchaser.email, {
+              purchaserName: purchaser.firstName,
+              recipientName: `${finalFirstName} ${finalLastName}`,
+              recipientEmail: attendee.email,
+              eventName: ticket?.event?.name ?? 'Event',
+            })
+            .catch((err) => console.error('[Registration] Purchaser notification failed:', err));
+        }
       }
     }
 
     return {
       success: true,
-      message: 'Registration completed successfully',
+      message: isUpdate ? 'Details updated successfully' : 'Registration completed successfully',
+      isUpdate,
       attendee: {
         firstName: finalFirstName,
         lastName: finalLastName,

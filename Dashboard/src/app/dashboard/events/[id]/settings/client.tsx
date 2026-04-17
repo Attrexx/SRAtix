@@ -107,6 +107,7 @@ export default function EventSettingsPage() {
   // Page paths (shortcode page URLs)
   const [pagePathTickets, setPagePathTickets] = useState('/tickets/');
   const [pagePathRegister, setPagePathRegister] = useState('/register/');
+  const [pagePathAttendeeRegister, setPagePathAttendeeRegister] = useState('/complete-attendee-registration/');
   const [pagePathMyTickets, setPagePathMyTickets] = useState('/my-tickets/');
   const [pagePathSchedule, setPagePathSchedule] = useState('/schedule/');
   const [pagePathExhibitorPortal, setPagePathExhibitorPortal] = useState('/exhibitor-portal/');
@@ -155,6 +156,7 @@ export default function EventSettingsPage() {
     const paths = (meta.pagePaths ?? {}) as Record<string, string>;
     setPagePathTickets(paths.tickets ?? '/tickets/');
     setPagePathRegister(paths.register ?? '/register/');
+    setPagePathAttendeeRegister(paths.attendeeRegister ?? '/complete-attendee-registration/');
     setPagePathMyTickets(paths.myTickets ?? '/my-tickets/');
     setPagePathSchedule(paths.schedule ?? '/schedule/');
     setPagePathExhibitorPortal(paths.exhibitorPortal ?? '/exhibitor-portal/');
@@ -227,6 +229,7 @@ export default function EventSettingsPage() {
           pagePaths: {
             tickets: pagePathTickets.trim() || '/tickets/',
             register: pagePathRegister.trim() || '/register/',
+            attendeeRegister: pagePathAttendeeRegister.trim() || '/complete-attendee-registration/',
             myTickets: pagePathMyTickets.trim() || '/my-tickets/',
             schedule: pagePathSchedule.trim() || '/schedule/',
             exhibitorPortal: pagePathExhibitorPortal.trim() || '/exhibitor-portal/',
@@ -547,6 +550,7 @@ export default function EventSettingsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FieldInput label={t('events.settings.pathTickets')} hint={t('events.settings.pathTicketsHint')} value={pagePathTickets} onChange={setPagePathTickets} placeholder="/tickets/" />
             <FieldInput label={t('events.settings.pathRegister')} hint={t('events.settings.pathRegisterHint')} value={pagePathRegister} onChange={setPagePathRegister} placeholder="/complete-registration/" />
+            <FieldInput label={t('events.settings.pathAttendeeRegister')} hint={t('events.settings.pathAttendeeRegisterHint')} value={pagePathAttendeeRegister} onChange={setPagePathAttendeeRegister} placeholder="/complete-attendee-registration/" />
             <FieldInput label={t('events.settings.pathMyTickets')} hint={t('events.settings.pathMyTicketsHint')} value={pagePathMyTickets} onChange={setPagePathMyTickets} placeholder="/my-tickets/" />
             <FieldInput label={t('events.settings.pathSchedule')} hint={t('events.settings.pathScheduleHint')} value={pagePathSchedule} onChange={setPagePathSchedule} placeholder="/schedule/" />
             <FieldInput label={t('events.settings.pathExhibitorPortal')} hint={t('events.settings.pathExhibitorPortalHint')} value={pagePathExhibitorPortal} onChange={setPagePathExhibitorPortal} placeholder="/exhibitor-portal/" />

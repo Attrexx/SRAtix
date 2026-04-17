@@ -250,6 +250,8 @@
   "events.settings.pathTicketsHint": "[sratix_tickets] — Dove i visitatori consultano e acquistano i biglietti.",
   "events.settings.pathRegister": "Registrazione destinatari",
   "events.settings.pathRegisterHint": "[sratix_register] — Dove i destinatari dei biglietti completano i dati tramite un link token. Non la pagina di creazione account WP.",
+  "events.settings.pathAttendeeRegister": "Registrazione visitatori",
+  "events.settings.pathAttendeeRegisterHint": "[sratix_attendee_register] — Dove i destinatari dei biglietti visitatore completano i dati. Usa il modulo del tipo di biglietto.",
   "events.settings.pathMyTickets": "I miei biglietti (self-service)",
   "events.settings.pathMyTicketsHint": "[sratix_my_tickets] — Dove i partecipanti visualizzano biglietti e codici QR dopo l'acquisto.",
   "events.settings.pathSchedule": "Programma evento",

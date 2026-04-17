@@ -400,7 +400,10 @@ export class PublicCheckoutController {
         orderMeta.includeTicketForSelf = includeTicketForSelf;
         const eventMeta = (event.meta as Record<string, any>) ?? {};
         const registerPath = eventMeta.pagePaths?.register ?? '/complete-registration';
-        orderMeta.registrationBaseUrl = new URL(dto.successUrl).origin + registerPath;
+        const attendeeRegisterPath = eventMeta.pagePaths?.attendeeRegister ?? '/complete-attendee-registration';
+        const origin = new URL(dto.successUrl).origin;
+        orderMeta.registrationBaseUrl = origin + registerPath;
+        orderMeta.attendeeRegisterBaseUrl = origin + attendeeRegisterPath;
       }
       if (Object.keys(orderMeta).length > 0) {
         await this.orders.updateMeta(order.id, orderMeta);
@@ -542,8 +545,8 @@ export class PublicCheckoutController {
 
           // Send gift notification emails to recipients
           const eventMetaFree = (event.meta as Record<string, any>) ?? {};
-          const registerPathFree = eventMetaFree.pagePaths?.register ?? '/complete-registration';
-          const registrationBaseUrl = new URL(dto.successUrl).origin + registerPathFree;
+          const attendeeRegisterPathFree = eventMetaFree.pagePaths?.attendeeRegister ?? '/complete-attendee-registration';
+          const registrationBaseUrl = new URL(dto.successUrl).origin + attendeeRegisterPathFree;
           const purchaserName = `${dto.attendeeData.firstName} ${dto.attendeeData.lastName}`;
           for (const recipient of recipientAttendees) {
             this.emailService

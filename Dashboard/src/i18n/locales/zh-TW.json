@@ -250,6 +250,8 @@
   "events.settings.pathTicketsHint": "[sratix_tickets] — 訪客瀏覽和購買票券的頁面。",
   "events.settings.pathRegister": "收票人註冊頁面",
   "events.settings.pathRegisterHint": "[sratix_register] — 票券收件人通過 Token 連結填寫資料的頁面。非 WP 帳號註冊頁面。",
+  "events.settings.pathAttendeeRegister": "訪客報名頁面",
+  "events.settings.pathAttendeeRegisterHint": "[sratix_attendee_register] — 訪客票券收件人填寫參加者資料的頁面。使用票券類型的表單架構。",
   "events.settings.pathMyTickets": "我的票券（自助服務）",
   "events.settings.pathMyTicketsHint": "[sratix_my_tickets] — 參加者購票後查看票券和 QR 碼的頁面。",
   "events.settings.pathSchedule": "活動議程",

@@ -231,7 +231,7 @@ export class StripeWebhookController {
       );
 
       // Send gift notification emails to recipients
-      const registrationBaseUrl = orderMeta.registrationBaseUrl as string;
+      const registrationBaseUrl = (orderMeta.attendeeRegisterBaseUrl ?? orderMeta.registrationBaseUrl) as string;
       if (registrationBaseUrl) {
         const eventForGift = await this.orders.findEventForOrder(orderId);
         const purchaserName = registrationName;
@@ -353,6 +353,7 @@ export class StripeWebhookController {
           isExhibitor: isExhibitorOrder,
           invoicePdf,
           invoiceUrl,
+          otherRecipientCount: recipientAttendees.length > 0 ? recipientAttendees.length : undefined,
         });
       } catch (err) {
         this.logger.error(`Failed to send confirmation email for order ${orderId}: ${err}`);
