@@ -187,14 +187,23 @@ export class InvoicesService {
     const leftMargin = 50;
     const rightMargin = width - 50;
 
-    // Helper: truncate text to fit within maxWidth
-    const truncate = (text: string, font: any, size: number, maxWidth: number): string => {
-      if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
-      let truncated = text;
-      while (truncated.length > 0 && font.widthOfTextAtSize(truncated + '…', size) > maxWidth) {
-        truncated = truncated.slice(0, -1);
+    // Helper: wrap text into multiple lines that fit within maxWidth
+    const wrapText = (text: string, font: any, size: number, maxWidth: number): string[] => {
+      if (font.widthOfTextAtSize(text, size) <= maxWidth) return [text];
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let current = '';
+      for (const word of words) {
+        const test = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(test, size) <= maxWidth) {
+          current = test;
+        } else {
+          if (current) lines.push(current);
+          current = word;
+        }
       }
-      return truncated + '…';
+      if (current) lines.push(current);
+      return lines;
     };
 
     // ─── Logo (left) ────────────────────────────────────────
@@ -375,19 +384,27 @@ export class InvoicesService {
     y -= 22;
 
     for (const line of invoiceLines) {
-      const desc = truncate(line.desc, helvetica, 10, descMaxWidth);
+      const descLines = wrapText(line.desc, helvetica, 10, descMaxWidth);
       const qty = String(line.qty);
       const unit = this.formatCurrency(line.unitCents, currency);
       const total = this.formatCurrency(line.totalCents, currency);
 
-      page.drawText(desc, { x: colDesc, y, size: 10, font: helvetica, color: black });
+      // First line: description + qty/unit/total
+      page.drawText(descLines[0], { x: colDesc, y, size: 10, font: helvetica, color: black });
       page.drawText(qty, { x: colQty, y, size: 10, font: helvetica, color: black });
       page.drawText(unit, { x: colUnit, y, size: 10, font: helvetica, color: black });
       page.drawText(total, {
         x: colTotal - helvetica.widthOfTextAtSize(total, 10),
         y, size: 10, font: helvetica, color: black,
       });
-      y -= 18;
+      y -= 14;
+
+      // Continuation lines (description only)
+      for (let i = 1; i < descLines.length; i++) {
+        page.drawText(descLines[i], { x: colDesc, y, size: 10, font: helvetica, color: black });
+        y -= 14;
+      }
+      y -= 4;
     }
 
     // ─── Totals ─────────────────────────────────────────────
