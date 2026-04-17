@@ -88,7 +88,7 @@ export class InvoicesController {
     const orders = await this.prisma.order.findMany({
       where: {
         status: 'paid',
-        meta: { path: ['invoiceToken'], equals: token },
+        meta: { path: '$.invoiceToken', equals: token },
       },
       select: { id: true },
       take: 1,
