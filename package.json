@@ -6,6 +6,6 @@
   "scripts": {
     "postinstall": "cd Server && npm install && npx prisma generate && cd ../Dashboard && npm install",
     "build": "cd Server && npm run build && cd ../Dashboard && npm run build",
-    "start": "cd Server && node dist/main.js"
+    "start": "cd Server && node scripts/pre-start.js && node dist/main.js"
   }
 }

@@ -15,7 +15,7 @@ import { AppModule } from './app.module';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { AuditLogService, AuditAction } from './audit-log/audit-log.service';
 
 async function bootstrap() {
@@ -237,9 +237,9 @@ async function bootstrap() {
       logger.warn(`Dashboard build not found at ${dashboardDir} — UI unavailable`);
     }
 
-    // Retry listen() — on deploy the old process may still hold the port
-    const MAX_RETRIES = 5;
-    const RETRY_DELAY = 3000;
+    // Retry listen() — safety net in case pre-start.js didn't fully clear the port
+    const MAX_RETRIES = 20;
+    const RETRY_DELAY = 1000;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         await app.listen(port, '0.0.0.0');
@@ -256,6 +256,10 @@ async function bootstrap() {
       }
     }
 
+    // Write PID file so pre-start.js can cleanly stop us on next deploy
+    const pidFile = join(__dirname, '..', '.sratix.pid');
+    try { writeFileSync(pidFile, String(process.pid)); } catch {}
+
     logger.log(`SRAtix Server v0.1.0 listening on port ${port}`);
     logger.log(`Node ${process.version}, PID ${process.pid}`);
 
@@ -271,6 +275,17 @@ async function bootstrap() {
     // Graceful shutdown logging
     app.enableShutdownHooks();
     const shutdownHandler = async () => {
+      // Hard deadline: force-exit after 10s to release the port even if
+      // Prisma disconnect or audit log write hangs
+      const killTimer = setTimeout(() => {
+        console.error('[SRAtix] Shutdown timeout (10s) — force exit');
+        process.exit(1);
+      }, 10_000);
+      killTimer.unref();
+
+      // Clean up PID file (best-effort)
+      try { unlinkSync(pidFile); } catch {}
+
       await audit.log({
         action: AuditAction.APP_SHUTDOWN,
         entity: 'app',

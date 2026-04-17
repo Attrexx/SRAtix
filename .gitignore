@@ -21,3 +21,6 @@ attrexx-account.txt
 *.secrets.txt
 
 /generated/prisma
+
+# Runtime PID file (written by main.ts, read by pre-start.js)
+.sratix.pid
