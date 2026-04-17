@@ -48,6 +48,11 @@ const sratixI18n = (function () {
       'qty.priceDiscounted':     '<s>{original}</s> → <strong>{final}</strong> (after discount)',
       'qty.includeMyself':       'Include a ticket for myself',
 
+      // Membership opt-out
+      'optOut.heading':          'Your ticket includes a <strong>free</strong> membership to the Swiss Robotics Association',
+      'optOut.label':            'I do not wish to become an SRA member',
+      'optOut.description':      'All tickets include a free individual membership to the Swiss Robotics Association, valid until the end of the current year. If you prefer not to join, check this box. The ticket price <strong>remains unchanged</strong> — you simply won\'t be registered as an SRA member.',
+
       // Recipient details
       'recipients.title':        'Recipient Details',
       'recipients.recipient':    'Recipient {n}',
@@ -90,6 +95,37 @@ const sratixI18n = (function () {
       'billing.continueToPay':   'Continue to payment \u2192',
       'billing.companyHide':     'Hide company fields',
 
+      // Registration (legacy / recipient registration)
+      'reg.title':               'Complete your registration',
+      'reg.firstName':           'First name',
+      'reg.lastName':            'Last name',
+      'reg.email':               'Email address',
+      'reg.phone':               'Phone',
+      'reg.organization':        'Organization',
+      'reg.password':            'Password',
+      'reg.passwordConfirm':     'Confirm password',
+      'reg.passwordHint':        'Choose a password for your account. You will use it to access the Exhibitor Portal.',
+      'reg.passwordMismatch':    'Passwords do not match.',
+      'reg.passwordTooShort':    'Password must be at least 8 characters.',
+      'reg.nameRequired':        'First name and last name are required.',
+      'reg.emailInvalid':        'Please enter a valid email address.',
+      'reg.pleaseWait':          'Please wait…',
+      'reg.genericError':        'Something went wrong. Please try again.',
+      'reg.alreadyRegisteredTitle': 'Already registered',
+      'reg.alreadyRegisteredMsg': 'You have already completed your registration, {name}. Check your email for your ticket confirmation.',
+      'reg.alreadyRegisteredFallbackName': 'dear attendee',
+      'reg.completeRegistration':'Complete registration',
+      'reg.continueToPayment':   'Continue to payment →',
+      'reg.back':                '← Back',
+      'reg.form.selectPlaceholder': 'Select…',
+      'reg.form.selected':         'selected',
+      'reg.form.yes':              'Yes',
+      'reg.form.no':               'No',
+      'reg.form.fieldRequired':    '{field} is required.',
+
+      'modal.close':             'Close',
+
+      'success.title':           'Registration complete!',
       'success.order':           'Order #{number}',
       'success.checkEmail':      'Check your email for your ticket confirmation.',
       'success.dismiss':         'Dismiss',
