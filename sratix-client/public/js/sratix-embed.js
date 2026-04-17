@@ -1038,12 +1038,11 @@
       var optOutCheck = modal.querySelector('#sratix-optout-check');
       var membershipOptOut = optOutCheck ? optOutCheck.checked : false;
       closeModal();
-      if (qty > 1) {
-        openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut);
-      } else {
-        // Single ticket — buyer always gets it, skip recipients, go to attendee form or billing
-        proceedAfterRecipients(eventId, tt, qty, promoCode, discountCents, true, [], membershipOptOut);
-      }
+      // Always go through recipient routing — it handles all combinations:
+      // qty=1 + includeForSelf → 0 recipients → proceedAfterRecipients → attendee form
+      // qty=1 + !includeForSelf → 1 recipient → collect details → billing/checkout
+      // qty>1 → collect recipients → then attendee form or billing
+      openRecipientDetailsModal(eventId, tt, qty, promoCode, discountCents, includeForSelf, membershipOptOut);
     });
 
     updateDisplay();
