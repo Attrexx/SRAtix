@@ -1485,11 +1485,8 @@
       +           '</div>'
       +         '</div>'
       +       '</div>'
-      // Invoice language
-      +       '<div class="sratix-field" style="margin-top:16px">'
-      +         '<label class="sratix-label" for="sratix-bill-lang">' + escHtml(t('billing.invoiceLang')) + ' <span class="sratix-req">*</span></label>'
-      +         '<select class="sratix-input" id="sratix-bill-lang" autocomplete="language">' + langSelectHtml + '</select>'
-      +       '</div>'
+      // Invoice language — hidden, always EN
+      +       '<input type="hidden" id="sratix-bill-lang" value="en" />'
       +       '<p class="sratix-error-msg" id="sratix-billing-error" style="display:none"></p>'
       +     '</form>'
       +   '</div>'
@@ -2711,10 +2708,8 @@
         +     '</div>'
         +   '</div>'
         + '</div>'
-        + '<div class="sratix-field" style="margin-top:16px">'
-        +   '<label class="sratix-label" for="sratix-exbill-lang">' + escHtml(t('billing.invoiceLang')) + ' <span class="sratix-req">*</span></label>'
-        +   '<select class="sratix-input" id="sratix-exbill-lang" autocomplete="language">' + langSelectHtml + '</select>'
-        + '</div>'
+        // Invoice language — hidden, always EN
+        + '<input type="hidden" id="sratix-exbill-lang" value="en" />'
         + '</div>';
       return html;
     }
