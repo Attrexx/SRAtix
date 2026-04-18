@@ -142,10 +142,24 @@ export class InvoicesService {
     const lang = orderMeta.invoiceLanguage || 'en';
     const L = getInvoiceLabels(lang);
 
-    // Issuer: prefer event.meta.issuerDetails, fall back to hardcoded
-    const issuer = eventMeta.issuerDetails
-      ? { ...this.fallbackIssuer, ...eventMeta.issuerDetails }
-      : { ...this.fallbackIssuer };
+    // Issuer: prefer event.meta.issuerDetails, fall back to hardcoded.
+    // Admin UI saves: name, email, vatNumber, uid, street, city, postalCode, country
+    // Renderer expects: companyName, companyNumber, email, vatNumber, street, city, postalCode, country
+    const raw = (eventMeta.issuerDetails as Record<string, string> | undefined) ?? {};
+    const issuer = {
+      ...this.fallbackIssuer,
+      ...(raw.name         ? { companyName: raw.name }           : {}),
+      ...(raw.email        ? { email: raw.email }               : {}),
+      ...(raw.vatNumber    ? { vatNumber: raw.vatNumber }        : {}),
+      ...(raw.uid          ? { companyNumber: raw.uid }          : {}),
+      ...(raw.street       ? { street: raw.street }              : {}),
+      ...(raw.city         ? { city: raw.city }                  : {}),
+      ...(raw.postalCode   ? { postalCode: raw.postalCode }      : {}),
+      ...(raw.country      ? { country: raw.country }            : {}),
+      ...(raw.iban         ? { iban: raw.iban }                  : {}),
+      ...(raw.bic          ? { bic: raw.bic }                    : {}),
+      ...(raw.bankName     ? { bankName: raw.bankName }          : {}),
+    };
 
     // Bill-to: prefer order.billingAddress, fall back to attendee data
     const billing = order.billingAddress as Record<string, any> | null;
