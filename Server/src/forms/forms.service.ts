@@ -515,11 +515,20 @@ export class FormsService {
    * Respects field conditions: if a field's conditions evaluate to false
    * (field is hidden), its required check is skipped and its value is stripped.
    */
+  private static readonly CORE_ATTENDEE_FIELDS = new Set([
+    'first_name', 'last_name', 'email', 'phone', 'company', 'organization',
+    'firstName', 'lastName',
+  ]);
+
   private validateSubmission(
     fields: FormField[],
     answers: Record<string, unknown>,
   ) {
     for (const field of fields) {
+      // Core attendee fields are handled separately by the registration endpoint
+      // and stripped from formData by the frontend — skip their validation here.
+      if (FormsService.CORE_ATTENDEE_FIELDS.has(field.id)) continue;
+
       // Evaluate conditions — if field should be hidden, skip validation
       if (field.conditions && field.conditions.length > 0) {
         const visible = evaluateConditions(
