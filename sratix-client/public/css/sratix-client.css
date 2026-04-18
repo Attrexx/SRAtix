@@ -93,8 +93,9 @@
 	margin: 0 auto;
 }
 
-/* Wider container for visitor ticket grid (3 columns need more room) */
-.sratix-page-inner:has(.sratix-cards--visitor) {
+/* Wider container for ticket grid (3 columns need more room) */
+.sratix-page-inner:has(.sratix-cards--visitor),
+.sratix-page-inner:has(.sratix-cards--exhibitor) {
 	max-width: 1280px;
 }
 
@@ -148,19 +149,22 @@
 	margin: 20px 0;
 }
 
-/* Visitor tickets: 3 per row in a wider container */
-.sratix-cards--visitor {
+/* Visitor & exhibitor tickets: 3 per row in a wider container */
+.sratix-cards--visitor,
+.sratix-cards--exhibitor {
 	grid-template-columns: repeat(3, 1fr);
 }
 
 @media (max-width: 900px) {
-	.sratix-cards--visitor {
+	.sratix-cards--visitor,
+	.sratix-cards--exhibitor {
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
 @media (max-width: 560px) {
-	.sratix-cards--visitor {
+	.sratix-cards--visitor,
+	.sratix-cards--exhibitor {
 		grid-template-columns: 1fr;
 	}
 }
