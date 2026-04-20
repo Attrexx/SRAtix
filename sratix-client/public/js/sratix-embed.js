@@ -1889,10 +1889,13 @@
         html += '</div>';
         break;
       case 'yes-no':
-        html = '<div class="sratix-yesno-group" data-field-id="' + escAttr(field.id) + '">';
-        html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="yes" /> ' + escHtml(t('reg.form.yes')) + '</label>';
-        html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="no" /> ' + escHtml(t('reg.form.no')) + '</label>';
-        html += '</div>';
+        html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
+        html += '<span class="sratix-toggle-switch">';
+        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
+        html += '</span>';
+        html += '<span class="sratix-toggle-text">' + escHtml(label) + '</span>';
+        html += '</label>';
         break;
       case 'consent':
         var docUrl = resolveLabel(field.documentUrl) || '';
@@ -1974,9 +1977,12 @@
           }
           break;
         case 'radio':
-        case 'yes-no':
           el = form.querySelector('input[name="' + CSS.escape(id) + '"]:checked');
           result[field.id] = el ? el.value : '';
+          break;
+        case 'yes-no':
+          el = form.querySelector('#' + CSS.escape(id));
+          result[field.id] = el && el.checked ? 'yes' : 'no';
           break;
         case 'checkbox':
           if (field.options && field.options.length > 0) {

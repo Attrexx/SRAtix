@@ -586,8 +586,8 @@
 }
 
 .sratix-toggle-switch input:checked + .sratix-toggle-track {
-	background: var(--sratix-primary);
-	border-color: var(--sratix-primary);
+	background: #22c55e;
+	border-color: #22c55e;
 }
 
 .sratix-toggle-switch input:checked + .sratix-toggle-track .sratix-toggle-thumb {
