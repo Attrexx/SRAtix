@@ -905,6 +905,7 @@
   // ─── Quantity modal (Stage A) ─────────────────────────────────────────────────
 
   function openQuantityModal(eventId, tt) {
+    _draftTicketTypeId = tt.id;
     const maxQty = Math.min(
       tt.maxPerOrder || 10,
       tt.available !== null ? tt.available : 99,
@@ -965,6 +966,13 @@
     let discountCents = 0;
     let promoCode = '';
 
+    // Restore from draft if available
+    var _qtyDraft = loadDraft(tt.id);
+    if (_qtyDraft) {
+      if (_qtyDraft.qty && _qtyDraft.qty >= 1 && _qtyDraft.qty <= maxQty) qty = _qtyDraft.qty;
+      if (_qtyDraft.promoCode) promoCode = _qtyDraft.promoCode;
+    }
+
     const valEl    = modal.querySelector('#sratix-qty-val');
     const decBtn   = modal.querySelector('#sratix-qty-dec');
     const incBtn   = modal.querySelector('#sratix-qty-inc');
@@ -975,6 +983,14 @@
     const errorEl     = modal.querySelector('#sratix-qty-error');
     const selfTicketRow = modal.querySelector('#sratix-self-ticket-row');
     const selfTicketCheckbox = modal.querySelector('#sratix-include-self');
+
+    // Apply draft values to DOM
+    if (_qtyDraft) {
+      if (_qtyDraft.promoCode) promoInput.value = _qtyDraft.promoCode;
+      if (selfTicketCheckbox && typeof _qtyDraft.includeForSelf === 'boolean') selfTicketCheckbox.checked = _qtyDraft.includeForSelf;
+      var optOutCb = modal.querySelector('#sratix-optout-check');
+      if (optOutCb && _qtyDraft.membershipOptOut) optOutCb.checked = true;
+    }
 
     function updateDisplay() {
       valEl.textContent = qty;
@@ -1091,6 +1107,19 @@
       + '</div>';
 
     document.body.appendChild(modal);
+
+    // Restore recipient fields from draft
+    var _rcptDraft = loadDraft(tt.id);
+    if (_rcptDraft && _rcptDraft.recipients) {
+      var firsts = modal.querySelectorAll('.sratix-rcpt-first');
+      var lasts  = modal.querySelectorAll('.sratix-rcpt-last');
+      var emails = modal.querySelectorAll('.sratix-rcpt-email');
+      _rcptDraft.recipients.forEach(function (r, i) {
+        if (firsts[i]) firsts[i].value = r.firstName || '';
+        if (lasts[i])  lasts[i].value  = r.lastName || '';
+        if (emails[i]) emails[i].value = r.email || '';
+      });
+    }
 
     modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -1294,6 +1323,57 @@
 
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
+    }
+
+    // ── Restore draft values (overrides WP prefill if user previously entered data) ──
+    var _attDraft = loadDraft(tt.id);
+    if (_attDraft && _attDraft.attendeeFields) {
+      var af = _attDraft.attendeeFields;
+      if (!useCustomForm) {
+        if (af._firstName) modal.querySelector('#sratix-first-name').value = af._firstName;
+        if (af._lastName)  modal.querySelector('#sratix-last-name').value  = af._lastName;
+        if (af._email)     modal.querySelector('#sratix-email').value      = af._email;
+        if (af._phone)     modal.querySelector('#sratix-phone').value      = af._phone;
+        if (af._company)   modal.querySelector('#sratix-company').value    = af._company;
+      }
+      // Restore custom dynamic fields
+      Object.keys(af).forEach(function (k) {
+        if (k.indexOf('df_') !== 0) return;
+        var fid = k.substring(3);
+        var wrap = formEl.querySelector('[data-df-id="' + CSS.escape(fid) + '"]');
+        if (!wrap) return;
+        var val = af[k];
+        // Richtext
+        var rt = wrap.querySelector('.sratix-richtext-editor');
+        if (rt) { rt.innerHTML = val || ''; return; }
+        // Toggle (yes-no)
+        var toggle = wrap.querySelector('.sratix-toggle-switch input[type="checkbox"]');
+        if (toggle) { toggle.checked = val === 'yes'; return; }
+        // Multi-checkbox (including multi-select dropdowns)
+        var checkboxes = wrap.querySelectorAll('input[type="checkbox"]');
+        if (checkboxes.length > 0 && Array.isArray(val)) {
+          checkboxes.forEach(function (cb) { cb.checked = val.indexOf(cb.value) !== -1; });
+          // Update multi-select dropdown trigger text
+          var msd = wrap.querySelector('.sratix-msd-panel');
+          if (msd) msd.dispatchEvent(new Event('change', { bubbles: true }));
+          return;
+        }
+        // Radio
+        var radios = wrap.querySelectorAll('input[type="radio"]');
+        if (radios.length > 0) {
+          radios.forEach(function (r) { r.checked = r.value === val; });
+          return;
+        }
+        // Standard input/select/textarea
+        var inp = wrap.querySelector('input, select, textarea');
+        if (inp) inp.value = val || '';
+      });
+      // Re-run condition visibility after restoring values
+      if (useCustomForm && schemaFields) {
+        var restoreSnap = collectDynamicAnswers(formEl, schemaFields, {});
+        applyConditionVisibility(formEl, schemaFields, restoreSnap);
+        applyCantonVisibility(formEl);
+      }
     }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -1507,6 +1587,23 @@
       companyToggle.textContent = isHidden ? t('billing.companyHide') : t('billing.companyToggle');
     });
 
+    // Restore billing fields from draft
+    var _billDraft = loadDraft(tt.id);
+    if (_billDraft && _billDraft.billingFields) {
+      var bf = _billDraft.billingFields;
+      ['name', 'email', 'street', 'city', 'postal', 'country', 'company', 'vat', 'bank'].forEach(function (k) {
+        if (bf[k]) {
+          var el = modal.querySelector('#sratix-bill-' + k);
+          if (el) el.value = bf[k];
+        }
+      });
+      // Auto-expand company section if company fields were filled
+      if (bf.company || bf.vat || bf.bank) {
+        companySection.style.display = '';
+        companyToggle.textContent = t('billing.companyHide');
+      }
+    }
+
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
     modal.querySelector('#sratix-billing-back').addEventListener('click', function () {
       closeModal();
@@ -1655,6 +1752,9 @@
       });
 
       closeModal();
+
+      // Purchase succeeded — clear the draft
+      clearDraft(tt.id);
 
       if (result.free) {
         window.location.href = result.successUrl;
@@ -3297,6 +3397,118 @@
     `).join('');
   }
 
+  // ─── Form draft persistence (sessionStorage) ─────────────────────────────────
+  // Remembers partially-filled registration data so closing the modal doesn't
+  // lose user input. Keyed by ticket-type ID. Cleared on purchase or session end.
+
+  var _draftTicketTypeId = null;
+
+  function draftKey(ttId) { return 'sratix_draft_' + ttId; }
+
+  function saveDraft(ttId, patch) {
+    if (!ttId) return;
+    try {
+      var existing = loadDraft(ttId) || {};
+      Object.keys(patch).forEach(function (k) { existing[k] = patch[k]; });
+      sessionStorage.setItem(draftKey(ttId), JSON.stringify(existing));
+    } catch (e) { /* quota exceeded or private mode — ignore */ }
+  }
+
+  function loadDraft(ttId) {
+    if (!ttId) return null;
+    try {
+      var raw = sessionStorage.getItem(draftKey(ttId));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function clearDraft(ttId) {
+    if (!ttId) return;
+    try { sessionStorage.removeItem(draftKey(ttId)); } catch (e) {}
+  }
+
+  /** Snapshot whichever modal is currently open and save to draft. */
+  function snapshotModalToDraft(modal) {
+    if (!modal || !_draftTicketTypeId) return;
+    var id = modal.id;
+
+    if (id === 'sratix-modal-qty') {
+      var valEl = modal.querySelector('#sratix-qty-val');
+      var selfCb = modal.querySelector('#sratix-include-self');
+      var optOut = modal.querySelector('#sratix-optout-check');
+      var promoIn = modal.querySelector('#sratix-promo-input');
+      saveDraft(_draftTicketTypeId, {
+        qty: valEl ? parseInt(valEl.textContent, 10) || 1 : 1,
+        includeForSelf: selfCb ? selfCb.checked : true,
+        membershipOptOut: optOut ? optOut.checked : false,
+        promoCode: promoIn ? promoIn.value.trim() : '',
+      });
+    }
+
+    if (id === 'sratix-modal-recipients') {
+      var firsts = modal.querySelectorAll('.sratix-rcpt-first');
+      var lasts  = modal.querySelectorAll('.sratix-rcpt-last');
+      var emails = modal.querySelectorAll('.sratix-rcpt-email');
+      var rcpts = [];
+      for (var i = 0; i < firsts.length; i++) {
+        rcpts.push({
+          firstName: firsts[i].value, lastName: lasts[i].value,
+          email: emails[i] ? emails[i].value : '',
+        });
+      }
+      saveDraft(_draftTicketTypeId, { recipients: rcpts });
+    }
+
+    if (id === 'sratix-modal-attendee') {
+      var data = {};
+      // Default (non-custom) form fields
+      var fn = modal.querySelector('#sratix-first-name');
+      var ln = modal.querySelector('#sratix-last-name');
+      var em = modal.querySelector('#sratix-email');
+      var ph = modal.querySelector('#sratix-phone');
+      var co = modal.querySelector('#sratix-company');
+      if (fn) data['_firstName'] = fn.value;
+      if (ln) data['_lastName'] = ln.value;
+      if (em) data['_email'] = em.value;
+      if (ph) data['_phone'] = ph.value;
+      if (co) data['_company'] = co.value;
+      // Custom dynamic fields (id starts with sratix-df-)
+      modal.querySelectorAll('[data-df-id]').forEach(function (wrap) {
+        var fid = wrap.getAttribute('data-df-id');
+        var inp = wrap.querySelector('input, select, textarea');
+        if (!inp) {
+          // Richtext editor
+          var rt = wrap.querySelector('.sratix-richtext-editor');
+          if (rt) data['df_' + fid] = rt.innerHTML;
+          return;
+        }
+        if (inp.type === 'checkbox' && inp.closest('.sratix-toggle-switch')) {
+          // Toggle (yes-no)
+          data['df_' + fid] = inp.checked ? 'yes' : 'no';
+        } else if (inp.type === 'checkbox') {
+          // Multi-checkbox — collect all checked
+          var checked = wrap.querySelectorAll('input[type="checkbox"]:checked');
+          data['df_' + fid] = Array.from(checked).map(function (c) { return c.value; });
+        } else if (inp.type === 'radio') {
+          var sel = wrap.querySelector('input[type="radio"]:checked');
+          data['df_' + fid] = sel ? sel.value : '';
+        } else {
+          data['df_' + fid] = inp.value;
+        }
+      });
+      saveDraft(_draftTicketTypeId, { attendeeFields: data });
+    }
+
+    if (id === 'sratix-modal-billing') {
+      var fields = {};
+      ['name', 'email', 'street', 'city', 'postal', 'country', 'company', 'vat', 'bank'].forEach(function (k) {
+        var el = modal.querySelector('#sratix-bill-' + k);
+        if (el) fields[k] = el.value;
+      });
+      saveDraft(_draftTicketTypeId, { billingFields: fields });
+    }
+  }
+
   // ─── Modal helpers ────────────────────────────────────────────────────────────
 
   function createModalShell(id) {
@@ -3311,7 +3523,10 @@
 
   function closeModal() {
     const existing = document.querySelector('.sratix-modal');
-    if (existing) existing.remove();
+    if (existing) {
+      snapshotModalToDraft(existing);
+      existing.remove();
+    }
   }
 
   function buildSuccessUrl(category, email) {
