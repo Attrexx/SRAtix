@@ -669,8 +669,8 @@
 /* ── Form fields ── */
 .sratix-label {
 	display: block;
-	font-size: 0.9em;
-	font-weight: 600;
+	font-size: 0.8em;
+	font-weight: 400;
 	margin-bottom: 5px;
 	color: var(--sratix-text-muted);
 }
