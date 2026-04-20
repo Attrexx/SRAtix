@@ -2097,20 +2097,17 @@
       ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: ' + minW + ';"'
       : '';
 
-    // For consent type, label is already inline (no tooltip needed — they have long inline helpText)
-    if (field.type === 'consent') {
-      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
-    }
+    var slugAttr = field.slug ? ' data-df-slug="' + escAttr(field.slug) + '"' : '';
 
-    // For yes-no, skip the outer <label class="sratix-label"> — the toggle label IS the field label.
-    // Tooltip is already inside the toggle text span for yes-no fields.
-    if (field.type === 'yes-no') {
-      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
+    // For consent, checkbox, and yes-no: skip the outer field label
+    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox') {
+      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '"' + slugAttr + '>'
         + html + helpHtml
         + '</div>';
     }
 
-    return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
+    var fieldClasses = 'sratix-field sratix-df' + (slug === 'attendee_sector' ? ' sratix-sector-field' : '');
+    return '<div class="' + fieldClasses + '"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '"' + slugAttr + '>'
       + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + tooltipHtml + '</label>'
       + html + helpHtml
       + '</div>';
@@ -2194,6 +2191,10 @@
           }
           el = form.querySelector('#' + CSS.escape(id));
           result[field.id] = el ? (el.value || '').trim() : '';
+      }
+      // Also key by slug so dynamic overrides can use canonical names
+      if (field.slug && field.slug !== field.id) {
+        result[field.slug] = result[field.id];
       }
     });
     return result;
@@ -2389,9 +2390,9 @@
   ];
   function applyCantonVisibility(form) {
     CANTON_FIELD_GROUPS.forEach(function (g) {
-      var cantonWrap  = form.querySelector('[data-df-id="' + g.canton  + '"]');
-      var countryWrap = form.querySelector('[data-df-id="' + g.country + '"]');
-      var cityWrap    = form.querySelector('[data-df-id="' + g.city    + '"]');
+      var cantonWrap  = findBySlug(form, g.canton);
+      var countryWrap = findBySlug(form, g.country);
+      var cityWrap    = findBySlug(form, g.city);
       if (!cantonWrap || !countryWrap || !cityWrap) return;
       // Read country value from the select element inside the wrapper
       var countrySel = countryWrap.querySelector('select');
@@ -2464,9 +2465,13 @@
    * Resolve a field from the schema by its known id OR by probing option values.
    * Returns { id, wrap } or null.
    */
+  function findBySlug(form, slug) {
+    return form.querySelector('[data-df-slug="' + CSS.escape(slug) + '"]')
+        || form.querySelector('[data-df-id="' + CSS.escape(slug) + '"]');
+  }
   function resolveField(form, fields, knownId, probeValues) {
-    // Fast path: field has the expected human-readable id
-    var wrap = form.querySelector('[data-df-id="' + CSS.escape(knownId) + '"]');
+    // Fast path: field wrapper found by slug or id
+    var wrap = findBySlug(form, knownId);
     if (wrap) return { id: knownId, wrap: wrap };
     // Slow path: search by option values (for auto-generated ids)
     if (probeValues && probeValues.length) {
@@ -2486,7 +2491,7 @@
 
   /** Find field id in schema by known id or by type + label substring. */
   function resolveFieldByType(form, fields, knownId, type, labelSubstr) {
-    var wrap = form.querySelector('[data-df-id="' + CSS.escape(knownId) + '"]');
+    var wrap = findBySlug(form, knownId);
     if (wrap) return { id: knownId, wrap: wrap };
     if (type || labelSubstr) {
       for (var i = 0; i < fields.length; i++) {
@@ -2535,7 +2540,7 @@
     var isAcademia = sector === 'academia';
 
     // 3a: Label swap — company_name
-    var compNameWrap = form.querySelector('[data-df-id="company_name"]');
+    var compNameWrap = findBySlug(form, 'company_name');
     if (compNameWrap) {
       var compLabel = compNameWrap.querySelector('.sratix-label');
       if (compLabel) {
@@ -2549,7 +2554,7 @@
     }
 
     // 3b: Label swap — company_website
-    var compWebWrap = form.querySelector('[data-df-id="company_website"]');
+    var compWebWrap = findBySlug(form, 'company_website');
     if (compWebWrap) {
       var webLabel = compWebWrap.querySelector('.sratix-label');
       if (webLabel) {
@@ -2563,15 +2568,15 @@
     }
 
     // 3c: Hide/show company_size
-    var sizeWrap = form.querySelector('[data-df-id="company_size"]');
+    var sizeWrap = findBySlug(form, 'company_size');
     if (sizeWrap) {
       sizeWrap.style.display = isAcademia ? 'none' : '';
     }
 
     // 3d: Adjust widths — job_title, department, industry_sector, company_size
-    var jtWrap = form.querySelector('[data-df-id="job_title"]');
-    var deptWrap = form.querySelector('[data-df-id="department"]');
-    var isWrap = form.querySelector('[data-df-id="industry_sector"]');
+    var jtWrap = findBySlug(form, 'job_title');
+    var deptWrap = findBySlug(form, 'department');
+    var isWrap = findBySlug(form, 'industry_sector');
     if (isAcademia) {
       if (jtWrap) setFieldFlex(jtWrap, 33);
       if (deptWrap) setFieldFlex(deptWrap, 33);
