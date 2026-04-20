@@ -2461,6 +2461,7 @@
    *  4. attendee_sector=industry|government → revert all of the above
    */
   function applyDynamicOverrides(form, fields, answers) {
+    console.log('[SRAtix] applyDynamicOverrides called, answers:', JSON.stringify(answers));
     // ── 1 & 2: create_map_listing + org_authorized_rep ──────
     var mapWrap = form.querySelector('[data-df-id="create_map_listing"]');
     var repWrap = form.querySelector('[data-df-id="org_authorized_rep"]');
