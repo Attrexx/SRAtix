@@ -341,10 +341,16 @@ export class FormsService {
       (f) => !(f as any).tooltip,
     );
 
+    // ── Phase 3: DefaultValue hydration (fields missing defaultValue) ─
+    const needsDefaultValueHydration = def.fields.filter(
+      (f) => (f as any).defaultValue === undefined,
+    );
+
     // Collect all slugs that need any hydration
     const allSlugsSet = new Set<string>();
     for (const f of needsOptionsHydration) allSlugsSet.add((f as any).slug || f.id);
     for (const f of needsTooltipHydration) allSlugsSet.add((f as any).slug || f.id);
+    for (const f of needsDefaultValueHydration) allSlugsSet.add((f as any).slug || f.id);
     if (allSlugsSet.size === 0) return;
 
     // Batch-fetch all matching FieldDefinitions by slug.
@@ -352,10 +358,10 @@ export class FormsService {
     // fields from the Dashboard builder store the slug in a separate property.
     const fieldDefs = await this.prisma.fieldDefinition.findMany({
       where: { slug: { in: [...allSlugsSet] }, active: true },
-      select: { slug: true, options: true, tooltip: true },
+      select: { slug: true, options: true, tooltip: true, defaultValue: true },
     });
 
-    const defsBySlug = new Map<string, { options: unknown; tooltip: unknown }>();
+    const defsBySlug = new Map<string, { options: unknown; tooltip: unknown; defaultValue: unknown }>();
     for (const fd of fieldDefs) {
       defsBySlug.set(fd.slug, { options: fd.options, tooltip: fd.tooltip });
     }
@@ -379,6 +385,15 @@ export class FormsService {
       const fdData = defsBySlug.get(fieldSlug);
       if (fdData?.tooltip && typeof fdData.tooltip === 'object') {
         (field as any).tooltip = fdData.tooltip;
+      }
+    }
+
+    // Merge defaultValue into the schema fields
+    for (const field of needsDefaultValueHydration) {
+      const fieldSlug = (field as any).slug || field.id;
+      const fdData = defsBySlug.get(fieldSlug);
+      if (fdData?.defaultValue != null) {
+        (field as any).defaultValue = fdData.defaultValue;
       }
     }
 
