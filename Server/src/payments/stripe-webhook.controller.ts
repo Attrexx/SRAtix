@@ -19,7 +19,7 @@ import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
-import { HYBRID_TIER_MAP, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
+import { HYBRID_TIER_MAP, SECTOR_TIER_OVERRIDE, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { SkipRateLimit } from '../common/guards/rate-limit.guard';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 import { AuthService } from '../auth/auth.service';
@@ -820,6 +820,27 @@ export class StripeWebhookController {
         // Flatten the most recent submission's data for easy access
         const latest = submissions[0];
         payload.formData = latest.data;
+
+        // ── Sector-based tier override ──────────────────────────
+        // If attendee_sector is 'academia', swap professional tiers
+        // to their academic equivalents (e.g. professionals → academics).
+        const formDataObj = latest.data as Record<string, unknown> | null;
+        const attendeeSector = formDataObj?.attendee_sector as string | undefined;
+        const membership = payload.membership as Record<string, unknown> | undefined;
+        if (attendeeSector && membership) {
+          const sectorOverrides = SECTOR_TIER_OVERRIDE[attendeeSector];
+          if (sectorOverrides) {
+            const currentTier = membership.sraMembershipTier as MembershipTier;
+            const overriddenTier = sectorOverrides[currentTier];
+            if (overriddenTier) {
+              membership.sraMembershipTier = overriddenTier;
+              membership.sraWpProductId = TIER_WP_PRODUCT_MAP[overriddenTier]
+                ?? membership.sraWpProductId;
+              membership.sectorOverrideApplied = true;
+            }
+          }
+          membership.attendeeSector = attendeeSector;
+        }
       }
     }
 

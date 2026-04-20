@@ -324,14 +324,15 @@ function getDefaultFieldDefinitions() {
     }),
 
     // ── Profile Fields ───────────────────────────────────────
-    fd('attendee_sector', { en: 'I represent…', de: '[DE] I represent…', fr: '[FR] I represent…', it: '[IT] I represent…', 'zh-TW': '[ZH] I represent…' }, 'radio', 'profile', {
+    fd('attendee_sector', { en: 'I represent…', de: 'Ich vertrete…', fr: 'Je représente…', it: 'Rappresento…', 'zh-TW': '我代表…' }, 'radio', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: -1,
       defaultValue: 'industry',
       options: [
-        { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
-        { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+        { value: 'industry', label: { en: 'Industry', de: 'Industrie', fr: 'Industrie', it: 'Industria', 'zh-TW': '產業界' } },
+        { value: 'academia', label: { en: 'Academia', de: 'Wissenschaft', fr: 'Académie', it: 'Accademia', 'zh-TW': '學術界' } },
+        { value: 'government', label: { en: 'Government / Public Sector', de: 'Regierung / Öffentlicher Sektor', fr: 'Gouvernement / Secteur public', it: 'Governo / Settore pubblico', 'zh-TW': '政府 / 公共部門' } },
       ],
-      tooltip: { en: 'Helps us tailor the form fields and networking to your sector.', de: '[DE] Helps us tailor the form fields and networking to your sector.', fr: '[FR] Helps us tailor the form fields and networking to your sector.', it: '[IT] Helps us tailor the form fields and networking to your sector.', 'zh-TW': '[ZH] Helps us tailor the form fields and networking to your sector.' },
+      tooltip: { en: 'Helps us tailor the form fields and networking to your sector.', de: 'Hilft uns, die Formularfelder und das Networking auf Ihren Sektor abzustimmen.', fr: 'Nous aide à adapter les champs du formulaire et le réseautage à votre secteur.', it: 'Ci aiuta ad adattare i campi del modulo e il networking al vostro settore.', 'zh-TW': '幫助我們根據您的領域調整表單欄位和交流活動。' },
     }),
     fd('short_bio', { en: 'Short Bio', de: 'Kurzbiografie', fr: 'Biographie courte', it: 'Breve biografia', 'zh-TW': '簡短自介' }, 'textarea', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,

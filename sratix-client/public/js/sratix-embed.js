@@ -2458,7 +2458,7 @@
    *  2. org_authorized_rep: show when create_map_listing=yes OR create_org_profile=yes (OR logic)
    *  3. attendee_sector=academia → swap company_name/company_website labels,
    *     hide company_size, adjust widths to 33%, swap department options
-   *  4. attendee_sector=industry → revert all of the above
+   *  4. attendee_sector=industry|government → revert all of the above
    */
   function applyDynamicOverrides(form, fields, answers) {
     // ── 1 & 2: create_map_listing + org_authorized_rep ──────

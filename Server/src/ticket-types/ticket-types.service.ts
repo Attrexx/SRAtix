@@ -127,6 +127,20 @@ export const HYBRID_TIER_MAP: Record<MembershipTier, MembershipTier> = {
 };
 
 /**
+ * Sector-based tier override — when the attendee_sector form field is
+ * 'academia', professional tiers are swapped to their academic equivalents.
+ *
+ * Only applies AFTER hybrid mapping (i.e. operates on already-mapped tiers).
+ * Sectors 'industry' and 'government' do not trigger any override.
+ */
+export const SECTOR_TIER_OVERRIDE: Partial<Record<string, Partial<Record<MembershipTier, MembershipTier>>>> = {
+  academia: {
+    professionals: 'academics',
+    young_professionals: 'young_academics',
+  },
+};
+
+/**
  * Human-readable labels for membership tiers (English defaults).
  */
 export const TIER_LABELS: Record<MembershipTier, string> = {

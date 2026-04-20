@@ -1682,8 +1682,20 @@ function TicketCard({
         )}
       </div>
 
-      {/* Actions */}
+      {/* ID + Actions */}
       <div className="mt-2 flex items-center gap-1.5 border-t pt-2" style={{ borderColor: 'var(--color-border)' }}>
+        <button
+          onClick={() => { navigator.clipboard.writeText(tt.id); }}
+          className="rounded-lg px-2 py-1 text-[10px] font-mono transition-colors"
+          style={{
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-muted)',
+          }}
+          title={`Copy ID: ${tt.id}`}
+        >
+          {tt.id.slice(0, 8)}…
+        </button>
+        <span className="mx-auto" />
         <button
           onClick={() => onToggleStatus(tt)}
           className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
