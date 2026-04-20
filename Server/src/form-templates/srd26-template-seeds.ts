@@ -212,6 +212,7 @@ function sraOrgProfileSection(startOrder: number): FormField[] {
     }),
     f('org_display_name', 'text', { en: 'Display Name', de: 'Anzeigename', fr: 'Nom d\'affichage', it: 'Nome visualizzato', 'zh-TW': '顯示名稱' }, 'sra_org_profile', startOrder + 1, { conditions: orgConditions }),
     f('org_type', 'select', { en: 'Organization Type', de: 'Organisationstyp', fr: 'Type d\'organisation', it: 'Tipo organizzazione', 'zh-TW': '組織類型' }, 'sra_org_profile', startOrder + 2, {
+      required: true,
       conditions: orgConditions,
       options: [
         { value: 'industry-large', label: { en: 'Industry — Large', de: 'Industrie — Gross', fr: 'Industrie — Grande', it: 'Industria — Grande', 'zh-TW': '企業 — 大型' } },
@@ -225,11 +226,14 @@ function sraOrgProfileSection(startOrder: number): FormField[] {
     f('org_phone', 'phone', { en: 'Public Phone', de: 'Öffentliche Telefonnummer', fr: 'Téléphone public', it: 'Telefono pubblico', 'zh-TW': '公開電話' }, 'sra_org_profile', startOrder + 4, { conditions: orgConditions }),
     f('org_website', 'url', { en: 'Organization Website', de: 'Website der Organisation', fr: 'Site web', it: 'Sito web', 'zh-TW': '組織網站' }, 'sra_org_profile', startOrder + 5, { conditions: orgConditions }),
     f('org_description', 'textarea', { en: 'Short Description', de: 'Kurzbeschreibung', fr: 'Description courte', it: 'Descrizione breve', 'zh-TW': '簡短描述' }, 'sra_org_profile', startOrder + 6, { conditions: orgConditions }),
-    f('org_logo', 'image-upload', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo', it: 'Logo', 'zh-TW': '組織標誌' }, 'sra_org_profile', startOrder + 7, { conditions: orgConditions }),
+    f('org_logo', 'image-upload', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo', it: 'Logo', 'zh-TW': '組織標誌' }, 'sra_org_profile', startOrder + 7, { required: true, conditions: orgConditions }),
     f('org_we_offer', 'textarea', { en: 'We offer…', de: 'Wir bieten…', fr: 'Nous offrons…', it: 'Offriamo…', 'zh-TW': '我們提供…' }, 'sra_org_profile', startOrder + 8, { conditions: orgConditions }),
     f('org_we_seek', 'textarea', { en: 'We are looking for…', de: 'Wir suchen…', fr: 'Nous recherchons…', it: 'Cerchiamo…', 'zh-TW': '我們正在尋找…' }, 'sra_org_profile', startOrder + 9, { conditions: orgConditions }),
     f('org_tags', 'multi-select', { en: 'Tags / Keywords', de: 'Tags', fr: 'Tags', it: 'Tag', 'zh-TW': '標籤' }, 'sra_org_profile', startOrder + 10, { conditions: orgConditions }),
-    f('org_authorized_rep', 'checkbox', { en: 'I am authorized to represent this organization', de: 'Ich bin berechtigt, diese Organisation zu vertreten', fr: 'Je suis autorisé(e) à représenter cette organisation', it: 'Sono autorizzato a rappresentare questa organizzazione', 'zh-TW': '我有權代表此組織' }, 'sra_org_profile', startOrder + 11, { required: true, conditions: orgConditions }),
+    f('org_authorized_rep', 'checkbox', { en: 'I am authorized to represent this organization', de: 'Ich bin berechtigt, diese Organisation zu vertreten', fr: 'Je suis autorisé(e) à représenter cette organisation', it: 'Sono autorizzato a rappresentare questa organizzazione', 'zh-TW': '我有權代表此組織' }, 'sra_org_profile', startOrder + 11, {
+      required: true,
+      conditions: sraCondition,
+    }),
   ];
 }
 
@@ -282,6 +286,12 @@ function template1_IndustryGovParticipant(): { name: string; description: string
   const fields: FormField[] = [
     ...personalSection(0),
     // Professional section
+    f('attendee_sector', 'radio', { en: 'I represent…', de: '[DE] I represent…', fr: '[FR] I represent…', it: '[IT] I represent…', 'zh-TW': '[ZH] I represent…' }, 'professional', -1, {
+      options: [
+        { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
+        { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+      ],
+    }),
     f('company_name', 'text', { en: 'Company / Institution', de: 'Firma / Institution', fr: 'Entreprise / Institution', it: 'Azienda / Istituzione', 'zh-TW': '公司 / 機構' }, 'professional', 0, { required: true }),
     f('company_website', 'url', { en: 'Company Website', de: 'Firmenwebsite', fr: 'Site web', it: 'Sito web aziendale', 'zh-TW': '公司網站' }, 'professional', 1),
     f('job_title', 'text', { en: 'Job Title', de: 'Berufsbezeichnung', fr: 'Titre du poste', it: 'Qualifica', 'zh-TW': '職稱' }, 'professional', 2),
@@ -333,6 +343,12 @@ function template2_StartupParticipant(): { name: string; description: string; ca
   const fields: FormField[] = [
     ...personalSection(0),
     // Professional section (same as Industry)
+    f('attendee_sector', 'radio', { en: 'I represent…', de: '[DE] I represent…', fr: '[FR] I represent…', it: '[IT] I represent…', 'zh-TW': '[ZH] I represent…' }, 'professional', -1, {
+      options: [
+        { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
+        { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+      ],
+    }),
     f('company_name', 'text', { en: 'Company / Startup Name', de: 'Firma / Startup-Name', fr: 'Entreprise / Nom startup', it: 'Azienda / Nome startup', 'zh-TW': '公司 / 新創名稱' }, 'professional', 0, { required: true }),
     f('company_website', 'url', { en: 'Company Website', de: 'Firmenwebsite', fr: 'Site web', it: 'Sito web', 'zh-TW': '公司網站' }, 'professional', 1),
     f('job_title', 'text', { en: 'Job Title / Role', de: 'Berufsbezeichnung / Rolle', fr: 'Titre / Rôle', it: 'Qualifica / Ruolo', 'zh-TW': '職稱 / 角色' }, 'professional', 2),
@@ -393,6 +409,12 @@ function template3_AcademiaParticipant(): { name: string; description: string; c
   const fields: FormField[] = [
     ...personalSection(0),
     // Academic section
+    f('attendee_sector', 'radio', { en: 'I represent…', de: '[DE] I represent…', fr: '[FR] I represent…', it: '[IT] I represent…', 'zh-TW': '[ZH] I represent…' }, 'academic', -1, {
+      options: [
+        { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
+        { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+      ],
+    }),
     f('institution_name', 'text', { en: 'Institution Name', de: 'Institutionsname', fr: 'Nom de l\'institution', it: 'Nome istituzione', 'zh-TW': '機構名稱' }, 'academic', 0, { required: true }),
     f('institution_department', 'text', { en: 'Department / Lab', de: 'Abteilung / Labor', fr: 'Département / Labo', it: 'Dipartimento / Lab', 'zh-TW': '系所 / 實驗室' }, 'academic', 1),
     f('academic_role', 'select', { en: 'Role', de: 'Rolle', fr: 'Rôle', it: 'Ruolo', 'zh-TW': '職位' }, 'academic', 2, {
@@ -550,6 +572,7 @@ function template6_ExhibitorPackage(): { name: string; description: string; cate
     f('create_org_profile', 'yes-no', { en: 'Create organization profile in SRA directory', de: 'Organisationsprofil im SRA-Verzeichnis erstellen', fr: 'Créer profil dans annuaire SRA', it: 'Crea profilo nell\'elenco SRA', 'zh-TW': '在 SRA 目錄建立組織檔案' }, 'org_profile', 0),
     f('org_display_name', 'text', { en: 'Display Name', de: 'Anzeigename', fr: 'Nom d\'affichage', it: 'Nome visualizzato', 'zh-TW': '顯示名稱' }, 'org_profile', 1, { conditions: orgProfileCondition }),
     f('org_type', 'select', { en: 'Organization Type', de: 'Organisationstyp', fr: 'Type d\'organisation', it: 'Tipo organizzazione', 'zh-TW': '組織類型' }, 'org_profile', 2, {
+      required: true,
       conditions: orgProfileCondition,
       options: [
         { value: 'industry-large', label: { en: 'Industry Large', de: 'Grossunternehmen', fr: 'Grande industrie', it: 'Grande industria', 'zh-TW': '大型企業' } },
@@ -561,11 +584,11 @@ function template6_ExhibitorPackage(): { name: string; description: string; cate
     f('org_contact_email', 'email', { en: 'Public Contact Email', de: 'Öffentliche Kontakt-E-Mail', fr: 'E-mail contact public', it: 'E-mail contatto pubblico', 'zh-TW': '公開信箱' }, 'org_profile', 3, { conditions: orgProfileCondition }),
     f('org_phone', 'phone', { en: 'Public Phone', de: 'Öffentliche Telefonnummer', fr: 'Téléphone public', it: 'Telefono pubblico', 'zh-TW': '公開電話' }, 'org_profile', 4, { conditions: orgProfileCondition }),
     f('org_description', 'textarea', { en: 'Short Description', de: 'Kurzbeschreibung', fr: 'Description courte', it: 'Descrizione breve', 'zh-TW': '簡短描述' }, 'org_profile', 5, { conditions: orgProfileCondition }),
-    f('org_logo', 'image-upload', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo', it: 'Logo', 'zh-TW': '組織標誌' }, 'org_profile', 6, { conditions: orgProfileCondition }),
+    f('org_logo', 'image-upload', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo', it: 'Logo', 'zh-TW': '組織標誌' }, 'org_profile', 6, { required: true, conditions: orgProfileCondition }),
     f('org_we_offer', 'textarea', { en: 'We offer…', de: 'Wir bieten…', fr: 'Nous offrons…', it: 'Offriamo…', 'zh-TW': '我們提供…' }, 'org_profile', 7, { conditions: orgProfileCondition }),
     f('org_we_seek', 'textarea', { en: 'We are looking for…', de: 'Wir suchen…', fr: 'Nous recherchons…', it: 'Cerchiamo…', 'zh-TW': '我們正在尋找…' }, 'org_profile', 8, { conditions: orgProfileCondition }),
     f('org_tags', 'multi-select', { en: 'Tags / Keywords', de: 'Tags', fr: 'Tags', it: 'Tag', 'zh-TW': '標籤' }, 'org_profile', 9, { conditions: orgProfileCondition }),
-    f('org_authorized_rep', 'checkbox', { en: 'I am authorized to represent this organization', de: 'Ich bin berechtigt, diese Organisation zu vertreten', fr: 'Je suis autorisé(e) à représenter cette organisation', it: 'Sono autorizzato a rappresentare questa organizzazione', 'zh-TW': '我有權代表此組織' }, 'org_profile', 10, { required: true, conditions: orgProfileCondition }),
+    f('org_authorized_rep', 'checkbox', { en: 'I am authorized to represent this organization', de: 'Ich bin berechtigt, diese Organisation zu vertreten', fr: 'Je suis autorisé(e) à représenter cette organisation', it: 'Sono autorizzato a rappresentare questa organizzazione', 'zh-TW': '我有權代表此組織' }, 'org_profile', 10, { required: true }),
 
     // Map Listing (conditional on create_map_listing)
     f('create_map_listing', 'yes-no', { en: 'Create Swiss Robotics Map listing', de: 'Swiss Robotics Map Eintrag erstellen', fr: 'Créer entrée Swiss Robotics Map', it: 'Crea inserzione Swiss Robotics Map', 'zh-TW': '建立瑞士機器人地圖據點' }, 'map_listing', 0),

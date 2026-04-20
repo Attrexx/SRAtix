@@ -1309,13 +1309,28 @@
         formEl.addEventListener('input', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         formEl.addEventListener('change', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
+        applyDynamicOverrides(formEl, schemaFields, initSnap);
+      } else {
+        // No conditions but still need dynamic overrides
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        var initSnap2 = collectDynamicAnswers(formEl, schemaFields, {});
+        applyDynamicOverrides(formEl, schemaFields, initSnap2);
       }
 
       formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
@@ -1373,6 +1388,7 @@
       if (useCustomForm && schemaFields) {
         var restoreSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, restoreSnap);
+        applyDynamicOverrides(formEl, schemaFields, restoreSnap);
         applyCantonVisibility(formEl);
       }
     }
@@ -2398,6 +2414,166 @@
     el.style.minWidth = '140px';
   }
 
+  }
+  function setFieldFlex(el, pct) {
+    el.style.flex = '0 0 calc(' + pct + '% - 14px)';
+    el.style.minWidth = '140px';
+  }
+
+  // ─── Dynamic field overrides (sector, map-listing, org_authorized_rep) ───────
+
+  /** Industry department option values (must match field-repository.service.ts). */
+  var INDUSTRY_DEPT_OPTIONS = [
+    { value: 'r_d', en: 'R&D' },
+    { value: 'engineering', en: 'Engineering' },
+    { value: 'operations', en: 'Operations' },
+    { value: 'procurement', en: 'Procurement' },
+    { value: 'sales', en: 'Sales' },
+    { value: 'marketing', en: 'Marketing' },
+    { value: 'finance', en: 'Finance' },
+    { value: 'hr', en: 'HR' },
+    { value: 'legal', en: 'Legal' },
+    { value: 'executive', en: 'Executive' },
+  ];
+
+  /** Academic department option values (must match field-repository.service.ts). */
+  var ACADEMIC_DEPT_OPTIONS = [
+    { value: 'robotics_lab_institute', en: 'Robotics Lab / Institute' },
+    { value: 'computer_science', en: 'Computer Science' },
+    { value: 'electrical_engineering', en: 'Electrical Engineering' },
+    { value: 'mechanical_engineering', en: 'Mechanical Engineering' },
+    { value: 'biomedical_engineering', en: 'Biomedical Engineering' },
+    { value: 'ai_machine_learning', en: 'AI / Machine Learning' },
+    { value: 'control_systems_automation', en: 'Control Systems & Automation' },
+    { value: 'mechatronics', en: 'Mechatronics' },
+    { value: 'materials_science', en: 'Materials Science' },
+    { value: 'physics', en: 'Physics' },
+    { value: 'mathematics', en: 'Mathematics' },
+    { value: 'neuroscience_cognitive_science', en: 'Neuroscience / Cognitive Science' },
+    { value: 'industrial_engineering', en: 'Industrial Engineering' },
+    { value: 'research_management_administration', en: 'Research Management / Administration' },
+    { value: 'dean_s_office_faculty_leadership', en: "Dean's Office / Faculty Leadership" },
+  ];
+
+  /**
+   * Apply dynamic field overrides based on attendee_sector & create_map_listing.
+   * Called alongside applyConditionVisibility on every input/change event.
+   *
+   * Handles:
+   *  1. create_map_listing width: 50% when yes (org_authorized_rep next to it), 100% when no
+   *  2. org_authorized_rep: show when create_map_listing=yes OR create_org_profile=yes (OR logic)
+   *  3. attendee_sector=academia → swap company_name/company_website labels,
+   *     hide company_size, adjust widths to 33%, swap department options
+   *  4. attendee_sector=industry → revert all of the above
+   */
+  function applyDynamicOverrides(form, fields, answers) {
+    // ── 1 & 2: create_map_listing + org_authorized_rep ──────
+    var mapWrap = form.querySelector('[data-df-id="create_map_listing"]');
+    var repWrap = form.querySelector('[data-df-id="org_authorized_rep"]');
+
+    if (mapWrap || repWrap) {
+      var mapVal = answers.create_map_listing;
+      var orgVal = answers.create_org_profile;
+      var mapYes = mapVal === true || mapVal === 'true' || mapVal === 'yes';
+      var orgYes = orgVal === true || orgVal === 'true' || orgVal === 'yes';
+      var eitherYes = mapYes || orgYes;
+
+      if (mapWrap) {
+        setFieldFlex(mapWrap, eitherYes ? 50 : 100);
+      }
+      if (repWrap) {
+        repWrap.style.display = eitherYes ? '' : 'none';
+        if (eitherYes) setFieldFlex(repWrap, 50);
+      }
+    }
+
+    // ── 3 & 4: attendee_sector dynamic changes ─────────────
+    var sector = answers.attendee_sector;
+    var isAcademia = sector === 'academia';
+
+    // 3a: Label swap — company_name
+    var compNameWrap = form.querySelector('[data-df-id="company_name"]');
+    if (compNameWrap) {
+      var compLabel = compNameWrap.querySelector('.sratix-label');
+      if (compLabel) {
+        var reqSpan = compLabel.querySelector('.sratix-req');
+        var tooltipSpan = compLabel.querySelector('.sratix-tooltip');
+        compLabel.textContent = '';
+        compLabel.appendChild(document.createTextNode(isAcademia ? 'Institution' : 'Company / Institution'));
+        if (reqSpan) compLabel.appendChild(reqSpan);
+        if (tooltipSpan) compLabel.appendChild(tooltipSpan);
+      }
+    }
+
+    // 3b: Label swap — company_website
+    var compWebWrap = form.querySelector('[data-df-id="company_website"]');
+    if (compWebWrap) {
+      var webLabel = compWebWrap.querySelector('.sratix-label');
+      if (webLabel) {
+        var reqSpan2 = webLabel.querySelector('.sratix-req');
+        var tooltipSpan2 = webLabel.querySelector('.sratix-tooltip');
+        webLabel.textContent = '';
+        webLabel.appendChild(document.createTextNode(isAcademia ? 'Institution Website' : 'Company Website'));
+        if (reqSpan2) webLabel.appendChild(reqSpan2);
+        if (tooltipSpan2) webLabel.appendChild(tooltipSpan2);
+      }
+    }
+
+    // 3c: Hide/show company_size
+    var sizeWrap = form.querySelector('[data-df-id="company_size"]');
+    if (sizeWrap) {
+      sizeWrap.style.display = isAcademia ? 'none' : '';
+    }
+
+    // 3d: Adjust widths — job_title, department, industry_sector, company_size
+    var jtWrap = form.querySelector('[data-df-id="job_title"]');
+    var deptWrap = form.querySelector('[data-df-id="department"]');
+    var isWrap = form.querySelector('[data-df-id="industry_sector"]');
+    if (isAcademia) {
+      if (jtWrap) setFieldFlex(jtWrap, 33);
+      if (deptWrap) setFieldFlex(deptWrap, 33);
+      if (isWrap) setFieldFlex(isWrap, 33);
+    } else {
+      if (jtWrap) setFieldFlex(jtWrap, 25);
+      if (deptWrap) setFieldFlex(deptWrap, 25);
+      if (isWrap) setFieldFlex(isWrap, 25);
+      if (sizeWrap) setFieldFlex(sizeWrap, 25);
+    }
+
+    // 3e: Swap department <select> options
+    if (deptWrap) {
+      var deptSel = deptWrap.querySelector('select');
+      if (deptSel) {
+        var opts = isAcademia ? ACADEMIC_DEPT_OPTIONS : INDUSTRY_DEPT_OPTIONS;
+        var curVal = deptSel.value;
+        // Only rebuild if option set changed
+        var firstOpt = deptSel.querySelector('option[value]');
+        var expectedFirst = opts[0] ? opts[0].value : '';
+        if (!firstOpt || firstOpt.value !== expectedFirst) {
+          var placeholder = deptSel.querySelector('option[value=""]');
+          deptSel.innerHTML = '';
+          if (placeholder) {
+            deptSel.appendChild(placeholder);
+          } else {
+            var ph = document.createElement('option');
+            ph.value = '';
+            ph.textContent = '—';
+            deptSel.appendChild(ph);
+          }
+          opts.forEach(function (o) {
+            var opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.en;
+            deptSel.appendChild(opt);
+          });
+          // Restore value if it exists in new set, otherwise reset
+          var hasVal = opts.some(function (o) { return o.value === curVal; });
+          deptSel.value = hasVal ? curVal : '';
+        }
+      }
+    }
+  }
+
   // ─── Registration modal (Stage B) ────────────────────────────────────────────
 
   async function openRegistrationModal(eventId, tt, qty, promoCode, discountCents, includeTicketForSelf, additionalAttendees, membershipOptOut) {
@@ -2517,14 +2693,28 @@
         formEl.addEventListener('input', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         formEl.addEventListener('change', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         // Initial pass
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
+        applyDynamicOverrides(formEl, schemaFields, initSnap);
+      } else {
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        var initSnap3 = collectDynamicAnswers(formEl, schemaFields, {});
+        applyDynamicOverrides(formEl, schemaFields, initSnap3);
       }
 
       // Canton: show only when country=CH (runs independently of schema conditions)
@@ -3021,13 +3211,28 @@
             formEl.addEventListener('input', function () {
               var snap = collectDynamicAnswers(formEl, schemaFields, {});
               applyConditionVisibility(formEl, schemaFields, snap);
+              applyDynamicOverrides(formEl, schemaFields, snap);
             });
             formEl.addEventListener('change', function () {
               var snap = collectDynamicAnswers(formEl, schemaFields, {});
               applyConditionVisibility(formEl, schemaFields, snap);
+              applyDynamicOverrides(formEl, schemaFields, snap);
             });
             var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
             applyConditionVisibility(formEl, schemaFields, initSnap);
+            applyDynamicOverrides(formEl, schemaFields, initSnap);
+          } else if (schemaFields) {
+            var formEl = modal.querySelector('.sratix-form-fields') || modal;
+            formEl.addEventListener('input', function () {
+              var snap = collectDynamicAnswers(formEl, schemaFields, {});
+              applyDynamicOverrides(formEl, schemaFields, snap);
+            });
+            formEl.addEventListener('change', function () {
+              var snap = collectDynamicAnswers(formEl, schemaFields, {});
+              applyDynamicOverrides(formEl, schemaFields, snap);
+            });
+            var initSnap4 = collectDynamicAnswers(formEl, schemaFields, {});
+            applyDynamicOverrides(formEl, schemaFields, initSnap4);
           }
           // Canton: show only when country=CH
           var formElCanton = modal.querySelector('.sratix-form-fields') || modal;
@@ -3870,13 +4075,27 @@
         formEl.addEventListener('input', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         formEl.addEventListener('change', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, snap);
+          applyDynamicOverrides(formEl, schemaFields, snap);
         });
         var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
         applyConditionVisibility(formEl, schemaFields, initSnap);
+        applyDynamicOverrides(formEl, schemaFields, initSnap);
+      } else if (useCustomForm && schemaFields) {
+        formEl.addEventListener('input', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        formEl.addEventListener('change', function () {
+          var snap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, snap);
+        });
+        var initSnap5 = collectDynamicAnswers(formEl, schemaFields, {});
+        applyDynamicOverrides(formEl, schemaFields, initSnap5);
       }
 
       // Canton: show only when country=CH
@@ -4136,13 +4355,27 @@
           formEl.addEventListener('input', function () {
             var snap = collectDynamicAnswers(formEl, schemaFields, {});
             applyConditionVisibility(formEl, schemaFields, snap);
+            applyDynamicOverrides(formEl, schemaFields, snap);
           });
           formEl.addEventListener('change', function () {
             var snap = collectDynamicAnswers(formEl, schemaFields, {});
             applyConditionVisibility(formEl, schemaFields, snap);
+            applyDynamicOverrides(formEl, schemaFields, snap);
           });
           var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, initSnap);
+          applyDynamicOverrides(formEl, schemaFields, initSnap);
+        } else {
+          formEl.addEventListener('input', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyDynamicOverrides(formEl, schemaFields, snap);
+          });
+          formEl.addEventListener('change', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyDynamicOverrides(formEl, schemaFields, snap);
+          });
+          var initSnap6 = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, initSnap6);
         }
 
         formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });

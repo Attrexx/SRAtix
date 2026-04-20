@@ -324,6 +324,15 @@ function getDefaultFieldDefinitions() {
     }),
 
     // ── Profile Fields ───────────────────────────────────────
+    fd('attendee_sector', { en: 'I represent…', de: '[DE] I represent…', fr: '[FR] I represent…', it: '[IT] I represent…', 'zh-TW': '[ZH] I represent…' }, 'radio', 'profile', {
+      widthDesktop: 100, widthMobile: 100, sortOrder: -1,
+      defaultValue: 'industry',
+      options: [
+        { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
+        { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+      ],
+      tooltip: { en: 'Helps us tailor the form fields and networking to your sector.', de: '[DE] Helps us tailor the form fields and networking to your sector.', fr: '[FR] Helps us tailor the form fields and networking to your sector.', it: '[IT] Helps us tailor the form fields and networking to your sector.', 'zh-TW': '[ZH] Helps us tailor the form fields and networking to your sector.' },
+    }),
     fd('short_bio', { en: 'Short Bio', de: 'Kurzbiografie', fr: 'Biographie courte', it: 'Breve biografia', 'zh-TW': '簡短自介' }, 'textarea', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
       tooltip: { en: 'A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', de: '[DE] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', fr: '[FR] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', it: '[IT] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', 'zh-TW': '[ZH] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.' },
@@ -1256,6 +1265,31 @@ function roboticsSkillsTools() {
     { value: 'cybersecurity', label: { en: 'Cybersecurity for Robotics', de: 'Cybersicherheit für Robotik', fr: 'Cybersécurité pour la robotique', it: 'Cybersicurezza per la robotica', 'zh-TW': '機器人網路安全' } },
     { value: 'cloud_infra', label: { en: 'Cloud Platforms (AWS, Azure, GCP)', de: 'Cloud-Plattformen (AWS, Azure, GCP)', fr: 'Plateformes cloud (AWS, Azure, GCP)', it: 'Piattaforme cloud (AWS, Azure, GCP)', 'zh-TW': '雲端平台 (AWS, Azure, GCP)' } },
   ];
+}
+
+/**
+ * Academic department options — used by client-side dynamic override
+ * when attendee_sector is 'academia'. Stored in the field repository for
+ * reference; the actual swap happens on the client.
+ */
+function academicDepartmentOptions() {
+  return multiOptI18n([
+    { en: 'Robotics Lab / Institute', de: '[DE] Robotics Lab / Institute', fr: '[FR] Robotics Lab / Institute', it: '[IT] Robotics Lab / Institute', 'zh-TW': '[ZH] Robotics Lab / Institute' },
+    { en: 'Computer Science', de: '[DE] Computer Science', fr: '[FR] Computer Science', it: '[IT] Computer Science', 'zh-TW': '[ZH] Computer Science' },
+    { en: 'Electrical Engineering', de: '[DE] Electrical Engineering', fr: '[FR] Electrical Engineering', it: '[IT] Electrical Engineering', 'zh-TW': '[ZH] Electrical Engineering' },
+    { en: 'Mechanical Engineering', de: '[DE] Mechanical Engineering', fr: '[FR] Mechanical Engineering', it: '[IT] Mechanical Engineering', 'zh-TW': '[ZH] Mechanical Engineering' },
+    { en: 'Biomedical Engineering', de: '[DE] Biomedical Engineering', fr: '[FR] Biomedical Engineering', it: '[IT] Biomedical Engineering', 'zh-TW': '[ZH] Biomedical Engineering' },
+    { en: 'AI / Machine Learning', de: '[DE] AI / Machine Learning', fr: '[FR] AI / Machine Learning', it: '[IT] AI / Machine Learning', 'zh-TW': '[ZH] AI / Machine Learning' },
+    { en: 'Control Systems & Automation', de: '[DE] Control Systems & Automation', fr: '[FR] Control Systems & Automation', it: '[IT] Control Systems & Automation', 'zh-TW': '[ZH] Control Systems & Automation' },
+    { en: 'Mechatronics', de: '[DE] Mechatronics', fr: '[FR] Mechatronics', it: '[IT] Mechatronics', 'zh-TW': '[ZH] Mechatronics' },
+    { en: 'Materials Science', de: '[DE] Materials Science', fr: '[FR] Materials Science', it: '[IT] Materials Science', 'zh-TW': '[ZH] Materials Science' },
+    { en: 'Physics', de: '[DE] Physics', fr: '[FR] Physics', it: '[IT] Physics', 'zh-TW': '[ZH] Physics' },
+    { en: 'Mathematics', de: '[DE] Mathematics', fr: '[FR] Mathematics', it: '[IT] Mathematics', 'zh-TW': '[ZH] Mathematics' },
+    { en: 'Neuroscience / Cognitive Science', de: '[DE] Neuroscience / Cognitive Science', fr: '[FR] Neuroscience / Cognitive Science', it: '[IT] Neuroscience / Cognitive Science', 'zh-TW': '[ZH] Neuroscience / Cognitive Science' },
+    { en: 'Industrial Engineering', de: '[DE] Industrial Engineering', fr: '[FR] Industrial Engineering', it: '[IT] Industrial Engineering', 'zh-TW': '[ZH] Industrial Engineering' },
+    { en: 'Research Management / Administration', de: '[DE] Research Management / Administration', fr: '[FR] Research Management / Administration', it: '[IT] Research Management / Administration', 'zh-TW': '[ZH] Research Management / Administration' },
+    { en: 'Dean\'s Office / Faculty Leadership', de: '[DE] Dean\'s Office / Faculty Leadership', fr: '[FR] Dean\'s Office / Faculty Leadership', it: '[IT] Dean\'s Office / Faculty Leadership', 'zh-TW': '[ZH] Dean\'s Office / Faculty Leadership' },
+  ]);
 }
 
 /**
