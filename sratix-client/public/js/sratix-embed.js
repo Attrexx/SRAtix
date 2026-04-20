@@ -1333,8 +1333,9 @@
         applyDynamicOverrides(formEl, schemaFields, initSnap2);
       }
 
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
       applyCantonVisibility(formEl);
+      syncSelectPlaceholders(formEl);
 
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
@@ -1390,6 +1391,7 @@
         applyConditionVisibility(formEl, schemaFields, restoreSnap);
         applyDynamicOverrides(formEl, schemaFields, restoreSnap);
         applyCantonVisibility(formEl);
+        syncSelectPlaceholders(formEl);
       }
     }
 
@@ -1994,7 +1996,7 @@
         (field.options || []).forEach(function (o) {
           opts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
         });
-        html = '<select class="sratix-input" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
+        html = '<select class="sratix-input sratix-select-empty" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
         break;
       case 'multi-select':
         // Checkbox dropdown with hierarchy support
@@ -2418,6 +2420,13 @@
 
   // ─── Dynamic field overrides (sector, map-listing, org_authorized_rep) ───────
 
+  /** Toggle muted placeholder color on native selects without a value */
+  function syncSelectPlaceholders(form) {
+    form.querySelectorAll('select.sratix-input').forEach(function (sel) {
+      sel.classList.toggle('sratix-select-empty', !sel.value);
+    });
+  }
+
   /** Industry department option values (must match field-repository.service.ts). */
   var INDUSTRY_DEPT_OPTIONS = [
     { value: 'r_d', en: 'R&D' },
@@ -2715,8 +2724,9 @@
       }
 
       // Canton: show only when country=CH (runs independently of schema conditions)
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
       applyCantonVisibility(formEl);
+      syncSelectPlaceholders(formEl);
 
       // Initialize richtext editors and multi-select dropdowns
       initRichtextEditors(formEl);
@@ -4096,8 +4106,9 @@
       }
 
       // Canton: show only when country=CH
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
       applyCantonVisibility(formEl);
+      syncSelectPlaceholders(formEl);
 
       formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -4375,8 +4386,9 @@
           applyDynamicOverrides(formEl, schemaFields, initSnap6);
         }
 
-        formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
+        formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
         applyCantonVisibility(formEl);
+        syncSelectPlaceholders(formEl);
 
         initRichtextEditors(formEl);
         initMultiSelectDropdowns(formEl);

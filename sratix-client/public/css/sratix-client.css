@@ -831,6 +831,9 @@ label.sratix-checkbox-label {
 .sratix-input::placeholder {
 	color: var(--sratix-text-muted);
 }
+select.sratix-input.sratix-select-empty {
+	color: var(--sratix-text-muted);
+}
 
 .sratix-input:focus {
 	outline: none;
