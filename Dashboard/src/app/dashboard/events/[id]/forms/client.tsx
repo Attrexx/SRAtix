@@ -299,7 +299,7 @@ export default function FormsPage() {
   const handleCreate = async () => {
     if (!formName.trim()) { setError(t('forms.validation.nameRequired')); return; }
     if (fields.length === 0) { setError(t('forms.validation.addField')); return; }
-    const emptyLabel = fields.find((f) => !f.label.en?.trim());
+    const emptyLabel = fields.find((f) => f.type !== 'separator' && f.type !== 'group' && !f.label.en?.trim());
     if (emptyLabel) { setError(t('forms.validation.labelRequired')); return; }
     setSaving(true);
     setError('');
