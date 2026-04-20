@@ -1333,9 +1333,8 @@
         applyDynamicOverrides(formEl, schemaFields, initSnap2);
       }
 
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
       applyCantonVisibility(formEl);
-      syncSelectPlaceholders(formEl);
 
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
@@ -1391,7 +1390,6 @@
         applyConditionVisibility(formEl, schemaFields, restoreSnap);
         applyDynamicOverrides(formEl, schemaFields, restoreSnap);
         applyCantonVisibility(formEl);
-        syncSelectPlaceholders(formEl);
       }
     }
 
@@ -1427,7 +1425,7 @@
 
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group' || f.type === 'separator') continue;
+          if (f.type === 'group') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -1947,27 +1945,26 @@
     var id = 'sratix-df-' + field.id;
     var html = '';
     var tooltipHtml = buildTooltipHtml(field);
-    var defaultVal = field.defaultValue != null ? field.defaultValue : null;
 
     switch (field.type) {
       case 'text':
       case 'url':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'email':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="email" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' autocomplete="email" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="email" placeholder="' + escAttr(ph) + '" autocomplete="email" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'phone':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="tel" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' autocomplete="tel" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="tel" placeholder="' + escAttr(ph) + '" autocomplete="tel" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'number':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="number" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="number" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'date':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="date"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="date" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'textarea':
-        html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '">' + (defaultVal != null ? escHtml(String(defaultVal)) : '') + '</textarea>';
+        html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '"></textarea>';
         break;
       case 'richtext':
         html = '<div class="sratix-richtext-wrap" data-field-id="' + escAttr(field.id) + '">'
@@ -1994,25 +1991,20 @@
       case 'country':
       case 'canton':
         var opts = '<option value="">' + escHtml(ph || t('reg.form.selectPlaceholder')) + '</option>';
-        var hasDefaultSelected = false;
         (field.options || []).forEach(function (o) {
-          var sel = (defaultVal != null && String(defaultVal) === o.value) ? ' selected' : '';
-          if (sel) hasDefaultSelected = true;
-          opts += '<option value="' + escAttr(o.value) + '"' + sel + '>' + escHtml(resolveLabel(o.label)) + '</option>';
+          opts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
         });
-        html = '<select class="sratix-input' + (hasDefaultSelected ? '' : ' sratix-select-empty') + '" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
+        html = '<select class="sratix-input" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
         break;
       case 'multi-select':
         // Checkbox dropdown with hierarchy support
         html = renderCheckboxDropdown(id, field, ph);
         break;
       case 'radio':
-        var isSector = field.id === 'attendee_sector';
-        html = '<div class="sratix-radio-group' + (isSector ? ' sratix-sector-picker' : '') + '" data-field-id="' + escAttr(field.id) + '">';
+        html = '<div class="sratix-radio-group" data-field-id="' + escAttr(field.id) + '">';
         (field.options || []).forEach(function (o, idx) {
           var rid = id + '-' + idx;
-          var chk = (defaultVal != null && String(defaultVal) === o.value) ? ' checked' : '';
-          html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '"' + chk + ' /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+          html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
         });
         html += '</div>';
         break;
@@ -2026,18 +2018,17 @@
             html += '<input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(cid) + '" />';
             html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
             html += '</span>';
-            html += '<span class="sratix-toggle-text">' + escHtml(resolveLabel(o.label)) + tooltipHtml + '</span>';
+            html += '<span class="sratix-toggle-text">' + escHtml(resolveLabel(o.label)) + '</span>';
             html += '</label>';
           });
           html += '</div>';
         } else {
-          var dfChk = (defaultVal === true || defaultVal === 'true') ? ' checked' : '';
           html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
           html += '<span class="sratix-toggle-switch">';
-          html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '"' + dfChk + ' />';
+          html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
           html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
           html += '</span>';
-          html += '<span class="sratix-toggle-text">' + escHtml(label) + tooltipHtml + '</span>';
+          html += '<span class="sratix-toggle-text">' + escHtml(label) + '</span>';
           html += '</label>';
         }
         break;
@@ -2045,16 +2036,15 @@
         // yes-no: Only show toggle label (no separate field label above)
         var toggleLabelText = escHtml(label);
         // Special case: create_map_listing — link "Swiss Robotics Map" words
-        if (field.id === 'create_map_listing') {
+        if (slug === 'create_map_listing') {
           toggleLabelText = toggleLabelText.replace(
             /Swiss Robotics Map/i,
             '<a href="https://swiss-robotics.org/robotics-ecosystem-map/" target="_blank" rel="noopener noreferrer" class="sratix-toggle-link" onclick="event.stopPropagation()">Swiss Robotics Map</a>'
           );
         }
-        var ynChk = (defaultVal === true || defaultVal === 'true') ? ' checked' : '';
         html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
         html += '<span class="sratix-toggle-switch">';
-        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '"' + ynChk + ' />';
+        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
         html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
         html += '</span>';
         html += '<span class="sratix-toggle-text">' + toggleLabelText + tooltipHtml + '</span>';
@@ -2066,47 +2056,33 @@
         if (!docUrl && legalPageUrls[field.id]) {
           docUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
         }
-        var consentReadLink = docUrl
-          ? ' <a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + t('reg.form.readHere') + '</a>'
-          : '';
-        html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
-        html += '<span class="sratix-toggle-switch">';
-        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
-        html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
-        html += '</span>';
-        html += '<span class="sratix-toggle-text">' + escHtml(label) + req + consentReadLink + '</span>';
-        html += '</label>';
+        var consentLabelHtml;
+        if (docUrl) {
+          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
+        } else {
+          consentLabelHtml = escHtml(label);
+        }
+        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + consentLabelHtml + req + '</label>';
         // Consent renders label inline; clear req so it isn't duplicated above
         req = '';
         break;
       case 'image-upload':
         html = '<div class="sratix-image-upload" id="' + escAttr(id) + '-wrap" data-field-id="' + escAttr(field.id) + '">'
-          + '<div class="sratix-image-upload-row">'
-          + '<input class="sratix-input sratix-file-input" id="' + escAttr(id) + '" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-field-id="' + escAttr(field.id) + '" />'
+          + '<input class="sratix-input" id="' + escAttr(id) + '" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-field-id="' + escAttr(field.id) + '" />'
           + '<div class="sratix-image-preview" id="' + escAttr(id) + '-preview" style="display:none;">'
-          + '<img id="' + escAttr(id) + '-img" alt="Preview" />'
+          + '<img id="' + escAttr(id) + '-img" alt="Preview" style="max-width:120px;max-height:120px;border-radius:6px;margin-top:6px;" />'
           + '<button type="button" class="sratix-image-remove" id="' + escAttr(id) + '-remove" title="Remove">&times;</button>'
-          + '</div>'
           + '</div>'
           + '<div class="sratix-image-status" id="' + escAttr(id) + '-status" style="display:none;font-size:0.85em;margin-top:4px;"></div>'
           + '<input type="hidden" id="' + escAttr(id) + '-url" value="" />'
           + '</div>';
         break;
       case 'file':
-        html = '<input class="sratix-input sratix-file-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'group':
         // Section headers rendered as divider
         html = '<hr class="sratix-section-divider" />';
-        break;
-      case 'separator':
-        // Visual separator line with optional inline section title from label
-        var sepTitle = resolveLabel(field.label) || '';
-        if (sepTitle) {
-          html = '<div class="sratix-separator"><span class="sratix-separator-title">' + escHtml(sepTitle) + '</span></div>';
-        } else {
-          html = '<div class="sratix-separator"></div>';
-        }
         break;
       default:
         html = '<input class="sratix-input" id="' + escAttr(id) + '" type="text" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
@@ -2121,17 +2097,20 @@
       ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: ' + minW + ';"'
       : '';
 
-    // For consent, checkbox, yes-no, and separator: skip the outer <label class="sratix-label">
-    // — the toggle label IS the field label (tooltip already inside toggle text).
-    // — separator renders its own inline title.
-    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox' || field.type === 'separator') {
+    // For consent type, label is already inline (no tooltip needed — they have long inline helpText)
+    if (field.type === 'consent') {
+      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
+    }
+
+    // For yes-no, skip the outer <label class="sratix-label"> — the toggle label IS the field label.
+    // Tooltip is already inside the toggle text span for yes-no fields.
+    if (field.type === 'yes-no') {
       return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
         + html + helpHtml
         + '</div>';
     }
 
-    var fieldClasses = 'sratix-field sratix-df' + (field.id === 'attendee_sector' ? ' sratix-sector-field' : '');
-    return '<div class="' + fieldClasses + '"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
+    return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
       + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + tooltipHtml + '</label>'
       + html + helpHtml
       + '</div>';
@@ -2147,7 +2126,7 @@
   function collectDynamicAnswers(form, fields, answers) {
     var result = {};
     fields.forEach(function (field) {
-      if (field.type === 'group' || field.type === 'separator') return;
+      if (field.type === 'group') return;
       // Skip conditionally hidden fields
       if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, answers)) return;
       // Skip fields hidden by client-side logic (e.g. canton when country ≠ CH)
@@ -2437,13 +2416,6 @@
 
   // ─── Dynamic field overrides (sector, map-listing, org_authorized_rep) ───────
 
-  /** Toggle muted placeholder color on native selects without a value */
-  function syncSelectPlaceholders(form) {
-    form.querySelectorAll('select.sratix-input').forEach(function (sel) {
-      sel.classList.toggle('sratix-select-empty', !sel.value);
-    });
-  }
-
   /** Industry department option values (must match field-repository.service.ts). */
   var INDUSTRY_DEPT_OPTIONS = [
     { value: 'r_d', en: 'R&D' },
@@ -2488,15 +2460,63 @@
    *     hide company_size, adjust widths to 33%, swap department options
    *  4. attendee_sector=industry|government → revert all of the above
    */
+  /**
+   * Resolve a field from the schema by its known id OR by probing option values.
+   * Returns { id, wrap } or null.
+   */
+  function resolveField(form, fields, knownId, probeValues) {
+    // Fast path: field has the expected human-readable id
+    var wrap = form.querySelector('[data-df-id="' + CSS.escape(knownId) + '"]');
+    if (wrap) return { id: knownId, wrap: wrap };
+    // Slow path: search by option values (for auto-generated ids)
+    if (probeValues && probeValues.length) {
+      for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        if (!f.options || !f.options.length) continue;
+        var vals = f.options.map(function (o) { return o.value; });
+        var match = probeValues.every(function (v) { return vals.indexOf(v) !== -1; });
+        if (match) {
+          var w = form.querySelector('[data-df-id="' + CSS.escape(f.id) + '"]');
+          if (w) return { id: f.id, wrap: w };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Find field id in schema by known id or by type + label substring. */
+  function resolveFieldByType(form, fields, knownId, type, labelSubstr) {
+    var wrap = form.querySelector('[data-df-id="' + CSS.escape(knownId) + '"]');
+    if (wrap) return { id: knownId, wrap: wrap };
+    if (type || labelSubstr) {
+      for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        if (type && f.type !== type) continue;
+        if (labelSubstr) {
+          var lbl = (f.label && (f.label.en || '')) || '';
+          if (lbl.toLowerCase().indexOf(labelSubstr.toLowerCase()) === -1) continue;
+        }
+        var w = form.querySelector('[data-df-id="' + CSS.escape(f.id) + '"]');
+        if (w) return { id: f.id, wrap: w };
+      }
+    }
+    return null;
+  }
+
   function applyDynamicOverrides(form, fields, answers) {
-    console.log('[SRAtix] applyDynamicOverrides called, answers:', JSON.stringify(answers));
+    // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
+    var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia']);
+    var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
+    var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
+    var orgProfRef   = resolveFieldByType(form, fields, 'create_org_profile', 'yes-no', 'profile');
+
     // ── 1 & 2: create_map_listing + org_authorized_rep ──────
-    var mapWrap = form.querySelector('[data-df-id="create_map_listing"]');
-    var repWrap = form.querySelector('[data-df-id="org_authorized_rep"]');
+    var mapWrap = mapRef ? mapRef.wrap : null;
+    var repWrap = repRef ? repRef.wrap : null;
 
     if (mapWrap || repWrap) {
-      var mapVal = answers.create_map_listing;
-      var orgVal = answers.create_org_profile;
+      var mapVal = mapRef ? answers[mapRef.id] : undefined;
+      var orgVal = orgProfRef ? answers[orgProfRef.id] : undefined;
       var mapYes = mapVal === true || mapVal === 'true' || mapVal === 'yes';
       var orgYes = orgVal === true || orgVal === 'true' || orgVal === 'yes';
       var eitherYes = mapYes || orgYes;
@@ -2511,7 +2531,7 @@
     }
 
     // ── 3 & 4: attendee_sector dynamic changes ─────────────
-    var sector = answers.attendee_sector;
+    var sector = sectorRef ? answers[sectorRef.id] : undefined;
     var isAcademia = sector === 'academia';
 
     // 3a: Label swap — company_name
@@ -2741,9 +2761,8 @@
       }
 
       // Canton: show only when country=CH (runs independently of schema conditions)
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
       applyCantonVisibility(formEl);
-      syncSelectPlaceholders(formEl);
 
       // Initialize richtext editors and multi-select dropdowns
       initRichtextEditors(formEl);
@@ -2782,7 +2801,7 @@
         // Validate required fields from schema
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group' || f.type === 'separator') continue;
+          if (f.type === 'group') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -3402,7 +3421,7 @@
         var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group' || f.type === 'separator') continue;
+          if (f.type === 'group') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -4123,9 +4142,8 @@
       }
 
       // Canton: show only when country=CH
-      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
+      formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
       applyCantonVisibility(formEl);
-      syncSelectPlaceholders(formEl);
 
       formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -4403,9 +4421,8 @@
           applyDynamicOverrides(formEl, schemaFields, initSnap6);
         }
 
-        formEl.addEventListener('change', function () { applyCantonVisibility(formEl); syncSelectPlaceholders(formEl); });
+        formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
         applyCantonVisibility(formEl);
-        syncSelectPlaceholders(formEl);
 
         initRichtextEditors(formEl);
         initMultiSelectDropdowns(formEl);
@@ -4432,7 +4449,7 @@
 
           for (var i = 0; i < schemaFields.length; i++) {
             var f = schemaFields[i];
-            if (f.type === 'group' || f.type === 'separator') continue;
+            if (f.type === 'group') continue;
             if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
             if (f.required) {
               var val = answers[f.id];
