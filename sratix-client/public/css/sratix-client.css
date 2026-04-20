@@ -679,6 +679,37 @@
 
 .sratix-field { margin-bottom: 14px; flex: 1; }
 
+/* ── Separator — muted line with optional inline section title ── */
+.sratix-separator {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	margin: 6px 0 2px;
+}
+.sratix-separator::before,
+.sratix-separator::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: var(--sratix-border);
+}
+.sratix-separator::before {
+	flex: 0 0 0;
+}
+.sratix-separator-title {
+	padding: 0 10px 0 0;
+	font-size: 0.75em;
+	font-weight: 500;
+	color: var(--sratix-text-muted);
+	white-space: nowrap;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+/* When no title, render a plain full-width line */
+.sratix-separator:not(:has(.sratix-separator-title))::before {
+	flex: 1;
+}
+
 /* ── Radio / checkbox / yes-no groups ── */
 .sratix-yesno-group,
 .sratix-radio-group,

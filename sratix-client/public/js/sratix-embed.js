@@ -1427,7 +1427,7 @@
 
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
+          if (f.type === 'group' || f.type === 'separator') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -2092,6 +2092,15 @@
         // Section headers rendered as divider
         html = '<hr class="sratix-section-divider" />';
         break;
+      case 'separator':
+        // Visual separator line with optional inline section title from label
+        var sepTitle = resolveLabel(field.label) || '';
+        if (sepTitle) {
+          html = '<div class="sratix-separator"><span class="sratix-separator-title">' + escHtml(sepTitle) + '</span></div>';
+        } else {
+          html = '<div class="sratix-separator"></div>';
+        }
+        break;
       default:
         html = '<input class="sratix-input" id="' + escAttr(id) + '" type="text" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
     }
@@ -2105,9 +2114,10 @@
       ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: ' + minW + ';"'
       : '';
 
-    // For consent, checkbox, and yes-no: skip the outer <label class="sratix-label">
+    // For consent, checkbox, yes-no, and separator: skip the outer <label class="sratix-label">
     // — the toggle label IS the field label (tooltip already inside toggle text).
-    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox') {
+    // — separator renders its own inline title.
+    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox' || field.type === 'separator') {
       return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
         + html + helpHtml
         + '</div>';
@@ -2130,7 +2140,7 @@
   function collectDynamicAnswers(form, fields, answers) {
     var result = {};
     fields.forEach(function (field) {
-      if (field.type === 'group') return;
+      if (field.type === 'group' || field.type === 'separator') return;
       // Skip conditionally hidden fields
       if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, answers)) return;
       // Skip fields hidden by client-side logic (e.g. canton when country ≠ CH)
@@ -2765,7 +2775,7 @@
         // Validate required fields from schema
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
+          if (f.type === 'group' || f.type === 'separator') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -3385,7 +3395,7 @@
         var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
+          if (f.type === 'group' || f.type === 'separator') continue;
           if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
@@ -4415,7 +4425,7 @@
 
           for (var i = 0; i < schemaFields.length; i++) {
             var f = schemaFields[i];
-            if (f.type === 'group') continue;
+            if (f.type === 'group' || f.type === 'separator') continue;
             if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
             if (f.required) {
               var val = answers[f.id];

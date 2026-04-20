@@ -38,7 +38,8 @@ export type FieldType =
   | 'canton'
   | 'consent'
   | 'yes-no'
-  | 'group';
+  | 'group'
+  | 'separator';
 
 /**
  * A single form field definition (JSON schema element).

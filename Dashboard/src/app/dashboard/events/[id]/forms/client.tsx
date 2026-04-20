@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 const FIELD_TYPES = [
   'text', 'email', 'phone', 'url', 'number', 'textarea', 'select',
   'multi-select', 'checkbox', 'radio', 'date', 'country',
-  'canton', 'consent', 'yes-no', 'file', 'image-upload', 'group',
+  'canton', 'consent', 'yes-no', 'file', 'image-upload', 'group', 'separator',
 ] as const;
 
 const WIDTH_OPTIONS = [
