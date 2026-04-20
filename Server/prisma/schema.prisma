@@ -444,6 +444,7 @@ model FieldDefinition {
   defaultWidthMobile  Int    @default(100) // 25 | 50 | 75 | 100
   validationRules   Json?    // { required?, minLength?, maxLength?, pattern? }
   helpText          Json?    // i18n help text
+  tooltip           Json?    // i18n tooltip text (shown via ? icon on hover/tap)
   placeholder       Json?    // i18n placeholder
   defaultValue      Json?    // default value (if any)
   categoryFilter    Json?    // ["general","individual","legal"] — which ticket categories can use this field; null = all

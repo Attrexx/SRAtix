@@ -1903,6 +1903,20 @@
   }
 
   /**
+   * Build tooltip HTML snippet for a field (? icon + hidden popup).
+   * Returns empty string if field has no tooltip.
+   */
+  function buildTooltipHtml(field) {
+    var tip = resolveLabel(field.tooltip) || '';
+    if (!tip) return '';
+    var ariaLabel = t('tooltip.moreInfo') || 'More information';
+    return ' <span class="sratix-tooltip-wrap">'
+      + '<button type="button" class="sratix-tooltip-btn" aria-label="' + escAttr(ariaLabel) + '" data-tooltip="' + escAttr(tip) + '" data-tooltip-label="' + escAttr(resolveLabel(field.label)) + '">?</button>'
+      + '<span class="sratix-tooltip-popup">' + escHtml(tip) + '</span>'
+      + '</span>';
+  }
+
+  /**
    * Render a single form field to an HTML string.
    * @param {Object} field  A FormField from the schema
    * @returns {string}
@@ -1914,6 +1928,7 @@
     var req = field.required ? ' <span class="sratix-req">*</span>' : '';
     var id = 'sratix-df-' + field.id;
     var html = '';
+    var tooltipHtml = buildTooltipHtml(field);
 
     switch (field.type) {
       case 'text':
@@ -2002,12 +2017,21 @@
         }
         break;
       case 'yes-no':
+        // yes-no: Only show toggle label (no separate field label above)
+        var toggleLabelText = escHtml(label);
+        // Special case: create_map_listing — link "Swiss Robotics Map" words
+        if (field.id === 'create_map_listing') {
+          toggleLabelText = toggleLabelText.replace(
+            /Swiss Robotics Map/i,
+            '<a href="https://swiss-robotics.org/robotics-ecosystem-map/" target="_blank" rel="noopener noreferrer" class="sratix-toggle-link" onclick="event.stopPropagation()">Swiss Robotics Map</a>'
+          );
+        }
         html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
         html += '<span class="sratix-toggle-switch">';
         html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
         html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
         html += '</span>';
-        html += '<span class="sratix-toggle-text">' + escHtml(label) + '</span>';
+        html += '<span class="sratix-toggle-text">' + toggleLabelText + tooltipHtml + '</span>';
         html += '</label>';
         break;
       case 'consent':
@@ -2057,13 +2081,21 @@
       ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: ' + minW + ';"'
       : '';
 
-    // For consent type, label is already inline
+    // For consent type, label is already inline (no tooltip needed — they have long inline helpText)
     if (field.type === 'consent') {
       return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
     }
 
+    // For yes-no, skip the outer <label class="sratix-label"> — the toggle label IS the field label.
+    // Tooltip is already inside the toggle text span for yes-no fields.
+    if (field.type === 'yes-no') {
+      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
+        + html + helpHtml
+        + '</div>';
+    }
+
     return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
-      + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + '</label>'
+      + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + tooltipHtml + '</label>'
       + html + helpHtml
       + '</div>';
   }
@@ -3633,6 +3665,38 @@
       existing.remove();
     }
   }
+
+  // ─── Tooltip click → mini-modal (works on both desktop and mobile) ────────────
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.sratix-tooltip-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    var tip = btn.getAttribute('data-tooltip') || '';
+    var fieldLabel = btn.getAttribute('data-tooltip-label') || '';
+    if (!tip) return;
+
+    // Create mini-modal using existing pattern
+    var modal = createModalShell('sratix-tooltip-modal');
+    modal.className += ' sratix-tooltip-modal';
+    modal.innerHTML = '<div class="sratix-modal-box">'
+      + '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close') || 'Close') + '">&times;</button>'
+      + '<h2 class="sratix-modal-title">' + escHtml(fieldLabel) + '</h2>'
+      + '<div class="sratix-modal-body"><p>' + escHtml(tip) + '</p></div>'
+      + '</div>';
+    document.body.appendChild(modal);
+
+    // Animate in
+    requestAnimationFrame(function () { modal.classList.add('sratix-modal--visible'); });
+
+    // Close handlers
+    modal.querySelector('.sratix-modal-close').addEventListener('click', function () { modal.remove(); });
+    modal.addEventListener('click', function (ev) {
+      if (ev.target === modal) modal.remove();
+    });
+  });
 
   function buildSuccessUrl(category, email) {
     // Exhibitor purchases → redirect to portal page if configured in event settings

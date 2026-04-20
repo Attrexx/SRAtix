@@ -405,6 +405,7 @@ const sratixI18n = (function () {
       'setPassword.req.digit':            'One digit',
       'setPassword.req.special':          'One special character',
       'setPassword.req.longBonus':        '12+ characters (bonus)',
+      'tooltip.moreInfo':                 'More information',
     },
 
     fr: {
@@ -788,6 +789,7 @@ const sratixI18n = (function () {
       'setPassword.req.digit':            'Un chiffre',
       'setPassword.req.special':          'Un caractère spécial',
       'setPassword.req.longBonus':        '12+ caractères (bonus)',
+      'tooltip.moreInfo':                 'Plus d\'informations',
     },
 
     de: {
@@ -1171,6 +1173,7 @@ const sratixI18n = (function () {
       'setPassword.req.digit':            'Eine Ziffer',
       'setPassword.req.special':          'Ein Sonderzeichen',
       'setPassword.req.longBonus':        '12+ Zeichen (Bonus)',
+      'tooltip.moreInfo':                 'Mehr Informationen',
     },
 
     it: {
@@ -1554,6 +1557,7 @@ const sratixI18n = (function () {
       'setPassword.req.digit':            'Una cifra',
       'setPassword.req.special':          'Un carattere speciale',
       'setPassword.req.longBonus':        '12+ caratteri (bonus)',
+      'tooltip.moreInfo':                 'Ulteriori informazioni',
     },
 
     'zh-TW': {
@@ -1937,6 +1941,7 @@ const sratixI18n = (function () {
       'setPassword.req.digit':            '一個數字',
       'setPassword.req.special':          '一個特殊字元',
       'setPassword.req.longBonus':        '12+ 個字元（加分）',
+      'tooltip.moreInfo':                 '更多資訊',
     },
   };
 

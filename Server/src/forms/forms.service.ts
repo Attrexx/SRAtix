@@ -64,6 +64,7 @@ export interface FormField {
   }>;
   placeholder?: Record<string, string>;
   helpText?: Record<string, string>;
+  tooltip?: Record<string, string>;
   documentUrl?: Record<string, string>;
 }
 
@@ -317,9 +318,9 @@ export class FormsService {
   }
 
   /**
-   * For each field in the schema that is a select-like type with an empty or
-   * missing `options` array, look up matching FieldDefinition by slug and
-   * copy its options into the schema payload sent to the client.
+   * Hydrate schema fields from FieldDefinition records:
+   * 1) Fill missing options for select-like fields
+   * 2) Fill missing tooltip for all fields (so existing schemas get tooltips)
    */
   private async hydrateFieldOptions(
     schema: { fields: unknown },
@@ -327,36 +328,55 @@ export class FormsService {
     const def = schema.fields as FormSchemaDefinition | null;
     if (!def?.fields?.length) return;
 
-    // Collect field IDs that need hydration
+    // ── Phase 1: Options hydration (select-like fields only) ────
     const selectTypes = new Set(['select', 'multi-select', 'country', 'canton']);
-    const needsHydration = def.fields.filter(
+    const needsOptionsHydration = def.fields.filter(
       (f) => selectTypes.has(f.type) && (!f.options || f.options.length === 0),
     );
-    if (needsHydration.length === 0) return;
+
+    // ── Phase 2: Tooltip hydration (all fields missing tooltip) ─
+    const needsTooltipHydration = def.fields.filter(
+      (f) => !(f as any).tooltip,
+    );
+
+    // Collect all slugs that need any hydration
+    const allSlugsSet = new Set<string>();
+    for (const f of needsOptionsHydration) allSlugsSet.add((f as any).slug || f.id);
+    for (const f of needsTooltipHydration) allSlugsSet.add((f as any).slug || f.id);
+    if (allSlugsSet.size === 0) return;
 
     // Batch-fetch all matching FieldDefinitions by slug.
     // Fields from seed templates use id = slug directly;
     // fields from the Dashboard builder store the slug in a separate property.
-    const slugs = needsHydration.map((f) => (f as any).slug || f.id);
     const fieldDefs = await this.prisma.fieldDefinition.findMany({
-      where: { slug: { in: slugs }, active: true },
-      select: { slug: true, options: true },
+      where: { slug: { in: [...allSlugsSet] }, active: true },
+      select: { slug: true, options: true, tooltip: true },
     });
 
-    const optionsBySlug = new Map<string, unknown>();
+    const defsBySlug = new Map<string, { options: unknown; tooltip: unknown }>();
     for (const fd of fieldDefs) {
-      if (fd.options) optionsBySlug.set(fd.slug, fd.options);
+      defsBySlug.set(fd.slug, { options: fd.options, tooltip: fd.tooltip });
     }
 
     // Merge options into the schema fields
-    for (const field of needsHydration) {
+    for (const field of needsOptionsHydration) {
       const fieldSlug = (field as any).slug || field.id;
-      const opts = optionsBySlug.get(fieldSlug);
+      const fdData = defsBySlug.get(fieldSlug);
+      const opts = fdData?.options;
       if (Array.isArray(opts) && opts.length > 0) {
         field.options = opts as FormField['options'];
       } else if (field.type === 'country') {
         // Built-in fallback: country fields always get the ISO 3166-1 list
         field.options = COUNTRY_OPTIONS;
+      }
+    }
+
+    // Merge tooltip into the schema fields
+    for (const field of needsTooltipHydration) {
+      const fieldSlug = (field as any).slug || field.id;
+      const fdData = defsBySlug.get(fieldSlug);
+      if (fdData?.tooltip && typeof fdData.tooltip === 'object') {
+        (field as any).tooltip = fdData.tooltip;
       }
     }
 

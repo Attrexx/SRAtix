@@ -599,6 +599,19 @@
 	line-height: 1.3;
 }
 
+.sratix-toggle-link {
+	color: var(--sratix-accent, #60a5fa);
+	text-decoration: underline;
+	text-decoration-color: rgba(96, 165, 250, 0.4);
+	text-underline-offset: 2px;
+	transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.sratix-toggle-link:hover {
+	color: #93c5fd;
+	text-decoration-color: #93c5fd;
+}
+
 .sratix-promo-field {
 	display: flex;
 	gap: 8px;
@@ -3358,4 +3371,92 @@ button.sratix-msd-trigger:focus,
 	margin: 0;
 	accent-color: var(--sratix-red);
 	cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Tooltip (? icon) — hover on desktop, tap-to-modal on mobile
+   ═══════════════════════════════════════════════════════════════ */
+
+.sratix-tooltip-wrap {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	margin-left: 5px;
+	vertical-align: middle;
+}
+
+.sratix-tooltip-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	border: 1.5px solid var(--sratix-text-muted);
+	border-radius: 50%;
+	background: transparent;
+	color: var(--sratix-text-muted);
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+	transition: color 0.15s, border-color 0.15s;
+	flex-shrink: 0;
+}
+
+.sratix-tooltip-btn:hover,
+.sratix-tooltip-btn:focus-visible {
+	color: var(--sratix-text);
+	border-color: var(--sratix-text);
+	outline: none;
+}
+
+.sratix-tooltip-popup {
+	display: none;
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	transform: translateX(-50%);
+	width: max-content;
+	max-width: min(280px, 80vw);
+	padding: 10px 14px;
+	background: var(--sratix-navy-light);
+	border: 1px solid var(--sratix-border);
+	border-radius: 8px;
+	font-size: 0.82em;
+	font-weight: 400;
+	line-height: 1.45;
+	color: var(--sratix-text);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+	z-index: 10000;
+	pointer-events: none;
+	white-space: normal;
+}
+
+/* Caret / arrow pointing down */
+.sratix-tooltip-popup::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	border: 6px solid transparent;
+	border-top-color: var(--sratix-border);
+}
+
+/* Desktop: show on hover */
+@media (hover: hover) and (pointer: fine) {
+	.sratix-tooltip-wrap:hover .sratix-tooltip-popup {
+		display: block;
+	}
+}
+
+/* Tooltip mini-modal (mobile tap) */
+.sratix-tooltip-modal .sratix-modal-box {
+	max-width: 400px;
+}
+
+.sratix-tooltip-modal .sratix-modal-body {
+	font-size: 0.95em;
+	line-height: 1.55;
 }

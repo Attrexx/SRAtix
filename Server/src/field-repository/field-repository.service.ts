@@ -258,6 +258,7 @@ function getDefaultFieldDefinitions() {
     fd('state_canton', { en: 'State / Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '州 / 邦' }, 'select', 'must_have', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 5,
       options: swissCantons(),
+      tooltip: { en: 'If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', de: '[DE] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', fr: '[FR] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', it: '[IT] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', 'zh-TW': '[ZH] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.' },
     }),
     fd('country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'country', 'must_have', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
@@ -267,6 +268,7 @@ function getDefaultFieldDefinitions() {
     fd('billing_details_differ', { en: 'Billing details differ from above', de: 'Rechnungsangaben weichen ab', fr: 'Les coordonnées de facturation diffèrent', it: 'I dati di fatturazione sono diversi', 'zh-TW': '帳單資料與上方不同' }, 'checkbox', 'billing', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
       helpText: { en: 'Check if your billing address is different from your personal details.', de: 'Aktivieren, falls Ihre Rechnungsadresse abweicht.', fr: 'Cochez si votre adresse de facturation est différente.', it: 'Seleziona se l\'indirizzo di fatturazione è diverso.', 'zh-TW': '若帳單地址與個人資料不同，請勾選。' },
+      tooltip: { en: 'Enable this if the invoice should go to a different name or address than your personal details.', de: '[DE] Enable this if the invoice should go to a different name or address than your personal details.', fr: '[FR] Enable this if the invoice should go to a different name or address than your personal details.', it: '[IT] Enable this if the invoice should go to a different name or address than your personal details.', 'zh-TW': '[ZH] Enable this if the invoice should go to a different name or address than your personal details.' },
     }),
     fd('billing_name', { en: 'Billing Name', de: 'Rechnungsname', fr: 'Nom de facturation', it: 'Nome fatturazione', 'zh-TW': '帳單姓名' }, 'text', 'billing', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 1,
@@ -279,6 +281,7 @@ function getDefaultFieldDefinitions() {
     fd('vat_tax_id', { en: 'VAT / Tax ID', de: 'USt-IdNr. / Steuernummer', fr: 'Numéro TVA', it: 'Partita IVA / Codice fiscale', 'zh-TW': '統一編號 / 稅號' }, 'text', 'billing', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 3,
       helpText: { en: 'Enter your VAT number for invoicing purposes.', de: 'Geben Sie Ihre USt-IdNr. für die Rechnungsstellung ein.', fr: 'Entrez votre numéro de TVA pour la facturation.', it: 'Inserisci la partita IVA per la fatturazione.', 'zh-TW': '請輸入您的統一編號以供開立發票。' },
+      tooltip: { en: 'Provide your company\'s VAT/Tax ID so we can issue a compliant invoice. Required for Swiss and EU companies claiming VAT deductions.', de: '[DE] Provide your company\'s VAT/Tax ID so we can issue a compliant invoice. Required for Swiss and EU companies claiming VAT deductions.', fr: '[FR] Provide your company\'s VAT/Tax ID so we can issue a compliant invoice. Required for Swiss and EU companies claiming VAT deductions.', it: '[IT] Provide your company\'s VAT/Tax ID so we can issue a compliant invoice. Required for Swiss and EU companies claiming VAT deductions.', 'zh-TW': '[ZH] Provide your company\'s VAT/Tax ID so we can issue a compliant invoice. Required for Swiss and EU companies claiming VAT deductions.' },
     }),
     fd('billing_company_name', { en: 'Billing Company Name', de: 'Rechnungsfirma', fr: 'Raison sociale', it: 'Ragione sociale', 'zh-TW': '帳單公司名稱' }, 'text', 'billing', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 4,
@@ -290,6 +293,7 @@ function getDefaultFieldDefinitions() {
     }),
     fd('invoice_required', { en: 'Invoice required?', de: 'Rechnung benötigt?', fr: 'Facture requise ?', it: 'Fattura necessaria?', 'zh-TW': '是否需要發票？' }, 'yes-no', 'billing', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
+      tooltip: { en: 'Enable this if you need a formal invoice for your accounting department.', de: '[DE] Enable this if you need a formal invoice for your accounting department.', fr: '[FR] Enable this if you need a formal invoice for your accounting department.', it: '[IT] Enable this if you need a formal invoice for your accounting department.', 'zh-TW': '[ZH] Enable this if you need a formal invoice for your accounting department.' },
     }),
 
     // ── Legal Compliance Fields ──────────────────────────────
@@ -322,6 +326,7 @@ function getDefaultFieldDefinitions() {
     // ── Profile Fields ───────────────────────────────────────
     fd('short_bio', { en: 'Short Bio', de: 'Kurzbiografie', fr: 'Biographie courte', it: 'Breve biografia', 'zh-TW': '簡短自介' }, 'textarea', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
+      tooltip: { en: 'A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', de: '[DE] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', fr: '[FR] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', it: '[IT] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.', 'zh-TW': '[ZH] A brief intro about yourself, shown on your attendee profile card. Helps others decide if they want to connect.' },
     }),
     fd('job_title', { en: 'Job Title', de: 'Berufsbezeichnung', fr: 'Titre du poste', it: 'Qualifica professionale', 'zh-TW': '職稱' }, 'text', 'profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 1,
@@ -340,12 +345,14 @@ function getDefaultFieldDefinitions() {
         { en: 'Legal', de: 'Recht', fr: 'Juridique', it: 'Legale', 'zh-TW': '法務' },
         { en: 'Executive', de: 'Geschäftsleitung', fr: 'Direction', it: 'Direzione', 'zh-TW': '高階管理' },
       ]),
+      tooltip: { en: 'Your department helps us match you with relevant sessions and networking opportunities.', de: '[DE] Your department helps us match you with relevant sessions and networking opportunities.', fr: '[FR] Your department helps us match you with relevant sessions and networking opportunities.', it: '[IT] Your department helps us match you with relevant sessions and networking opportunities.', 'zh-TW': '[ZH] Your department helps us match you with relevant sessions and networking opportunities.' },
     }),
     fd('personal_linkedin', { en: 'Personal LinkedIn', de: 'Persönliches LinkedIn', fr: 'LinkedIn personnel', it: 'LinkedIn personale', 'zh-TW': '個人 LinkedIn' }, 'url', 'profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 3,
     }),
     fd('profile_photo', { en: 'Profile Photo', de: 'Profilfoto', fr: 'Photo de profil', it: 'Foto profilo', 'zh-TW': '個人照片' }, 'image-upload', 'profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 4,
+      tooltip: { en: 'A photo helps other attendees recognize you during the event and makes your profile more approachable.', de: '[DE] A photo helps other attendees recognize you during the event and makes your profile more approachable.', fr: '[FR] A photo helps other attendees recognize you during the event and makes your profile more approachable.', it: '[IT] A photo helps other attendees recognize you during the event and makes your profile more approachable.', 'zh-TW': '[ZH] A photo helps other attendees recognize you during the event and makes your profile more approachable.' },
     }),
     fd('profile_visibility', { en: 'Profile Visibility', de: 'Profilsichtbarkeit', fr: 'Visibilité du profil', it: 'Visibilità profilo', 'zh-TW': '個人檔案可見度' }, 'radio', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 5,
@@ -354,10 +361,12 @@ function getDefaultFieldDefinitions() {
         { value: 'connections', label: { en: 'Visible to connections only', de: 'Nur für Kontakte sichtbar', fr: 'Visible seulement par mes contacts', it: 'Visibile solo ai contatti', 'zh-TW': '僅聯絡人可見' } },
         { value: 'hidden', label: { en: 'Hidden', de: 'Ausgeblendet', fr: 'Masqué', it: 'Nascosto', 'zh-TW': '隱藏' } },
       ],
+      tooltip: { en: 'Controls who can see your attendee profile. You can change this after registration too.', de: '[DE] Controls who can see your attendee profile. You can change this after registration too.', fr: '[FR] Controls who can see your attendee profile. You can change this after registration too.', it: '[IT] Controls who can see your attendee profile. You can change this after registration too.', 'zh-TW': '[ZH] Controls who can see your attendee profile. You can change this after registration too.' },
     }),
     fd('skills_expertise', { en: 'Skills / Expertise', de: 'Fähigkeiten / Fachgebiete', fr: 'Compétences / Expertise', it: 'Competenze / Specializzazioni', 'zh-TW': '技能與專業領域' }, 'multi-select', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 6,
       helpText: { en: 'Select your areas of expertise in robotics.', de: 'Wählen Sie Ihre Fachgebiete in der Robotik.', fr: 'Sélectionnez vos domaines d\'expertise en robotique.', it: 'Seleziona le tue aree di competenza nella robotica.', 'zh-TW': '請選擇您在機器人領域的專業範疇。' },
+      tooltip: { en: 'Select your areas of expertise so we can recommend relevant sessions and connect you with like-minded attendees.', de: '[DE] Select your areas of expertise so we can recommend relevant sessions and connect you with like-minded attendees.', fr: '[FR] Select your areas of expertise so we can recommend relevant sessions and connect you with like-minded attendees.', it: '[IT] Select your areas of expertise so we can recommend relevant sessions and connect you with like-minded attendees.', 'zh-TW': '[ZH] Select your areas of expertise so we can recommend relevant sessions and connect you with like-minded attendees.' },
     }),
     fd('languages_spoken', { en: 'Languages spoken', de: 'Gesprochene Sprachen', fr: 'Langues parlées', it: 'Lingue parlate', 'zh-TW': '使用語言' }, 'multi-select', 'profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 7,
@@ -375,6 +384,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Russian', de: 'Russisch', fr: 'Russe', it: 'Russo', 'zh-TW': '俄語' },
         { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
       ]),
+      tooltip: { en: 'Knowing your languages helps us facilitate networking across Switzerland\'s multilingual community.', de: '[DE] Knowing your languages helps us facilitate networking across Switzerland\'s multilingual community.', fr: '[FR] Knowing your languages helps us facilitate networking across Switzerland\'s multilingual community.', it: '[IT] Knowing your languages helps us facilitate networking across Switzerland\'s multilingual community.', 'zh-TW': '[ZH] Knowing your languages helps us facilitate networking across Switzerland\'s multilingual community.' },
     }),
     fd('preferred_meeting_format', { en: 'Preferred meeting format', de: 'Bevorzugtes Meetingformat', fr: 'Format de réunion préféré', it: 'Formato di incontro preferito', 'zh-TW': '偏好的會議形式' }, 'select', 'profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 8,
@@ -384,6 +394,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Online / Virtual', de: 'Online / Virtuell', fr: 'En ligne / Virtuel', it: 'Online / Virtuale', 'zh-TW': '線上 / 虛擬' },
         { en: 'Either', de: 'Beides', fr: 'L\'un ou l\'autre', it: 'Qualsiasi', 'zh-TW': '皆可' },
       ]),
+      tooltip: { en: 'Tell us how you prefer to meet — we\'ll use this for our matchmaking features.', de: '[DE] Tell us how you prefer to meet — we\'ll use this for our matchmaking features.', fr: '[FR] Tell us how you prefer to meet — we\'ll use this for our matchmaking features.', it: '[IT] Tell us how you prefer to meet — we\'ll use this for our matchmaking features.', 'zh-TW': '[ZH] Tell us how you prefer to meet — we\'ll use this for our matchmaking features.' },
     }),
     fd('community_tags', { en: 'Community Tags', de: 'Community-Tags', fr: 'Tags communauté', it: 'Tag della community', 'zh-TW': '社群標籤' }, 'multi-select', 'community', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
@@ -394,6 +405,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Hiring', de: 'Einstellend', fr: 'Recruteurs', it: 'In fase di assunzione', 'zh-TW': '招募中' },
         { en: 'Investors', de: 'Investoren', fr: 'Investisseurs', it: 'Investitori', 'zh-TW': '投資人' },
       ]),
+      tooltip: { en: 'Join community groups to connect with like-minded attendees and get invited to special meetups at the event.', de: '[DE] Join community groups to connect with like-minded attendees and get invited to special meetups at the event.', fr: '[FR] Join community groups to connect with like-minded attendees and get invited to special meetups at the event.', it: '[IT] Join community groups to connect with like-minded attendees and get invited to special meetups at the event.', 'zh-TW': '[ZH] Join community groups to connect with like-minded attendees and get invited to special meetups at the event.' },
     }),
 
     // ── Company Fields ───────────────────────────────────────
@@ -427,10 +439,12 @@ function getDefaultFieldDefinitions() {
         { en: 'Finance', de: 'Finanzwesen', fr: 'Finance', it: 'Finanza', 'zh-TW': '金融業' },
         { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
       ]),
+      tooltip: { en: 'Helps us understand which industries are represented and tailor content accordingly.', de: '[DE] Helps us understand which industries are represented and tailor content accordingly.', fr: '[FR] Helps us understand which industries are represented and tailor content accordingly.', it: '[IT] Helps us understand which industries are represented and tailor content accordingly.', 'zh-TW': '[ZH] Helps us understand which industries are represented and tailor content accordingly.' },
     }),
     fd('company_size', { en: 'Company Size', de: 'Firmengrösse', fr: 'Taille entreprise', it: 'Dimensione azienda', 'zh-TW': '公司規模' }, 'select', 'company', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 4,
       options: multiOpt(['1–10', '11–50', '51–200', '201–1000', '1000+']),
+      tooltip: { en: 'Company size helps us group attendees for relevant networking sessions (startup meetups, enterprise roundtables, etc.).', de: '[DE] Company size helps us group attendees for relevant networking sessions (startup meetups, enterprise roundtables, etc.).', fr: '[FR] Company size helps us group attendees for relevant networking sessions (startup meetups, enterprise roundtables, etc.).', it: '[IT] Company size helps us group attendees for relevant networking sessions (startup meetups, enterprise roundtables, etc.).', 'zh-TW': '[ZH] Company size helps us group attendees for relevant networking sessions (startup meetups, enterprise roundtables, etc.).' },
     }),
     fd('hq_country', { en: 'HQ Country', de: 'Hauptsitz Land', fr: 'Pays du siège', it: 'Paese della sede', 'zh-TW': '總部國家' }, 'country', 'company', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 5,
@@ -442,35 +456,43 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 7,
       categoryFilter: ['legal'],
       helpText: { en: 'If yes, your company/institution will be added to the Swiss Robotics Map on swiss-robotics.org.', de: 'Falls ja, wird Ihre Firma auf der Swiss Robotics Map auf swiss-robotics.org eingetragen.', fr: 'Si oui, votre entreprise sera ajoutée à la carte Robotics sur swiss-robotics.org.', it: 'Se sì, la vostra azienda verrà aggiunta alla Swiss Robotics Map su swiss-robotics.org.', 'zh-TW': '若選「是」，您的公司或機構將被加入 swiss-robotics.org 的瑞士機器人地圖。' },
+      tooltip: { en: 'The Swiss Robotics Map is a public directory of robotics organizations in Switzerland. Opting in gives your company free visibility.', de: '[DE] The Swiss Robotics Map is a public directory of robotics organizations in Switzerland. Opting in gives your company free visibility.', fr: '[FR] The Swiss Robotics Map is a public directory of robotics organizations in Switzerland. Opting in gives your company free visibility.', it: '[IT] The Swiss Robotics Map is a public directory of robotics organizations in Switzerland. Opting in gives your company free visibility.', 'zh-TW': '[ZH] The Swiss Robotics Map is a public directory of robotics organizations in Switzerland. Opting in gives your company free visibility.' },
     }),
     fd('create_company_profile', { en: 'Create a Company Profile on SRA?', de: 'Firmenprofil auf SRA erstellen?', fr: 'Créer un profil entreprise SRA ?', it: 'Creare un profilo aziendale su SRA?', 'zh-TW': '是否在 SRA 建立公司簡介？' }, 'yes-no', 'company', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 8,
       categoryFilter: ['legal'],
       helpText: { en: 'If yes, a corporate member profile page will be created on swiss-robotics.org.', de: 'Falls ja, wird eine Firmenmitgliedsseite auf swiss-robotics.org erstellt.', fr: 'Si oui, une page de profil d\'entreprise sera créée sur swiss-robotics.org.', it: 'Se sì, verrà creata una pagina profilo aziendale su swiss-robotics.org.', 'zh-TW': '若選「是」，將在 swiss-robotics.org 上建立企業會員簡介頁面。' },
+      tooltip: { en: 'A company profile on swiss-robotics.org gives your organization a dedicated page with logo, description, and contact info visible to the SRA community.', de: '[DE] A company profile on swiss-robotics.org gives your organization a dedicated page with logo, description, and contact info visible to the SRA community.', fr: '[FR] A company profile on swiss-robotics.org gives your organization a dedicated page with logo, description, and contact info visible to the SRA community.', it: '[IT] A company profile on swiss-robotics.org gives your organization a dedicated page with logo, description, and contact info visible to the SRA community.', 'zh-TW': '[ZH] A company profile on swiss-robotics.org gives your organization a dedicated page with logo, description, and contact info visible to the SRA community.' },
     }),
 
     // ── Privacy / Sharing Toggles ───────────────────────────
     fd('allow_messaging', { en: 'Allow attendees to message me in-platform', de: 'Nachrichten erlauben', fr: 'Autoriser les messages', it: 'Consentire messaggi da altri partecipanti', 'zh-TW': '允許與會者透過平台傳送訊息給我' }, 'yes-no', 'privacy', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
+      tooltip: { en: 'When enabled, other attendees can send you messages through the event platform. Your email stays hidden.', de: '[DE] When enabled, other attendees can send you messages through the event platform. Your email stays hidden.', fr: '[FR] When enabled, other attendees can send you messages through the event platform. Your email stays hidden.', it: '[IT] When enabled, other attendees can send you messages through the event platform. Your email stays hidden.', 'zh-TW': '[ZH] When enabled, other attendees can send you messages through the event platform. Your email stays hidden.' },
     }),
     fd('show_email', { en: 'Allow attendees to see my email', de: 'E-Mail anzeigen', fr: 'Afficher mon e-mail', it: 'Mostrare la mia e-mail ai partecipanti', 'zh-TW': '允許與會者查看我的電子郵件' }, 'yes-no', 'privacy', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 1,
       defaultValue: false,
       helpText: { en: 'Defaults to OFF for your privacy.', de: 'Standardmässig deaktiviert.', fr: 'Désactivé par défaut pour votre confidentialité.', it: 'Disattivato per impostazione predefinita.', 'zh-TW': '預設為關閉以保護您的隱私。' },
+      tooltip: { en: 'By default, your email is hidden. Enable this only if you want other attendees to see and contact you directly via email.', de: '[DE] By default, your email is hidden. Enable this only if you want other attendees to see and contact you directly via email.', fr: '[FR] By default, your email is hidden. Enable this only if you want other attendees to see and contact you directly via email.', it: '[IT] By default, your email is hidden. Enable this only if you want other attendees to see and contact you directly via email.', 'zh-TW': '[ZH] By default, your email is hidden. Enable this only if you want other attendees to see and contact you directly via email.' },
     }),
     fd('allow_exhibitor_contact', { en: 'Allow exhibitors/sponsors to contact me', de: 'Kontakt durch Aussteller erlauben', fr: 'Autoriser le contact par les exposants', it: 'Consentire il contatto da espositori/sponsor', 'zh-TW': '允許展商/贊助商聯繫我' }, 'yes-no', 'privacy', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 2,
+      tooltip: { en: 'Exhibitors and sponsors may want to follow up about products or services you showed interest in.', de: '[DE] Exhibitors and sponsors may want to follow up about products or services you showed interest in.', fr: '[FR] Exhibitors and sponsors may want to follow up about products or services you showed interest in.', it: '[IT] Exhibitors and sponsors may want to follow up about products or services you showed interest in.', 'zh-TW': '[ZH] Exhibitors and sponsors may want to follow up about products or services you showed interest in.' },
     }),
     fd('share_with_sponsors', { en: 'Allow my info to be shared with sponsors', de: 'Infos mit Sponsoren teilen', fr: 'Partager mes infos avec les sponsors', it: 'Condividere le mie informazioni con gli sponsor', 'zh-TW': '允許將我的資料分享給贊助商' }, 'yes-no', 'privacy', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 3,
+      tooltip: { en: 'Event sponsors may receive a list of attendees who opted in. Your data is never shared without your explicit consent here.', de: '[DE] Event sponsors may receive a list of attendees who opted in. Your data is never shared without your explicit consent here.', fr: '[FR] Event sponsors may receive a list of attendees who opted in. Your data is never shared without your explicit consent here.', it: '[IT] Event sponsors may receive a list of attendees who opted in. Your data is never shared without your explicit consent here.', 'zh-TW': '[ZH] Event sponsors may receive a list of attendees who opted in. Your data is never shared without your explicit consent here.' },
     }),
     fd('allow_b2b_qr_scan', { en: 'Allow B2B QR scan exchanges', de: 'B2B QR-Scan erlauben', fr: 'Autoriser échanges QR B2B', it: 'Consentire lo scambio tramite scansione QR B2B', 'zh-TW': '允許 B2B QR Code 交換' }, 'yes-no', 'privacy', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      tooltip: { en: 'When enabled, other attendees can scan your badge QR code to instantly exchange contact details — great for networking!', de: '[DE] When enabled, other attendees can scan your badge QR code to instantly exchange contact details — great for networking!', fr: '[FR] When enabled, other attendees can scan your badge QR code to instantly exchange contact details — great for networking!', it: '[IT] When enabled, other attendees can scan your badge QR code to instantly exchange contact details — great for networking!', 'zh-TW': '[ZH] When enabled, other attendees can scan your badge QR code to instantly exchange contact details — great for networking!' },
     }),
 
     // ── B2B / Networking Questions ──────────────────────────
     fd('purchasing_decisions', { en: 'Are you involved in purchasing decisions?', de: 'Sind Sie an Kaufentscheidungen beteiligt?', fr: 'Participez-vous aux décisions d\'achat ?', it: 'Siete coinvolti nelle decisioni di acquisto?', 'zh-TW': '您是否參與採購決策？' }, 'yes-no', 'b2b', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 0,
+      tooltip: { en: 'Lets exhibitors know if you have decision-making power — they can prioritize demos and meetings accordingly.', de: '[DE] Lets exhibitors know if you have decision-making power — they can prioritize demos and meetings accordingly.', fr: '[FR] Lets exhibitors know if you have decision-making power — they can prioritize demos and meetings accordingly.', it: '[IT] Lets exhibitors know if you have decision-making power — they can prioritize demos and meetings accordingly.', 'zh-TW': '[ZH] Lets exhibitors know if you have decision-making power — they can prioritize demos and meetings accordingly.' },
     }),
     fd('buying_timeframe', { en: 'Buying timeframe', de: 'Kaufzeitraum', fr: 'Délai d\'achat', it: 'Tempistica di acquisto', 'zh-TW': '採購時程' }, 'select', 'b2b', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 1,
@@ -481,9 +503,11 @@ function getDefaultFieldDefinitions() {
         { en: '12+ months', de: '12+ Monate', fr: 'Plus de 12 mois', it: 'Oltre 12 mesi', 'zh-TW': '12 個月以上' },
         { en: 'Just exploring', de: 'Nur orientieren', fr: 'Juste en exploration', it: 'Solo esplorazione', 'zh-TW': '僅在探索階段' },
       ]),
+      tooltip: { en: 'Helps exhibitors understand your buying stage so they can tailor their conversations.', de: '[DE] Helps exhibitors understand your buying stage so they can tailor their conversations.', fr: '[FR] Helps exhibitors understand your buying stage so they can tailor their conversations.', it: '[IT] Helps exhibitors understand your buying stage so they can tailor their conversations.', 'zh-TW': '[ZH] Helps exhibitors understand your buying stage so they can tailor their conversations.' },
     }),
     fd('interested_in_demos', { en: 'Interested in demos/meetings during event', de: 'Interesse an Demos/Meetings', fr: 'Intéressé par des démos/réunions', it: 'Interessato a demo/incontri durante l\'evento', 'zh-TW': '是否有興趣在活動期間參加展示或會議' }, 'multi-select', 'b2b', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 2,
+      tooltip: { en: 'Select which demos or meetings you\'d like to attend, so exhibitors can prepare and reserve time for you.', de: '[DE] Select which demos or meetings you\'d like to attend, so exhibitors can prepare and reserve time for you.', fr: '[FR] Select which demos or meetings you\'d like to attend, so exhibitors can prepare and reserve time for you.', it: '[IT] Select which demos or meetings you\'d like to attend, so exhibitors can prepare and reserve time for you.', 'zh-TW': '[ZH] Select which demos or meetings you\'d like to attend, so exhibitors can prepare and reserve time for you.' },
     }),
     fd('looking_for', { en: 'What are you looking for?', de: 'Was suchen Sie?', fr: 'Que recherchez-vous ?', it: 'Cosa state cercando?', 'zh-TW': '您在尋找什麼？' }, 'multi-select', 'b2b', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 3,
@@ -497,12 +521,15 @@ function getDefaultFieldDefinitions() {
         { en: 'Research Partnerships', de: 'Forschungspartnerschaften', fr: 'Partenariats de recherche', it: 'Partnership di ricerca', 'zh-TW': '研究合作夥伴' },
         { en: 'Funding', de: 'Finanzierung', fr: 'Financement', it: 'Finanziamenti', 'zh-TW': '資金' },
       ]),
+      tooltip: { en: 'Tell us what you\'re looking for so we can match you with the right exhibitors and attendees.', de: '[DE] Tell us what you\'re looking for so we can match you with the right exhibitors and attendees.', fr: '[FR] Tell us what you\'re looking for so we can match you with the right exhibitors and attendees.', it: '[IT] Tell us what you\'re looking for so we can match you with the right exhibitors and attendees.', 'zh-TW': '[ZH] Tell us what you\'re looking for so we can match you with the right exhibitors and attendees.' },
     }),
     fd('agree_exhibitor_contact', { en: 'I agree to be contacted by exhibitors/sponsors', de: 'Kontakt durch Aussteller', fr: 'Contact par exposants', it: 'Acconsento ad essere contattato da espositori/sponsor', 'zh-TW': '我同意展商/贊助商與我聯繫' }, 'yes-no', 'b2b', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      tooltip: { en: 'Allows exhibitors and sponsors to contact you after the event about products or collaborations discussed.', de: '[DE] Allows exhibitors and sponsors to contact you after the event about products or collaborations discussed.', fr: '[FR] Allows exhibitors and sponsors to contact you after the event about products or collaborations discussed.', it: '[IT] Allows exhibitors and sponsors to contact you after the event about products or collaborations discussed.', 'zh-TW': '[ZH] Allows exhibitors and sponsors to contact you after the event about products or collaborations discussed.' },
     }),
     fd('share_b2b_profile', { en: 'I agree to share my B2B profile with attendees', de: 'B2B-Profil teilen', fr: 'Partager profil B2B', it: 'Acconsento a condividere il mio profilo B2B con i partecipanti', 'zh-TW': '我同意與其他與會者分享我的 B2B 個人檔案' }, 'yes-no', 'b2b', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 5,
+      tooltip: { en: 'Shares your professional profile (name, company, interests) with other attendees for networking purposes.', de: '[DE] Shares your professional profile (name, company, interests) with other attendees for networking purposes.', fr: '[FR] Shares your professional profile (name, company, interests) with other attendees for networking purposes.', it: '[IT] Shares your professional profile (name, company, interests) with other attendees for networking purposes.', 'zh-TW': '[ZH] Shares your professional profile (name, company, interests) with other attendees for networking purposes.' },
     }),
     fd('want_to_meet', { en: 'I want to meet', de: 'Ich möchte treffen', fr: 'Je veux rencontrer', it: 'Vorrei incontrare', 'zh-TW': '我想認識' }, 'multi-select', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
@@ -515,6 +542,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Students', de: 'Studierende', fr: 'Étudiants', it: 'Studenti', 'zh-TW': '學生' },
         { en: 'Recruiters', de: 'Recruiter', fr: 'Recruteurs', it: 'Recruiter', 'zh-TW': '招募人員' },
       ]),
+      tooltip: { en: 'Tell us who you\'d like to meet, and we\'ll try to facilitate introductions at the event.', de: '[DE] Tell us who you\'d like to meet, and we\'ll try to facilitate introductions at the event.', fr: '[FR] Tell us who you\'d like to meet, and we\'ll try to facilitate introductions at the event.', it: '[IT] Tell us who you\'d like to meet, and we\'ll try to facilitate introductions at the event.', 'zh-TW': '[ZH] Tell us who you\'d like to meet, and we\'ll try to facilitate introductions at the event.' },
     }),
     fd('collaboration_interests', { en: 'Collaboration interests', de: 'Kooperationsinteressen', fr: 'Intérêts de collaboration', it: 'Interessi di collaborazione', 'zh-TW': '合作意向' }, 'multi-select', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 1,
@@ -526,6 +554,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Funding', de: 'Finanzierung', fr: 'Financement', it: 'Finanziamenti', 'zh-TW': '融資' },
         { en: 'Media', de: 'Medien', fr: 'Médias', it: 'Media', 'zh-TW': '媒體' },
       ]),
+      tooltip: { en: 'Select your collaboration interests so we can suggest relevant networking sessions and matchmaking.', de: '[DE] Select your collaboration interests so we can suggest relevant networking sessions and matchmaking.', fr: '[FR] Select your collaboration interests so we can suggest relevant networking sessions and matchmaking.', it: '[IT] Select your collaboration interests so we can suggest relevant networking sessions and matchmaking.', 'zh-TW': '[ZH] Select your collaboration interests so we can suggest relevant networking sessions and matchmaking.' },
     }),
     fd('what_offering', { en: 'What I\'m offering', de: 'Was ich anbiete', fr: 'Ce que j\'offre', it: 'Cosa offro', 'zh-TW': '我能提供' }, 'multi-select', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 2,
@@ -537,6 +566,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Hiring', de: 'Stellen', fr: 'Emplois', it: 'Posizioni lavorative', 'zh-TW': '工作機會' },
         { en: 'Speaking', de: 'Vorträge', fr: 'Conférences', it: 'Interventi', 'zh-TW': '演講分享' },
       ]),
+      tooltip: { en: 'What can you bring to the table? Helps other attendees find you for the right opportunities.', de: '[DE] What can you bring to the table? Helps other attendees find you for the right opportunities.', fr: '[FR] What can you bring to the table? Helps other attendees find you for the right opportunities.', it: '[IT] What can you bring to the table? Helps other attendees find you for the right opportunities.', 'zh-TW': '[ZH] What can you bring to the table? Helps other attendees find you for the right opportunities.' },
     }),
     fd('what_seeking', { en: 'What I\'m seeking', de: 'Was ich suche', fr: 'Ce que je recherche', it: 'Cosa cerco', 'zh-TW': '我正在尋找' }, 'multi-select', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 3,
@@ -548,9 +578,11 @@ function getDefaultFieldDefinitions() {
         { en: 'Hiring', de: 'Einstellungen', fr: 'Recrutement', it: 'Assunzioni', 'zh-TW': '人才' },
         { en: 'Speaking', de: 'Redner', fr: 'Conférenciers', it: 'Relatori', 'zh-TW': '演講機會' },
       ]),
+      tooltip: { en: 'What are you looking for? Helps us match you with the right people and opportunities.', de: '[DE] What are you looking for? Helps us match you with the right people and opportunities.', fr: '[FR] What are you looking for? Helps us match you with the right people and opportunities.', it: '[IT] What are you looking for? Helps us match you with the right people and opportunities.', 'zh-TW': '[ZH] What are you looking for? Helps us match you with the right people and opportunities.' },
     }),
     fd('topics_happy_to_talk', { en: 'Topics I\'m happy to talk about', de: 'Themen über die ich spreche', fr: 'Sujets dont j\'aime parler', it: 'Argomenti di cui parlo volentieri', 'zh-TW': '我樂意聊的話題' }, 'multi-select', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      tooltip: { en: 'Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', de: '[DE] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', fr: '[FR] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', it: '[IT] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', 'zh-TW': '[ZH] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.' },
     }),
 
     // ── Event Questions ─────────────────────────────────────
@@ -566,16 +598,20 @@ function getDefaultFieldDefinitions() {
         { en: 'Nut allergy', de: 'Nussallergie', fr: 'Allergie aux noix', it: 'Allergia alla frutta a guscio', 'zh-TW': '堅果過敏' },
         { en: 'No restrictions', de: 'Keine Einschränkungen', fr: 'Aucune restriction', it: 'Nessuna restrizione', 'zh-TW': '無特殊需求' },
       ]),
+      tooltip: { en: 'We collect dietary needs so our catering team can point you to safe food options at the event.', de: '[DE] We collect dietary needs so our catering team can point you to safe food options at the event.', fr: '[FR] We collect dietary needs so our catering team can point you to safe food options at the event.', it: '[IT] We collect dietary needs so our catering team can point you to safe food options at the event.', 'zh-TW': '[ZH] We collect dietary needs so our catering team can point you to safe food options at the event.' },
     }),
     fd('badge_name_preference', { en: 'Badge name preference', de: 'Badgename', fr: 'Nom sur le badge', it: 'Nome preferito sul badge', 'zh-TW': '名牌顯示名稱' }, 'text', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
       helpText: { en: 'If different from your first/last name.', de: 'Falls abweichend von Vor-/Nachname.', fr: 'Si différent de votre nom.', it: 'Se diverso dal vostro nome/cognome.', 'zh-TW': '若與您的姓名不同，請填寫。' },
+      tooltip: { en: 'If you go by a different name (nickname, preferred name), enter it here and we\'ll print it on your badge.', de: '[DE] If you go by a different name (nickname, preferred name), enter it here and we\'ll print it on your badge.', fr: '[FR] If you go by a different name (nickname, preferred name), enter it here and we\'ll print it on your badge.', it: '[IT] If you go by a different name (nickname, preferred name), enter it here and we\'ll print it on your badge.', 'zh-TW': '[ZH] If you go by a different name (nickname, preferred name), enter it here and we\'ll print it on your badge.' },
     }),
     fd('accessibility_requirements', { en: 'Accessibility requirements', de: 'Barrierefreiheit', fr: 'Besoins d\'accessibilité', it: 'Esigenze di accessibilità', 'zh-TW': '無障礙需求' }, 'textarea', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 7,
+      tooltip: { en: 'Let us know about any accessibility needs (wheelchair access, hearing assistance, etc.) so we can ensure a comfortable experience.', de: '[DE] Let us know about any accessibility needs (wheelchair access, hearing assistance, etc.) so we can ensure a comfortable experience.', fr: '[FR] Let us know about any accessibility needs (wheelchair access, hearing assistance, etc.) so we can ensure a comfortable experience.', it: '[IT] Let us know about any accessibility needs (wheelchair access, hearing assistance, etc.) so we can ensure a comfortable experience.', 'zh-TW': '[ZH] Let us know about any accessibility needs (wheelchair access, hearing assistance, etc.) so we can ensure a comfortable experience.' },
     }),
     fd('hotel_needed', { en: 'Hotel needed?', de: 'Hotel benötigt?', fr: 'Hôtel nécessaire ?', it: 'Necessità di hotel?', 'zh-TW': '是否需要住宿？' }, 'yes-no', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 8,
+      tooltip: { en: 'We can share information about partner hotels with negotiated rates near the venue.', de: '[DE] We can share information about partner hotels with negotiated rates near the venue.', fr: '[FR] We can share information about partner hotels with negotiated rates near the venue.', it: '[IT] We can share information about partner hotels with negotiated rates near the venue.', 'zh-TW': '[ZH] We can share information about partner hotels with negotiated rates near the venue.' },
     }),
     fd('emergency_contact_name', { en: 'Emergency contact name', de: 'Notfallkontakt Name', fr: 'Contact d\'urgence nom', it: 'Nome contatto di emergenza', 'zh-TW': '緊急聯絡人姓名' }, 'text', 'questions', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 9,
@@ -592,9 +628,11 @@ function getDefaultFieldDefinitions() {
         { en: 'Retired', de: 'Pensioniert', fr: 'Retraité', it: 'In pensione', 'zh-TW': '已退休' },
         { en: 'Other', de: 'Andere', fr: 'Autre', it: 'Altro', 'zh-TW': '其他' },
       ]),
+      tooltip: { en: 'Select your status to verify eligibility for the reduced-price ticket.', de: '[DE] Select your status to verify eligibility for the reduced-price ticket.', fr: '[FR] Select your status to verify eligibility for the reduced-price ticket.', it: '[IT] Select your status to verify eligibility for the reduced-price ticket.', 'zh-TW': '[ZH] Select your status to verify eligibility for the reduced-price ticket.' },
     }),
     fd('reduced_note', { en: 'Additional note', de: 'Zusätzliche Bemerkung', fr: 'Remarque supplémentaire', it: 'Nota aggiuntiva', 'zh-TW': '補充說明' }, 'textarea', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 12,
+      tooltip: { en: 'Provide any additional context about your reduced ticket eligibility if needed.', de: '[DE] Provide any additional context about your reduced ticket eligibility if needed.', fr: '[FR] Provide any additional context about your reduced ticket eligibility if needed.', it: '[IT] Provide any additional context about your reduced ticket eligibility if needed.', 'zh-TW': '[ZH] Provide any additional context about your reduced ticket eligibility if needed.' },
     }),
 
     // ── Academic / Institution Fields ────────────────────────
@@ -619,6 +657,7 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 13,
       options: roboticsExpertiseAreas(),
       helpText: { en: 'Select your areas of research in robotics.', de: 'Wählen Sie Ihre Forschungsbereiche in der Robotik.', fr: 'Sélectionnez vos domaines de recherche en robotique.', it: 'Seleziona le tue aree di ricerca nella robotica.', 'zh-TW': '請選擇您在機器人領域的研究範疇。' },
+      tooltip: { en: 'Select your research areas so we can suggest relevant talks, posters, and potential collaborators.', de: '[DE] Select your research areas so we can suggest relevant talks, posters, and potential collaborators.', fr: '[FR] Select your research areas so we can suggest relevant talks, posters, and potential collaborators.', it: '[IT] Select your research areas so we can suggest relevant talks, posters, and potential collaborators.', 'zh-TW': '[ZH] Select your research areas so we can suggest relevant talks, posters, and potential collaborators.' },
     }),
 
     // ── Student Fields ──────────────────────────────────────
@@ -652,6 +691,7 @@ function getDefaultFieldDefinitions() {
     fd('student_supervisor', { en: 'Supervisor / Lab', de: 'Betreuer/in / Labor', fr: 'Superviseur / Laboratoire', it: 'Supervisore / Laboratorio', 'zh-TW': '指導教授 / 實驗室' }, 'text', 'student', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 5,
       categoryFilter: ['individual'],
+      tooltip: { en: 'Sharing your supervisor or lab helps other researchers and companies find you for collaboration or hiring.', de: '[DE] Sharing your supervisor or lab helps other researchers and companies find you for collaboration or hiring.', fr: '[FR] Sharing your supervisor or lab helps other researchers and companies find you for collaboration or hiring.', it: '[IT] Sharing your supervisor or lab helps other researchers and companies find you for collaboration or hiring.', 'zh-TW': '[ZH] Sharing your supervisor or lab helps other researchers and companies find you for collaboration or hiring.' },
     }),
     fd('student_seeking', { en: 'Seeking opportunities', de: 'Suche nach Möglichkeiten', fr: 'Recherche d\'opportunités', it: 'Cerco opportunità', 'zh-TW': '尋求機會' }, 'multi-select', 'student', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 6,
@@ -661,12 +701,14 @@ function getDefaultFieldDefinitions() {
         { en: 'Thesis project', de: 'Abschlussarbeit', fr: 'Projet de thèse', it: 'Progetto di tesi', 'zh-TW': '畢業論文專案' },
         { en: 'Full-time position', de: 'Vollzeitstelle', fr: 'Poste à plein temps', it: 'Posizione a tempo pieno', 'zh-TW': '全職工作' },
       ]),
+      tooltip: { en: 'Let companies and researchers know what opportunities you\'re looking for.', de: '[DE] Let companies and researchers know what opportunities you\'re looking for.', fr: '[FR] Let companies and researchers know what opportunities you\'re looking for.', it: '[IT] Let companies and researchers know what opportunities you\'re looking for.', 'zh-TW': '[ZH] Let companies and researchers know what opportunities you\'re looking for.' },
     }),
 
     // ── Startup Fields ──────────────────────────────────────
     fd('startup_incorporated_recently', { en: 'Company incorporated within last 5 years', de: 'Firma in den letzten 5 Jahren gegründet', fr: 'Société constituée il y a moins de 5 ans', it: 'Società costituita negli ultimi 5 anni', 'zh-TW': '公司於過去 5 年內成立' }, 'checkbox', 'startup', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
       categoryFilter: ['individual', 'legal'],
+      tooltip: { en: 'Confirms startup status for access to special startup programs, pitching sessions, and networking events.', de: '[DE] Confirms startup status for access to special startup programs, pitching sessions, and networking events.', fr: '[FR] Confirms startup status for access to special startup programs, pitching sessions, and networking events.', it: '[IT] Confirms startup status for access to special startup programs, pitching sessions, and networking events.', 'zh-TW': '[ZH] Confirms startup status for access to special startup programs, pitching sessions, and networking events.' },
     }),
     fd('startup_incorporation_year', { en: 'Incorporation Year', de: 'Gründungsjahr', fr: 'Année de création', it: 'Anno di costituzione', 'zh-TW': '成立年份' }, 'text', 'startup', {
       widthDesktop: 25, widthMobile: 50, sortOrder: 1,
@@ -677,6 +719,7 @@ function getDefaultFieldDefinitions() {
     fd('startup_pitch_deck_url', { en: 'Website / Pitch Deck URL', de: 'Website / Pitch Deck URL', fr: 'Site web / URL du pitch deck', it: 'Sito web / URL pitch deck', 'zh-TW': '網站 / 簡報連結' }, 'url', 'startup', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 2,
       categoryFilter: ['individual', 'legal'],
+      tooltip: { en: 'Share your pitch deck so investors and potential partners can learn about your startup before the event.', de: '[DE] Share your pitch deck so investors and potential partners can learn about your startup before the event.', fr: '[FR] Share your pitch deck so investors and potential partners can learn about your startup before the event.', it: '[IT] Share your pitch deck so investors and potential partners can learn about your startup before the event.', 'zh-TW': '[ZH] Share your pitch deck so investors and potential partners can learn about your startup before the event.' },
     }),
     fd('startup_team_size', { en: 'Team Size', de: 'Teamgrösse', fr: 'Taille de l\'équipe', it: 'Dimensione del team', 'zh-TW': '團隊規模' }, 'select', 'startup', {
       widthDesktop: 25, widthMobile: 50, sortOrder: 3,
@@ -694,6 +737,7 @@ function getDefaultFieldDefinitions() {
         { en: 'Customers', de: 'Kunden', fr: 'Clients', it: 'Clienti', 'zh-TW': '客戶' },
         { en: 'Mentors', de: 'Mentoren', fr: 'Mentors', it: 'Mentor', 'zh-TW': '導師' },
       ]),
+      tooltip: { en: 'Tell us what your startup needs — we\'ll try to connect you with the right people at the event.', de: '[DE] Tell us what your startup needs — we\'ll try to connect you with the right people at the event.', fr: '[FR] Tell us what your startup needs — we\'ll try to connect you with the right people at the event.', it: '[IT] Tell us what your startup needs — we\'ll try to connect you with the right people at the event.', 'zh-TW': '[ZH] Tell us what your startup needs — we\'ll try to connect you with the right people at the event.' },
     }),
 
     // ═══════════════════════════════════════════════════════════
@@ -706,12 +750,14 @@ function getDefaultFieldDefinitions() {
       categoryFilter: ['individual'],
       defaultValue: true,
       helpText: { en: 'Your profile will be visible on swiss-robotics.org.', de: 'Ihr Profil wird auf swiss-robotics.org sichtbar sein.', fr: 'Votre profil sera visible sur swiss-robotics.org.', it: 'Il tuo profilo sarà visibile su swiss-robotics.org.', 'zh-TW': '您的個人檔案將顯示在 swiss-robotics.org。' },
+      tooltip: { en: 'Creates a public profile on swiss-robotics.org, making you visible to the Swiss robotics community.', de: '[DE] Creates a public profile on swiss-robotics.org, making you visible to the Swiss robotics community.', fr: '[FR] Creates a public profile on swiss-robotics.org, making you visible to the Swiss robotics community.', it: '[IT] Creates a public profile on swiss-robotics.org, making you visible to the Swiss robotics community.', 'zh-TW': '[ZH] Creates a public profile on swiss-robotics.org, making you visible to the Swiss robotics community.' },
     }),
     fd('publish_resume', { en: 'Publish my resume on SRA', de: 'Meinen Lebenslauf auf SRA veröffentlichen', fr: 'Publier mon CV sur SRA', it: 'Pubblica il mio CV su SRA', 'zh-TW': '在 SRA 發布我的履歷' }, 'yes-no', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 1,
       categoryFilter: ['individual'],
       defaultValue: false,
       helpText: { en: 'Your resume will be searchable by employers on swiss-robotics.org.', de: 'Ihr Lebenslauf wird für Arbeitgeber auf swiss-robotics.org durchsuchbar sein.', fr: 'Votre CV sera consultable par les employeurs sur swiss-robotics.org.', it: 'Il tuo CV sarà ricercabile dai datori di lavoro su swiss-robotics.org.', 'zh-TW': '您的履歷將可被 swiss-robotics.org 上的雇主搜尋。' },
+      tooltip: { en: 'Makes your resume searchable by employers on swiss-robotics.org. You can unpublish anytime.', de: '[DE] Makes your resume searchable by employers on swiss-robotics.org. You can unpublish anytime.', fr: '[FR] Makes your resume searchable by employers on swiss-robotics.org. You can unpublish anytime.', it: '[IT] Makes your resume searchable by employers on swiss-robotics.org. You can unpublish anytime.', 'zh-TW': '[ZH] Makes your resume searchable by employers on swiss-robotics.org. You can unpublish anytime.' },
     }),
     fd('profile_visibility_resume', { en: 'Profile visibility', de: 'Profilsichtbarkeit', fr: 'Visibilité du profil', it: 'Visibilità del profilo', 'zh-TW': '個人檔案可見度' }, 'radio', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 2,
@@ -721,10 +767,12 @@ function getDefaultFieldDefinitions() {
         { value: 'members', label: { en: 'Members only — visible to SRA members', de: 'Nur Mitglieder — für SRA-Mitglieder sichtbar', fr: 'Membres uniquement — visible par les membres SRA', it: 'Solo membri — visibile ai membri SRA', 'zh-TW': '僅限會員 — SRA 會員可見' } },
         { value: 'hidden', label: { en: 'Hidden — not listed', de: 'Ausgeblendet — nicht gelistet', fr: 'Masqué — non listé', it: 'Nascosto — non elencato', 'zh-TW': '隱藏 — 不公開列出' } },
       ],
+      tooltip: { en: 'Controls who can see your resume — public, SRA members only, or hidden.', de: '[DE] Controls who can see your resume — public, SRA members only, or hidden.', fr: '[FR] Controls who can see your resume — public, SRA members only, or hidden.', it: '[IT] Controls who can see your resume — public, SRA members only, or hidden.', 'zh-TW': '[ZH] Controls who can see your resume — public, SRA members only, or hidden.' },
     }),
     fd('allow_employer_contact', { en: 'Allow employers to contact me', de: 'Arbeitgebern erlauben, mich zu kontaktieren', fr: 'Autoriser les employeurs à me contacter', it: 'Consenti ai datori di lavoro di contattarmi', 'zh-TW': '允許雇主聯繫我' }, 'yes-no', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 3,
       categoryFilter: ['individual'],
+      tooltip: { en: 'When enabled, employers browsing resumes on swiss-robotics.org can reach out to you directly.', de: '[DE] When enabled, employers browsing resumes on swiss-robotics.org can reach out to you directly.', fr: '[FR] When enabled, employers browsing resumes on swiss-robotics.org can reach out to you directly.', it: '[IT] When enabled, employers browsing resumes on swiss-robotics.org can reach out to you directly.', 'zh-TW': '[ZH] When enabled, employers browsing resumes on swiss-robotics.org can reach out to you directly.' },
     }),
 
     // ── Resume Data Fields ──────────────────────────────────
@@ -738,11 +786,13 @@ function getDefaultFieldDefinitions() {
       categoryFilter: ['individual'],
       validation: { maxLength: 500 },
       helpText: { en: 'Max 500 characters. Describe yourself in 2-3 sentences.', de: 'Max. 500 Zeichen. Beschreiben Sie sich in 2-3 Sätzen.', fr: 'Max. 500 caractères. Décrivez-vous en 2-3 phrases.', it: 'Max. 500 caratteri. Descriviti in 2-3 frasi.', 'zh-TW': '最多 500 字元。用 2-3 句話描述自己。' },
+      tooltip: { en: 'A short pitch about yourself for your SRA resume. Employers see this first when browsing candidates.', de: '[DE] A short pitch about yourself for your SRA resume. Employers see this first when browsing candidates.', fr: '[FR] A short pitch about yourself for your SRA resume. Employers see this first when browsing candidates.', it: '[IT] A short pitch about yourself for your SRA resume. Employers see this first when browsing candidates.', 'zh-TW': '[ZH] A short pitch about yourself for your SRA resume. Employers see this first when browsing candidates.' },
     }),
     fd('personal_photo', { en: 'Personal Photo', de: 'Persönliches Foto', fr: 'Photo personnelle', it: 'Foto personale', 'zh-TW': '個人照片' }, 'image-upload', 'resume', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 5,
       categoryFilter: ['individual'],
       helpText: { en: 'Upload a professional photo for your SRA profile. Max 5 MB, JPG/PNG.', de: 'Laden Sie ein professionelles Foto für Ihr SRA-Profil hoch. Max. 5 MB, JPG/PNG.', fr: 'Téléchargez une photo professionnelle pour votre profil SRA. Max 5 Mo, JPG/PNG.', it: 'Carica una foto professionale per il tuo profilo SRA. Max 5 MB, JPG/PNG.', 'zh-TW': '上傳一張專業照片作為您的 SRA 個人檔案。最大 5 MB，JPG/PNG。' },
+      tooltip: { en: 'A professional photo makes your SRA profile more credible and approachable to potential employers.', de: '[DE] A professional photo makes your SRA profile more credible and approachable to potential employers.', fr: '[FR] A professional photo makes your SRA profile more credible and approachable to potential employers.', it: '[IT] A professional photo makes your SRA profile more credible and approachable to potential employers.', 'zh-TW': '[ZH] A professional photo makes your SRA profile more credible and approachable to potential employers.' },
     }),
     fd('position_type_sought', { en: 'Type of position sought', de: 'Art der gesuchten Stelle', fr: 'Type de poste recherché', it: 'Tipo di posizione cercata', 'zh-TW': '尋求的職位類型' }, 'multi-select', 'resume', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
@@ -777,17 +827,20 @@ function getDefaultFieldDefinitions() {
         { value: 'c_permit', label: { en: 'C Permit', de: 'C-Bewilligung', fr: 'Permis C', it: 'Permesso C', 'zh-TW': 'C 許可' } },
         { value: 'swiss_citizen', label: { en: 'Swiss citizen', de: 'Schweizer Bürger/in', fr: 'Citoyen(ne) suisse', it: 'Cittadino/a svizzero/a', 'zh-TW': '瑞士公民' } },
       ],
+      tooltip: { en: 'Swiss employers need to know your work permit status to understand hiring requirements.', de: '[DE] Swiss employers need to know your work permit status to understand hiring requirements.', fr: '[FR] Swiss employers need to know your work permit status to understand hiring requirements.', it: '[IT] Swiss employers need to know your work permit status to understand hiring requirements.', 'zh-TW': '[ZH] Swiss employers need to know your work permit status to understand hiring requirements.' },
     }),
     fd('expertise_area', { en: 'Field(s) of experience', de: 'Erfahrungsbereiche', fr: 'Domaine(s) d\'expérience', it: 'Aree di esperienza', 'zh-TW': '經驗領域' }, 'multi-select', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 10,
       categoryFilter: ['individual'],
       options: roboticsExpertiseAreas(),
       helpText: { en: 'Select your areas of expertise in robotics.', de: 'Wählen Sie Ihre Fachgebiete in der Robotik.', fr: 'Sélectionnez vos domaines d\'expertise en robotique.', it: 'Seleziona le tue aree di competenza nella robotica.', 'zh-TW': '請選擇您在機器人領域的專業範疇。' },
+      tooltip: { en: 'Select your robotics expertise areas to appear in relevant search results on swiss-robotics.org.', de: '[DE] Select your robotics expertise areas to appear in relevant search results on swiss-robotics.org.', fr: '[FR] Select your robotics expertise areas to appear in relevant search results on swiss-robotics.org.', it: '[IT] Select your robotics expertise areas to appear in relevant search results on swiss-robotics.org.', 'zh-TW': '[ZH] Select your robotics expertise areas to appear in relevant search results on swiss-robotics.org.' },
     }),
     fd('sub_expertise', { en: 'Sub-areas of expertise', de: 'Unterbereiche', fr: 'Sous-domaines d\'expertise', it: 'Sotto-aree di competenza', 'zh-TW': '專業子領域' }, 'multi-select', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 11,
       categoryFilter: ['individual'],
       helpText: { en: 'Specify more detailed sub-areas if applicable.', de: 'Geben Sie bei Bedarf detailliertere Unterbereiche an.', fr: 'Précisez les sous-domaines si applicable.', it: 'Specifica sotto-aree più dettagliate se applicabile.', 'zh-TW': '如適用，請指定更詳細的子領域。' },
+      tooltip: { en: 'Narrow down your expertise to specific sub-areas for more targeted employer matches.', de: '[DE] Narrow down your expertise to specific sub-areas for more targeted employer matches.', fr: '[FR] Narrow down your expertise to specific sub-areas for more targeted employer matches.', it: '[IT] Narrow down your expertise to specific sub-areas for more targeted employer matches.', 'zh-TW': '[ZH] Narrow down your expertise to specific sub-areas for more targeted employer matches.' },
     }),
     fd('skills_tools', { en: 'Skills & Tools', de: 'Fähigkeiten & Werkzeuge', fr: 'Compétences & Outils', it: 'Competenze & Strumenti', 'zh-TW': '技能與工具' }, 'multi-select', 'resume', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 12,
@@ -855,11 +908,13 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 0,
       categoryFilter: ['legal'],
       defaultValue: true,
+      tooltip: { en: 'Creates a directory listing for your organization on swiss-robotics.org, visible to all SRA members.', de: '[DE] Creates a directory listing for your organization on swiss-robotics.org, visible to all SRA members.', fr: '[FR] Creates a directory listing for your organization on swiss-robotics.org, visible to all SRA members.', it: '[IT] Creates a directory listing for your organization on swiss-robotics.org, visible to all SRA members.', 'zh-TW': '[ZH] Creates a directory listing for your organization on swiss-robotics.org, visible to all SRA members.' },
     }),
     fd('create_map_listing', { en: 'Create listing on Swiss Robotics Map', de: 'Eintrag auf der Swiss Robotics Map erstellen', fr: 'Créer une entrée sur la Swiss Robotics Map', it: 'Crea un\'inserzione sulla Swiss Robotics Map', 'zh-TW': '在瑞士機器人地圖建立據點' }, 'yes-no', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 1,
       categoryFilter: ['legal'],
       defaultValue: true,
+      tooltip: { en: 'Adds a pin for your organization on the Swiss Robotics Map — an interactive directory of the robotics ecosystem.', de: '[DE] Adds a pin for your organization on the Swiss Robotics Map — an interactive directory of the robotics ecosystem.', fr: '[FR] Adds a pin for your organization on the Swiss Robotics Map — an interactive directory of the robotics ecosystem.', it: '[IT] Adds a pin for your organization on the Swiss Robotics Map — an interactive directory of the robotics ecosystem.', 'zh-TW': '[ZH] Adds a pin for your organization on the Swiss Robotics Map — an interactive directory of the robotics ecosystem.' },
     }),
     fd('org_profile_visibility', { en: 'Make profile public immediately?', de: 'Profil sofort veröffentlichen?', fr: 'Rendre le profil public immédiatement ?', it: 'Rendere il profilo pubblico immediatamente?', 'zh-TW': '立即公開個人檔案？' }, 'radio', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 2,
@@ -868,6 +923,7 @@ function getDefaultFieldDefinitions() {
         { value: 'publish', label: { en: 'Yes — publish now', de: 'Ja — jetzt veröffentlichen', fr: 'Oui — publier maintenant', it: 'Sì — pubblica ora', 'zh-TW': '是 — 立即發佈' } },
         { value: 'draft', label: { en: 'No — save as draft pending review', de: 'Nein — als Entwurf speichern', fr: 'Non — enregistrer comme brouillon', it: 'No — salva come bozza', 'zh-TW': '否 — 儲存為草稿待審核' } },
       ],
+      tooltip: { en: 'Choose whether your listing goes live immediately or stays as a draft for review first.', de: '[DE] Choose whether your listing goes live immediately or stays as a draft for review first.', fr: '[FR] Choose whether your listing goes live immediately or stays as a draft for review first.', it: '[IT] Choose whether your listing goes live immediately or stays as a draft for review first.', 'zh-TW': '[ZH] Choose whether your listing goes live immediately or stays as a draft for review first.' },
     }),
 
     // ── Org Identity ────────────────────────────────────────
@@ -892,6 +948,7 @@ function getDefaultFieldDefinitions() {
         { value: 'ngo', label: { en: 'NGO / Non-profit', de: 'NGO / Non-Profit', fr: 'ONG / Association', it: 'ONG / Non-profit', 'zh-TW': 'NGO / 非營利組織' } },
         { value: 'government', label: { en: 'Government / Public', de: 'Staat / Öffentlich', fr: 'Gouvernement / Public', it: 'Governo / Pubblico', 'zh-TW': '政府 / 公家機關' } },
       ],
+      tooltip: { en: 'Helps categorize your organization in the SRA directory and determines which filters visitors can use to find you.', de: '[DE] Helps categorize your organization in the SRA directory and determines which filters visitors can use to find you.', fr: '[FR] Helps categorize your organization in the SRA directory and determines which filters visitors can use to find you.', it: '[IT] Helps categorize your organization in the SRA directory and determines which filters visitors can use to find you.', 'zh-TW': '[ZH] Helps categorize your organization in the SRA directory and determines which filters visitors can use to find you.' },
     }),
     fd('org_website', { en: 'Organization Website', de: 'Website der Organisation', fr: 'Site web de l\'organisation', it: 'Sito web dell\'organizzazione', 'zh-TW': '組織網站' }, 'url', 'org_profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
@@ -930,6 +987,7 @@ function getDefaultFieldDefinitions() {
     fd('org_description', { en: 'Short Description', de: 'Kurzbeschreibung', fr: 'Description courte', it: 'Descrizione breve', 'zh-TW': '簡短描述' }, 'textarea', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 13,
       categoryFilter: ['legal'],
+      tooltip: { en: 'A short description of your organization shown on your SRA directory listing.', de: '[DE] A short description of your organization shown on your SRA directory listing.', fr: '[FR] A short description of your organization shown on your SRA directory listing.', it: '[IT] A short description of your organization shown on your SRA directory listing.', 'zh-TW': '[ZH] A short description of your organization shown on your SRA directory listing.' },
     }),
     fd('org_logo', { en: 'Organization Logo', de: 'Organisationslogo', fr: 'Logo de l\'organisation', it: 'Logo dell\'organizzazione', 'zh-TW': '組織標誌' }, 'image-upload', 'org_profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 14,
@@ -939,11 +997,13 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 50, widthMobile: 100, sortOrder: 15,
       categoryFilter: ['legal'],
       helpText: { en: 'Describe what your organization offers (products, services, expertise).', de: 'Beschreiben Sie, was Ihre Organisation anbietet.', fr: 'Décrivez ce que votre organisation propose.', it: 'Descrivi ciò che la tua organizzazione offre.', 'zh-TW': '說明您的組織提供的產品、服務或專業。' },
+      tooltip: { en: 'Describe what your organization offers — this is displayed on your directory profile to attract collaborators.', de: '[DE] Describe what your organization offers — this is displayed on your directory profile to attract collaborators.', fr: '[FR] Describe what your organization offers — this is displayed on your directory profile to attract collaborators.', it: '[IT] Describe what your organization offers — this is displayed on your directory profile to attract collaborators.', 'zh-TW': '[ZH] Describe what your organization offers — this is displayed on your directory profile to attract collaborators.' },
     }),
     fd('org_we_seek', { en: 'We are looking for…', de: 'Wir suchen…', fr: 'Nous recherchons…', it: 'Cerchiamo…', 'zh-TW': '我們正在尋找…' }, 'textarea', 'org_profile', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 16,
       categoryFilter: ['legal'],
       helpText: { en: 'Describe what your organization is looking for (partners, talent, etc.).', de: 'Beschreiben Sie, was Ihre Organisation sucht.', fr: 'Décrivez ce que votre organisation recherche.', it: 'Descrivi ciò che la tua organizzazione cerca.', 'zh-TW': '說明您的組織正在尋找的合作夥伴、人才等。' },
+      tooltip: { en: 'Describe what your organization is looking for — partners, talent, or services. Displayed on your directory profile.', de: '[DE] Describe what your organization is looking for — partners, talent, or services. Displayed on your directory profile.', fr: '[FR] Describe what your organization is looking for — partners, talent, or services. Displayed on your directory profile.', it: '[IT] Describe what your organization is looking for — partners, talent, or services. Displayed on your directory profile.', 'zh-TW': '[ZH] Describe what your organization is looking for — partners, talent, or services. Displayed on your directory profile.' },
     }),
 
     // ── Org Taxonomy Mapping (for map filters) ──────────────
@@ -951,20 +1011,24 @@ function getDefaultFieldDefinitions() {
       widthDesktop: 100, widthMobile: 100, sortOrder: 17,
       categoryFilter: ['legal'],
       options: roboticsFieldOptions(),
+      tooltip: { en: 'Select which robotics fields your organization works in. Used for map filters so visitors can discover you.', de: '[DE] Select which robotics fields your organization works in. Used for map filters so visitors can discover you.', fr: '[FR] Select which robotics fields your organization works in. Used for map filters so visitors can discover you.', it: '[IT] Select which robotics fields your organization works in. Used for map filters so visitors can discover you.', 'zh-TW': '[ZH] Select which robotics fields your organization works in. Used for map filters so visitors can discover you.' },
     }),
     fd('org_robotics_subfields', { en: 'Robotics Sub-fields', de: 'Robotik-Unterbereiche', fr: 'Sous-domaines de la robotique', it: 'Sotto-campi della robotica', 'zh-TW': '機器人子領域' }, 'multi-select', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 18,
       categoryFilter: ['legal'],
       options: roboticsSubfieldOptions(),
+      tooltip: { en: 'Specify more detailed sub-fields for finer-grained discoverability on the map.', de: '[DE] Specify more detailed sub-fields for finer-grained discoverability on the map.', fr: '[FR] Specify more detailed sub-fields for finer-grained discoverability on the map.', it: '[IT] Specify more detailed sub-fields for finer-grained discoverability on the map.', 'zh-TW': '[ZH] Specify more detailed sub-fields for finer-grained discoverability on the map.' },
     }),
     fd('org_tags', { en: 'Tags / Keywords', de: 'Tags / Schlüsselwörter', fr: 'Tags / Mots-clés', it: 'Tag / Parole chiave', 'zh-TW': '標籤 / 關鍵字' }, 'multi-select', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 19,
       categoryFilter: ['legal'],
+      tooltip: { en: 'Add keywords so other members can find your organization through search and filters.', de: '[DE] Add keywords so other members can find your organization through search and filters.', fr: '[FR] Add keywords so other members can find your organization through search and filters.', it: '[IT] Add keywords so other members can find your organization through search and filters.', 'zh-TW': '[ZH] Add keywords so other members can find your organization through search and filters.' },
     }),
     fd('org_authorized_rep', { en: 'I confirm I am authorized to represent this organization', de: 'Ich bestätige, dass ich berechtigt bin, diese Organisation zu vertreten', fr: 'Je confirme être autorisé/e à représenter cette organisation', it: 'Confermo di essere autorizzato a rappresentare questa organizzazione', 'zh-TW': '我確認我有權代表此組織' }, 'checkbox', 'org_profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 20,
       categoryFilter: ['legal'],
       validation: { required: true },
+      tooltip: { en: 'Confirms you have the authority to create or manage this organization\'s profile on behalf of the company.', de: '[DE] Confirms you have the authority to create or manage this organization\'s profile on behalf of the company.', fr: '[FR] Confirms you have the authority to create or manage this organization\'s profile on behalf of the company.', it: '[IT] Confirms you have the authority to create or manage this organization\'s profile on behalf of the company.', 'zh-TW': '[ZH] Confirms you have the authority to create or manage this organization\'s profile on behalf of the company.' },
     }),
 
     // ═══════════════════════════════════════════════════════════
@@ -1062,6 +1126,7 @@ function fd(
     options?: Array<{ value: string; label: Record<string, string> }>;
     validation?: Record<string, unknown>;
     helpText?: Record<string, string>;
+    tooltip?: Record<string, string>;
     placeholder?: Record<string, string>;
     defaultValue?: unknown;
     categoryFilter?: string[];
@@ -1081,6 +1146,7 @@ function fd(
     options: opts?.options ?? null,
     validationRules: opts?.validation ?? null,
     helpText: opts?.helpText ?? null,
+    tooltip: opts?.tooltip ?? null,
     placeholder: opts?.placeholder ?? null,
     defaultValue: opts?.defaultValue ?? null,
     categoryFilter: opts?.categoryFilter ?? null,

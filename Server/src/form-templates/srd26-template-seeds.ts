@@ -46,6 +46,7 @@ function f(
     conditions?: Array<{ field: string; operator: string; value: unknown }>;
     options?: Array<{ value: string; label: Record<string, string> }>;
     helpText?: Record<string, string>;
+    tooltip?: Record<string, string>;
     placeholder?: Record<string, string>;
     validation?: Record<string, unknown>;
     documentUrl?: Record<string, string>;
@@ -61,6 +62,7 @@ function f(
     conditions: opts?.conditions,
     options: opts?.options,
     helpText: opts?.helpText,
+    tooltip: opts?.tooltip,
     placeholder: opts?.placeholder,
     validation: opts?.validation,
     documentUrl: opts?.documentUrl,
