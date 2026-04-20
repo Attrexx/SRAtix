@@ -1943,9 +1943,9 @@
     var help = resolveLabel(field.helpText) || '';
     var req = field.required ? ' <span class="sratix-req">*</span>' : '';
     var id = 'sratix-df-' + field.id;
+    var slug = field.slug || field.id;
     var html = '';
     var tooltipHtml = buildTooltipHtml(field);
-    var slug = field.slug || field.id;
 
     switch (field.type) {
       case 'text':
@@ -2002,8 +2002,7 @@
         html = renderCheckboxDropdown(id, field, ph);
         break;
       case 'radio':
-        var radioClasses = 'sratix-radio-group' + (slug === 'attendee_sector' ? ' sratix-sector-picker' : '');
-        html = '<div class="' + radioClasses + '" data-field-id="' + escAttr(field.id) + '">';
+        html = '<div class="sratix-radio-group' + (slug === 'attendee_sector' ? ' sratix-sector-picker' : '') + '" data-field-id="' + escAttr(field.id) + '">';
         (field.options || []).forEach(function (o, idx) {
           var rid = id + '-' + idx;
           html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
