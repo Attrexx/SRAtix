@@ -137,6 +137,7 @@ const sratixI18n = (function () {
       'reg.form.imageUploadError':    'Upload failed: ',
       'reg.form.imageUploadInvalidType': 'Please select an image file.',
       'reg.form.imageUploadTooLarge': 'Image must be under 5 MB.',
+      'reg.form.readHere':           'Read here',
 
       'modal.close':             'Close',
 
@@ -531,6 +532,7 @@ const sratixI18n = (function () {
       'reg.form.imageUploadError':    'Échec du téléchargement : ',
       'reg.form.imageUploadInvalidType': 'Veuillez sélectionner un fichier image.',
       'reg.form.imageUploadTooLarge': 'L\'image ne doit pas dépasser 5 Mo.', 
+      'reg.form.readHere':           'Lire ici',
 
       'modal.close':             'Fermer',
 
@@ -915,6 +917,7 @@ const sratixI18n = (function () {
       'reg.form.imageUploadError':    'Hochladen fehlgeschlagen: ',
       'reg.form.imageUploadInvalidType': 'Bitte wählen Sie eine Bilddatei.',
       'reg.form.imageUploadTooLarge': 'Das Bild darf maximal 5 MB gross sein.',
+      'reg.form.readHere':           'Hier lesen',
 
       'modal.close':             'Schliessen',
 
@@ -1299,6 +1302,7 @@ const sratixI18n = (function () {
       'reg.form.imageUploadError':    'Caricamento fallito: ',
       'reg.form.imageUploadInvalidType': 'Seleziona un file immagine.',
       'reg.form.imageUploadTooLarge': 'L\'immagine non deve superare 5 MB.', 
+      'reg.form.readHere':           'Leggi qui',
 
       'modal.close':             'Chiudi',
 
@@ -1683,6 +1687,7 @@ const sratixI18n = (function () {
       'reg.form.imageUploadError':    '上傳失敗：',
       'reg.form.imageUploadInvalidType': '請選擇圖片檔案。',
       'reg.form.imageUploadTooLarge': '圖片大小不得超過 5 MB。',
+      'reg.form.readHere':           '在此閱讀',
 
       'modal.close':             '關閉',
 

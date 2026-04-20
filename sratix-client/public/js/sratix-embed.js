@@ -2021,7 +2021,7 @@
             html += '<input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(cid) + '" />';
             html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
             html += '</span>';
-            html += '<span class="sratix-toggle-text">' + escHtml(resolveLabel(o.label)) + '</span>';
+            html += '<span class="sratix-toggle-text">' + escHtml(resolveLabel(o.label)) + tooltipHtml + '</span>';
             html += '</label>';
           });
           html += '</div>';
@@ -2031,7 +2031,7 @@
           html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
           html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
           html += '</span>';
-          html += '<span class="sratix-toggle-text">' + escHtml(label) + '</span>';
+          html += '<span class="sratix-toggle-text">' + escHtml(label) + tooltipHtml + '</span>';
           html += '</label>';
         }
         break;
@@ -2059,13 +2059,16 @@
         if (!docUrl && legalPageUrls[field.id]) {
           docUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
         }
-        var consentLabelHtml;
-        if (docUrl) {
-          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
-        } else {
-          consentLabelHtml = escHtml(label);
-        }
-        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + consentLabelHtml + req + '</label>';
+        var consentReadLink = docUrl
+          ? ' <a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + t('reg.form.readHere') + '</a>'
+          : '';
+        html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
+        html += '<span class="sratix-toggle-switch">';
+        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
+        html += '</span>';
+        html += '<span class="sratix-toggle-text">' + escHtml(label) + req + consentReadLink + '</span>';
+        html += '</label>';
         // Consent renders label inline; clear req so it isn't duplicated above
         req = '';
         break;
@@ -2100,14 +2103,9 @@
       ? ' style="flex: 0 0 calc(' + widthPct + '% - 14px); min-width: ' + minW + ';"'
       : '';
 
-    // For consent type, label is already inline (no tooltip needed — they have long inline helpText)
-    if (field.type === 'consent') {
-      return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">' + html + helpHtml + '</div>';
-    }
-
-    // For yes-no, skip the outer <label class="sratix-label"> — the toggle label IS the field label.
-    // Tooltip is already inside the toggle text span for yes-no fields.
-    if (field.type === 'yes-no') {
+    // For consent, checkbox, and yes-no: skip the outer <label class="sratix-label">
+    // — the toggle label IS the field label (tooltip already inside toggle text).
+    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox') {
       return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
         + html + helpHtml
         + '</div>';
