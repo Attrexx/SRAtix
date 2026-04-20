@@ -4369,20 +4369,6 @@
             applyDynamicOverrides(formEl, schemaFields, snap);
           });
           var initSnap6 = collectDynamicAnswers(formEl, schemaFields, {});
-          applyDynamicOverrides(formEl, schemaFields, initSnap6
-          var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
-          applyConditionVisibility(formEl, schemaFields, initSnap);
-          applyDynamicOverrides(formEl, schemaFields, initSnap);
-        } else {
-          formEl.addEventListener('input', function () {
-            var snap = collectDynamicAnswers(formEl, schemaFields, {});
-            applyDynamicOverrides(formEl, schemaFields, snap);
-          });
-          formEl.addEventListener('change', function () {
-            var snap = collectDynamicAnswers(formEl, schemaFields, {});
-            applyDynamicOverrides(formEl, schemaFields, snap);
-          });
-          var initSnap6 = collectDynamicAnswers(formEl, schemaFields, {});
           applyDynamicOverrides(formEl, schemaFields, initSnap6);
         }
 
