@@ -37,9 +37,9 @@ export class FieldRepositoryService implements OnModuleInit {
    */
   async onModuleInit() {
     try {
-      const { created, skipped } = await this.seedDefaults();
-      if (created > 0) {
-        this.logger.log(`Field repository seeded: ${created} created, ${skipped} skipped`);
+      const { created, skipped, updated } = await this.seedDefaults();
+      if (created > 0 || updated > 0) {
+        this.logger.log(`Field repository seeded: ${created} created, ${updated} updated, ${skipped} skipped`);
       } else {
         this.logger.debug(`Field repository up to date (${skipped} fields exist)`);
       }
@@ -197,25 +197,37 @@ export class FieldRepositoryService implements OnModuleInit {
    * Seed the repository with default fields. Idempotent — skips existing slugs.
    * Called by the seed script or manually from the admin.
    */
-  async seedDefaults(): Promise<{ created: number; skipped: number }> {
+  async seedDefaults(): Promise<{ created: number; skipped: number; updated: number }> {
     const defaults = getDefaultFieldDefinitions();
     let created = 0;
     let skipped = 0;
+    let updated = 0;
 
     for (const field of defaults) {
       const existing = await this.prisma.fieldDefinition.findUnique({
         where: { slug: field.slug },
       });
       if (existing) {
-        skipped++;
+        // Update tooltip if it changed (or was added)
+        const seedTooltip = (field as any).tooltip ?? null;
+        const dbTooltip = existing.tooltip ?? null;
+        if (JSON.stringify(seedTooltip) !== JSON.stringify(dbTooltip) && seedTooltip !== null) {
+          await this.prisma.fieldDefinition.update({
+            where: { slug: field.slug },
+            data: { tooltip: seedTooltip },
+          });
+          updated++;
+        } else {
+          skipped++;
+        }
         continue;
       }
       await this.prisma.fieldDefinition.create({ data: field as any });
       created++;
     }
 
-    this.logger.log(`Field repository seeded: ${created} created, ${skipped} skipped`);
-    return { created, skipped };
+    this.logger.log(`Field repository seeded: ${created} created, ${updated} updated, ${skipped} skipped`);
+    return { created, skipped, updated };
   }
 }
 

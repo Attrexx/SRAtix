@@ -3375,9 +3375,11 @@ button.sratix-msd-trigger:focus,
 
 /* ═══════════════════════════════════════════════════════════════
    Tooltip (? icon) — hover on desktop, tap-to-modal on mobile
+   Scoped under parent containers to beat Elementor specificity.
    ═══════════════════════════════════════════════════════════════ */
 
-.sratix-tooltip-wrap {
+.sratix-page-wrap .sratix-tooltip-wrap,
+.sratix-modal .sratix-tooltip-wrap {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
@@ -3385,7 +3387,8 @@ button.sratix-msd-trigger:focus,
 	vertical-align: middle;
 }
 
-.sratix-tooltip-btn {
+.sratix-page-wrap .sratix-tooltip-btn,
+.sratix-modal .sratix-tooltip-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -3404,14 +3407,17 @@ button.sratix-msd-trigger:focus,
 	flex-shrink: 0;
 }
 
-.sratix-tooltip-btn:hover,
-.sratix-tooltip-btn:focus-visible {
+.sratix-page-wrap .sratix-tooltip-btn:hover,
+.sratix-page-wrap .sratix-tooltip-btn:focus-visible,
+.sratix-modal .sratix-tooltip-btn:hover,
+.sratix-modal .sratix-tooltip-btn:focus-visible {
 	color: var(--sratix-text);
 	border-color: var(--sratix-text);
 	outline: none;
 }
 
-.sratix-tooltip-popup {
+.sratix-page-wrap .sratix-tooltip-popup,
+.sratix-modal .sratix-tooltip-popup {
 	display: none;
 	position: absolute;
 	bottom: calc(100% + 8px);
@@ -3434,7 +3440,8 @@ button.sratix-msd-trigger:focus,
 }
 
 /* Caret / arrow pointing down */
-.sratix-tooltip-popup::after {
+.sratix-page-wrap .sratix-tooltip-popup::after,
+.sratix-modal .sratix-tooltip-popup::after {
 	content: '';
 	position: absolute;
 	top: 100%;
@@ -3446,7 +3453,8 @@ button.sratix-msd-trigger:focus,
 
 /* Desktop: show on hover */
 @media (hover: hover) and (pointer: fine) {
-	.sratix-tooltip-wrap:hover .sratix-tooltip-popup {
+	.sratix-page-wrap .sratix-tooltip-wrap:hover .sratix-tooltip-popup,
+	.sratix-modal .sratix-tooltip-wrap:hover .sratix-tooltip-popup {
 		display: block;
 	}
 }
