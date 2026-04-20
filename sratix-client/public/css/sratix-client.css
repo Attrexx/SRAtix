@@ -841,6 +841,70 @@ select.sratix-input.sratix-select-empty {
 	box-shadow: 0 0 0 3px rgba(224, 32, 32, 0.15);
 }
 
+/* ── File / image-upload inputs ── */
+.sratix-file-input {
+	color: var(--sratix-text-muted);
+}
+.sratix-file-input::file-selector-button {
+	background: var(--sratix-navy-mid);
+	color: var(--sratix-text-muted);
+	border: 1px solid var(--sratix-border-h);
+	border-radius: 8px;
+	padding: 6px 14px;
+	margin-right: 12px;
+	font-family: 'Outfit', sans-serif;
+	font-size: 0.9em;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+.sratix-file-input::file-selector-button:hover {
+	background: var(--sratix-navy-light);
+	color: var(--sratix-text);
+}
+.sratix-image-upload-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.sratix-image-upload-row .sratix-file-input {
+	flex: 1;
+	min-width: 0;
+}
+.sratix-image-preview {
+	position: relative;
+	flex-shrink: 0;
+}
+.sratix-image-preview img {
+	width: 44px;
+	height: 44px;
+	object-fit: cover;
+	border-radius: 6px;
+	border: 1px solid var(--sratix-border-h);
+	display: block;
+}
+.sratix-image-remove {
+	position: absolute !important;
+	top: -6px !important;
+	right: -6px !important;
+	width: 20px !important;
+	height: 20px !important;
+	border-radius: 50% !important;
+	background: var(--sratix-red) !important;
+	color: #fff !important;
+	font-size: 14px !important;
+	line-height: 1 !important;
+	padding: 0 !important;
+	border: 2px solid var(--sratix-navy) !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: pointer !important;
+	transition: background 0.15s !important;
+}
+.sratix-image-remove:hover {
+	background: var(--sratix-red-hover) !important;
+}
+
 .sratix-error-msg {
 	color: #f87171;
 	background: rgba(220, 38, 38, 0.1);
