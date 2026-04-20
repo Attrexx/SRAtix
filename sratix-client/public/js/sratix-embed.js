@@ -2001,7 +2001,8 @@
         html = renderCheckboxDropdown(id, field, ph);
         break;
       case 'radio':
-        html = '<div class="sratix-radio-group" data-field-id="' + escAttr(field.id) + '">';
+        var isSector = field.id === 'attendee_sector';
+        html = '<div class="sratix-radio-group' + (isSector ? ' sratix-sector-picker' : '') + '" data-field-id="' + escAttr(field.id) + '">';
         (field.options || []).forEach(function (o, idx) {
           var rid = id + '-' + idx;
           html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
@@ -2110,7 +2111,8 @@
         + '</div>';
     }
 
-    return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
+    var fieldClasses = 'sratix-field sratix-df' + (field.id === 'attendee_sector' ? ' sratix-sector-field' : '');
+    return '<div class="' + fieldClasses + '"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '">'
       + '<label class="sratix-label" for="' + escAttr(id) + '">' + escHtml(label) + req + tooltipHtml + '</label>'
       + html + helpHtml
       + '</div>';

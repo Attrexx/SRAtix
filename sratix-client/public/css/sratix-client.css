@@ -695,6 +695,90 @@ label.sratix-checkbox-label {
 	font-size: 0.9rem;
 }
 
+/* ── Sector picker (attendee_sector) — prominent card-style radio ── */
+.sratix-sector-field {
+	text-align: center;
+	margin-bottom: 20px;
+}
+.sratix-sector-field > .sratix-label {
+	font-size: 1.05em;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--sratix-text);
+	margin-bottom: 10px;
+}
+.sratix-sector-picker {
+	justify-content: center;
+	gap: 10px;
+}
+.sratix-sector-picker .sratix-radio-label {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-width: 140px;
+	padding: 12px 22px;
+	border: 2px solid var(--sratix-border-h);
+	border-radius: 10px;
+	background: var(--sratix-navy-light);
+	color: var(--sratix-text-muted);
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+	user-select: none;
+}
+.sratix-sector-picker .sratix-radio-label:hover {
+	border-color: rgba(255,255,255,0.25);
+	background: var(--sratix-navy-mid);
+	color: var(--sratix-text);
+}
+.sratix-sector-picker .sratix-radio-label:has(input:checked) {
+	border-color: var(--sratix-primary);
+	background: rgba(224,32,32,0.10);
+	color: #fff;
+	box-shadow: 0 0 0 1px var(--sratix-primary), 0 2px 8px rgba(224,32,32,0.18);
+}
+.sratix-sector-picker input[type="radio"] {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 18px;
+	height: 18px;
+	border: 2px solid var(--sratix-border-h);
+	border-radius: 50%;
+	background: transparent;
+	flex-shrink: 0;
+	position: relative;
+	transition: border-color 0.2s, background 0.2s;
+	cursor: pointer;
+	margin: 0;
+}
+.sratix-sector-picker input[type="radio"]:checked {
+	border-color: var(--sratix-primary);
+	background: var(--sratix-primary);
+}
+.sratix-sector-picker input[type="radio"]:checked::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #fff;
+}
+@media (max-width: 480px) {
+	.sratix-sector-picker {
+		flex-direction: column;
+		align-items: center;
+	}
+	.sratix-sector-picker .sratix-radio-label {
+		width: 100%;
+		max-width: 260px;
+	}
+}
+
 /* ── Consent document link ── */
 .sratix-consent-link {
 	color: var(--sratix-accent, #6366f1);
