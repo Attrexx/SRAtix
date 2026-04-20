@@ -67,6 +67,7 @@ export interface FormField {
   helpText?: Record<string, string>;
   tooltip?: Record<string, string>;
   documentUrl?: Record<string, string>;
+  defaultValue?: unknown;
 }
 
 export interface FormSection {

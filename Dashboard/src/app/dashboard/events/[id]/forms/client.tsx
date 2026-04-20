@@ -60,6 +60,7 @@ interface BuilderField {
   helpText?: Record<string, string>;
   placeholder?: Record<string, string>;
   validationRules?: Record<string, unknown>;
+  defaultValue?: unknown;
 }
 
 interface FormSchema {
@@ -107,6 +108,7 @@ function repoFieldToBuilder(fd: FieldDefinition): BuilderField {
     helpText: fd.helpText,
     placeholder: fd.placeholder,
     validationRules: fd.validationRules,
+    defaultValue: fd.defaultValue,
   };
 }
 
@@ -580,6 +582,38 @@ export default function FormsPage() {
                             {field.slug}
                           </span>
                         )}
+                        {/* Default value control */}
+                        {(['yes-no', 'consent'].includes(field.type) || (field.type === 'checkbox' && (!field.options || field.options.length === 0))) ? (
+                          <label className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            <input
+                              type="checkbox"
+                              checked={field.defaultValue === true || field.defaultValue === 'true'}
+                              onChange={(e) => updateField(idx, { defaultValue: e.target.checked })}
+                            />
+                            {t('forms.defaultValue')}
+                          </label>
+                        ) : (['select', 'radio', 'country', 'canton'].includes(field.type) && field.options && field.options.length > 0) ? (
+                          <select
+                            value={field.defaultValue != null ? String(field.defaultValue) : ''}
+                            onChange={(e) => updateField(idx, { defaultValue: e.target.value || undefined })}
+                            className="rounded px-1.5 py-0.5 text-xs"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+                            title={t('forms.defaultValue')}
+                          >
+                            <option value="">{t('forms.noDefault')}</option>
+                            {(field.options || []).map((o) => (
+                              <option key={o.value} value={o.value}>{resolveLabel(o.label, locale)}</option>
+                            ))}
+                          </select>
+                        ) : !['separator', 'group', 'file', 'image-upload', 'multi-select', 'checkbox'].includes(field.type) ? (
+                          <input
+                            value={field.defaultValue != null ? String(field.defaultValue) : ''}
+                            onChange={(e) => updateField(idx, { defaultValue: e.target.value || undefined })}
+                            placeholder={t('forms.defaultValue')}
+                            className="rounded px-1.5 py-0.5 text-xs"
+                            style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', color: 'var(--color-text)', maxWidth: '120px' }}
+                          />
+                        ) : null}
                         {field.conditions && field.conditions.length > 0 && (
                           <span
                             className="rounded px-1.5 py-0.5 text-[10px] font-medium"

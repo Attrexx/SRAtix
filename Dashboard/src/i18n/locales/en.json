@@ -599,6 +599,8 @@
   "forms.noFieldsYet": "No fields yet. Click \"Add Field\" to start.",
   "forms.fieldLabel": "Field label",
   "forms.required": "Required",
+  "forms.defaultValue": "Default",
+  "forms.noDefault": "No default",
   "forms.active": "Active",
   "forms.inactive": "Inactive",
   "forms.nFormsConfigured": "No forms configured yet.",

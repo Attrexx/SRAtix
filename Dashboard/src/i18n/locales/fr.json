@@ -599,6 +599,8 @@
   "forms.noFieldsYet": "Aucun champ. Cliquez sur « Ajouter un champ » pour commencer.",
   "forms.fieldLabel": "Libellé du champ",
   "forms.required": "Obligatoire",
+  "forms.defaultValue": "Défaut",
+  "forms.noDefault": "Pas de défaut",
   "forms.active": "Actif",
   "forms.inactive": "Inactif",
   "forms.nFormsConfigured": "Aucun formulaire configuré.",

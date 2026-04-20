@@ -599,6 +599,8 @@
   "forms.noFieldsYet": "Noch keine Felder. Klicken Sie auf «Feld hinzufügen».",
   "forms.fieldLabel": "Feldbezeichnung",
   "forms.required": "Erforderlich",
+  "forms.defaultValue": "Standard",
+  "forms.noDefault": "Kein Standard",
   "forms.active": "Aktiv",
   "forms.inactive": "Inaktiv",
   "forms.nFormsConfigured": "Noch keine Formulare konfiguriert.",

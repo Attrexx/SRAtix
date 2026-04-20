@@ -1947,26 +1947,27 @@
     var id = 'sratix-df-' + field.id;
     var html = '';
     var tooltipHtml = buildTooltipHtml(field);
+    var defaultVal = field.defaultValue != null ? field.defaultValue : null;
 
     switch (field.type) {
       case 'text':
       case 'url':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'email':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="email" placeholder="' + escAttr(ph) + '" autocomplete="email" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="email" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' autocomplete="email" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'phone':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="tel" placeholder="' + escAttr(ph) + '" autocomplete="tel" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="tel" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' autocomplete="tel" data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'number':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="number" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="number" placeholder="' + escAttr(ph) + '"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'date':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="date" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="date"' + (defaultVal != null ? ' value="' + escAttr(String(defaultVal)) + '"' : '') + ' data-field-id="' + escAttr(field.id) + '" />';
         break;
       case 'textarea':
-        html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '"></textarea>';
+        html = '<textarea class="sratix-input" id="' + escAttr(id) + '" rows="3" placeholder="' + escAttr(ph) + '" data-field-id="' + escAttr(field.id) + '">' + (defaultVal != null ? escHtml(String(defaultVal)) : '') + '</textarea>';
         break;
       case 'richtext':
         html = '<div class="sratix-richtext-wrap" data-field-id="' + escAttr(field.id) + '">'
@@ -1993,10 +1994,13 @@
       case 'country':
       case 'canton':
         var opts = '<option value="">' + escHtml(ph || t('reg.form.selectPlaceholder')) + '</option>';
+        var hasDefaultSelected = false;
         (field.options || []).forEach(function (o) {
-          opts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
+          var sel = (defaultVal != null && String(defaultVal) === o.value) ? ' selected' : '';
+          if (sel) hasDefaultSelected = true;
+          opts += '<option value="' + escAttr(o.value) + '"' + sel + '>' + escHtml(resolveLabel(o.label)) + '</option>';
         });
-        html = '<select class="sratix-input sratix-select-empty" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
+        html = '<select class="sratix-input' + (hasDefaultSelected ? '' : ' sratix-select-empty') + '" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
         break;
       case 'multi-select':
         // Checkbox dropdown with hierarchy support
@@ -2007,7 +2011,8 @@
         html = '<div class="sratix-radio-group' + (isSector ? ' sratix-sector-picker' : '') + '" data-field-id="' + escAttr(field.id) + '">';
         (field.options || []).forEach(function (o, idx) {
           var rid = id + '-' + idx;
-          html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+          var chk = (defaultVal != null && String(defaultVal) === o.value) ? ' checked' : '';
+          html += '<label class="sratix-radio-label"><input type="radio" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(rid) + '"' + chk + ' /> ' + escHtml(resolveLabel(o.label)) + '</label>';
         });
         html += '</div>';
         break;
@@ -2026,9 +2031,10 @@
           });
           html += '</div>';
         } else {
+          var dfChk = (defaultVal === true || defaultVal === 'true') ? ' checked' : '';
           html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
           html += '<span class="sratix-toggle-switch">';
-          html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+          html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '"' + dfChk + ' />';
           html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
           html += '</span>';
           html += '<span class="sratix-toggle-text">' + escHtml(label) + tooltipHtml + '</span>';
@@ -2045,9 +2051,10 @@
             '<a href="https://swiss-robotics.org/robotics-ecosystem-map/" target="_blank" rel="noopener noreferrer" class="sratix-toggle-link" onclick="event.stopPropagation()">Swiss Robotics Map</a>'
           );
         }
+        var ynChk = (defaultVal === true || defaultVal === 'true') ? ' checked' : '';
         html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
         html += '<span class="sratix-toggle-switch">';
-        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '"' + ynChk + ' />';
         html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
         html += '</span>';
         html += '<span class="sratix-toggle-text">' + toggleLabelText + tooltipHtml + '</span>';

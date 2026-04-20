@@ -599,6 +599,8 @@
   "forms.noFieldsYet": "Nessun campo. Clicca su «Aggiungi campo» per iniziare.",
   "forms.fieldLabel": "Etichetta del campo",
   "forms.required": "Obbligatorio",
+  "forms.defaultValue": "Predefinito",
+  "forms.noDefault": "Nessun predefinito",
   "forms.active": "Attivo",
   "forms.inactive": "Inattivo",
   "forms.nFormsConfigured": "Nessun modulo configurato.",

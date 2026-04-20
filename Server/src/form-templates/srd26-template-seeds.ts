@@ -50,6 +50,7 @@ function f(
     placeholder?: Record<string, string>;
     validation?: Record<string, unknown>;
     documentUrl?: Record<string, string>;
+    defaultValue?: unknown;
   },
 ): FormField {
   return {
@@ -66,6 +67,7 @@ function f(
     placeholder: opts?.placeholder,
     validation: opts?.validation,
     documentUrl: opts?.documentUrl,
+    defaultValue: opts?.defaultValue,
   };
 }
 
