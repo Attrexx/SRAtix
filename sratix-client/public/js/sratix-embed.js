@@ -2510,8 +2510,10 @@
   }
 
   function applyDynamicOverrides(form, fields, answers) {
+    console.log('[SRAtix] applyDynamicOverrides v0.10.1 — fields count:', fields.length);
     // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
     var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia']);
+    console.log('[SRAtix] sectorRef:', sectorRef ? sectorRef.id : 'NOT FOUND', '| sector value:', sectorRef ? answers[sectorRef.id] : 'N/A');
     var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
     var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
     var orgProfRef   = resolveFieldByType(form, fields, 'create_org_profile', 'yes-no', 'profile');
