@@ -1978,16 +1978,28 @@
         html += '</div>';
         break;
       case 'checkbox':
-        html = '<div class="sratix-checkbox-group" data-field-id="' + escAttr(field.id) + '">';
         if (field.options && field.options.length > 0) {
+          html = '<div class="sratix-checkbox-group sratix-toggle-group" data-field-id="' + escAttr(field.id) + '">';
           field.options.forEach(function (o, idx) {
             var cid = id + '-' + idx;
-            html += '<label class="sratix-checkbox-label"><input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(cid) + '" /> ' + escHtml(resolveLabel(o.label)) + '</label>';
+            html += '<label class="sratix-toggle-label" for="' + escAttr(cid) + '">';
+            html += '<span class="sratix-toggle-switch">';
+            html += '<input type="checkbox" name="' + escAttr(id) + '" value="' + escAttr(o.value) + '" id="' + escAttr(cid) + '" />';
+            html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
+            html += '</span>';
+            html += '<span class="sratix-toggle-text">' + escHtml(resolveLabel(o.label)) + '</span>';
+            html += '</label>';
           });
+          html += '</div>';
         } else {
-          html += '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + escHtml(label) + '</label>';
+          html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
+          html += '<span class="sratix-toggle-switch">';
+          html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+          html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
+          html += '</span>';
+          html += '<span class="sratix-toggle-text">' + escHtml(label) + '</span>';
+          html += '</label>';
         }
-        html += '</div>';
         break;
       case 'yes-no':
         html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
@@ -3572,13 +3584,16 @@
           if (rt) data['df_' + fid] = rt.innerHTML;
           return;
         }
-        if (inp.type === 'checkbox' && inp.closest('.sratix-toggle-switch')) {
-          // Toggle (yes-no)
-          data['df_' + fid] = inp.checked ? 'yes' : 'no';
-        } else if (inp.type === 'checkbox') {
-          // Multi-checkbox — collect all checked
-          var checked = wrap.querySelectorAll('input[type="checkbox"]:checked');
-          data['df_' + fid] = Array.from(checked).map(function (c) { return c.value; });
+        if (inp.type === 'checkbox') {
+          var allCbs = wrap.querySelectorAll('input[type="checkbox"]');
+          if (allCbs.length > 1) {
+            // Multi-checkbox (toggle group) — collect all checked values
+            var checked = wrap.querySelectorAll('input[type="checkbox"]:checked');
+            data['df_' + fid] = Array.from(checked).map(function (c) { return c.value; });
+          } else {
+            // Single toggle (yes-no or lone checkbox)
+            data['df_' + fid] = inp.checked ? 'yes' : 'no';
+          }
         } else if (inp.type === 'radio') {
           var sel = wrap.querySelector('input[type="radio"]:checked');
           data['df_' + fid] = sel ? sel.value : '';
