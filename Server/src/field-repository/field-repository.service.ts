@@ -338,7 +338,6 @@ function getDefaultFieldDefinitions() {
     // ── Profile Fields ───────────────────────────────────────
     fd('attendee_sector', { en: 'I represent…', de: 'Ich vertrete…', fr: 'Je représente…', it: 'Rappresento…', 'zh-TW': '我代表…' }, 'radio', 'profile', {
       widthDesktop: 100, widthMobile: 100, sortOrder: -1,
-      defaultValue: 'industry',
       options: [
         { value: 'industry', label: { en: 'Industry', de: 'Industrie', fr: 'Industrie', it: 'Industria', 'zh-TW': '產業界' } },
         { value: 'academia', label: { en: 'Academia', de: 'Wissenschaft', fr: 'Académie', it: 'Accademia', 'zh-TW': '學術界' } },
