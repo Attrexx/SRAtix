@@ -1323,6 +1323,7 @@
 
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
+      initImageUploads(formEl);
     }
 
     // ── Restore draft values (overrides WP prefill if user previously entered data) ──
@@ -2014,6 +2015,16 @@
         req = '';
         break;
       case 'image-upload':
+        html = '<div class="sratix-image-upload" id="' + escAttr(id) + '-wrap" data-field-id="' + escAttr(field.id) + '">'
+          + '<input class="sratix-input" id="' + escAttr(id) + '" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-field-id="' + escAttr(field.id) + '" />'
+          + '<div class="sratix-image-preview" id="' + escAttr(id) + '-preview" style="display:none;">'
+          + '<img id="' + escAttr(id) + '-img" alt="Preview" style="max-width:120px;max-height:120px;border-radius:6px;margin-top:6px;" />'
+          + '<button type="button" class="sratix-image-remove" id="' + escAttr(id) + '-remove" title="Remove">&times;</button>'
+          + '</div>'
+          + '<div class="sratix-image-status" id="' + escAttr(id) + '-status" style="display:none;font-size:0.85em;margin-top:4px;"></div>'
+          + '<input type="hidden" id="' + escAttr(id) + '-url" value="" />'
+          + '</div>';
+        break;
       case 'file':
         html = '<input class="sratix-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
         break;
@@ -2105,7 +2116,9 @@
           break;
         case 'file':
         case 'image-upload':
-          // File uploads not supported in public widget — skip
+          // Read the URL stored by the upload handler
+          var urlInput = form.querySelector('#' + CSS.escape(id) + '-url');
+          result[field.id] = urlInput ? urlInput.value : '';
           break;
         case 'richtext':
           el = form.querySelector('#' + CSS.escape(id));
@@ -2124,6 +2137,81 @@
       }
     });
     return result;
+  }
+
+  /**
+   * Initialise image-upload fields inside a container.
+   * On file selection, uploads to /api/public/forms/upload-image, shows preview,
+   * and stores the returned URL in a hidden input for later collection.
+   * @param {HTMLElement} container
+   */
+  function initImageUploads(container) {
+    var wraps = container.querySelectorAll('.sratix-image-upload');
+    wraps.forEach(function (wrap) {
+      var fileInput = wrap.querySelector('input[type="file"]');
+      var hiddenUrl = wrap.querySelector('input[type="hidden"]');
+      var preview = wrap.querySelector('.sratix-image-preview');
+      var img = wrap.querySelector('img');
+      var removeBtn = wrap.querySelector('.sratix-image-remove');
+      var status = wrap.querySelector('.sratix-image-status');
+      if (!fileInput || !hiddenUrl) return;
+
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        // Client-side validation
+        if (!file.type.startsWith('image/')) {
+          status.textContent = t('reg.form.imageUploadInvalidType') || 'Please select an image file.';
+          status.style.display = 'block';
+          status.style.color = '#c0392b';
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          status.textContent = t('reg.form.imageUploadTooLarge') || 'Image must be under 5 MB.';
+          status.style.display = 'block';
+          status.style.color = '#c0392b';
+          return;
+        }
+
+        // Show uploading state
+        status.textContent = t('reg.form.imageUploading') || 'Uploading…';
+        status.style.display = 'block';
+        status.style.color = '#666';
+        fileInput.disabled = true;
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        apiFetch('public/forms/upload-image', {
+          method: 'POST',
+          body: formData,
+        }).then(function (res) {
+          hiddenUrl.value = res.url || '';
+          if (img && res.url) {
+            img.src = resolveApiUrl(res.url);
+            preview.style.display = 'flex';
+          }
+          status.textContent = t('reg.form.imageUploadSuccess') || 'Uploaded successfully.';
+          status.style.color = '#27ae60';
+          fileInput.disabled = false;
+        }).catch(function (err) {
+          status.textContent = (t('reg.form.imageUploadError') || 'Upload failed: ') + (err.message || 'unknown error');
+          status.style.color = '#c0392b';
+          hiddenUrl.value = '';
+          fileInput.disabled = false;
+        });
+      });
+
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+          hiddenUrl.value = '';
+          fileInput.value = '';
+          preview.style.display = 'none';
+          status.style.display = 'none';
+        });
+      }
+    });
   }
 
   /**
@@ -2402,6 +2490,7 @@
       // Initialize richtext editors and multi-select dropdowns
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
+      initImageUploads(formEl);
     }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -2865,6 +2954,7 @@
       if (currentStep === 2) {
         initRichtextEditors(modal);
         initMultiSelectDropdowns(modal);
+        initImageUploads(modal);
         // Restore previously collected answers
         if (schemaFields) {
           schemaFields.forEach(function (f) {
@@ -3692,8 +3782,9 @@
 
       var formEl = container.querySelector('#sratix-register-form');
 
-      // Initialise multi-select checkbox dropdowns
+      // Initialise multi-select checkbox dropdowns and image uploads
       initMultiSelectDropdowns(container);
+      initImageUploads(container);
 
       // Wire up condition-based visibility if using custom form
       if (useCustomForm && schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
@@ -3980,6 +4071,7 @@
 
         initRichtextEditors(formEl);
         initMultiSelectDropdowns(formEl);
+        initImageUploads(formEl);
       }
 
       formEl.addEventListener('submit', async function(e) {

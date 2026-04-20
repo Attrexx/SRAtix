@@ -132,6 +132,11 @@ const sratixI18n = (function () {
       'reg.form.yes':              'Yes',
       'reg.form.no':               'No',
       'reg.form.fieldRequired':    '{field} is required.',
+      'reg.form.imageUploading':      'Uploading…',
+      'reg.form.imageUploadSuccess':  'Uploaded successfully.',
+      'reg.form.imageUploadError':    'Upload failed: ',
+      'reg.form.imageUploadInvalidType': 'Please select an image file.',
+      'reg.form.imageUploadTooLarge': 'Image must be under 5 MB.',
 
       'modal.close':             'Close',
 
@@ -519,7 +524,12 @@ const sratixI18n = (function () {
       'reg.form.selected':         'sélectionnés',
       'reg.form.yes':              'Oui',
       'reg.form.no':               'Non',
-      'reg.form.fieldRequired':    '{field} est obligatoire.', 
+      'reg.form.fieldRequired':    '{field} est obligatoire.',
+      'reg.form.imageUploading':      'Téléchargement…',
+      'reg.form.imageUploadSuccess':  'Téléchargé avec succès.',
+      'reg.form.imageUploadError':    'Échec du téléchargement : ',
+      'reg.form.imageUploadInvalidType': 'Veuillez sélectionner un fichier image.',
+      'reg.form.imageUploadTooLarge': 'L\'image ne doit pas dépasser 5 Mo.', 
 
       'modal.close':             'Fermer',
 
@@ -898,6 +908,11 @@ const sratixI18n = (function () {
       'reg.form.yes':              'Ja',
       'reg.form.no':               'Nein',
       'reg.form.fieldRequired':    '{field} ist erforderlich.',
+      'reg.form.imageUploading':      'Wird hochgeladen…',
+      'reg.form.imageUploadSuccess':  'Erfolgreich hochgeladen.',
+      'reg.form.imageUploadError':    'Hochladen fehlgeschlagen: ',
+      'reg.form.imageUploadInvalidType': 'Bitte wählen Sie eine Bilddatei.',
+      'reg.form.imageUploadTooLarge': 'Das Bild darf maximal 5 MB gross sein.',
 
       'modal.close':             'Schliessen',
 
@@ -1275,7 +1290,12 @@ const sratixI18n = (function () {
       'reg.form.selected':         'selezionati',
       'reg.form.yes':              'Sì',
       'reg.form.no':               'No',
-      'reg.form.fieldRequired':    '{field} è obbligatorio.', 
+      'reg.form.fieldRequired':    '{field} è obbligatorio.',
+      'reg.form.imageUploading':      'Caricamento…',
+      'reg.form.imageUploadSuccess':  'Caricato con successo.',
+      'reg.form.imageUploadError':    'Caricamento fallito: ',
+      'reg.form.imageUploadInvalidType': 'Seleziona un file immagine.',
+      'reg.form.imageUploadTooLarge': 'L\'immagine non deve superare 5 MB.', 
 
       'modal.close':             'Chiudi',
 
@@ -1654,6 +1674,11 @@ const sratixI18n = (function () {
       'reg.form.yes':              '是',
       'reg.form.no':               '否',
       'reg.form.fieldRequired':    '{field} 為必填。',
+      'reg.form.imageUploading':      '上傳中…',
+      'reg.form.imageUploadSuccess':  '上傳成功。',
+      'reg.form.imageUploadError':    '上傳失敗：',
+      'reg.form.imageUploadInvalidType': '請選擇圖片檔案。',
+      'reg.form.imageUploadTooLarge': '圖片大小不得超過 5 MB。',
 
       'modal.close':             '關閉',
 

@@ -11,6 +11,10 @@ import {
   evaluateConditions,
 } from '../common/conditions';
 import * as sanitizeHtml from 'sanitize-html';
+import * as sharp from 'sharp';
+import { resolve, join } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
+import { randomBytes } from 'crypto';
 
 /**
  * Supported form field types per PRODUCTION-ARCHITECTURE.md §8.
@@ -485,6 +489,55 @@ export class FormsService {
     });
   }
 
+  // ─── Image Upload (public registration flow) ──────────────────
+
+  /** Allowed MIME types for image uploads. */
+  private static readonly ALLOWED_IMAGE_MIMES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ]);
+
+  /**
+   * Upload and optimize an image for a registration form field.
+   * Stores in /uploads/registrations/{uuid}.webp and returns the public URL.
+   * No auth required — rate-limited by the controller.
+   */
+  async uploadFormImage(
+    fileBuffer: Buffer,
+    mimetype: string,
+    originalName: string,
+  ): Promise<{ url: string }> {
+    if (!FormsService.ALLOWED_IMAGE_MIMES.has(mimetype)) {
+      throw new BadRequestException(
+        'Only image files are accepted (JPEG, PNG, WebP, GIF)',
+      );
+    }
+
+    // Optimize: resize to max 512×512, convert to WebP
+    const optimized = await sharp(fileBuffer)
+      .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const uploadsBase = resolve(__dirname, '..', '..', 'uploads', 'registrations');
+    mkdirSync(uploadsBase, { recursive: true });
+
+    const fileId = randomBytes(16).toString('hex');
+    const filename = `${fileId}.webp`;
+    const filePath = join(uploadsBase, filename);
+    writeFileSync(filePath, optimized);
+
+    const publicUrl = `/uploads/registrations/${filename}`;
+
+    this.logger.log(
+      `Form image uploaded: ${originalName} → ${filename} (${optimized.length} bytes)`,
+    );
+
+    return { url: publicUrl };
+  }
+
   // ─── Validation ───────────────────────────────────────────────
 
   /**
@@ -595,6 +648,21 @@ export class FormsService {
             allowedAttributes: { a: ['href'] },
             allowedSchemes: ['https', 'http', 'mailto'],
           });
+          break;
+        case 'image-upload':
+        case 'file':
+          // Accept URL string from prior upload, or empty string
+          if (typeof value !== 'string') {
+            throw new BadRequestException(
+              `Field '${field.id}' must be a URL string`,
+            );
+          }
+          // Only allow our own /uploads/ paths — prevent arbitrary URL injection
+          if (value !== '' && !value.startsWith('/uploads/')) {
+            throw new BadRequestException(
+              `Field '${field.id}' contains an invalid upload URL`,
+            );
+          }
           break;
       }
 

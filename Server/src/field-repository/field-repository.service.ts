@@ -739,6 +739,11 @@ function getDefaultFieldDefinitions() {
       validation: { maxLength: 500 },
       helpText: { en: 'Max 500 characters. Describe yourself in 2-3 sentences.', de: 'Max. 500 Zeichen. Beschreiben Sie sich in 2-3 Sätzen.', fr: 'Max. 500 caractères. Décrivez-vous en 2-3 phrases.', it: 'Max. 500 caratteri. Descriviti in 2-3 frasi.', 'zh-TW': '最多 500 字元。用 2-3 句話描述自己。' },
     }),
+    fd('personal_photo', { en: 'Personal Photo', de: 'Persönliches Foto', fr: 'Photo personnelle', it: 'Foto personale', 'zh-TW': '個人照片' }, 'image-upload', 'resume', {
+      widthDesktop: 50, widthMobile: 100, sortOrder: 5,
+      categoryFilter: ['individual'],
+      helpText: { en: 'Upload a professional photo for your SRA profile. Max 5 MB, JPG/PNG.', de: 'Laden Sie ein professionelles Foto für Ihr SRA-Profil hoch. Max. 5 MB, JPG/PNG.', fr: 'Téléchargez une photo professionnelle pour votre profil SRA. Max 5 Mo, JPG/PNG.', it: 'Carica una foto professionale per il tuo profilo SRA. Max 5 MB, JPG/PNG.', 'zh-TW': '上傳一張專業照片作為您的 SRA 個人檔案。最大 5 MB，JPG/PNG。' },
+    }),
     fd('position_type_sought', { en: 'Type of position sought', de: 'Art der gesuchten Stelle', fr: 'Type de poste recherché', it: 'Tipo di posizione cercata', 'zh-TW': '尋求的職位類型' }, 'multi-select', 'resume', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
       categoryFilter: ['individual'],

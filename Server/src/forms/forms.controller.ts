@@ -7,7 +7,9 @@ import {
   Param,
   Body,
   Query,
+  Req,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -21,6 +23,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { RateLimit } from '../common/guards/rate-limit.guard';
+import { FastifyRequest } from 'fastify';
 
 // ─── DTOs ───────────────────────────────────────────────────────
 
@@ -201,5 +204,28 @@ export class FormsPublicController {
   @RateLimit({ limit: 30, windowSec: 60 }) // Tighter limit on public submission
   submitForm(@Body() dto: SubmitFormDto) {
     return this.formsService.createSubmission(dto);
+  }
+
+  /**
+   * POST /api/public/forms/upload-image
+   * Upload an image for a registration form field (profile photo, org logo, etc.).
+   * Accepts multipart file, optimizes to WebP, returns the public URL.
+   * No auth required — the file is stored on disk and the URL is submitted
+   * as the field answer alongside the rest of the form data.
+   */
+  @Post('upload-image')
+  @RateLimit({ limit: 10, windowSec: 60 }) // Strict limit — image uploads are heavier
+  async uploadFormImage(@Req() req: FastifyRequest) {
+    const data = await req.file();
+    if (!data) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    if (!data.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are accepted');
+    }
+
+    const buffer = await data.toBuffer();
+    return this.formsService.uploadFormImage(buffer, data.mimetype, data.filename);
   }
 }
