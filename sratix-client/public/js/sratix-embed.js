@@ -2414,12 +2414,6 @@
     el.style.minWidth = '140px';
   }
 
-  }
-  function setFieldFlex(el, pct) {
-    el.style.flex = '0 0 calc(' + pct + '% - 14px)';
-    el.style.minWidth = '140px';
-  }
-
   // ─── Dynamic field overrides (sector, map-listing, org_authorized_rep) ───────
 
   /** Industry department option values (must match field-repository.service.ts). */
@@ -4362,6 +4356,20 @@
             applyConditionVisibility(formEl, schemaFields, snap);
             applyDynamicOverrides(formEl, schemaFields, snap);
           });
+          var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
+          applyConditionVisibility(formEl, schemaFields, initSnap);
+          applyDynamicOverrides(formEl, schemaFields, initSnap);
+        } else {
+          formEl.addEventListener('input', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyDynamicOverrides(formEl, schemaFields, snap);
+          });
+          formEl.addEventListener('change', function () {
+            var snap = collectDynamicAnswers(formEl, schemaFields, {});
+            applyDynamicOverrides(formEl, schemaFields, snap);
+          });
+          var initSnap6 = collectDynamicAnswers(formEl, schemaFields, {});
+          applyDynamicOverrides(formEl, schemaFields, initSnap6
           var initSnap = collectDynamicAnswers(formEl, schemaFields, {});
           applyConditionVisibility(formEl, schemaFields, initSnap);
           applyDynamicOverrides(formEl, schemaFields, initSnap);
