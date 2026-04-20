@@ -363,7 +363,7 @@ export class FormsService {
 
     const defsBySlug = new Map<string, { options: unknown; tooltip: unknown; defaultValue: unknown }>();
     for (const fd of fieldDefs) {
-      defsBySlug.set(fd.slug, { options: fd.options, tooltip: fd.tooltip });
+      defsBySlug.set(fd.slug, { options: fd.options, tooltip: fd.tooltip, defaultValue: fd.defaultValue });
     }
 
     // Merge options into the schema fields
