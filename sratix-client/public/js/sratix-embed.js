@@ -1826,6 +1826,15 @@
   }
   function looseEq(a, b) {
     if (a === b) return true;
+    // yes-no <-> boolean
+    if (typeof a === 'string' && typeof b === 'boolean') {
+      if (a === 'yes') return b === true;
+      if (a === 'no') return b === false;
+    }
+    if (typeof b === 'string' && typeof a === 'boolean') {
+      if (b === 'yes') return a === true;
+      if (b === 'no') return a === false;
+    }
     if (typeof a === 'boolean' && typeof b === 'string') return a === (b === 'true');
     if (typeof b === 'boolean' && typeof a === 'string') return b === (a === 'true');
     if (typeof a === 'number' && typeof b === 'string') return a === Number(b);

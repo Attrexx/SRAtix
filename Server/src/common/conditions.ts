@@ -130,10 +130,19 @@ function evaluateRule(
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-/** Loose equality: handles boolean/string coercion (e.g. "true" == true). */
+/** Loose equality: handles boolean/string coercion (e.g. "true" == true, "yes" == true). */
 function looseEquals(a: unknown, b: unknown): boolean {
   if (a === b) return true;
 
+  // yes-no string ↔ boolean
+  if (typeof a === 'string' && typeof b === 'boolean') {
+    if (a === 'yes') return b === true;
+    if (a === 'no') return b === false;
+  }
+  if (typeof b === 'string' && typeof a === 'boolean') {
+    if (b === 'yes') return a === true;
+    if (b === 'no') return a === false;
+  }
   // Boolean ↔ string coercion
   if (typeof a === 'boolean' && typeof b === 'string') {
     return a === (b === 'true');
