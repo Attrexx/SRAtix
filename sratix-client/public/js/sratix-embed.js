@@ -1287,6 +1287,7 @@
     document.body.appendChild(modal);
 
     var formEl = modal.querySelector('#sratix-attendee-form');
+    setSratixFormCtx(formEl, { sraMembership: !!(tt && tt.membershipTier && !flowCtx.membershipOptOut) });
 
     // ── Pre-fill from WP user context ──
     if (!useCustomForm) {
@@ -2115,6 +2116,28 @@
   }
 
   /**
+   * Read virtual/context fields (like `_is_sra_membership_ticket`) from form dataset.
+   * Set via `setSratixFormCtx(formEl, { sraMembership: bool })` at modal creation.
+   */
+  function getVirtualFields(form) {
+    var v = {};
+    if (form && form.dataset) {
+      if (form.dataset.sratixSraMembership != null) {
+        v._is_sra_membership_ticket = form.dataset.sratixSraMembership === 'true';
+      }
+    }
+    return v;
+  }
+
+  /** Set virtual context on a form element for condition evaluation. */
+  function setSratixFormCtx(form, ctx) {
+    if (!form || !form.dataset) return;
+    if (ctx && typeof ctx.sraMembership !== 'undefined') {
+      form.dataset.sratixSraMembership = ctx.sraMembership ? 'true' : 'false';
+    }
+  }
+
+  /**
    * Read all dynamic field values from the modal DOM.
    * @param {HTMLElement} form  The form element
    * @param {Array} fields      Schema fields
@@ -2122,11 +2145,13 @@
    * @returns {Object} answers map keyed by field.id
    */
   function collectDynamicAnswers(form, fields, answers) {
+    var virt = getVirtualFields(form);
+    var condAnswers = Object.assign({}, virt, answers || {});
     var result = {};
     fields.forEach(function (field) {
       if (field.type === 'group') return;
       // Skip conditionally hidden fields
-      if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, answers)) return;
+      if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, condAnswers)) return;
       // Skip fields hidden by client-side logic (e.g. canton when country ≠ CH)
       var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
       if (wrap && wrap.style.display === 'none') return;
@@ -2198,6 +2223,8 @@
         result[field.slug] = result[field.id];
       }
     });
+    // Inject virtual fields so downstream code sees them
+    Object.assign(result, virt);
     return result;
   }
 
@@ -2369,11 +2396,13 @@
    * @param {Object} answers
    */
   function applyConditionVisibility(form, fields, answers) {
+    var virt = getVirtualFields(form);
+    var condAnswers = Object.assign({}, virt, answers || {});
     fields.forEach(function (field) {
       if (!field.conditions || field.conditions.length === 0) return;
       var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
       if (!wrap) return;
-      var visible = evalConditions(field.conditions, answers);
+      var visible = evalConditions(field.conditions, condAnswers);
       wrap.style.display = visible ? '' : 'none';
     });
     applyCantonVisibility(form);
@@ -2510,7 +2539,7 @@
   }
 
   function applyDynamicOverrides(form, fields, answers) {
-    console.log('[SRAtix] applyDynamicOverrides v0.10.1 — fields count:', fields.length);
+    console.log('[SRAtix] applyDynamicOverrides v0.11.0 — sraMem flag:', form && form.dataset && form.dataset.sratixSraMembership);
     // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
     var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia']);
     console.log('[SRAtix] sectorRef:', sectorRef ? sectorRef.id : 'NOT FOUND', '| sector value:', sectorRef ? answers[sectorRef.id] : 'N/A');
@@ -2720,6 +2749,7 @@
     document.body.appendChild(modal);
 
     var formEl = modal.querySelector('#sratix-reg-form');
+    setSratixFormCtx(formEl, { sraMembership: !!(tt && tt.membershipTier && !membershipOptOut) });
 
     // ── Pre-fill from WP user context ──
     if (!useCustomForm) {
@@ -3259,6 +3289,7 @@
           // Wire condition visibility
           if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
             var formEl = modal.querySelector('.sratix-form-fields') || modal;
+            setSratixFormCtx(formEl, { sraMembership: !!(tt && tt.membershipTier) });
             formEl.addEventListener('input', function () {
               var snap = collectDynamicAnswers(formEl, schemaFields, {});
               applyConditionVisibility(formEl, schemaFields, snap);
@@ -3274,6 +3305,7 @@
             applyDynamicOverrides(formEl, schemaFields, initSnap);
           } else if (schemaFields) {
             var formEl = modal.querySelector('.sratix-form-fields') || modal;
+            setSratixFormCtx(formEl, { sraMembership: !!(tt && tt.membershipTier) });
             formEl.addEventListener('input', function () {
               var snap = collectDynamicAnswers(formEl, schemaFields, {});
               applyDynamicOverrides(formEl, schemaFields, snap);
