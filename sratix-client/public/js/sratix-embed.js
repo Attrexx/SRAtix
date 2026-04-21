@@ -2005,7 +2005,7 @@
         (field.options || []).forEach(function (o) {
           opts += '<option value="' + escAttr(o.value) + '">' + escHtml(resolveLabel(o.label)) + '</option>';
         });
-        html = '<select class="sratix-input" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
+        html = '<select class="sratix-input sratix-select-empty" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '">' + opts + '</select>';
         break;
       case 'multi-select':
         // Checkbox dropdown with hierarchy support
@@ -2073,7 +2073,14 @@
         } else {
           consentLabelHtml = escHtml(label);
         }
-        html = '<label class="sratix-checkbox-label"><input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" /> ' + consentLabelHtml + req + '</label>';
+        // Render consent as styled toggle (same markup as yes-no) for visual consistency
+        html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
+        html += '<span class="sratix-toggle-switch">';
+        html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
+        html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
+        html += '</span>';
+        html += '<span class="sratix-toggle-text">' + consentLabelHtml + req + '</span>';
+        html += '</label>';
         // Consent renders label inline; clear req so it isn't duplicated above
         req = '';
         break;
@@ -2089,8 +2096,9 @@
           + '</div>';
         break;
       case 'file':
-        html = '<input class="sratix-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
+        html = '<input class="sratix-input sratix-file-input" id="' + escAttr(id) + '" type="file" data-field-id="' + escAttr(field.id) + '" />';
         break;
+      case 'separator':
       case 'group':
         // Section headers rendered as divider
         html = '<hr class="sratix-section-divider" />';
@@ -2110,8 +2118,8 @@
 
     var slugAttr = field.slug ? ' data-df-slug="' + escAttr(field.slug) + '"' : '';
 
-    // For consent, checkbox, and yes-no: skip the outer field label
-    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox') {
+    // For consent, checkbox, yes-no, separator: skip the outer field label
+    if (field.type === 'consent' || field.type === 'yes-no' || field.type === 'checkbox' || field.type === 'separator') {
       return '<div class="sratix-field sratix-df"' + widthStyle + ' data-df-id="' + escAttr(field.id) + '"' + slugAttr + '>'
         + html + helpHtml
         + '</div>';
@@ -2415,6 +2423,20 @@
       wrap.style.display = visible ? '' : 'none';
     });
     applyCantonVisibility(form);
+    applySelectEmptyClass(form);
+  }
+
+  /**
+   * Toggle `sratix-select-empty` class on <select> elements based on current value.
+   * Used to style the "Select..." placeholder in muted color (matches input placeholder).
+   */
+  function applySelectEmptyClass(form) {
+    if (!form) return;
+    var selects = form.querySelectorAll('select.sratix-input');
+    selects.forEach(function (sel) {
+      if (!sel.value) sel.classList.add('sratix-select-empty');
+      else sel.classList.remove('sratix-select-empty');
+    });
   }
 
   /**
