@@ -2881,26 +2881,47 @@
     return refs;
   }
 
-  function resolveFirstFieldByAliases(form, fields, matcher) {
+  function fieldLooksOrganizationScoped(field) {
+    var slug = ((field && (field.slug || field.id)) || '').toLowerCase();
+    if (slug.indexOf('org_') === 0 || slug.indexOf('organization_') === 0) return true;
+    if (slug.indexOf('_org_') !== -1 || slug.indexOf('_organization_') !== -1) return true;
+
+    var label = getFieldEnglishLabel(field).toLowerCase();
+    return /\b(org|organization|company|institution)\b/.test(label);
+  }
+
+  function resolveFirstFieldByAliases(form, fields, matcher, options) {
+    var preferOrganization = !!(options && options.preferOrganization);
+    var fallback = null;
+
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (!fieldMatchesAnyAlias(field, matcher.slugs, matcher.labels)) continue;
       var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
       if (wrap) {
-        return { id: field.id, wrap: wrap, field: field };
+        if (!preferOrganization) {
+          return { id: field.id, wrap: wrap, field: field };
+        }
+        if (fieldLooksOrganizationScoped(field)) {
+          return { id: field.id, wrap: wrap, field: field };
+        }
+        if (!fallback) {
+          fallback = { id: field.id, wrap: wrap, field: field };
+        }
       }
     }
-    return null;
+
+    return fallback;
   }
 
   function getMapListingRefs(form, fields) {
     return {
       createListing: resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map'),
-      address: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.address),
-      city: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.city),
-      canton: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.canton),
-      latitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.latitude),
-      longitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.longitude),
+      address: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.address, { preferOrganization: true }),
+      city: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.city, { preferOrganization: true }),
+      canton: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.canton, { preferOrganization: true }),
+      latitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.latitude, { preferOrganization: true }),
+      longitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.longitude, { preferOrganization: true }),
     };
   }
 
@@ -2988,7 +3009,31 @@
     if (!form || !refs || !refs.createListing) return;
     var callout = refs.createListing.wrap ? refs.createListing.wrap.querySelector('.sratix-map-listing-callout') : null;
     if (!callout) return;
-    callout.style.display = isMapListingEnabled(refs.createListing) ? '' : 'none';
+    // Callout is an informational pre-check block and should disappear once listing is enabled.
+    callout.style.display = isMapListingEnabled(refs.createListing) ? 'none' : '';
+  }
+
+  function syncMapListingGeocodeVisibility(form, refs) {
+    if (!form || !refs) return;
+    var wrap = refs.city && refs.city.wrap ? refs.city.wrap : (refs.address && refs.address.wrap ? refs.address.wrap : null);
+    if (!wrap) return;
+
+    var hasToggle = !!refs.createListing;
+    var show = hasToggle ? isMapListingEnabled(refs.createListing) : true;
+
+    var action = wrap.querySelector('.sratix-map-geocode-action');
+    var hint = wrap.querySelector('.sratix-map-geocode-hint');
+    var status = wrap.querySelector('.sratix-map-geocode-status');
+
+    if (action) action.style.display = show ? '' : 'none';
+    if (hint) hint.style.display = show ? '' : 'none';
+    if (status) {
+      if (show) {
+        status.style.display = status.classList.contains('is-visible') ? 'block' : '';
+      } else {
+        status.style.display = 'none';
+      }
+    }
   }
 
   function ensureMapListingGeocodeControls(form, refs) {
@@ -3114,18 +3159,21 @@
     }
 
     ensureMapListingGeocodeControls(form, refs);
+    syncMapListingGeocodeVisibility(form, refs);
 
     if (refs.createListing) {
       var toggleControl = getFieldControl(refs.createListing.wrap);
       if (toggleControl && !toggleControl.dataset.sratixMapListingUiBound) {
         var syncVisibility = function () {
           syncMapListingCalloutVisibility(form, refs);
+          syncMapListingGeocodeVisibility(form, refs);
         };
         toggleControl.addEventListener('change', syncVisibility);
         toggleControl.addEventListener('input', syncVisibility);
         toggleControl.dataset.sratixMapListingUiBound = 'true';
       }
       syncMapListingCalloutVisibility(form, refs);
+      syncMapListingGeocodeVisibility(form, refs);
     }
 
     applySelectEmptyClass(form);
