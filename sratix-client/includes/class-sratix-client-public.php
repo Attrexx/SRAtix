@@ -79,6 +79,7 @@ class SRAtix_Client_Public {
 
 		$localize_data = array(
 			'apiUrl'           => esc_url( $api_url ),
+			'ajaxUrl'          => esc_url( admin_url( 'admin-ajax.php' ) ),
 			'eventId'          => sanitize_text_field( $event_id ),
 			'theme'            => $config['theme'] ?? 'light',
 			'primaryColor'     => $config['primaryColor'] ?? '#0073aa',
@@ -87,6 +88,7 @@ class SRAtix_Client_Public {
 			'locale'           => $this->detect_locale(),
 			'memberGateEnabled' => (bool) get_option( 'sratix_client_member_gate_enabled', false ),
 			'sraLogoUrl'       => esc_url( get_option( 'sratix_client_sra_logo_url', '' ) ),
+			'mapListingUi'     => $this->get_map_listing_ui_config(),
 			'membershipPrices' => $this->get_membership_product_prices(),
 			'logoutUrl'        => is_user_logged_in() ? wp_logout_url( home_url() ) : '',
 		);
@@ -116,6 +118,167 @@ class SRAtix_Client_Public {
 		}
 
 		wp_localize_script( 'sratix-client-embed', 'sratixConfig', $localize_data );
+	}
+
+	/**
+	 * AJAX geocode helper for the public registration form.
+	 */
+	public function handle_geocode_request() {
+		if ( ! check_ajax_referer( 'sratix_client_nonce', 'nonce', false ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid request.', 'sratix-client' ) ),
+				403
+			);
+		}
+
+		$address = isset( $_POST['address'] ) ? sanitize_text_field( wp_unslash( $_POST['address'] ) ) : '';
+		$city    = isset( $_POST['city'] ) ? sanitize_text_field( wp_unslash( $_POST['city'] ) ) : '';
+		$canton  = isset( $_POST['canton'] ) ? sanitize_text_field( wp_unslash( $_POST['canton'] ) ) : '';
+
+		if ( '' === $address ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Please add the street address before geolocating.', 'sratix-client' ) ),
+				422
+			);
+		}
+
+		if ( '' === $city || '' === $canton ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Please choose both canton and city before geolocating.', 'sratix-client' ) ),
+				422
+			);
+		}
+
+		$api_key = get_option( 'sra_map_google_api_key', '' );
+		if ( empty( $api_key ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Map geolocation is not configured on this site.', 'sratix-client' ) ),
+				500
+			);
+		}
+
+		$query = implode(
+			', ',
+			array_filter(
+				array(
+					$address,
+					$city,
+					$canton,
+					'Switzerland',
+				)
+			)
+		);
+
+		$url = add_query_arg(
+			array(
+				'address' => rawurlencode( $query ),
+				'region'  => 'ch',
+				'key'     => $api_key,
+			),
+			'https://maps.googleapis.com/maps/api/geocode/json'
+		);
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 12,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error(
+				array( 'message' => sanitize_text_field( $response->get_error_message() ) ),
+				502
+			);
+		}
+
+		$body   = json_decode( wp_remote_retrieve_body( $response ), true );
+		$status = sanitize_text_field( $body['status'] ?? 'UNKNOWN_ERROR' );
+
+		if ( 'OK' !== $status || empty( $body['results'][0]['geometry']['location'] ) ) {
+			$message = ! empty( $body['error_message'] )
+				? sanitize_text_field( $body['error_message'] )
+				: sprintf(
+					/* translators: %s: Google geocoding status */
+					__( 'Geolocation failed with status: %s', 'sratix-client' ),
+					$status
+				);
+
+			wp_send_json_error( array( 'message' => $message ), 422 );
+		}
+
+		$location = $body['results'][0]['geometry']['location'];
+
+		wp_send_json_success(
+			array(
+				'lat'              => number_format( (float) $location['lat'], 6, '.', '' ),
+				'lng'              => number_format( (float) $location['lng'], 6, '.', '' ),
+				'formattedAddress' => sanitize_text_field( $body['results'][0]['formatted_address'] ?? $query ),
+			)
+		);
+	}
+
+	/**
+	 * Build frontend config for map-listing fields.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function get_map_listing_ui_config() {
+		return array(
+			'mapUrl'  => esc_url_raw( home_url( '/robotics-ecosystem-map/' ) ),
+			'cantons' => $this->get_map_taxonomy_options( 'canton' ),
+			'cities'  => $this->get_map_taxonomy_options( 'city' ),
+			'strings' => array(
+				'introTitle'            => __( 'Before you create a new map listing', 'sratix-client' ),
+				'introBody'             => __( 'Please check the Swiss Robotics Map first to see whether your company or institution is already listed. If it is already there, you can skip this section. If it is missing, enable the listing option below, fill in the full address, canton and city, then click "Geolocate" so we can place your marker correctly.', 'sratix-client' ),
+				'mapLinkLabel'          => __( 'Open the Swiss Robotics Map', 'sratix-client' ),
+				'geocodeLabel'          => __( 'Geolocate', 'sratix-client' ),
+				'geocodeHint'           => __( 'Fill in the full address, canton and city, then click "Geolocate". Latitude and longitude stay hidden and will be used automatically for the map entry.', 'sratix-client' ),
+				'geocodePrompt'         => __( 'Please add the street address before geolocating.', 'sratix-client' ),
+				'geocodeLocationPrompt' => __( 'Please choose both canton and city before geolocating.', 'sratix-client' ),
+				'geocodeWorking'        => __( 'Geolocating…', 'sratix-client' ),
+				'geocodeSuccess'        => __( 'Geolocation successful. Coordinates are saved for the map listing.', 'sratix-client' ),
+				'lookupUnavailable'     => __( 'Geolocation is currently unavailable. Please try again in a moment.', 'sratix-client' ),
+				'coordsRequired'        => __( 'Please click "Geolocate" for the map listing before continuing.', 'sratix-client' ),
+				'cantonPlaceholder'     => __( 'Select canton', 'sratix-client' ),
+				'cityPlaceholder'       => __( 'Select city', 'sratix-client' ),
+			),
+		);
+	}
+
+	/**
+	 * Get taxonomy options for runtime dropdown hydration.
+	 *
+	 * @param string $taxonomy Taxonomy slug.
+	 * @return array<int, array<string, string>>
+	 */
+	private function get_map_taxonomy_options( $taxonomy ) {
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			return array();
+		}
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+				'order'      => 'ASC',
+			)
+		);
+
+		if ( is_wp_error( $terms ) || empty( $terms ) ) {
+			return array();
+		}
+
+		$options = array();
+		foreach ( $terms as $term ) {
+			$options[] = array(
+				'value' => (string) $term->slug,
+				'label' => (string) $term->name,
+			);
+		}
+
+		return $options;
 	}
 
 	/*──────────────────────────────────────────────────────────

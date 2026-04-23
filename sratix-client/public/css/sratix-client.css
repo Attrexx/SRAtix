@@ -819,8 +819,65 @@ label.sratix-checkbox-label {
 	gap: 14px;
 }
 
+.sratix-map-listing-callout {
+	margin-top: 12px;
+	padding: 14px 16px;
+	border: 1px solid rgba(255,255,255,0.12);
+	border-radius: 12px;
+	background: rgba(255,255,255,0.04);
+	color: var(--sratix-text-muted);
+	font-size: 0.92rem;
+	line-height: 1.55;
+}
+
+.sratix-map-listing-callout strong {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--sratix-text);
+	font-weight: 700;
+}
+
+.sratix-map-listing-callout a {
+	color: var(--sratix-text);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.sratix-map-geocode-row {
+	align-items: center;
+	margin-top: 8px;
+}
+
+.sratix-map-geocode-row .sratix-btn {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+.sratix-map-geocode-status {
+	margin: 8px 0 0;
+	font-size: 0.92rem;
+	line-height: 1.45;
+	color: var(--sratix-text-muted);
+	display: none;
+}
+
+.sratix-map-geocode-status.is-visible {
+	display: block;
+}
+
+.sratix-map-geocode-status.is-success {
+	color: #86efac;
+}
+
+.sratix-map-geocode-status.is-error {
+	color: #fda4af;
+}
+
 @media (max-width: 480px) {
 	.sratix-field-row { flex-direction: column; gap: 0; }
+	.sratix-map-geocode-row .sratix-btn {
+		width: 100%;
+	}
 }
 
 .sratix-input {

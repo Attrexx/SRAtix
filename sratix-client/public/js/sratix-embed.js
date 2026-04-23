@@ -1340,6 +1340,7 @@
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
       initImageUploads(formEl);
+      initMapListingUi(formEl, schemaFields);
     }
 
     // ── Restore draft values (overrides WP prefill if user previously entered data) ──
@@ -1437,6 +1438,10 @@
               return;
             }
           }
+        }
+
+        if (!validateMapListingCoordinates(formEl, schemaFields, answers, errorEl)) {
+          return;
         }
 
         var coreIds = ['first_name', 'firstName', 'last_name', 'lastName', 'email', 'phone', 'company', 'organization'];
@@ -2255,6 +2260,7 @@
         result[field.slug] = result[field.id];
       }
     });
+    injectMapListingGeoAnswers(form, fields, result);
     // Inject virtual fields so downstream code sees them
     Object.assign(result, virt);
     return result;
@@ -2491,6 +2497,116 @@
     el.style.minWidth = '140px';
   }
 
+  var MAP_LISTING_FIELD_MATCHERS = {
+    address: {
+      slugs: ['org_address', 'organization_address', 'organization_address_swiss_hq_or_swiss_branch'],
+      labels: [/\b(org|organization)\b.*\baddress\b/i, /\baddress\b.*\b(swiss|branch|hq)\b/i],
+    },
+    city: {
+      slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland'],
+      labels: [/\b(org|organization)\b.*\bcity\b/i, /\bcity\b.*\b(switzerland|branch)\b/i],
+    },
+    canton: {
+      slugs: ['org_canton'],
+      labels: [/\bcanton\b/i],
+    },
+    latitude: {
+      slugs: ['org_latitude', 'org_lat', 'organization_latitude'],
+      labels: [/\b(latitude|lat)\b/i],
+    },
+    longitude: {
+      slugs: ['org_longitude', 'org_lng', 'organization_longitude'],
+      labels: [/\b(longitude|lng|lon)\b/i],
+    },
+  };
+
+  function getMapListingUiConfig() {
+    return (window.sratixConfig && window.sratixConfig.mapListingUi) || { strings: {}, cantons: [], cities: [] };
+  }
+
+  function getMapListingStrings() {
+    return getMapListingUiConfig().strings || {};
+  }
+
+  function normalizeMapListingValue(value) {
+    return String(value || '').toLowerCase().trim();
+  }
+
+  function getFieldControl(wrap) {
+    return wrap ? wrap.querySelector('input, select, textarea') : null;
+  }
+
+  function findMatchingRuntimeOption(options, currentValue) {
+    var normalizedCurrent = normalizeMapListingValue(currentValue);
+    if (!normalizedCurrent) return '';
+    for (var i = 0; i < options.length; i++) {
+      var option = options[i];
+      if (normalizeMapListingValue(option.value) === normalizedCurrent || normalizeMapListingValue(option.label) === normalizedCurrent) {
+        return option.value;
+      }
+    }
+    return '';
+  }
+
+  function populateRuntimeSelect(selectEl, options, placeholder, currentValue) {
+    if (!selectEl) return;
+
+    var matchedValue = findMatchingRuntimeOption(options, currentValue);
+    var preservedValue = matchedValue || currentValue || '';
+    var preservedLabel = currentValue || '';
+
+    selectEl.innerHTML = '';
+
+    var placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = placeholder || t('reg.form.selectPlaceholder');
+    selectEl.appendChild(placeholderOpt);
+
+    options.forEach(function (option) {
+      var optEl = document.createElement('option');
+      optEl.value = option.value;
+      optEl.textContent = option.label;
+      selectEl.appendChild(optEl);
+    });
+
+    if (preservedValue && !matchedValue) {
+      var customOpt = document.createElement('option');
+      customOpt.value = preservedValue;
+      customOpt.textContent = preservedLabel;
+      selectEl.appendChild(customOpt);
+    }
+
+    selectEl.value = preservedValue;
+  }
+
+  function getReadableFieldValue(control) {
+    if (!control) return '';
+    if (control.tagName === 'SELECT') {
+      var selected = control.options[control.selectedIndex];
+      return selected ? selected.text.trim() : '';
+    }
+    return (control.value || '').trim();
+  }
+
+  function getStoredMapListingCoords(form) {
+    return {
+      lat: form && form.dataset ? (form.dataset.sratixMapLat || '') : '',
+      lng: form && form.dataset ? (form.dataset.sratixMapLng || '') : '',
+    };
+  }
+
+  function setMapListingGeocodeStatus(form, message, kind) {
+    if (!form) return;
+    var statusEl = form.querySelector('.sratix-map-geocode-status');
+    if (!statusEl) return;
+
+    statusEl.textContent = message || '';
+    statusEl.classList.remove('is-error', 'is-success', 'is-visible');
+    if (kind === 'error') statusEl.classList.add('is-error');
+    if (kind === 'success') statusEl.classList.add('is-success');
+    if (message) statusEl.classList.add('is-visible');
+  }
+
   // ─── Dynamic field overrides (sector, map-listing, org_authorized_rep) ───────
 
   /** Industry department option values (must match field-repository.service.ts). */
@@ -2621,6 +2737,267 @@
     });
 
     return refs;
+  }
+
+  function resolveFirstFieldByAliases(form, fields, matcher) {
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      if (!fieldMatchesAnyAlias(field, matcher.slugs, matcher.labels)) continue;
+      var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+      if (wrap) {
+        return { id: field.id, wrap: wrap, field: field };
+      }
+    }
+    return null;
+  }
+
+  function getMapListingRefs(form, fields) {
+    return {
+      createListing: resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map'),
+      address: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.address),
+      city: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.city),
+      canton: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.canton),
+      latitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.latitude),
+      longitude: resolveFirstFieldByAliases(form, fields, MAP_LISTING_FIELD_MATCHERS.longitude),
+    };
+  }
+
+  function hydrateRuntimeSelect(ref, options, placeholder) {
+    if (!ref || !ref.wrap || !options || !options.length) return null;
+
+    var control = getFieldControl(ref.wrap);
+    if (!control) return null;
+
+    var currentValue = control.value || '';
+    var selectEl = control;
+
+    if (control.tagName !== 'SELECT') {
+      selectEl = document.createElement('select');
+      selectEl.id = control.id;
+      selectEl.name = control.name || '';
+      selectEl.className = control.className || 'sratix-input';
+      if (selectEl.className.indexOf('sratix-input') === -1) {
+        selectEl.className += ' sratix-input';
+      }
+      selectEl.setAttribute('data-field-id', control.getAttribute('data-field-id') || ref.id);
+      control.parentNode.replaceChild(selectEl, control);
+    }
+
+    populateRuntimeSelect(selectEl, options, placeholder, currentValue);
+    return selectEl;
+  }
+
+  function setStoredMapListingCoords(form, refs, lat, lng) {
+    if (!form || !form.dataset) return;
+
+    form.dataset.sratixMapLat = lat || '';
+    form.dataset.sratixMapLng = lng || '';
+
+    var latControl = refs && refs.latitude ? getFieldControl(refs.latitude.wrap) : null;
+    var lngControl = refs && refs.longitude ? getFieldControl(refs.longitude.wrap) : null;
+    if (latControl) latControl.value = lat || '';
+    if (lngControl) lngControl.value = lng || '';
+  }
+
+  function clearStoredMapListingCoords(form, refs) {
+    setStoredMapListingCoords(form, refs, '', '');
+  }
+
+  function insertMapListingIntro(ref) {
+    if (!ref || !ref.wrap || ref.wrap.querySelector('.sratix-map-listing-callout')) return;
+
+    var ui = getMapListingUiConfig();
+    var strings = getMapListingStrings();
+    var callout = document.createElement('div');
+    callout.className = 'sratix-map-listing-callout';
+
+    var title = document.createElement('strong');
+    title.textContent = strings.introTitle || 'Before you create a new map listing';
+    callout.appendChild(title);
+
+    var body = document.createElement('p');
+    body.style.margin = '0';
+    body.textContent = strings.introBody || 'Please check the Swiss Robotics Map first to see whether your company or institution is already listed. If it is already there, you can skip this section.';
+    callout.appendChild(body);
+
+    if (ui.mapUrl) {
+      var link = document.createElement('a');
+      link.href = ui.mapUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = strings.mapLinkLabel || 'Open the Swiss Robotics Map';
+      link.style.display = 'inline-block';
+      link.style.marginTop = '8px';
+      callout.appendChild(link);
+    }
+
+    ref.wrap.appendChild(callout);
+  }
+
+  function ensureMapListingGeocodeControls(form, refs) {
+    if (!refs.address || !refs.address.wrap) return;
+
+    var wrap = refs.address.wrap;
+    var input = getFieldControl(wrap);
+    if (!input) return;
+
+    if (!wrap.querySelector('.sratix-map-geocode-row')) {
+      var row = document.createElement('div');
+      row.className = 'sratix-field-row sratix-map-geocode-row';
+
+      input.parentNode.insertBefore(row, input);
+      row.appendChild(input);
+
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sratix-btn sratix-btn--outline';
+      button.textContent = getMapListingStrings().geocodeLabel || 'Geolocate';
+      row.appendChild(button);
+
+      var hint = document.createElement('p');
+      hint.className = 'sratix-field-help';
+      hint.textContent = getMapListingStrings().geocodeHint || 'Fill in the full address, canton and city, then click "Geolocate".';
+      wrap.appendChild(hint);
+
+      var status = document.createElement('p');
+      status.className = 'sratix-map-geocode-status';
+      wrap.appendChild(status);
+
+      button.addEventListener('click', function () {
+        requestMapListingGeocode(form, refs, button);
+      });
+    }
+
+    if (form.dataset.sratixMapGeoBound !== 'true') {
+      [refs.address, refs.city, refs.canton].forEach(function (ref) {
+        var control = ref ? getFieldControl(ref.wrap) : null;
+        if (!control) return;
+        var clearFn = function () {
+          clearStoredMapListingCoords(form, refs);
+          setMapListingGeocodeStatus(form, '', '');
+        };
+        control.addEventListener('input', clearFn);
+        control.addEventListener('change', clearFn);
+      });
+      form.dataset.sratixMapGeoBound = 'true';
+    }
+  }
+
+  async function requestMapListingGeocode(form, refs, button) {
+    var strings = getMapListingStrings();
+    var ajaxUrl = (window.sratixConfig && window.sratixConfig.ajaxUrl) || '';
+
+    var addressControl = refs.address ? getFieldControl(refs.address.wrap) : null;
+    var cityControl = refs.city ? getFieldControl(refs.city.wrap) : null;
+    var cantonControl = refs.canton ? getFieldControl(refs.canton.wrap) : null;
+
+    var address = addressControl ? (addressControl.value || '').trim() : '';
+    var city = getReadableFieldValue(cityControl);
+    var canton = getReadableFieldValue(cantonControl);
+
+    if (!address) {
+      setMapListingGeocodeStatus(form, strings.geocodePrompt || 'Please add the street address before geolocating.', 'error');
+      return;
+    }
+    if (!city || !canton) {
+      setMapListingGeocodeStatus(form, strings.geocodeLocationPrompt || 'Please choose both canton and city before geolocating.', 'error');
+      return;
+    }
+    if (!ajaxUrl) {
+      setMapListingGeocodeStatus(form, strings.lookupUnavailable || 'Geolocation is currently unavailable. Please try again in a moment.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    setMapListingGeocodeStatus(form, strings.geocodeWorking || 'Geolocating…', '');
+
+    try {
+      var requestBody = new FormData();
+      requestBody.append('action', 'sratix_client_geocode');
+      requestBody.append('nonce', (window.sratixConfig && window.sratixConfig.nonce) || '');
+      requestBody.append('address', address);
+      requestBody.append('city', city);
+      requestBody.append('canton', canton);
+
+      var response = await fetch(ajaxUrl, {
+        method: 'POST',
+        body: requestBody,
+        credentials: 'same-origin',
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok || !data || !data.success || !data.data) {
+        throw new Error((data && data.data && data.data.message) || strings.lookupUnavailable || 'Geolocation is currently unavailable.');
+      }
+
+      setStoredMapListingCoords(form, refs, data.data.lat || '', data.data.lng || '');
+      setMapListingGeocodeStatus(form, strings.geocodeSuccess || 'Geolocation successful. Coordinates are saved for the map listing.', 'success');
+    } catch (err) {
+      clearStoredMapListingCoords(form, refs);
+      var baseMessage = strings.lookupUnavailable || 'Geolocation is currently unavailable. Please try again in a moment.';
+      var detail = err && err.message ? (' ' + err.message) : '';
+      setMapListingGeocodeStatus(form, baseMessage + detail, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function initMapListingUi(form, fields) {
+    if (!form || !fields || !fields.length) return;
+
+    var refs = getMapListingRefs(form, fields);
+    var ui = getMapListingUiConfig();
+    var strings = getMapListingStrings();
+
+    if (!refs.createListing && !refs.address) return;
+
+    if (refs.createListing) {
+      insertMapListingIntro(refs.createListing);
+    }
+    if (refs.canton) {
+      hydrateRuntimeSelect(refs.canton, ui.cantons || [], strings.cantonPlaceholder || t('reg.form.selectPlaceholder'));
+    }
+    if (refs.city) {
+      hydrateRuntimeSelect(refs.city, ui.cities || [], strings.cityPlaceholder || t('reg.form.selectPlaceholder'));
+    }
+
+    ensureMapListingGeocodeControls(form, refs);
+    applySelectEmptyClass(form);
+  }
+
+  function injectMapListingGeoAnswers(form, fields, result) {
+    var coords = getStoredMapListingCoords(form);
+    if (!coords.lat || !coords.lng) return;
+
+    var refs = getMapListingRefs(form, fields);
+    result.org_latitude = coords.lat;
+    result.org_longitude = coords.lng;
+    result.org_lat = coords.lat;
+    result.org_lng = coords.lng;
+
+    if (refs.latitude) {
+      result[refs.latitude.id] = coords.lat;
+      if (refs.latitude.field && refs.latitude.field.slug) result[refs.latitude.field.slug] = coords.lat;
+    }
+    if (refs.longitude) {
+      result[refs.longitude.id] = coords.lng;
+      if (refs.longitude.field && refs.longitude.field.slug) result[refs.longitude.field.slug] = coords.lng;
+    }
+  }
+
+  function validateMapListingCoordinates(form, fields, answers, errorEl) {
+    var refs = getMapListingRefs(form, fields);
+    var mapValue = refs.createListing ? answers[refs.createListing.id] : answers.create_map_listing;
+    var mapEnabled = mapValue === true || mapValue === 'true' || mapValue === 'yes';
+    if (!mapEnabled) return true;
+
+    var coords = getStoredMapListingCoords(form);
+    if (coords.lat && coords.lng) return true;
+
+    if (errorEl) {
+      errorEl.textContent = getMapListingStrings().coordsRequired || 'Please click "Geolocate" for the map listing before continuing.';
+      errorEl.style.display = '';
+    }
+    return false;
   }
 
   function applyDynamicOverrides(form, fields, answers) {
@@ -2925,6 +3302,7 @@
       initRichtextEditors(formEl);
       initMultiSelectDropdowns(formEl);
       initImageUploads(formEl);
+      initMapListingUi(formEl, schemaFields);
     }
 
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
@@ -2969,6 +3347,10 @@
               return;
             }
           }
+        }
+
+        if (!validateMapListingCoordinates(formEl, schemaFields, answers, errorEl)) {
+          return;
         }
 
         // Build formData (all answers except the 5 core attendee fields)

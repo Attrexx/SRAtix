@@ -456,6 +456,7 @@ class SRAtix_Control_Webhook {
 
 		// Store additional form data as user meta
 		$this->store_form_data( $user_id, $form_data );
+		$this->maybe_sync_map_entity( $attendee, $form_data, $user_id, $order_id, $order_number, $membership_tier );
 
 		error_log( sprintf(
 			'SRAtix Control [order.paid]: Processed attendee %s (WP user %d, %s, WC order %s)',
@@ -464,6 +465,158 @@ class SRAtix_Control_Webhook {
 			$is_new_user ? 'NEW' : 'existing',
 			$wc_order_id ?: 'none'
 		) );
+	}
+
+	/**
+	 * Create an SRA MAP entity for registrations that opted into map listing creation.
+	 *
+	 * @param array  $attendee        Enriched attendee payload.
+	 * @param array  $form_data       Submitted form answers.
+	 * @param int    $user_id         WordPress user ID.
+	 * @param string $order_id        SRAtix order UUID.
+	 * @param string $order_number    Human-readable order number.
+	 * @param string $membership_tier Original SRAtix membership tier.
+	 * @return void
+	 */
+	private function maybe_sync_map_entity( $attendee, $form_data, $user_id, $order_id, $order_number, $membership_tier ) {
+		if ( ! is_array( $form_data ) || ! SRAtix_Control_Map_Entity_Builder::should_create_map_listing( $form_data ) ) {
+			return;
+		}
+
+		if ( ! function_exists( 'sra_map_create_entity' ) ) {
+			error_log( 'SRAtix Control [order.paid]: Map listing requested but SRA MAP API is unavailable.' );
+			return;
+		}
+
+		$source_key = $this->get_map_entity_source_key( $attendee, $order_id );
+		if ( $this->find_existing_map_entity_by_source( $source_key ) ) {
+			error_log( 'SRAtix Control [order.paid]: Map entity already exists for source ' . $source_key . ', skipping duplicate create.' );
+			return;
+		}
+
+		$entity_data = SRAtix_Control_Map_Entity_Builder::build_entity_payload(
+			is_array( $attendee ) ? $attendee : array(),
+			$form_data,
+			$user_id,
+			$membership_tier
+		);
+
+		$entity_data = $this->normalize_map_entity_payload( $entity_data );
+
+		if ( empty( $entity_data['name'] ) ) {
+			error_log( 'SRAtix Control [order.paid]: Map listing requested but no organization name was available.' );
+			return;
+		}
+
+		if ( ! isset( $entity_data['lat'], $entity_data['lng'] ) ) {
+			error_log( 'SRAtix Control [order.paid]: Map listing requested but coordinates were missing. Entity creation skipped.' );
+			return;
+		}
+
+		$post_id = sra_map_create_entity( $entity_data );
+		if ( is_wp_error( $post_id ) ) {
+			error_log( 'SRAtix Control [order.paid]: Failed to create SRA MAP entity: ' . $post_id->get_error_message() );
+			return;
+		}
+
+		update_post_meta( $post_id, '_sratix_source_key', $source_key );
+		update_post_meta( $post_id, '_sratix_order_id', sanitize_text_field( $order_id ) );
+		update_post_meta( $post_id, '_sratix_order_number', sanitize_text_field( $order_number ) );
+		update_post_meta( $post_id, '_sratix_attendee_id', sanitize_text_field( $attendee['id'] ?? '' ) );
+		update_post_meta( $post_id, '_sratix_actor_id', sanitize_text_field( $attendee['actorId'] ?? '' ) );
+		update_post_meta( $post_id, '_sratix_created_via', 'event_registration' );
+		update_user_meta( $user_id, 'sratix_sra_entity_id', $post_id );
+
+		$mapping_source_id = ! empty( $attendee['id'] ) ? sanitize_text_field( $attendee['id'] ) : '';
+		if ( $mapping_source_id ) {
+			SRAtix_Control_Sync::set_mapping( 'sra_entity', $post_id, 'map_listing', $mapping_source_id );
+		}
+
+		error_log( sprintf(
+			'SRAtix Control [order.paid]: Created SRA MAP entity #%d for attendee %s.',
+			$post_id,
+			sanitize_email( $attendee['email'] ?? '' )
+		) );
+	}
+
+	/**
+	 * Build a stable idempotency key for SRAtix-created map entities.
+	 *
+	 * @param array  $attendee Attendee payload.
+	 * @param string $order_id SRAtix order UUID.
+	 * @return string
+	 */
+	private function get_map_entity_source_key( $attendee, $order_id ) {
+		if ( ! empty( $attendee['id'] ) ) {
+			return 'attendee:' . sanitize_text_field( $attendee['id'] );
+		}
+
+		return 'order:' . sanitize_text_field( $order_id );
+	}
+
+	/**
+	 * Find an existing map entity created from the same SRAtix source.
+	 *
+	 * @param string $source_key Idempotency key.
+	 * @return int
+	 */
+	private function find_existing_map_entity_by_source( $source_key ) {
+		if ( ! post_type_exists( 'sra_entity' ) || empty( $source_key ) ) {
+			return 0;
+		}
+
+		$existing = get_posts( array(
+			'post_type'      => 'sra_entity',
+			'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'meta_key'       => '_sratix_source_key',
+			'meta_value'     => $source_key,
+		) );
+
+		return ! empty( $existing ) ? (int) $existing[0] : 0;
+	}
+
+	/**
+	 * Normalize city/canton values before sending them into SRA MAP.
+	 *
+	 * @param array $entity_data Raw entity payload.
+	 * @return array
+	 */
+	private function normalize_map_entity_payload( $entity_data ) {
+		if ( ! is_array( $entity_data ) ) {
+			return array();
+		}
+
+		if ( ! empty( $entity_data['city'] ) && taxonomy_exists( 'city' ) ) {
+			$city_term = get_term_by( 'slug', sanitize_title( $entity_data['city'] ), 'city' );
+			if ( $city_term && ! is_wp_error( $city_term ) ) {
+				$entity_data['city'] = $city_term->name;
+			}
+		}
+
+		if ( ! empty( $entity_data['canton'] ) && taxonomy_exists( 'canton' ) ) {
+			$canton_term = get_term_by( 'slug', sanitize_title( $entity_data['canton'] ), 'canton' );
+			if ( $canton_term && ! is_wp_error( $canton_term ) ) {
+				$entity_data['canton'] = $canton_term->slug;
+			} else {
+				$matches = get_terms( array(
+					'taxonomy'   => 'canton',
+					'hide_empty' => false,
+					'name'       => sanitize_text_field( $entity_data['canton'] ),
+					'number'     => 1,
+				) );
+				if ( ! is_wp_error( $matches ) && ! empty( $matches ) ) {
+					$entity_data['canton'] = $matches[0]->slug;
+				}
+			}
+		}
+
+		if ( empty( $entity_data['country'] ) ) {
+			$entity_data['country'] = 'ch';
+		}
+
+		return $entity_data;
 	}
 
 	/*──────────────────────────────────────────────────────────

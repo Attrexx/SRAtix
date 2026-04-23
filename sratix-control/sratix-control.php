@@ -36,6 +36,7 @@ require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-loader.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-admin.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-api.php';
+require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-map-entity-builder.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-sync.php';
 require_once SRATIX_CONTROL_DIR . 'includes/class-sratix-control-webhook.php';
 

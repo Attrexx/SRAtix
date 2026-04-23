@@ -43,6 +43,10 @@ class SRAtix_Client {
 
 		// Enqueue frontend assets only on pages with our shortcodes
 		$this->loader->add_action( 'wp_enqueue_scripts', $this->public, 'enqueue_assets' );
+
+		// Public geolocation helper for map-listing fields during checkout.
+		$this->loader->add_action( 'wp_ajax_sratix_client_geocode', $this->public, 'handle_geocode_request' );
+		$this->loader->add_action( 'wp_ajax_nopriv_sratix_client_geocode', $this->public, 'handle_geocode_request' );
 	}
 
 	private function define_webhook_hooks() {
