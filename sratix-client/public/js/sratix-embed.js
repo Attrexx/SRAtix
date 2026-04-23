@@ -2084,8 +2084,8 @@
         req = '';
         break;
       case 'image-upload':
-        html = '<div class="sratix-image-upload" id="' + escAttr(id) + '-wrap" data-field-id="' + escAttr(field.id) + '">'
-          + '<input class="sratix-input" id="' + escAttr(id) + '" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-field-id="' + escAttr(field.id) + '" />'
+        html = '<div class="sratix-image-upload sratix-image-upload-row" id="' + escAttr(id) + '-wrap" data-field-id="' + escAttr(field.id) + '">'
+          + '<input class="sratix-input sratix-file-input" id="' + escAttr(id) + '" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-field-id="' + escAttr(field.id) + '" />'
           + '<div class="sratix-image-preview" id="' + escAttr(id) + '-preview" style="display:none;">'
           + '<img id="' + escAttr(id) + '-img" alt="Preview" style="max-width:120px;max-height:120px;border-radius:6px;margin-top:6px;" />'
           + '<button type="button" class="sratix-image-remove" id="' + escAttr(id) + '-remove" title="Remove">&times;</button>'
@@ -2624,10 +2624,8 @@
   }
 
   function applyDynamicOverrides(form, fields, answers) {
-    console.log('[SRAtix] applyDynamicOverrides v0.11.0 — sraMem flag:', form && form.dataset && form.dataset.sratixSraMembership);
     // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
     var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia']);
-    console.log('[SRAtix] sectorRef:', sectorRef ? sectorRef.id : 'NOT FOUND', '| sector value:', sectorRef ? answers[sectorRef.id] : 'N/A');
     var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
     var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
     var orgOptInRefs = resolveFieldsByAliases(form, fields, [

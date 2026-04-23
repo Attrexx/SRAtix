@@ -66,6 +66,12 @@ class SRAtix_Client_Public {
 			true
 		);
 
+		// Keep jQuery Migrate available if another script needs it, but mute its
+		// startup console banner on SRAtix pages.
+		if ( wp_script_is( 'jquery-migrate', 'registered' ) ) {
+			wp_add_inline_script( 'jquery-migrate', 'jQuery.migrateMute = true;', 'before' );
+		}
+
 		// Pass config to JS
 		$api_url  = get_option( 'sratix_client_api_url', '' );
 		$event_id = get_option( 'sratix_client_event_id', '' );
