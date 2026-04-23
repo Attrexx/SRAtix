@@ -2183,6 +2183,7 @@
    * @returns {Object} answers map keyed by field.id
    */
   function collectDynamicAnswers(form, fields, answers) {
+    var virt = getVirtualFields(form);
     var result = {};
     fields.forEach(function (field) {
       if (!isDynamicFieldVisible(form, field, answers)) return;
@@ -2629,7 +2630,6 @@
     console.log('[SRAtix] sectorRef:', sectorRef ? sectorRef.id : 'NOT FOUND', '| sector value:', sectorRef ? answers[sectorRef.id] : 'N/A');
     var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
     var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
-    var orgProfRef   = resolveFieldByType(form, fields, 'create_org_profile', 'yes-no', 'profile');
     var orgOptInRefs = resolveFieldsByAliases(form, fields, [
       {
         slugs: ['org_authorized_rep'],
@@ -2675,18 +2675,15 @@
 
     if (mapWrap || orgOptInRefs.length > 0) {
       var mapVal = mapRef ? answers[mapRef.id] : undefined;
-      var orgVal = orgProfRef ? answers[orgProfRef.id] : undefined;
       var mapYes = mapVal === true || mapVal === 'true' || mapVal === 'yes';
-      var orgYes = orgVal === true || orgVal === 'true' || orgVal === 'yes';
-      var eitherYes = mapYes || orgYes;
 
       if (mapWrap) {
-        setFieldFlex(mapWrap, eitherYes ? 50 : 100);
+        setFieldFlex(mapWrap, mapYes ? 50 : 100);
       }
       orgOptInRefs.forEach(function (ref) {
-        ref.wrap.style.display = eitherYes ? '' : 'none';
+        ref.wrap.style.display = mapYes ? '' : 'none';
       });
-      if (repWrap && eitherYes) {
+      if (repWrap && mapYes) {
         setFieldFlex(repWrap, 50);
       }
     }

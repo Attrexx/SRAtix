@@ -610,6 +610,68 @@ export class FormsService {
     'firstName', 'lastName',
   ]);
 
+  private static readonly MAP_LISTING_CONDITIONAL_FIELD_SLUGS = new Set([
+    'org_authorized_rep',
+    'org_logo',
+    'org_type',
+    'org_contact_email',
+    'org_email',
+    'organization_email',
+    'organization_contact_email',
+    'org_phone',
+    'organization_phone',
+    'organization_contact_phone',
+    'org_description',
+    'organization_description',
+    'organization_short_description',
+    'org_address',
+    'organization_address',
+    'org_city',
+    'organization_city',
+    'organization_branch_city',
+    'organization_branch_city_in_switzerland',
+    'org_canton',
+    'org_country',
+  ]);
+
+  private static readonly MAP_LISTING_CONDITIONAL_LABEL_PATTERNS = [
+    /authorized.*represent/i,
+    /represent this organization/i,
+    /\b(org|organization)\b.*\blogo\b/i,
+    /\blogo\b.*\b(org|organization)\b/i,
+    /\b(org|organization)\b.*\btype\b/i,
+    /\b(org|organization)\b.*\b(e-?mail|email)\b/i,
+    /\b(org|organization)\b.*\b(phone|telephone)\b/i,
+    /\b(org|organization)\b.*\b(short )?description\b/i,
+    /\b(org|organization)\b.*\baddress\b/i,
+    /\baddress\b.*\b(swiss|branch|hq)\b/i,
+    /\b(org|organization)\b.*\bcity\b/i,
+    /\bcity\b.*\b(switzerland|branch)\b/i,
+  ];
+
+  private isMapListingConditionalField(field: FormField): boolean {
+    const slug = (((field as any).slug as string | undefined) || field.id || '').toLowerCase();
+    if (FormsService.MAP_LISTING_CONDITIONAL_FIELD_SLUGS.has(slug)) {
+      return true;
+    }
+
+    const englishLabel = field.label?.en || '';
+    return FormsService.MAP_LISTING_CONDITIONAL_LABEL_PATTERNS.some((pattern) => pattern.test(englishLabel));
+  }
+
+  private shouldHideForMapListingOptIn(
+    field: FormField,
+    answers: Record<string, unknown>,
+  ): boolean {
+    const mapValue = answers.create_map_listing;
+    if (mapValue === undefined) {
+      return false;
+    }
+
+    const mapEnabled = mapValue === true || mapValue === 'true' || mapValue === 'yes';
+    return !mapEnabled && this.isMapListingConditionalField(field);
+  }
+
   private validateSubmission(
     fields: FormField[],
     answers: Record<string, unknown>,
@@ -618,6 +680,15 @@ export class FormsService {
       // Core attendee fields are handled separately by the registration endpoint
       // and stripped from formData by the frontend — skip their validation here.
       if (FormsService.CORE_ATTENDEE_FIELDS.has(field.id)) continue;
+
+      // Some org profile/map fields are still hidden by client-side display logic
+      // in older schemas, so mirror that visibility rule server-side.
+      if (this.shouldHideForMapListingOptIn(field, answers)) {
+        delete answers[field.id];
+        const fieldSlug = (field as any).slug as string | undefined;
+        if (fieldSlug) delete answers[fieldSlug];
+        continue;
+      }
 
       // Evaluate conditions — if field should be hidden, skip validation
       if (field.conditions && field.conditions.length > 0) {
