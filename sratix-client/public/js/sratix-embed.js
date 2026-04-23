@@ -2062,8 +2062,10 @@
         html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
         html += '<span class="sratix-toggle-track"><span class="sratix-toggle-thumb"></span></span>';
         html += '</span>';
-        html += '<span class="sratix-toggle-text">' + toggleLabelText + tooltipHtml + '</span>';
+        html += '<span class="sratix-toggle-text">' + toggleLabelText + req + tooltipHtml + '</span>';
         html += '</label>';
+        // yes-no renders label inline; clear req so it isn't duplicated above
+        req = '';
         break;
       case 'consent':
         var docUrl = resolveLabel(field.documentUrl) || '';
@@ -2499,23 +2501,23 @@
 
   var MAP_LISTING_FIELD_MATCHERS = {
     address: {
-      slugs: ['org_address', 'organization_address', 'organization_address_swiss_hq_or_swiss_branch'],
+      slugs: ['org_address', 'organization_address', 'organization_address_swiss_hq_or_swiss_branch', 'address'],
       labels: [/\b(org|organization)\b.*\baddress\b/i, /\baddress\b.*\b(swiss|branch|hq)\b/i],
     },
     city: {
-      slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland'],
-      labels: [/\b(org|organization)\b.*\bcity\b/i, /\bcity\b.*\b(switzerland|branch)\b/i],
+      slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland', 'city'],
+      labels: [/\b(org|organization)\b.*\bcity\b/i, /\bcity\b.*\b(switzerland|branch)\b/i, /^city$/i],
     },
     canton: {
-      slugs: ['org_canton'],
+      slugs: ['org_canton', 'canton'],
       labels: [/\bcanton\b/i],
     },
     latitude: {
-      slugs: ['org_latitude', 'org_lat', 'organization_latitude'],
+      slugs: ['org_latitude', 'org_lat', 'organization_latitude', 'latitude', 'lat'],
       labels: [/\b(latitude|lat)\b/i],
     },
     longitude: {
-      slugs: ['org_longitude', 'org_lng', 'organization_longitude'],
+      slugs: ['org_longitude', 'org_lng', 'organization_longitude', 'longitude', 'lng', 'lon'],
       labels: [/\b(longitude|lng|lon)\b/i],
     },
   };
@@ -2690,7 +2692,7 @@
         var f = fields[i];
         if (type && f.type !== type) continue;
         if (labelSubstr) {
-          var lbl = (f.label && (f.label.en || '')) || '';
+          var lbl = getFieldEnglishLabel(f);
           if (lbl.toLowerCase().indexOf(labelSubstr.toLowerCase()) === -1) continue;
         }
         var w = form.querySelector('[data-df-id="' + CSS.escape(f.id) + '"]');
@@ -2701,7 +2703,9 @@
   }
 
   function getFieldEnglishLabel(field) {
-    return (field && field.label && (field.label.en || '')) || '';
+    if (!field || !field.label) return '';
+    if (typeof field.label === 'string') return field.label;
+    return field.label.en || field.label[Object.keys(field.label)[0]] || '';
   }
 
   function fieldMatchesAnyAlias(field, slugAliases, labelPatterns) {
@@ -3035,11 +3039,11 @@
         labels: [/\b(org|organization)\b.*\baddress\b/, /\baddress\b.*\b(swiss|branch|hq)\b/],
       },
       {
-        slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland'],
+        slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland', 'city'],
         labels: [/\b(org|organization)\b.*\bcity\b/, /\bcity\b.*\b(switzerland|branch)\b/],
       },
       {
-        slugs: ['org_canton', 'org_country'],
+        slugs: ['org_canton', 'org_country', 'canton', 'country'],
         labels: [],
       },
     ]);
@@ -3821,6 +3825,7 @@
           var formElCanton = modal.querySelector('.sratix-form-fields') || modal;
           formElCanton.addEventListener('change', function () { applyCantonVisibility(formElCanton); });
           applyCantonVisibility(formElCanton);
+          initMapListingUi(formElCanton, schemaFields);
         }
       }
 
@@ -4683,6 +4688,9 @@
       // Canton: show only when country=CH
       formEl.addEventListener('change', function () { applyCantonVisibility(formEl); });
       applyCantonVisibility(formEl);
+      if (useCustomForm && schemaFields) {
+        initMapListingUi(formEl, schemaFields);
+      }
 
       formEl.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -4966,6 +4974,7 @@
         initRichtextEditors(formEl);
         initMultiSelectDropdowns(formEl);
         initImageUploads(formEl);
+        initMapListingUi(formEl, schemaFields);
       }
 
       formEl.addEventListener('submit', async function(e) {
