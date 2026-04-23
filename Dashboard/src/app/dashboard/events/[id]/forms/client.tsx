@@ -84,6 +84,45 @@ function generateId() {
   return `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function slugifyField(value: string): string {
+  return (value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80);
+}
+
+function normalizeBuilderFields(fields: BuilderField[]): BuilderField[] {
+  const usedSlugs = new Set<string>();
+
+  return fields.map((field) => {
+    const next: BuilderField = { ...field };
+    const preferredLabel = next.label?.en?.trim()
+      || Object.values(next.label || {}).find((value) => value?.trim())
+      || '';
+    const baseSlug = slugifyField(next.slug || preferredLabel);
+
+    if (!baseSlug) {
+      delete next.slug;
+      return next;
+    }
+
+    let uniqueSlug = baseSlug;
+    let suffix = 2;
+    while (usedSlugs.has(uniqueSlug)) {
+      uniqueSlug = `${baseSlug}_${suffix}`;
+      suffix += 1;
+    }
+
+    next.slug = uniqueSlug;
+    usedSlugs.add(uniqueSlug);
+    return next;
+  });
+}
+
 /** Convert a FieldDefinition from the repository into a BuilderField. */
 function repoFieldToBuilder(fd: FieldDefinition): BuilderField {
   // Convert legacy conditionalOn to conditions array
@@ -243,7 +282,9 @@ export default function FormsPage() {
   }, [showBuilder, repoLoaded, repoFields, fields.length, editSchemaId]);
 
   const updateField = (idx: number, patch: Partial<BuilderField>) => {
-    setFields((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
+    setFields((prev) => normalizeBuilderFields(
+      prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)),
+    ));
   };
 
   const removeField = (idx: number) => {
@@ -251,14 +292,14 @@ export default function FormsPage() {
   };
 
   const addFieldFromRepo = (fd: FieldDefinition) => {
-    setFields((prev) => [...prev, repoFieldToBuilder(fd)]);
+    setFields((prev) => normalizeBuilderFields([...prev, repoFieldToBuilder(fd)]));
   };
 
   const addBlankField = () => {
-    setFields((prev) => [
+    setFields((prev) => normalizeBuilderFields([
       ...prev,
       { id: generateId(), type: 'text', label: { en: '' }, required: false, width: 100 },
-    ]);
+    ]));
   };
 
   const resetBuilder = () => {
@@ -275,7 +316,7 @@ export default function FormsPage() {
   const openEditSchema = async (schema: FormSchema) => {
     setEditSchemaId(schema.id);
     setFormName(schema.name);
-    setFields(normalizeFields(schema));
+    setFields(normalizeBuilderFields(normalizeFields(schema)));
     setError('');
     setShowBuilder(true);
     await loadRepo();
@@ -304,9 +345,12 @@ export default function FormsPage() {
     setSaving(true);
     setError('');
     try {
+      const normalizedFields = normalizeBuilderFields(fields);
+      setFields(normalizedFields);
+
       // Stamp each field with its visual order so the embed widget
       // renders them in the exact sequence shown in the builder.
-      const orderedFields = fields.map((f, idx) => ({ ...f, order: idx + 1 }));
+      const orderedFields = normalizedFields.map((f, idx) => ({ ...f, order: idx + 1 }));
       const fieldsPayload = { fields: orderedFields };
       if (editSchemaId) {
         await api.updateFormSchema(editSchemaId, eventId, {

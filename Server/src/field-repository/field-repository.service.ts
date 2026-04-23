@@ -194,7 +194,8 @@ export class FieldRepositoryService implements OnModuleInit {
   }
 
   /**
-   * Seed the repository with default fields. Idempotent — skips existing slugs.
+   * Seed the repository with default fields. Idempotent — creates missing slugs
+   * and syncs selected seeded properties for existing ones.
    * Called by the seed script or manually from the admin.
    */
   async seedDefaults(): Promise<{ created: number; skipped: number; updated: number }> {
@@ -208,13 +209,26 @@ export class FieldRepositoryService implements OnModuleInit {
         where: { slug: field.slug },
       });
       if (existing) {
+        const updates: Record<string, unknown> = {};
+
         // Update tooltip if it changed (or was added)
         const seedTooltip = (field as any).tooltip ?? null;
         const dbTooltip = existing.tooltip ?? null;
         if (JSON.stringify(seedTooltip) !== JSON.stringify(dbTooltip) && seedTooltip !== null) {
+          updates.tooltip = seedTooltip;
+        }
+
+        // Update options if the seeded field gained or changed choices.
+        const seedOptions = (field as any).options ?? null;
+        const dbOptions = existing.options ?? null;
+        if (JSON.stringify(seedOptions) !== JSON.stringify(dbOptions) && seedOptions !== null) {
+          updates.options = seedOptions;
+        }
+
+        if (Object.keys(updates).length > 0) {
           await this.prisma.fieldDefinition.update({
             where: { slug: field.slug },
-            data: { tooltip: seedTooltip },
+            data: updates as any,
           });
           updated++;
         } else {
@@ -603,6 +617,18 @@ function getDefaultFieldDefinitions() {
     }),
     fd('topics_happy_to_talk', { en: 'Topics I\'m happy to talk about', de: 'Themen über die ich spreche', fr: 'Sujets dont j\'aime parler', it: 'Argomenti di cui parlo volentieri', 'zh-TW': '我樂意聊的話題' }, 'multi-select', 'questions', {
       widthDesktop: 100, widthMobile: 100, sortOrder: 4,
+      options: multiOptI18n([
+        { en: 'Robotics applications', de: 'Robotikanwendungen', fr: 'Applications robotiques', it: 'Applicazioni robotiche', 'zh-TW': '機器人應用' },
+        { en: 'AI and autonomy', de: 'KI und Autonomie', fr: 'IA et autonomie', it: 'IA e autonomia', 'zh-TW': '人工智慧與自主系統' },
+        { en: 'Manufacturing and automation', de: 'Fertigung und Automatisierung', fr: 'Fabrication et automatisation', it: 'Produzione e automazione', 'zh-TW': '製造與自動化' },
+        { en: 'Research and academia', de: 'Forschung und Hochschulen', fr: 'Recherche et milieu académique', it: 'Ricerca e mondo accademico', 'zh-TW': '研究與學術界' },
+        { en: 'Startups and entrepreneurship', de: 'Startups und Unternehmertum', fr: 'Startups et entrepreneuriat', it: 'Startup e imprenditorialità', 'zh-TW': '新創與創業' },
+        { en: 'Investment and funding', de: 'Investitionen und Finanzierung', fr: 'Investissement et financement', it: 'Investimenti e finanziamenti', 'zh-TW': '投資與資金' },
+        { en: 'Hiring and careers', de: 'Recruiting und Karriere', fr: 'Recrutement et carrières', it: 'Recruiting e carriere', 'zh-TW': '招募與職涯' },
+        { en: 'Partnerships and collaboration', de: 'Partnerschaften und Zusammenarbeit', fr: 'Partenariats et collaboration', it: 'Partnership e collaborazione', 'zh-TW': '合作夥伴與協作' },
+        { en: 'Swiss robotics ecosystem', de: 'Schweizer Robotik-Ökosystem', fr: 'Écosystème suisse de la robotique', it: 'Ecosistema svizzero della robotica', 'zh-TW': '瑞士機器人生態系' },
+        { en: 'Ethics and regulation', de: 'Ethik und Regulierung', fr: 'Éthique et réglementation', it: 'Etica e regolamentazione', 'zh-TW': '倫理與法規' },
+      ]),
       tooltip: { en: 'Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', de: '[DE] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', fr: '[FR] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', it: '[IT] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.', 'zh-TW': '[ZH] Topics you\'re happy to discuss casually. Shown on your profile to encourage spontaneous conversations.' },
     }),
 

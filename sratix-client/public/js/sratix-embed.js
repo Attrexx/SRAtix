@@ -1426,8 +1426,7 @@
 
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
-          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (!isDynamicFieldVisible(formEl, f, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
             if (val === undefined || val === null || val === ''
@@ -2155,6 +2154,28 @@
   }
 
   /**
+   * Return whether a dynamic field is currently visible to the user.
+   * Hidden fields should not be collected or enforced as required.
+   */
+  function isDynamicFieldVisible(form, field, answers) {
+    if (!field || field.type === 'group') return false;
+
+    var virt = getVirtualFields(form);
+    var condAnswers = Object.assign({}, virt, answers || {});
+
+    if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, condAnswers)) {
+      return false;
+    }
+
+    var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+    if (wrap && wrap.style.display === 'none') {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Read all dynamic field values from the modal DOM.
    * @param {HTMLElement} form  The form element
    * @param {Array} fields      Schema fields
@@ -2162,16 +2183,9 @@
    * @returns {Object} answers map keyed by field.id
    */
   function collectDynamicAnswers(form, fields, answers) {
-    var virt = getVirtualFields(form);
-    var condAnswers = Object.assign({}, virt, answers || {});
     var result = {};
     fields.forEach(function (field) {
-      if (field.type === 'group') return;
-      // Skip conditionally hidden fields
-      if (field.conditions && field.conditions.length > 0 && !evalConditions(field.conditions, condAnswers)) return;
-      // Skip fields hidden by client-side logic (e.g. canton when country ≠ CH)
-      var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
-      if (wrap && wrap.style.display === 'none') return;
+      if (!isDynamicFieldVisible(form, field, answers)) return;
 
       var id = 'sratix-df-' + field.id;
       var el;
@@ -2569,6 +2583,45 @@
     return null;
   }
 
+  function getFieldEnglishLabel(field) {
+    return (field && field.label && (field.label.en || '')) || '';
+  }
+
+  function fieldMatchesAnyAlias(field, slugAliases, labelPatterns) {
+    var slug = ((field && (field.slug || field.id)) || '').toLowerCase();
+    var label = getFieldEnglishLabel(field).toLowerCase();
+
+    if (slugAliases && slugAliases.some(function (alias) { return slug === alias; })) {
+      return true;
+    }
+
+    if (labelPatterns && labelPatterns.some(function (pattern) { return pattern.test(label); })) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function resolveFieldsByAliases(form, fields, matchers) {
+    var refs = [];
+    var seen = {};
+
+    fields.forEach(function (field) {
+      for (var i = 0; i < matchers.length; i++) {
+        var matcher = matchers[i];
+        if (!fieldMatchesAnyAlias(field, matcher.slugs, matcher.labels)) continue;
+        var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+        if (wrap && !seen[field.id]) {
+          refs.push({ id: field.id, wrap: wrap });
+          seen[field.id] = true;
+        }
+        break;
+      }
+    });
+
+    return refs;
+  }
+
   function applyDynamicOverrides(form, fields, answers) {
     console.log('[SRAtix] applyDynamicOverrides v0.11.0 — sraMem flag:', form && form.dataset && form.dataset.sratixSraMembership);
     // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
@@ -2577,12 +2630,50 @@
     var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
     var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
     var orgProfRef   = resolveFieldByType(form, fields, 'create_org_profile', 'yes-no', 'profile');
+    var orgOptInRefs = resolveFieldsByAliases(form, fields, [
+      {
+        slugs: ['org_authorized_rep'],
+        labels: [/authorized.*represent/, /represent this organization/],
+      },
+      {
+        slugs: ['org_logo'],
+        labels: [/\b(org|organization)\b.*\blogo\b/, /\blogo\b.*\b(org|organization)\b/],
+      },
+      {
+        slugs: ['org_type'],
+        labels: [/\b(org|organization)\b.*\btype\b/],
+      },
+      {
+        slugs: ['org_contact_email', 'org_email', 'organization_email', 'organization_contact_email'],
+        labels: [/\b(org|organization)\b.*\b(e-?mail|email)\b/],
+      },
+      {
+        slugs: ['org_phone', 'organization_phone', 'organization_contact_phone'],
+        labels: [/\b(org|organization)\b.*\b(phone|telephone)\b/],
+      },
+      {
+        slugs: ['org_description', 'organization_description', 'organization_short_description'],
+        labels: [/\b(org|organization)\b.*\b(short )?description\b/],
+      },
+      {
+        slugs: ['org_address', 'organization_address'],
+        labels: [/\b(org|organization)\b.*\baddress\b/, /\baddress\b.*\b(swiss|branch|hq)\b/],
+      },
+      {
+        slugs: ['org_city', 'organization_city', 'organization_branch_city', 'organization_branch_city_in_switzerland'],
+        labels: [/\b(org|organization)\b.*\bcity\b/, /\bcity\b.*\b(switzerland|branch)\b/],
+      },
+      {
+        slugs: ['org_canton', 'org_country'],
+        labels: [],
+      },
+    ]);
 
-    // ── 1 & 2: create_map_listing + org_authorized_rep ──────
+    // ── 1 & 2: create_map_listing + org opt-in fields ───────
     var mapWrap = mapRef ? mapRef.wrap : null;
     var repWrap = repRef ? repRef.wrap : null;
 
-    if (mapWrap || repWrap) {
+    if (mapWrap || orgOptInRefs.length > 0) {
       var mapVal = mapRef ? answers[mapRef.id] : undefined;
       var orgVal = orgProfRef ? answers[orgProfRef.id] : undefined;
       var mapYes = mapVal === true || mapVal === 'true' || mapVal === 'yes';
@@ -2592,9 +2683,11 @@
       if (mapWrap) {
         setFieldFlex(mapWrap, eitherYes ? 50 : 100);
       }
-      if (repWrap) {
-        repWrap.style.display = eitherYes ? '' : 'none';
-        if (eitherYes) setFieldFlex(repWrap, 50);
+      orgOptInRefs.forEach(function (ref) {
+        ref.wrap.style.display = eitherYes ? '' : 'none';
+      });
+      if (repWrap && eitherYes) {
+        setFieldFlex(repWrap, 50);
       }
     }
 
@@ -2870,8 +2963,7 @@
         // Validate required fields from schema
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
-          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (!isDynamicFieldVisible(formEl, f, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
             if (val === undefined || val === null || val === ''
@@ -3492,8 +3584,7 @@
         var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
         for (var i = 0; i < schemaFields.length; i++) {
           var f = schemaFields[i];
-          if (f.type === 'group') continue;
-          if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+          if (!isDynamicFieldVisible(formEl, f, answers)) continue;
           if (f.required) {
             var val = answers[f.id];
             if (val === undefined || val === null || val === ''
@@ -4520,8 +4611,7 @@
 
           for (var i = 0; i < schemaFields.length; i++) {
             var f = schemaFields[i];
-            if (f.type === 'group') continue;
-            if (f.conditions && f.conditions.length > 0 && !evalConditions(f.conditions, answers)) continue;
+            if (!isDynamicFieldVisible(formEl, f, answers)) continue;
             if (f.required) {
               var val = answers[f.id];
               if (val === undefined || val === null || val === ''
