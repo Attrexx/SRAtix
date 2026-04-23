@@ -843,14 +843,17 @@ label.sratix-checkbox-label {
 	text-underline-offset: 2px;
 }
 
-.sratix-map-geocode-row {
-	align-items: center;
+.sratix-map-geocode-action {
 	margin-top: 8px;
 }
 
-.sratix-map-geocode-row .sratix-btn {
-	flex: 0 0 auto;
+.sratix-map-geocode-action .sratix-btn {
+	width: 100%;
 	white-space: nowrap;
+}
+
+.sratix-map-geocode-hint {
+	margin-top: 8px;
 }
 
 .sratix-map-geocode-status {
@@ -875,7 +878,7 @@ label.sratix-checkbox-label {
 
 @media (max-width: 480px) {
 	.sratix-field-row { flex-direction: column; gap: 0; }
-	.sratix-map-geocode-row .sratix-btn {
+	.sratix-map-geocode-action .sratix-btn {
 		width: 100%;
 	}
 }

@@ -2838,28 +2838,39 @@
     ref.wrap.appendChild(callout);
   }
 
+  function isMapListingEnabled(ref) {
+    var control = ref ? getFieldControl(ref.wrap) : null;
+    if (!control) return false;
+    if (control.type === 'checkbox') return !!control.checked;
+    var value = normalizeMapListingValue(control.value);
+    return value === 'yes' || value === 'true' || value === '1' || value === 'on';
+  }
+
+  function syncMapListingCalloutVisibility(form, refs) {
+    if (!form || !refs || !refs.createListing) return;
+    var callout = refs.createListing.wrap ? refs.createListing.wrap.querySelector('.sratix-map-listing-callout') : null;
+    if (!callout) return;
+    callout.style.display = isMapListingEnabled(refs.createListing) ? '' : 'none';
+  }
+
   function ensureMapListingGeocodeControls(form, refs) {
-    if (!refs.address || !refs.address.wrap) return;
+    var wrap = refs.city && refs.city.wrap ? refs.city.wrap : (refs.address && refs.address.wrap ? refs.address.wrap : null);
+    if (!wrap) return;
 
-    var wrap = refs.address.wrap;
-    var input = getFieldControl(wrap);
-    if (!input) return;
-
-    if (!wrap.querySelector('.sratix-map-geocode-row')) {
-      var row = document.createElement('div');
-      row.className = 'sratix-field-row sratix-map-geocode-row';
-
-      input.parentNode.insertBefore(row, input);
-      row.appendChild(input);
+    if (!wrap.querySelector('.sratix-map-geocode-action')) {
+      var action = document.createElement('div');
+      action.className = 'sratix-map-geocode-action';
 
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'sratix-btn sratix-btn--outline';
       button.textContent = getMapListingStrings().geocodeLabel || 'Geolocate';
-      row.appendChild(button);
+      action.appendChild(button);
+
+      wrap.appendChild(action);
 
       var hint = document.createElement('p');
-      hint.className = 'sratix-field-help';
+      hint.className = 'sratix-field-help sratix-map-geocode-hint';
       hint.textContent = getMapListingStrings().geocodeHint || 'Fill in the full address, canton and city, then click "Geolocate".';
       wrap.appendChild(hint);
 
@@ -2965,6 +2976,20 @@
     }
 
     ensureMapListingGeocodeControls(form, refs);
+
+    if (refs.createListing) {
+      var toggleControl = getFieldControl(refs.createListing.wrap);
+      if (toggleControl && !toggleControl.dataset.sratixMapListingUiBound) {
+        var syncVisibility = function () {
+          syncMapListingCalloutVisibility(form, refs);
+        };
+        toggleControl.addEventListener('change', syncVisibility);
+        toggleControl.addEventListener('input', syncVisibility);
+        toggleControl.dataset.sratixMapListingUiBound = 'true';
+      }
+      syncMapListingCalloutVisibility(form, refs);
+    }
+
     applySelectEmptyClass(form);
   }
 

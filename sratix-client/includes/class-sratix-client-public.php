@@ -230,7 +230,7 @@ class SRAtix_Client_Public {
 			'cities'  => $this->get_map_taxonomy_options( 'city' ),
 			'strings' => array(
 				'introTitle'            => __( 'Before you create a new map listing', 'sratix-client' ),
-				'introBody'             => __( 'Please check the Swiss Robotics Map first to see whether your company or institution is already listed. If it is already there, you can skip this section. If it is missing, enable the listing option below, fill in the full address, canton and city, then click "Geolocate" so we can place your marker correctly.', 'sratix-client' ),
+				'introBody'             => __( 'Please check the Swiss Robotics Map first to see whether your company or institution is already listed. If it is already there, you can skip this section. If it is missing, enable the listing option above, fill in the full address, canton and city, then click "Geolocate" so we can place your marker correctly.', 'sratix-client' ),
 				'mapLinkLabel'          => __( 'Open the Swiss Robotics Map', 'sratix-client' ),
 				'geocodeLabel'          => __( 'Geolocate', 'sratix-client' ),
 				'geocodeHint'           => __( 'Fill in the full address, canton and city, then click "Geolocate". Latitude and longitude stay hidden and will be used automatically for the map entry.', 'sratix-client' ),
