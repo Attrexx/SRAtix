@@ -1306,6 +1306,8 @@
         if (el) el.value = prefillMap[fid];
       });
 
+      applySchemaDefaults(formEl, schemaFields);
+
       if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
         formEl.addEventListener('input', function () {
           var snap = collectDynamicAnswers(formEl, schemaFields, {});
@@ -2426,6 +2428,8 @@
           trigger.setAttribute('aria-expanded', 'false');
         }
       });
+
+      updateText();
     });
   }
 
@@ -2460,6 +2464,140 @@
       if (!sel.value) sel.classList.add('sratix-select-empty');
       else sel.classList.remove('sratix-select-empty');
     });
+  }
+
+  function getFieldDefaultValue(field) {
+    if (!field) return undefined;
+    if (Object.prototype.hasOwnProperty.call(field, 'defaultValue')) return field.defaultValue;
+    // Backward compatibility for schema payloads that still expose `default`.
+    if (Object.prototype.hasOwnProperty.call(field, 'default')) return field.default;
+    return undefined;
+  }
+
+  function normalizeDefaultBoolean(value) {
+    if (typeof value === 'boolean') return value;
+    if (value && typeof value === 'object' && typeof value.granted === 'boolean') {
+      return value.granted;
+    }
+    if (value === null || value === undefined) return null;
+
+    var normalized = String(value).toLowerCase().trim();
+    if (['yes', 'true', '1', 'on', 'checked', 'granted'].indexOf(normalized) !== -1) return true;
+    if (['no', 'false', '0', 'off', 'unchecked'].indexOf(normalized) !== -1) return false;
+    return null;
+  }
+
+  function normalizeDefaultArray(value) {
+    if (Array.isArray(value)) {
+      return value.map(function (item) { return String(item); });
+    }
+    if (typeof value !== 'string') return null;
+
+    var trimmed = value.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.charAt(0) === '[') {
+      try {
+        var decoded = JSON.parse(trimmed);
+        if (Array.isArray(decoded)) {
+          return decoded.map(function (item) { return String(item); });
+        }
+      } catch (e) {
+        // Ignore malformed JSON and fall back to comma parsing.
+      }
+    }
+
+    return trimmed.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
+  }
+
+  function applySchemaDefaults(form, fields, existingAnswers) {
+    if (!form || !fields || !fields.length) return;
+
+    fields.forEach(function (field) {
+      if (!field || !field.id) return;
+
+      if (existingAnswers && (
+        Object.prototype.hasOwnProperty.call(existingAnswers, field.id)
+        || (field.slug && Object.prototype.hasOwnProperty.call(existingAnswers, field.slug))
+      )) {
+        return;
+      }
+
+      var defaultValue = getFieldDefaultValue(field);
+      if (defaultValue === undefined || defaultValue === null) return;
+
+      var wrap = form.querySelector('[data-df-id="' + CSS.escape(field.id) + '"]');
+      if (!wrap) return;
+
+      if (field.type === 'yes-no' || field.type === 'consent') {
+        var toggle = wrap.querySelector('.sratix-toggle-switch input[type="checkbox"]');
+        var toggleDefault = normalizeDefaultBoolean(defaultValue);
+        if (toggle && toggleDefault !== null) {
+          toggle.checked = toggleDefault;
+        }
+        return;
+      }
+
+      if (field.type === 'checkbox') {
+        var checkboxes = wrap.querySelectorAll('input[type="checkbox"]');
+        if (!checkboxes.length) return;
+
+        if (checkboxes.length === 1) {
+          var singleDefault = normalizeDefaultBoolean(defaultValue);
+          if (singleDefault !== null) {
+            checkboxes[0].checked = singleDefault;
+          } else {
+            checkboxes[0].checked = String(defaultValue) === checkboxes[0].value;
+          }
+          return;
+        }
+
+        var groupDefaults = normalizeDefaultArray(defaultValue);
+        if (groupDefaults === null) return;
+        checkboxes.forEach(function (cb) {
+          cb.checked = groupDefaults.indexOf(cb.value) !== -1;
+        });
+        return;
+      }
+
+      if (field.type === 'multi-select' || (field.type === 'select' && wrap.querySelector('.sratix-msd'))) {
+        var msdChecks = wrap.querySelectorAll('.sratix-msd-panel input[type="checkbox"]');
+        var msdDefaults = normalizeDefaultArray(defaultValue);
+        if (!msdChecks.length || msdDefaults === null) return;
+        msdChecks.forEach(function (cb) {
+          cb.checked = msdDefaults.indexOf(cb.value) !== -1;
+        });
+        return;
+      }
+
+      if (field.type === 'radio') {
+        var radios = wrap.querySelectorAll('input[type="radio"]');
+        if (!radios.length) return;
+        var radioDefault = String(defaultValue);
+        radios.forEach(function (radio) {
+          radio.checked = radio.value === radioDefault;
+        });
+        return;
+      }
+
+      if (field.type === 'richtext') {
+        var editor = wrap.querySelector('.sratix-richtext-editor');
+        if (editor && !editor.innerHTML.trim()) {
+          editor.innerHTML = String(defaultValue);
+        }
+        return;
+      }
+
+      var control = wrap.querySelector('#' + CSS.escape('sratix-df-' + field.id))
+        || wrap.querySelector('input, select, textarea');
+      if (!control) return;
+
+      if ((control.tagName === 'SELECT' || control.tagName === 'TEXTAREA' || control.tagName === 'INPUT') && !control.value) {
+        control.value = String(defaultValue);
+      }
+    });
+
+    applySelectEmptyClass(form);
   }
 
   /**
@@ -3294,6 +3432,8 @@
         if (el) el.value = prefillMap[fid];
       });
 
+      applySchemaDefaults(formEl, schemaFields);
+
       // Wire up condition-based live visibility
       if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
         formEl.addEventListener('input', function () {
@@ -3815,6 +3955,10 @@
               }
             }
           });
+
+          var formElDefaults = modal.querySelector('.sratix-form-fields') || modal;
+          applySchemaDefaults(formElDefaults, schemaFields, formAnswers);
+
           // Wire condition visibility
           if (schemaFields.some(function (f) { return f.conditions && f.conditions.length > 0; })) {
             var formEl = modal.querySelector('.sratix-form-fields') || modal;
@@ -4678,6 +4822,10 @@
 
       var formEl = container.querySelector('#sratix-register-form');
 
+      if (useCustomForm && schemaFields) {
+        applySchemaDefaults(formEl, schemaFields);
+      }
+
       // Initialise multi-select checkbox dropdowns and image uploads
       initMultiSelectDropdowns(container);
       initImageUploads(container);
@@ -4934,6 +5082,8 @@
           if (el && !el.value) el.value = prefillMap[fid];
         });
 
+        applySchemaDefaults(formEl, schemaFields);
+
         // Pre-fill from saved form data
         if (savedFormData && typeof savedFormData === 'object') {
           Object.keys(savedFormData).forEach(function (fid) {
@@ -4942,12 +5092,13 @@
             var el = formEl.querySelector('#sratix-df-' + CSS.escape(fid));
             if (!el) return;
 
-            if (el.type === 'checkbox') {
-              el.checked = !!val;
+            if (typeof val === 'object' && !Array.isArray(val) && val.granted !== undefined) {
+              el.checked = !!val.granted;
+            } else if (el.type === 'checkbox') {
+              var savedBool = normalizeDefaultBoolean(val);
+              el.checked = savedBool !== null ? savedBool : !!val;
             } else if (el.tagName === 'SELECT') {
               el.value = String(val);
-            } else if (typeof val === 'object' && !Array.isArray(val) && val.granted !== undefined) {
-              el.checked = !!val.granted;
             } else {
               el.value = Array.isArray(val) ? val.join(', ') : String(val);
             }
