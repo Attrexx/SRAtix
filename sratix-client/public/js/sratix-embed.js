@@ -378,7 +378,13 @@
       }
       html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
       html += '</div>';
-      html += renderTicketCards(ticketTypes, layout, memberSession, role);
+      // Active SRA members shouldn't see bundled (ticket + 1yr membership) tickets —
+      // their member discount applies to the regular tickets instead.
+      var isActiveMember = !!(memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none');
+      var displayTicketTypes = isActiveMember
+        ? ticketTypes.filter(function (tt) { return !(tt.membershipTier && tt.sraWpProductId); })
+        : ticketTypes;
+      html += renderTicketCards(displayTicketTypes, layout, memberSession, role);
       container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
       // Bind "change member type" link
@@ -2606,30 +2612,48 @@
    * When Switzerland ('ch') is selected → show canton, all three fields 33%.
    * Otherwise → hide canton, city + country 50% each.
    */
+  // Each group lists ALL possible slugs the canton field may use. Dashboard-saved
+  // forms may slugify the field as `canton` (from label) instead of the canonical
+  // `state_canton` from the field repo, so we probe both.
   var CANTON_FIELD_GROUPS = [
-    { canton: 'state_canton', country: 'country', city: 'city' },
-    { canton: 'org_canton',   country: 'org_country', city: 'org_city' },
+    { cantons: ['state_canton', 'canton'], country: 'country', city: 'city' },
+    { cantons: ['org_canton'],              country: 'org_country', city: 'org_city' },
   ];
+  function findFirstBySlugs(form, slugs) {
+    for (var i = 0; i < slugs.length; i++) {
+      var w = findBySlug(form, slugs[i]);
+      if (w) return w;
+    }
+    return null;
+  }
   function applyCantonVisibility(form) {
     CANTON_FIELD_GROUPS.forEach(function (g) {
-      var cantonWrap  = findBySlug(form, g.canton);
+      var cantonWrap  = findFirstBySlugs(form, g.cantons);
       var countryWrap = findBySlug(form, g.country);
       var cityWrap    = findBySlug(form, g.city);
-      if (!cantonWrap || !countryWrap || !cityWrap) return;
-      // Read country value from the select element inside the wrapper
-      var countrySel = countryWrap.querySelector('select');
-      var isSwitzerland = countrySel && countrySel.value === 'ch';
-      // Show/hide canton
-      cantonWrap.style.display = isSwitzerland ? '' : 'none';
-      // Adjust widths
-      if (isSwitzerland) {
+
+      // Nothing to do for this group if neither country nor canton is present.
+      if (!countryWrap && !cantonWrap) return;
+
+      // Read country value (if country field exists) — default to non-CH.
+      var countrySel = countryWrap ? countryWrap.querySelector('select') : null;
+      var isSwitzerland = !!(countrySel && countrySel.value === 'ch');
+
+      // Toggle canton visibility — only when canton field exists.
+      if (cantonWrap) {
+        cantonWrap.style.display = isSwitzerland ? '' : 'none';
+      }
+
+      // Adjust widths based on which fields are actually rendered + CH state.
+      if (isSwitzerland && cantonWrap && countryWrap && cityWrap) {
         setFieldFlex(cantonWrap, 33);
         setFieldFlex(countryWrap, 33);
         setFieldFlex(cityWrap, 33);
-      } else {
+      } else if (countryWrap && cityWrap) {
         setFieldFlex(countryWrap, 50);
         setFieldFlex(cityWrap, 50);
       }
+      // If only one of (country/city) exists, leave its schema-defined width alone.
     });
   }
   function setFieldFlex(el, pct) {

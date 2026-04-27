@@ -286,6 +286,13 @@ function getDefaultFieldDefinitions() {
       options: swissCantons(),
       tooltip: { en: 'If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', de: '[DE] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', fr: '[FR] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', it: '[IT] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', 'zh-TW': '[ZH] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.' },
     }),
+    // Alias slug — Dashboard form-builder slugifies the label ("Canton") to `canton`.
+    // Provide the same options under both slugs so hydration works in either case.
+    fd('canton', { en: 'Canton', de: 'Kanton', fr: 'Canton', it: 'Cantone', 'zh-TW': '邦' }, 'select', 'must_have', {
+      widthDesktop: 33, widthMobile: 100, sortOrder: 5,
+      options: swissCantons(),
+      tooltip: { en: 'If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', de: '[DE] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', fr: '[FR] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', it: '[IT] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.', 'zh-TW': '[ZH] If based in Switzerland, selecting your canton helps us connect you with regional robotics networks.' },
+    }),
     fd('country', { en: 'Country', de: 'Land', fr: 'Pays', it: 'Paese', 'zh-TW': '國家' }, 'country', 'must_have', {
       widthDesktop: 50, widthMobile: 100, sortOrder: 6,
     }),

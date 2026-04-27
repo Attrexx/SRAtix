@@ -292,6 +292,7 @@ function template1_IndustryGovParticipant(): { name: string; description: string
       options: [
         { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
         { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+        { value: 'government', label: { en: 'Government / Public Sector', de: 'Regierung / Öffentlicher Sektor', fr: 'Gouvernement / Secteur public', it: 'Governo / Settore pubblico', 'zh-TW': '政府 / 公共部門' } },
       ],
     }),
     f('company_name', 'text', { en: 'Company / Institution', de: 'Firma / Institution', fr: 'Entreprise / Institution', it: 'Azienda / Istituzione', 'zh-TW': '公司 / 機構' }, 'professional', 0, { required: true }),
@@ -349,6 +350,7 @@ function template2_StartupParticipant(): { name: string; description: string; ca
       options: [
         { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
         { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+        { value: 'government', label: { en: 'Government / Public Sector', de: 'Regierung / Öffentlicher Sektor', fr: 'Gouvernement / Secteur public', it: 'Governo / Settore pubblico', 'zh-TW': '政府 / 公共部門' } },
       ],
     }),
     f('company_name', 'text', { en: 'Company / Startup Name', de: 'Firma / Startup-Name', fr: 'Entreprise / Nom startup', it: 'Azienda / Nome startup', 'zh-TW': '公司 / 新創名稱' }, 'professional', 0, { required: true }),
@@ -415,6 +417,7 @@ function template3_AcademiaParticipant(): { name: string; description: string; c
       options: [
         { value: 'industry', label: { en: 'Industry', de: '[DE] Industry', fr: '[FR] Industry', it: '[IT] Industry', 'zh-TW': '[ZH] Industry' } },
         { value: 'academia', label: { en: 'Academia', de: '[DE] Academia', fr: '[FR] Academia', it: '[IT] Academia', 'zh-TW': '[ZH] Academia' } },
+        { value: 'government', label: { en: 'Government / Public Sector', de: 'Regierung / Öffentlicher Sektor', fr: 'Gouvernement / Secteur public', it: 'Governo / Settore pubblico', 'zh-TW': '政府 / 公共部門' } },
       ],
     }),
     f('institution_name', 'text', { en: 'Institution Name', de: 'Institutionsname', fr: 'Nom de l\'institution', it: 'Nome istituzione', 'zh-TW': '機構名稱' }, 'academic', 0, { required: true }),

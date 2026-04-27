@@ -336,6 +336,31 @@ export class FormsService {
       (f) => selectTypes.has(f.type) && (!f.options || f.options.length === 0),
     );
 
+    // Curated slugs whose options are managed centrally in FieldDefinition.
+    // For these, we ALWAYS overwrite the inline schema options (even when present)
+    // so that admin-side option changes propagate without re-saving every form.
+    const FORCE_OVERWRITE_OPTION_SLUGS = new Set([
+      'attendee_sector',
+      'expertise_area',
+      'sub_expertise',
+      'skills_tools',
+      'robotics_field',
+      'robotics_subfield',
+      'department',
+      'state_canton',
+      'canton',
+      'org_canton',
+      'industry_sector',
+      'work_permit',
+      'study_level',
+      'field_of_study',
+    ]);
+    const needsForceOverwrite = def.fields.filter((f) => {
+      if (!selectTypes.has(f.type) && f.type !== 'radio') return false;
+      const slug = (f as any).slug || f.id;
+      return FORCE_OVERWRITE_OPTION_SLUGS.has(slug);
+    });
+
     // ── Phase 2: Tooltip hydration (all fields missing tooltip) ─
     const needsTooltipHydration = def.fields.filter(
       (f) => !(f as any).tooltip,
@@ -349,6 +374,7 @@ export class FormsService {
     // Collect all slugs that need any hydration
     const allSlugsSet = new Set<string>();
     for (const f of needsOptionsHydration) allSlugsSet.add((f as any).slug || f.id);
+    for (const f of needsForceOverwrite) allSlugsSet.add((f as any).slug || f.id);
     for (const f of needsTooltipHydration) allSlugsSet.add((f as any).slug || f.id);
     for (const f of needsDefaultValueHydration) allSlugsSet.add((f as any).slug || f.id);
     if (allSlugsSet.size === 0) return;
@@ -376,6 +402,16 @@ export class FormsService {
       } else if (field.type === 'country') {
         // Built-in fallback: country fields always get the ISO 3166-1 list
         field.options = COUNTRY_OPTIONS;
+      }
+    }
+
+    // Force-overwrite options for curated slugs (centrally managed).
+    for (const field of needsForceOverwrite) {
+      const fieldSlug = (field as any).slug || field.id;
+      const fdData = defsBySlug.get(fieldSlug);
+      const opts = fdData?.options;
+      if (Array.isArray(opts) && opts.length > 0) {
+        field.options = opts as FormField['options'];
       }
     }
 
