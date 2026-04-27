@@ -1546,6 +1546,18 @@ select.sratix-input.sratix-select-empty {
 	margin-top: 18px;
 }
 
+.sratix-member-gate__bottom-logo {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 12px;
+}
+
+.sratix-member-gate__bottom-logo-img {
+	max-height: 40px;
+	width: auto;
+	object-fit: contain;
+}
+
 .sratix-why-join-link a {
 	color: var(--sratix-text-muted, #94a3b8);
 	font-size: 0.85rem;

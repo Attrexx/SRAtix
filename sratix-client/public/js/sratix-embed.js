@@ -553,7 +553,7 @@
       container.innerHTML = `
         <div class="sratix-member-gate${gateModifier}">
           <a href="#" class="sratix-back-to-gate" id="sratix-back-to-role">${escHtml(t('roleChoice.changeRole'))}</a>
-          <h2 class="sratix-member-gate__title">${sraLogoTitle}${escHtml(t('memberGate.title'))}</h2>
+          <h2 class="sratix-member-gate__title">${escHtml(t('memberGate.title'))}</h2>
           <div class="sratix-member-gate__subtitle">${gateInfo.memberGateSubtitle || escHtml(t('memberGate.subtitle'))}</div>
           <div class="sratix-member-gate__buttons">
             <button class="sratix-member-btn sratix-member-btn--sra" data-member="sra">
@@ -596,7 +596,7 @@
               </div>
               <div class="sratix-why-join__cta-wrap"><a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer" class="sratix-why-join__cta">${escHtml(t('memberGate.whyJoinVisit'))} &rarr;</a></div>
             </div>
-          </details>` : `<div class="sratix-why-join-link"><a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer">${escHtml(t('memberGate.detailsAboutSra'))} &rarr;</a></div>`}
+          </details>` : `<div class="sratix-why-join-link">${sraLogoTitle ? '<div class="sratix-member-gate__bottom-logo">' + sraLogoTitle.replace('sratix-member-gate__title-logo', 'sratix-member-gate__bottom-logo-img') + '</div>' : ''}<a href="https://swiss-robotics.org/" target="_blank" rel="noopener noreferrer">${escHtml(t('memberGate.detailsAboutSra'))} &rarr;</a></div>`}
         </div>
       `;
 
