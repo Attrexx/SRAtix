@@ -1280,7 +1280,7 @@ select.sratix-input.sratix-select-empty {
 	gap: 12px;
 	min-height: 150px;
 	padding: 24px 20px;
-	border: 2px solid rgba(255, 255, 255, 0.15);
+	border: 2px solid rgba(255, 255, 255, 0.35);
 	border-radius: 12px;
 	background: rgba(255, 255, 255, 0.06);
 	color: var(--sratix-text);
@@ -1297,22 +1297,22 @@ select.sratix-input.sratix-select-empty {
 }
 
 .sratix-member-btn:hover {
-	border-color: #797e85;
+	border-color: var(--sratix-red);
 	background: rgba(255,255,255,0.05);
 	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 	transform: translateY(-2px);
 }
 
 .sratix-member-btn:active {
-	background: rgba(121, 126, 133, 0.15) !important;
+	background: rgba(224, 32, 32, 0.15) !important;
 }
 
 .sratix-member-btn--sra:hover {
-	border-color: #797e85;
+	border-color: var(--sratix-red);
 }
 
 .sratix-member-btn--partner:hover {
-	border-color: #797e85;
+	border-color: var(--sratix-red);
 }
 
 /* "Continue without membership" — full-width row below the grid */
