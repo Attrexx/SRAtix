@@ -2782,6 +2782,24 @@
     { value: 'dean_s_office_faculty_leadership', en: "Dean's Office / Faculty Leadership" },
   ];
 
+  /** Government / public-sector department option values (must match field-repository.service.ts). */
+  var GOVERNMENT_DEPT_OPTIONS = [
+    { value: 'federal_administration', en: 'Federal Administration' },
+    { value: 'cantonal_administration', en: 'Cantonal Administration' },
+    { value: 'municipal_city_administration', en: 'Municipal / City Administration' },
+    { value: 'innovation_economic_development_agency', en: 'Innovation & Economic Development Agency' },
+    { value: 'research_funding_agency', en: 'Research Funding Agency' },
+    { value: 'education_training_authority', en: 'Education / Training Authority' },
+    { value: 'health_authority', en: 'Health Authority' },
+    { value: 'transport_infrastructure_authority', en: 'Transport / Infrastructure Authority' },
+    { value: 'defense_security', en: 'Defense / Security' },
+    { value: 'regulatory_standards_body', en: 'Regulatory / Standards Body' },
+    { value: 'public_procurement', en: 'Public Procurement' },
+    { value: 'international_organization_un_eu_etc_', en: 'International Organization (UN, EU, etc.)' },
+    { value: 'embassy_consulate', en: 'Embassy / Consulate' },
+    { value: 'other_public_sector_entity', en: 'Other Public-Sector Entity' },
+  ];
+
   /**
    * Apply dynamic field overrides based on attendee_sector & create_map_listing.
    * Called alongside applyConditionVisibility on every input/change event.
@@ -2790,8 +2808,12 @@
    *  1. create_map_listing width: 50% when yes (org_authorized_rep next to it), 100% when no
    *  2. org_authorized_rep: show when create_map_listing=yes OR create_org_profile=yes (OR logic)
    *  3. attendee_sector=academia → swap company_name/company_website labels,
-   *     hide company_size, adjust widths to 33%, swap department options
-   *  4. attendee_sector=industry|government → revert all of the above
+   *     hide company_size, swap department to free-text input,
+   *     adjust widths to 33% (job_title/department/industry_sector)
+   *  4. attendee_sector=government → swap labels to "Organization / Authority",
+   *     hide company_size + industry_sector, use government dept options,
+   *     2-up widths (job_title/department @ 50%)
+   *  5. attendee_sector=industry (default) → revert to industry dept options + 4-up widths
    */
   /**
    * Resolve a field from the schema by its known id OR by probing option values.
@@ -3217,7 +3239,7 @@
 
   function applyDynamicOverrides(form, fields, answers) {
     // ── Resolve field identifiers (handles both seed ids and auto-generated ids) ──
-    var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia']);
+    var sectorRef    = resolveField(form, fields, 'attendee_sector', ['industry', 'academia', 'government']);
     var mapRef       = resolveFieldByType(form, fields, 'create_map_listing', 'yes-no', 'map');
     var repRef       = resolveFieldByType(form, fields, 'org_authorized_rep', 'yes-no', 'authorized');
     var orgOptInRefs = resolveFieldsByAliases(form, fields, [
@@ -3280,7 +3302,8 @@
 
     // ── 3 & 4: attendee_sector dynamic changes ─────────────
     var sector = sectorRef ? answers[sectorRef.id] : undefined;
-    var isAcademia = sector === 'academia';
+    var isAcademia   = sector === 'academia';
+    var isGovernment = sector === 'government';
 
     // 3a: Label swap — company_name
     var compNameWrap = findBySlug(form, 'company_name');
@@ -3290,7 +3313,9 @@
         var reqSpan = compLabel.querySelector('.sratix-req');
         var tooltipSpan = compLabel.querySelector('.sratix-tooltip');
         compLabel.textContent = '';
-        compLabel.appendChild(document.createTextNode(isAcademia ? 'Institution' : 'Company / Institution'));
+        compLabel.appendChild(document.createTextNode(
+          isAcademia ? 'Institution' : (isGovernment ? 'Organization / Authority' : 'Company / Institution')
+        ));
         if (reqSpan) compLabel.appendChild(reqSpan);
         if (tooltipSpan) compLabel.appendChild(tooltipSpan);
       }
@@ -3304,65 +3329,129 @@
         var reqSpan2 = webLabel.querySelector('.sratix-req');
         var tooltipSpan2 = webLabel.querySelector('.sratix-tooltip');
         webLabel.textContent = '';
-        webLabel.appendChild(document.createTextNode(isAcademia ? 'Institution Website' : 'Company Website'));
+        webLabel.appendChild(document.createTextNode(
+          isAcademia ? 'Institution Website' : (isGovernment ? 'Organization Website' : 'Company Website')
+        ));
         if (reqSpan2) webLabel.appendChild(reqSpan2);
         if (tooltipSpan2) webLabel.appendChild(tooltipSpan2);
       }
     }
 
-    // 3c: Hide/show company_size
+    // 3c: Hide/show company_size (hidden for academia and government)
     var sizeWrap = findBySlug(form, 'company_size');
     if (sizeWrap) {
-      sizeWrap.style.display = isAcademia ? 'none' : '';
+      sizeWrap.style.display = (isAcademia || isGovernment) ? 'none' : '';
     }
 
     // 3d: Adjust widths — job_title, department, industry_sector, company_size
+    //  - industry: 4-up (job_title, department, industry_sector, company_size)
+    //  - academia: 3-up (job_title, department, industry_sector); company_size hidden
+    //  - government: 2-up (job_title, department); industry_sector & company_size hidden
     var jtWrap = findBySlug(form, 'job_title');
     var deptWrap = findBySlug(form, 'department');
     var isWrap = findBySlug(form, 'industry_sector');
-    if (isAcademia) {
+    if (isGovernment) {
+      // Industry/sector field is hidden for government
+      if (isWrap) isWrap.style.display = 'none';
+      if (jtWrap) setFieldFlex(jtWrap, 50);
+      if (deptWrap) setFieldFlex(deptWrap, 50);
+    } else if (isAcademia) {
+      if (isWrap) isWrap.style.display = '';
       if (jtWrap) setFieldFlex(jtWrap, 33);
       if (deptWrap) setFieldFlex(deptWrap, 33);
       if (isWrap) setFieldFlex(isWrap, 33);
     } else {
+      if (isWrap) isWrap.style.display = '';
       if (jtWrap) setFieldFlex(jtWrap, 25);
       if (deptWrap) setFieldFlex(deptWrap, 25);
       if (isWrap) setFieldFlex(isWrap, 25);
       if (sizeWrap) setFieldFlex(sizeWrap, 25);
     }
 
-    // 3e: Swap department <select> options
+    // 3e: Department field
+    //  - academia → free-text input (institutions name departments freely)
+    //  - industry/government → <select> with sector-specific options
     if (deptWrap) {
-      var deptSel = deptWrap.querySelector('select');
-      if (deptSel) {
-        var opts = isAcademia ? ACADEMIC_DEPT_OPTIONS : INDUSTRY_DEPT_OPTIONS;
-        var curVal = deptSel.value;
-        // Only rebuild if option set changed
-        var firstOpt = deptSel.querySelector('option[value]');
-        var expectedFirst = opts[0] ? opts[0].value : '';
-        if (!firstOpt || firstOpt.value !== expectedFirst) {
-          var placeholder = deptSel.querySelector('option[value=""]');
-          deptSel.innerHTML = '';
-          if (placeholder) {
-            deptSel.appendChild(placeholder);
-          } else {
-            var ph = document.createElement('option');
-            ph.value = '';
-            ph.textContent = '—';
-            deptSel.appendChild(ph);
-          }
-          opts.forEach(function (o) {
-            var opt = document.createElement('option');
-            opt.value = o.value;
-            opt.textContent = o.en;
-            deptSel.appendChild(opt);
-          });
-          // Restore value if it exists in new set, otherwise reset
-          var hasVal = opts.some(function (o) { return o.value === curVal; });
-          deptSel.value = hasVal ? curVal : '';
-        }
-      }
+      swapDepartmentField(deptWrap, isAcademia, isGovernment);
     }
+  }
+
+  /**
+   * Swap the department control between a free-text input (academia) and a
+   * <select> dropdown (industry/government). Preserves user-entered value
+   * across swaps and rebuilds the select option list when sector changes.
+   */
+  function swapDepartmentField(deptWrap, isAcademia, isGovernment) {
+    var existingInput = deptWrap.querySelector('input[type="text"].sratix-input');
+    var existingSelect = deptWrap.querySelector('select.sratix-input');
+    var control = existingInput || existingSelect;
+    if (!control) return;
+
+    var fieldId = control.getAttribute('data-field-id') || '';
+    var elemId = control.id;
+    var curVal = control.value || '';
+
+    if (isAcademia) {
+      // Need a text input
+      if (existingInput) return;
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'sratix-input';
+      input.id = elemId;
+      if (fieldId) input.setAttribute('data-field-id', fieldId);
+      input.value = curVal;
+      input.setAttribute('autocomplete', 'off');
+      existingSelect.replaceWith(input);
+      return;
+    }
+
+    // Need a <select>
+    var opts = isGovernment ? GOVERNMENT_DEPT_OPTIONS : INDUSTRY_DEPT_OPTIONS;
+    if (existingSelect) {
+      // Already a select — only rebuild if option set changed
+      var firstOpt = existingSelect.querySelector('option[value]:not([value=""])');
+      var expectedFirst = opts[0] ? opts[0].value : '';
+      if (firstOpt && firstOpt.value === expectedFirst) return;
+      var placeholder = existingSelect.querySelector('option[value=""]');
+      existingSelect.innerHTML = '';
+      if (placeholder) {
+        existingSelect.appendChild(placeholder);
+      } else {
+        var ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = '—';
+        existingSelect.appendChild(ph);
+      }
+      opts.forEach(function (o) {
+        var opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.en;
+        existingSelect.appendChild(opt);
+      });
+      var hasVal = opts.some(function (o) { return o.value === curVal; });
+      existingSelect.value = hasVal ? curVal : '';
+      return;
+    }
+
+    // Replacing a text input with a select
+    var sel = document.createElement('select');
+    sel.className = 'sratix-input sratix-select-empty';
+    sel.id = elemId;
+    if (fieldId) sel.setAttribute('data-field-id', fieldId);
+    var ph2 = document.createElement('option');
+    ph2.value = '';
+    ph2.textContent = '—';
+    sel.appendChild(ph2);
+    opts.forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.en;
+      sel.appendChild(opt);
+    });
+    // Free-text from academia is unlikely to match a slug; reset if not in list
+    var hasVal2 = opts.some(function (o) { return o.value === curVal; });
+    sel.value = hasVal2 ? curVal : '';
+    existingInput.replaceWith(sel);
   }
 
   // ─── Registration modal (Stage B) ────────────────────────────────────────────

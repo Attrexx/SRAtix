@@ -1331,6 +1331,30 @@ function academicDepartmentOptions() {
 }
 
 /**
+ * Government / public-sector department options — used by client-side dynamic
+ * override when attendee_sector is 'government'. Stored in the field repository
+ * for reference; the actual swap happens on the client.
+ */
+function governmentDepartmentOptions() {
+  return multiOptI18n([
+    { en: 'Federal Administration', de: 'Bundesverwaltung', fr: 'Administration fédérale', it: 'Amministrazione federale', 'zh-TW': '聯邦行政機關' },
+    { en: 'Cantonal Administration', de: 'Kantonale Verwaltung', fr: 'Administration cantonale', it: 'Amministrazione cantonale', 'zh-TW': '邦行政機關' },
+    { en: 'Municipal / City Administration', de: 'Gemeinde- / Stadtverwaltung', fr: 'Administration municipale', it: 'Amministrazione comunale', 'zh-TW': '市政 / 地方行政' },
+    { en: 'Innovation & Economic Development Agency', de: 'Innovations- & Wirtschaftsförderung', fr: 'Agence d\'innovation & développement économique', it: 'Agenzia innovazione & sviluppo economico', 'zh-TW': '創新與經濟發展機構' },
+    { en: 'Research Funding Agency', de: 'Forschungsförderung', fr: 'Agence de financement de la recherche', it: 'Agenzia di finanziamento della ricerca', 'zh-TW': '研究資助機構' },
+    { en: 'Education / Training Authority', de: 'Bildungs- / Ausbildungsbehörde', fr: 'Autorité éducation / formation', it: 'Autorità istruzione / formazione', 'zh-TW': '教育 / 培訓主管機關' },
+    { en: 'Health Authority', de: 'Gesundheitsbehörde', fr: 'Autorité sanitaire', it: 'Autorità sanitaria', 'zh-TW': '衛生主管機關' },
+    { en: 'Transport / Infrastructure Authority', de: 'Verkehrs- / Infrastrukturbehörde', fr: 'Autorité transports / infrastructures', it: 'Autorità trasporti / infrastrutture', 'zh-TW': '交通 / 基礎設施主管機關' },
+    { en: 'Defense / Security', de: 'Verteidigung / Sicherheit', fr: 'Défense / Sécurité', it: 'Difesa / Sicurezza', 'zh-TW': '國防 / 安全' },
+    { en: 'Regulatory / Standards Body', de: 'Regulierungs- / Normungsstelle', fr: 'Organisme de régulation / normalisation', it: 'Ente regolatorio / normazione', 'zh-TW': '監管 / 標準機構' },
+    { en: 'Public Procurement', de: 'Öffentliches Beschaffungswesen', fr: 'Achats publics', it: 'Appalti pubblici', 'zh-TW': '公共採購' },
+    { en: 'International Organization (UN, EU, etc.)', de: 'Internationale Organisation (UN, EU, etc.)', fr: 'Organisation internationale (ONU, UE, etc.)', it: 'Organizzazione internazionale (ONU, UE, ecc.)', 'zh-TW': '國際組織（聯合國、歐盟等）' },
+    { en: 'Embassy / Consulate', de: 'Botschaft / Konsulat', fr: 'Ambassade / Consulat', it: 'Ambasciata / Consolato', 'zh-TW': '大使館 / 領事館' },
+    { en: 'Other Public-Sector Entity', de: 'Andere öffentliche Stelle', fr: 'Autre entité du secteur public', it: 'Altro ente pubblico', 'zh-TW': '其他公共部門單位' },
+  ]);
+}
+
+/**
  * Robotics field options — mirrors SRA MAP `robotics_field` taxonomy exactly.
  * 4 top-level parent-field categories from the SRA MAP plugin.
  */

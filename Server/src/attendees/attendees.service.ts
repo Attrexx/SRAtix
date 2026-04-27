@@ -256,14 +256,20 @@ export class AttendeesService {
    * Delete an attendee. If the attendee has paid orders their status is set
    * to 'cancelled' and their tickets are voided (soft-delete). Otherwise the
    * attendee record is hard-deleted along with all related child records.
+   *
+   * Pass `force = true` to bypass the soft-delete branch and hard-delete
+   * regardless of paid orders. Intended for admin clean-up of test accounts.
    */
-  async delete(id: string) {
+  async delete(id: string, force = false) {
     const attendee = await this.findOne(id);
 
     // Soft-delete path: attendee has paid orders → cancel + void tickets
-    const paidOrders = await this.prisma.order.count({
-      where: { attendeeId: id, status: 'paid' },
-    });
+    //   (skipped when force = true)
+    const paidOrders = force
+      ? 0
+      : await this.prisma.order.count({
+          where: { attendeeId: id, status: 'paid' },
+        });
     if (paidOrders > 0) {
       await this.prisma.attendee.update({
         where: { id },
@@ -307,7 +313,7 @@ export class AttendeesService {
       action: AuditAction.ATTENDEE_DELETED,
       entity: 'attendee',
       entityId: id,
-      detail: { email: attendee.email, hardDelete: true },
+      detail: { email: attendee.email, hardDelete: true, forced: force },
     });
 
     return { success: true };

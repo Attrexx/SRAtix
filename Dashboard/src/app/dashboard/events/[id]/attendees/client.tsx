@@ -116,7 +116,16 @@ export default function AttendeesPage() {
     const msg = t('attendees.confirmDelete').replace('{name}', `${a.firstName} ${a.lastName}`);
     if (!confirm(msg)) return;
     try {
-      await api.deleteAttendee(a.id);
+      const res = await api.deleteAttendee(a.id);
+      // If the attendee had paid orders the backend soft-deletes (status=cancelled)
+      // and keeps the record. Offer a force-delete pass so admins can fully clean
+      // up test accounts (which may have had free / completed orders).
+      if (res?.softDeleted) {
+        const forceMsg = `"${a.firstName} ${a.lastName}" has paid orders so the record was kept (cancelled).\n\nPermanently delete it now? This is intended for test accounts and cannot be undone.`;
+        if (confirm(forceMsg)) {
+          await api.deleteAttendee(a.id, true);
+        }
+      }
       await loadData();
     } catch {
       alert(t('attendees.failedToDelete'));

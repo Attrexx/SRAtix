@@ -992,8 +992,11 @@ export const api = {
   }) =>
     request<Attendee>(`/attendees/${id}`, { method: 'PATCH', body: data }),
 
-  deleteAttendee: (id: string) =>
-    request<{ success: boolean }>(`/attendees/${id}`, { method: 'DELETE' }),
+  deleteAttendee: (id: string, force?: boolean) =>
+    request<{ success: boolean; softDeleted?: boolean }>(
+      `/attendees/${id}${force ? '?force=true' : ''}`,
+      { method: 'DELETE' },
+    ),
 
   getAttendeeSubmissions: (attendeeId: string, eventId: string, signal?: AbortSignal) =>
     request<FormSubmission[]>(`/attendees/${attendeeId}/submissions/${eventId}`, { signal }),

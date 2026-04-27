@@ -141,7 +141,7 @@ export class AttendeesController {
 
   @Delete(':id')
   @Roles('super_admin', 'admin')
-  delete(@Param('id') id: string) {
-    return this.attendeesService.delete(id);
+  delete(@Param('id') id: string, @Query('force') force?: string) {
+    return this.attendeesService.delete(id, force === 'true' || force === '1');
   }
 }
