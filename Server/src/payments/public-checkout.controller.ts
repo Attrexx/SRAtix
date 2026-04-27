@@ -33,6 +33,7 @@ import { FormsService } from '../forms/forms.service';
 import { SettingsService } from '../settings/settings.service';
 import { AuthService } from '../auth/auth.service';
 import { TicketTypesService } from '../ticket-types/ticket-types.service';
+import { HYBRID_TIER_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
@@ -258,6 +259,28 @@ export class PublicCheckoutController {
     const resolved = this.ticketTypesService.resolvePrice(tt, tt.pricingVariants, now);
     const effectivePriceCents = resolved.activePriceCents;
 
+    // ── Effective membership opt-out ────────────────────────────────────
+    // Honor the client-provided flag, but ALSO force opt-out when the buyer
+    // is an active SRA member already in the bundle's mapped tier. This
+    // prevents creating a duplicate WP membership for someone who already
+    // has one. Decoded from JWT — trustworthy without a DB hit.
+    let effectiveMembershipOptOut = !!dto.membershipOptOut;
+    if (
+      !effectiveMembershipOptOut &&
+      tt.membershipTier &&
+      dto.memberSessionToken &&
+      dto.memberGroup === 'sra'
+    ) {
+      const session = this.authService.decodeMemberSession(dto.memberSessionToken);
+      if (session && session.eventId === dto.eventId && session.memberGroup === 'sra') {
+        const bundleMappedTier =
+          HYBRID_TIER_MAP[tt.membershipTier as MembershipTier] ?? tt.membershipTier;
+        if (session.tier === bundleMappedTier) {
+          effectiveMembershipOptOut = true;
+        }
+      }
+    }
+
     if (tt.salesStart && tt.salesStart > now) {
       throw new BadRequestException('Ticket sales have not started yet');
     }
@@ -394,6 +417,11 @@ export class PublicCheckoutController {
       const orderMeta: Record<string, unknown> = {};
       if (isTestMode) orderMeta.isTestOrder = true;
       if (dto.membershipOptOut) orderMeta.membershipOptOut = true;
+      // Server-forced opt-out (active member already in bundle's tier).
+      if (effectiveMembershipOptOut && !dto.membershipOptOut) {
+        orderMeta.membershipOptOut = true;
+        orderMeta.membershipOptOutForcedByServer = true;
+      }
       if (dto.attendeeData.company) orderMeta.companyName = dto.attendeeData.company;
       if (recipientAttendees.length > 0) {
         orderMeta.recipientAttendees = recipientAttendees;
@@ -516,6 +544,10 @@ export class PublicCheckoutController {
     if (validatedPartnerId) metadata.sratix_partner_id = validatedPartnerId;
     if (isTestMode) metadata.sratix_test_mode = '1';
     if (dto.membershipOptOut) metadata.sratix_membership_opt_out = '1';
+    if (effectiveMembershipOptOut && !dto.membershipOptOut) {
+      metadata.sratix_membership_opt_out = '1';
+      metadata.sratix_membership_opt_out_forced = '1';
+    }
 
     const finalTotal = totalCents - discountCents;
 

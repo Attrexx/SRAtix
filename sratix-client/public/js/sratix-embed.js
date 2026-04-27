@@ -378,13 +378,9 @@
       }
       html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
       html += '</div>';
-      // Active SRA members shouldn't see bundled (ticket + 1yr membership) tickets —
-      // their member discount applies to the regular tickets instead.
-      var isActiveMember = !!(memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none');
-      var displayTicketTypes = isActiveMember
-        ? ticketTypes.filter(function (tt) { return !(tt.membershipTier && tt.sraWpProductId); })
-        : ticketTypes;
-      html += renderTicketCards(displayTicketTypes, layout, memberSession, role);
+      // Bundled tickets remain visible to active SRA members; renderCard adapts the
+      // badge + price for matching tiers, and checkout forces membershipOptOut.
+      html += renderTicketCards(ticketTypes, layout, memberSession, role);
       container.innerHTML = html;
       bindSelectButtons(container, eventId, ticketTypes);
       // Bind "change member type" link
@@ -826,15 +822,33 @@
     return `<div class="${cls}${roleCls}">${types.map(function (tt) { return renderCard(tt, memberSession); }).join('')}</div>`;
   }
 
+  /**
+   * True when an active SRA member already holds the membership tier that
+   * this bundled ticket would grant. In that case the membership add-on is
+   * redundant — the buyer should see a different badge, the opt-out is forced,
+   * and any configured SRA discount applies as if it were a regular ticket.
+   */
+  function isMemberAlreadyInBundleTier(tt, memberSession) {
+    if (!tt || !tt.membershipTier || !tt.sraWpProductId) return false;
+    if (!memberSession || memberSession.memberGroup !== 'sra') return false;
+    var bundleTier = tt.sraMembershipTier || tt.membershipTier;
+    return memberSession.tier === bundleTier;
+  }
+
   function renderCard(tt, memberSession) {
     const soldOut = tt.soldOut || (tt.available !== null && tt.available <= 0);
     const isBundled = !!(tt.membershipTier && tt.sraWpProductId);
+    const memberAlreadyInTier = isMemberAlreadyInBundleTier(tt, memberSession);
 
     const hasEarlyBird = tt.priceLabel && tt.basePriceCents != null && tt.basePriceCents > tt.priceCents;
 
     // ── Badge area (bundle + early bird / member discount) ──
     let badgesHtml = '';
-    if (isBundled) {
+    if (isBundled && memberAlreadyInTier) {
+      // Active member already holds this tier — show a “discount applied” badge
+      // instead of the “+1yr Membership” bundle pitch.
+      badgesHtml += `<span class="sratix-bundle-badge sratix-bundle-badge--member">${escHtml(t('tickets.alreadyMember') || 'Already an SRA member — discount applied')}</span>`;
+    } else if (isBundled) {
       var tierLabel = HYBRID_TIER_LABELS[tt.membershipTier] || tt.sraMembershipTier || '';
       var prices = config.membershipPrices || {};
       var priceCents = prices[tt.sraWpProductId];
@@ -996,6 +1010,16 @@
       if (selfTicketCheckbox && typeof _qtyDraft.includeForSelf === 'boolean') selfTicketCheckbox.checked = _qtyDraft.includeForSelf;
       var optOutCb = modal.querySelector('#sratix-optout-check');
       if (optOutCb && _qtyDraft.membershipOptOut) optOutCb.checked = true;
+    }
+
+    // Active SRA members already in the bundle's tier: force-check opt-out and
+    // hide the opt-out UI entirely (they can't get a duplicate membership).
+    var _qtyMemberSession = (typeof getMemberSession === 'function') ? getMemberSession() : null;
+    if (isMemberAlreadyInBundleTier(tt, _qtyMemberSession)) {
+      var optOutBox = modal.querySelector('#sratix-membership-optout');
+      var optOutForce = modal.querySelector('#sratix-optout-check');
+      if (optOutForce) optOutForce.checked = true;
+      if (optOutBox) optOutBox.style.display = 'none';
     }
 
     function updateDisplay() {
