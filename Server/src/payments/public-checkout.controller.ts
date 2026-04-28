@@ -500,16 +500,28 @@ export class PublicCheckoutController {
       });
 
       if (ttWithDiscounts) {
+        // Member discount is calculated against the BASE price (not early-bird).
+        // We never stack discounts — the user gets whichever is larger between
+        // early-bird savings and member savings. Order's `totalCents` is already
+        // in early-bird terms (effectivePriceCents * qty), so here we only
+        // record the EXTRA savings beyond early bird (if any).
         const discount = this.ticketTypesService.calculateMemberDiscount(
           ttWithDiscounts,
-          effectivePriceCents, // use resolved price (early-bird if applicable)
+          tt.priceCents, // base price — matches display logic
           validatedMemberGroup,
           validatedMemberTier,
           validatedPartnerId,
         );
         if (discount) {
-          memberDiscountCents = discount.discountCents * dto.quantity;
-          memberDiscountLabel = discount.discountLabel;
+          const memberSavingsPerUnit = discount.discountCents;
+          const earlyBirdSavingsPerUnit = tt.priceCents - effectivePriceCents;
+          // Only apply if member savings beat early bird (otherwise early bird
+          // already wins and is baked into effectivePriceCents).
+          if (memberSavingsPerUnit > earlyBirdSavingsPerUnit) {
+            const extraSavingsPerUnit = memberSavingsPerUnit - earlyBirdSavingsPerUnit;
+            memberDiscountCents = extraSavingsPerUnit * dto.quantity;
+            memberDiscountLabel = discount.discountLabel;
+          }
         }
       }
     }
