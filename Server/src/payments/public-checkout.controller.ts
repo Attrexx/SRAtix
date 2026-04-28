@@ -33,7 +33,6 @@ import { FormsService } from '../forms/forms.service';
 import { SettingsService } from '../settings/settings.service';
 import { AuthService } from '../auth/auth.service';
 import { TicketTypesService } from '../ticket-types/ticket-types.service';
-import { HYBRID_TIER_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
@@ -260,10 +259,10 @@ export class PublicCheckoutController {
     const effectivePriceCents = resolved.activePriceCents;
 
     // ── Effective membership opt-out ────────────────────────────────────
-    // Honor the client-provided flag, but ALSO force opt-out when the buyer
-    // is an active SRA member already in the bundle's mapped tier. This
-    // prevents creating a duplicate WP membership for someone who already
-    // has one. Decoded from JWT — trustworthy without a DB hit.
+    // Honor the client-provided flag, but ALSO force opt-out whenever the
+    // buyer is an active SRA member purchasing a bundled ticket. Bundle
+    // pitch is for non-members only — active members never get a duplicate
+    // WP membership created. Decoded from JWT, no DB hit.
     let effectiveMembershipOptOut = !!dto.membershipOptOut;
     if (
       !effectiveMembershipOptOut &&
@@ -272,12 +271,13 @@ export class PublicCheckoutController {
       dto.memberGroup === 'sra'
     ) {
       const session = this.authService.decodeMemberSession(dto.memberSessionToken);
-      if (session && session.eventId === dto.eventId && session.memberGroup === 'sra') {
-        const bundleMappedTier =
-          HYBRID_TIER_MAP[tt.membershipTier as MembershipTier] ?? tt.membershipTier;
-        if (session.tier === bundleMappedTier) {
-          effectiveMembershipOptOut = true;
-        }
+      if (
+        session &&
+        session.eventId === dto.eventId &&
+        session.memberGroup === 'sra' &&
+        session.tier
+      ) {
+        effectiveMembershipOptOut = true;
       }
     }
 

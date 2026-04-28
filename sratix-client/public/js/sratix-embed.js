@@ -823,32 +823,25 @@
   }
 
   /**
-   * True when an active SRA member already holds the membership tier that
-   * this bundled ticket would grant. In that case the membership add-on is
-   * redundant — the buyer should see a different badge, the opt-out is forced,
-   * and any configured SRA discount applies as if it were a regular ticket.
+   * True when the buyer is an active SRA member. Bundle badges and the
+   * membership add-on UI are hidden for these users — the bundle pitch is
+   * meant only for non-members. SRA discounts (configured per ticket) still
+   * apply to give them a price reduction.
    */
-  function isMemberAlreadyInBundleTier(tt, memberSession) {
-    if (!tt || !tt.membershipTier || !tt.sraWpProductId) return false;
-    if (!memberSession || memberSession.memberGroup !== 'sra') return false;
-    var bundleTier = tt.sraMembershipTier || tt.membershipTier;
-    return memberSession.tier === bundleTier;
+  function isActiveSraMember(memberSession) {
+    return !!(memberSession && memberSession.memberGroup === 'sra' && memberSession.tier);
   }
 
   function renderCard(tt, memberSession) {
     const soldOut = tt.soldOut || (tt.available !== null && tt.available <= 0);
     const isBundled = !!(tt.membershipTier && tt.sraWpProductId);
-    const memberAlreadyInTier = isMemberAlreadyInBundleTier(tt, memberSession);
+    const hideBundlePitch = isActiveSraMember(memberSession);
 
     const hasEarlyBird = tt.priceLabel && tt.basePriceCents != null && tt.basePriceCents > tt.priceCents;
 
     // ── Badge area (bundle + early bird / member discount) ──
     let badgesHtml = '';
-    if (isBundled && memberAlreadyInTier) {
-      // Active member already holds this tier — show a “discount applied” badge
-      // instead of the “+1yr Membership” bundle pitch.
-      badgesHtml += `<span class="sratix-bundle-badge sratix-bundle-badge--member">${escHtml(t('tickets.alreadyMember') || 'Already an SRA member — discount applied')}</span>`;
-    } else if (isBundled) {
+    if (isBundled && !hideBundlePitch) {
       var tierLabel = HYBRID_TIER_LABELS[tt.membershipTier] || tt.sraMembershipTier || '';
       var prices = config.membershipPrices || {};
       var priceCents = prices[tt.sraWpProductId];
@@ -1012,10 +1005,10 @@
       if (optOutCb && _qtyDraft.membershipOptOut) optOutCb.checked = true;
     }
 
-    // Active SRA members already in the bundle's tier: force-check opt-out and
-    // hide the opt-out UI entirely (they can't get a duplicate membership).
+    // Active SRA members never see the membership add-on UI — force opt-out
+    // and hide the opt-out box (bundle pitch is for non-members only).
     var _qtyMemberSession = (typeof getMemberSession === 'function') ? getMemberSession() : null;
-    if (isMemberAlreadyInBundleTier(tt, _qtyMemberSession)) {
+    if (isActiveSraMember(_qtyMemberSession)) {
       var optOutBox = modal.querySelector('#sratix-membership-optout');
       var optOutForce = modal.querySelector('#sratix-optout-check');
       if (optOutForce) optOutForce.checked = true;
