@@ -3335,13 +3335,11 @@
     var mapWrap = mapRef ? mapRef.wrap : null;
     var repWrap = repRef ? repRef.wrap : null;
 
-    if (mapWrap || orgOptInRefs.length > 0) {
+    if (mapWrap) {
       var mapVal = mapRef ? answers[mapRef.id] : undefined;
       var mapYes = mapVal === true || mapVal === 'true' || mapVal === 'yes';
 
-      if (mapWrap) {
-        setFieldFlex(mapWrap, mapYes ? 50 : 100);
-      }
+      setFieldFlex(mapWrap, mapYes ? 50 : 100);
       orgOptInRefs.forEach(function (ref) {
         ref.wrap.style.display = mapYes ? '' : 'none';
       });
