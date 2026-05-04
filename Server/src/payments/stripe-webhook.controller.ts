@@ -351,6 +351,7 @@ export class StripeWebhookController {
           eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
           eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
           isExhibitor: isExhibitorOrder,
+          language: (orderMeta.invoiceLanguage as string) ?? undefined,
           invoicePdf,
           invoiceUrl,
           otherRecipientCount: recipientAttendees.length > 0 ? recipientAttendees.length : undefined,

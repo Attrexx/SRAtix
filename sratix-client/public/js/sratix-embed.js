@@ -248,13 +248,18 @@
   async function apiFetch(endpoint, options = {}) {
     const url = API_BASE + '/' + endpoint.replace(/^\//, '');
     var headers = options.headers || {};
+    var requestBody = options.body;
     // Don't set Content-Type for FormData — browser sets multipart boundary automatically
     // Don't set Content-Type when there's no body (e.g. DELETE requests)
-    if (options.body && !(options.body instanceof FormData)) {
+    if (requestBody && !(requestBody instanceof FormData)) {
       headers = { 'Content-Type': 'application/json', ...headers };
+      if (typeof requestBody !== 'string') {
+        requestBody = JSON.stringify(requestBody);
+      }
     }
     const res = await fetch(url, {
       ...options,
+      body: requestBody,
       headers: headers,
     });
     const body = await res.json().catch(() => ({}));
@@ -1041,11 +1046,11 @@
           `public/promo-codes/validate/event/${encodeURIComponent(EVENT_ID)}`,
           {
             method: 'POST',
-            body: {
+            body: JSON.stringify({
               code: code,
               totalCents: tt.priceCents * qty,
               ticketTypeIds: [tt.id],
-            },
+            }),
           },
         );
         if (res.valid) {
@@ -1616,8 +1621,8 @@
       +           '</div>'
       +         '</div>'
       +       '</div>'
-      // Invoice language — hidden, always EN
-      +       '<input type="hidden" id="sratix-bill-lang" value="en" />'
+      // Invoice/email language follows the active widget locale
+      +       '<input type="hidden" id="sratix-bill-lang" value="' + escAttr(currentLang) + '" />'
       +       '<p class="sratix-error-msg" id="sratix-billing-error" style="display:none"></p>'
       +     '</form>'
       +   '</div>'

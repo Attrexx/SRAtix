@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { EmailTransport, EmailMessage, DeliveryResult } from './email-transport.interface';
 import { emailHeader, emailPreFooter, emailFooter, emailShell } from './email-templates.util';
+import { parseLocale, type Locale } from '../common/i18n';
 
 /**
  * Email templates — server-side HTML generation.
@@ -31,7 +32,205 @@ interface OrderConfirmationData {
   invoiceUrl?: string;
   /** Number of other recipients who will receive their own ticket codes */
   otherRecipientCount?: number;
+  /** Buyer-selected checkout/invoice language */
+  language?: string;
 }
+
+interface OrderEmailLabels {
+  orderConfirmation: string;
+  order: string;
+  ticketSubjectOne: string;
+  ticketSubjectMany: string;
+  boothSubject: string;
+  ticketThankYouOne: string;
+  ticketThankYouMany: string;
+  boothThankYou: string;
+  ticketTableLabel: string;
+  boothPackage: string;
+  qty: string;
+  total: string;
+  ticketListOne: string;
+  ticketListMany: string;
+  ticketCodeHeadingOne: string;
+  ticketCodeHeadingMany: string;
+  ticketCodeTextHeadingOne: string;
+  ticketCodeTextHeadingMany: string;
+  presentCodeOne: string;
+  presentCodeMany: string;
+  otherRecipientOne: string;
+  otherRecipientMany: string;
+  eventDetails: string;
+  event: string;
+  date: string;
+  venue: string;
+  invoice: string;
+  invoiceTextLabel: string;
+  invoiceAttached: string;
+  downloadInvoice: string;
+}
+
+const ORDER_EMAIL_LABELS: Record<Locale, OrderEmailLabels> = {
+  en: {
+    orderConfirmation: 'Order Confirmation',
+    order: 'Order',
+    ticketSubjectOne: 'Your ticket for {eventName} — Order {orderNumber}',
+    ticketSubjectMany: 'Your tickets for {eventName} — Order {orderNumber}',
+    boothSubject: 'Your booth for {eventName} — Order {orderNumber}',
+    ticketThankYouOne: 'Thank you for your order! Your ticket for <strong>{eventName}</strong> is confirmed.',
+    ticketThankYouMany: 'Thank you for your order! Your tickets for <strong>{eventName}</strong> are confirmed.',
+    boothThankYou: 'Thank you for your order! Your booth for <strong>{eventName}</strong> is confirmed. You will receive a separate email with instructions to set up your Exhibitor Portal.',
+    ticketTableLabel: 'Ticket Type',
+    boothPackage: 'Booth Package',
+    qty: 'Qty',
+    total: 'Total',
+    ticketListOne: 'Ticket',
+    ticketListMany: 'Tickets',
+    ticketCodeHeadingOne: 'Your Ticket Code',
+    ticketCodeHeadingMany: 'Your Ticket Codes',
+    ticketCodeTextHeadingOne: 'Ticket Code',
+    ticketCodeTextHeadingMany: 'Ticket Codes',
+    presentCodeOne: 'Present this code at the event entrance for check-in.',
+    presentCodeMany: 'Present these codes at the event entrance for check-in.',
+    otherRecipientOne: '{count} other recipient will receive a separate ticket code via email once they complete registration.',
+    otherRecipientMany: '{count} other recipients will receive their own ticket codes via email once they complete registration.',
+    eventDetails: 'Event Details',
+    event: 'Event',
+    date: 'Date',
+    venue: 'Venue',
+    invoice: 'Invoice',
+    invoiceTextLabel: 'Invoice',
+    invoiceAttached: 'Your invoice is attached to this email. You can also download it anytime:',
+    downloadInvoice: 'Download Invoice',
+  },
+  fr: {
+    orderConfirmation: 'Confirmation de commande',
+    order: 'Commande',
+    ticketSubjectOne: 'Votre billet pour {eventName} — Commande {orderNumber}',
+    ticketSubjectMany: 'Vos billets pour {eventName} — Commande {orderNumber}',
+    boothSubject: 'Votre stand pour {eventName} — Commande {orderNumber}',
+    ticketThankYouOne: 'Merci pour votre commande ! Votre billet pour <strong>{eventName}</strong> est confirmé.',
+    ticketThankYouMany: 'Merci pour votre commande ! Vos billets pour <strong>{eventName}</strong> sont confirmés.',
+    boothThankYou: 'Merci pour votre commande ! Votre stand pour <strong>{eventName}</strong> est confirmé. Vous recevrez un e-mail séparé avec les instructions pour configurer votre portail exposant.',
+    ticketTableLabel: 'Type de billet',
+    boothPackage: 'Pack stand',
+    qty: 'Qté',
+    total: 'Total',
+    ticketListOne: 'Billet',
+    ticketListMany: 'Billets',
+    ticketCodeHeadingOne: 'Votre code billet',
+    ticketCodeHeadingMany: 'Vos codes billets',
+    ticketCodeTextHeadingOne: 'Code billet',
+    ticketCodeTextHeadingMany: 'Codes billets',
+    presentCodeOne: 'Présentez ce code à l’entrée de l’événement pour l’enregistrement.',
+    presentCodeMany: 'Présentez ces codes à l’entrée de l’événement pour l’enregistrement.',
+    otherRecipientOne: '{count} autre destinataire recevra un code billet séparé par e-mail une fois son inscription terminée.',
+    otherRecipientMany: '{count} autres destinataires recevront leurs propres codes billets par e-mail une fois leur inscription terminée.',
+    eventDetails: 'Détails de l’événement',
+    event: 'Événement',
+    date: 'Date',
+    venue: 'Lieu',
+    invoice: 'Facture',
+    invoiceTextLabel: 'Facture',
+    invoiceAttached: 'Votre facture est jointe à cet e-mail. Vous pouvez aussi la télécharger à tout moment :',
+    downloadInvoice: 'Télécharger la facture',
+  },
+  de: {
+    orderConfirmation: 'Bestellbestätigung',
+    order: 'Bestellung',
+    ticketSubjectOne: 'Ihr Ticket für {eventName} — Bestellung {orderNumber}',
+    ticketSubjectMany: 'Ihre Tickets für {eventName} — Bestellung {orderNumber}',
+    boothSubject: 'Ihr Stand für {eventName} — Bestellung {orderNumber}',
+    ticketThankYouOne: 'Vielen Dank für Ihre Bestellung! Ihr Ticket für <strong>{eventName}</strong> ist bestätigt.',
+    ticketThankYouMany: 'Vielen Dank für Ihre Bestellung! Ihre Tickets für <strong>{eventName}</strong> sind bestätigt.',
+    boothThankYou: 'Vielen Dank für Ihre Bestellung! Ihr Stand für <strong>{eventName}</strong> ist bestätigt. Sie erhalten eine separate E-Mail mit Anweisungen zum Einrichten Ihres Ausstellerportals.',
+    ticketTableLabel: 'Tickettyp',
+    boothPackage: 'Standpaket',
+    qty: 'Menge',
+    total: 'Total',
+    ticketListOne: 'Ticket',
+    ticketListMany: 'Tickets',
+    ticketCodeHeadingOne: 'Ihr Ticketcode',
+    ticketCodeHeadingMany: 'Ihre Ticketcodes',
+    ticketCodeTextHeadingOne: 'Ticketcode',
+    ticketCodeTextHeadingMany: 'Ticketcodes',
+    presentCodeOne: 'Zeigen Sie diesen Code am Eingang der Veranstaltung zum Check-in vor.',
+    presentCodeMany: 'Zeigen Sie diese Codes am Eingang der Veranstaltung zum Check-in vor.',
+    otherRecipientOne: '{count} weitere Person erhält einen separaten Ticketcode per E-Mail, sobald sie ihre Registrierung abgeschlossen hat.',
+    otherRecipientMany: '{count} weitere Personen erhalten ihre eigenen Ticketcodes per E-Mail, sobald sie ihre Registrierung abgeschlossen haben.',
+    eventDetails: 'Veranstaltungsdetails',
+    event: 'Veranstaltung',
+    date: 'Datum',
+    venue: 'Veranstaltungsort',
+    invoice: 'Rechnung',
+    invoiceTextLabel: 'Rechnung',
+    invoiceAttached: 'Ihre Rechnung ist dieser E-Mail angehängt. Sie können sie auch jederzeit herunterladen:',
+    downloadInvoice: 'Rechnung herunterladen',
+  },
+  it: {
+    orderConfirmation: 'Conferma ordine',
+    order: 'Ordine',
+    ticketSubjectOne: 'Il tuo biglietto per {eventName} — Ordine {orderNumber}',
+    ticketSubjectMany: 'I tuoi biglietti per {eventName} — Ordine {orderNumber}',
+    boothSubject: 'Il tuo stand per {eventName} — Ordine {orderNumber}',
+    ticketThankYouOne: 'Grazie per il tuo ordine! Il tuo biglietto per <strong>{eventName}</strong> è confermato.',
+    ticketThankYouMany: 'Grazie per il tuo ordine! I tuoi biglietti per <strong>{eventName}</strong> sono confermati.',
+    boothThankYou: 'Grazie per il tuo ordine! Il tuo stand per <strong>{eventName}</strong> è confermato. Riceverai un’e-mail separata con le istruzioni per configurare il Portale Espositori.',
+    ticketTableLabel: 'Tipo di biglietto',
+    boothPackage: 'Pacchetto stand',
+    qty: 'Qtà',
+    total: 'Totale',
+    ticketListOne: 'Biglietto',
+    ticketListMany: 'Biglietti',
+    ticketCodeHeadingOne: 'Il tuo codice biglietto',
+    ticketCodeHeadingMany: 'I tuoi codici biglietto',
+    ticketCodeTextHeadingOne: 'Codice biglietto',
+    ticketCodeTextHeadingMany: 'Codici biglietto',
+    presentCodeOne: 'Presenta questo codice all’ingresso dell’evento per il check-in.',
+    presentCodeMany: 'Presenta questi codici all’ingresso dell’evento per il check-in.',
+    otherRecipientOne: '{count} altro destinatario riceverà un codice biglietto separato via e-mail dopo aver completato la registrazione.',
+    otherRecipientMany: '{count} altri destinatari riceveranno i propri codici biglietto via e-mail dopo aver completato la registrazione.',
+    eventDetails: 'Dettagli evento',
+    event: 'Evento',
+    date: 'Data',
+    venue: 'Sede',
+    invoice: 'Fattura',
+    invoiceTextLabel: 'Fattura',
+    invoiceAttached: 'La fattura è allegata a questa e-mail. Puoi anche scaricarla in qualsiasi momento:',
+    downloadInvoice: 'Scarica fattura',
+  },
+  'zh-TW': {
+    orderConfirmation: '訂單確認',
+    order: '訂單',
+    ticketSubjectOne: '您的 {eventName} 票券 — 訂單 {orderNumber}',
+    ticketSubjectMany: '您的 {eventName} 票券 — 訂單 {orderNumber}',
+    boothSubject: '您的 {eventName} 展位 — 訂單 {orderNumber}',
+    ticketThankYouOne: '感謝您的訂單！您的 <strong>{eventName}</strong> 票券已確認。',
+    ticketThankYouMany: '感謝您的訂單！您的 <strong>{eventName}</strong> 票券已確認。',
+    boothThankYou: '感謝您的訂單！您的 <strong>{eventName}</strong> 展位已確認。您將收到另一封電子郵件，內含設定參展商入口網站的說明。',
+    ticketTableLabel: '票種',
+    boothPackage: '展位方案',
+    qty: '數量',
+    total: '總計',
+    ticketListOne: '票券',
+    ticketListMany: '票券',
+    ticketCodeHeadingOne: '您的票券代碼',
+    ticketCodeHeadingMany: '您的票券代碼',
+    ticketCodeTextHeadingOne: '票券代碼',
+    ticketCodeTextHeadingMany: '票券代碼',
+    presentCodeOne: '請在活動入口出示此代碼以辦理報到。',
+    presentCodeMany: '請在活動入口出示這些代碼以辦理報到。',
+    otherRecipientOne: '另有 {count} 位收件人完成註冊後，將透過電子郵件收到個別票券代碼。',
+    otherRecipientMany: '另有 {count} 位收件人完成註冊後，將透過電子郵件收到各自的票券代碼。',
+    eventDetails: '活動詳情',
+    event: '活動',
+    date: '日期',
+    venue: '場地',
+    invoice: '發票',
+    invoiceTextLabel: '發票',
+    invoiceAttached: '您的發票已附加於此電子郵件，也可隨時下載：',
+    downloadInvoice: '下載發票',
+  },
+};
 
 /**
  * Email Service — high-level email API.
@@ -73,11 +272,16 @@ export class EmailService {
     to: string,
     data: OrderConfirmationData,
   ): Promise<DeliveryResult> {
+    const labels = this.orderEmailLabels(data.language);
+    const ticketCount = this.orderTicketCount(data);
     const html = this.renderOrderConfirmation(data);
     const text = this.renderOrderConfirmationText(data);
     const subject = data.isExhibitor
-      ? `Your booth for ${data.eventName} — Order ${data.orderNumber}`
-      : `Your tickets for ${data.eventName} — Order ${data.orderNumber}`;
+      ? this.formatEmailLabel(labels.boothSubject, data)
+      : this.formatEmailLabel(
+          ticketCount === 1 ? labels.ticketSubjectOne : labels.ticketSubjectMany,
+          data,
+        );
 
     const attachments: import('./email-transport.interface').EmailAttachment[] = [];
     if (data.invoicePdf) {
@@ -188,7 +392,8 @@ export class EmailService {
     const ticketLines = (data.ticketBreakdown ?? [])
       .map((t) => `  ${t.name} x${t.quantity}`)
       .join('\n');
-    const text = `New Order: ${data.orderNumber}\n\nCustomer: ${data.customerName} (${data.customerEmail})\nEvent: ${data.eventName}\nDate: ${data.eventDate}\nTickets: ${data.ticketCount}${ticketLines ? '\n' + ticketLines : ''}\nTotal: ${data.totalFormatted} ${data.currency}${data.isExhibitor ? '\nType: Exhibitor' : ''}${data.companyName ? '\nCompany: ' + data.companyName : ''}\n\n-- SRAtix`;
+    const ticketLabel = data.ticketCount === 1 ? 'Ticket' : 'Tickets';
+    const text = `New Order: ${data.orderNumber}\n\nCustomer: ${data.customerName} (${data.customerEmail})\nEvent: ${data.eventName}\nDate: ${data.eventDate}\n${ticketLabel}: ${data.ticketCount}${ticketLines ? '\n' + ticketLines : ''}\nTotal: ${data.totalFormatted} ${data.currency}${data.isExhibitor ? '\nType: Exhibitor' : ''}${data.companyName ? '\nCompany: ' + data.companyName : ''}\n\n-- SRAtix`;
 
     for (const to of recipients) {
       this.send({
@@ -1030,10 +1235,30 @@ ${data.message}
     }
   }
 
+  private orderEmailLabels(language?: string): OrderEmailLabels {
+    return ORDER_EMAIL_LABELS[parseLocale(language)];
+  }
+
+  private orderTicketCount(data: OrderConfirmationData): number {
+    return data.tickets.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  private formatEmailLabel(
+    template: string,
+    data: Pick<OrderConfirmationData, 'eventName' | 'orderNumber'> & { count?: number },
+  ): string {
+    return template
+      .replace(/\{eventName\}/g, data.eventName)
+      .replace(/\{orderNumber\}/g, data.orderNumber)
+      .replace(/\{count\}/g, String(data.count ?? ''));
+  }
+
   // ─── Template Rendering (Phase 1: Inline HTML) ────────────────
 
   private renderOrderConfirmation(data: OrderConfirmationData): string {
-    const itemLabel = data.isExhibitor ? 'Booth Package' : 'Ticket Type';
+    const labels = this.orderEmailLabels(data.language);
+    const ticketCount = this.orderTicketCount(data);
+    const itemLabel = data.isExhibitor ? labels.boothPackage : labels.ticketTableLabel;
     const ticketRows = data.tickets
       .map(
         (t) => `
@@ -1045,8 +1270,11 @@ ${data.message}
       .join('');
 
     const thankYouLine = data.isExhibitor
-      ? `Thank you for your order! Your booth for <strong>${data.eventName}</strong> is confirmed. You will receive a separate email with instructions to set up your Exhibitor Portal.`
-      : `Thank you for your order! Your tickets for <strong>${data.eventName}</strong> are confirmed.`;
+      ? this.formatEmailLabel(labels.boothThankYou, data)
+      : this.formatEmailLabel(
+          ticketCount === 1 ? labels.ticketThankYouOne : labels.ticketThankYouMany,
+          data,
+        );
 
     // Exhibitors don't get ticket QR codes — they receive access via the Exhibitor Portal
     const showTicketCodes = !data.isExhibitor && data.ticketCodes && data.ticketCodes.length > 0;
@@ -1057,11 +1285,11 @@ ${data.message}
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Order Confirmation</title>
+      <title>${labels.orderConfirmation}</title>
     </head>
     <body style="margin:0; padding:0; background:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff;">
-        ${emailHeader('Order Confirmation')}
+        ${emailHeader(labels.orderConfirmation)}
 
         <!-- Body -->
         <tr>
@@ -1075,12 +1303,12 @@ ${data.message}
 
             <!-- Order Summary -->
             <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
-              <h3 style="margin: 0 0 12px; color: #333;">Order #${data.orderNumber}</h3>
+              <h3 style="margin: 0 0 12px; color: #333;">${labels.order} #${data.orderNumber}</h3>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <thead>
                   <tr>
                     <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">${itemLabel}</th>
-                    <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">Qty</th>
+                    <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666;">${labels.qty}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1088,37 +1316,37 @@ ${data.message}
                 </tbody>
               </table>
               <p style="margin: 12px 0 0; font-size: 18px; font-weight: bold; text-align: right;">
-                Total: ${data.totalFormatted} ${data.currency}
+                ${labels.total}: ${data.totalFormatted} ${data.currency}
               </p>
             </div>
 
             ${showTicketCodes ? `
             <!-- Ticket Codes -->
             <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
-              <h3 style="margin: 0 0 8px; color: #333;">Your Ticket Code${data.ticketCodes!.length > 1 ? 's' : ''}</h3>
-              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present ${data.ticketCodes!.length > 1 ? 'these codes' : 'this code'} at the event entrance for check-in.</p>
+              <h3 style="margin: 0 0 8px; color: #333;">${data.ticketCodes!.length === 1 ? labels.ticketCodeHeadingOne : labels.ticketCodeHeadingMany}</h3>
+              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">${data.ticketCodes!.length === 1 ? labels.presentCodeOne : labels.presentCodeMany}</p>
               ${data.ticketCodes!.map((code) => `<table cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0;"><tr>
                 <td style="vertical-align: middle; padding-right: 12px;">${data.apiBaseUrl ? `<img src="${data.apiBaseUrl}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
                 <td style="vertical-align: middle;"><div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div></td>
               </tr></table>`).join('')}
-              ${data.otherRecipientCount && data.otherRecipientCount > 0 ? `<p style="margin: 12px 0 0; font-size: 13px; color: #666;">ℹ️ ${data.otherRecipientCount} other recipient${data.otherRecipientCount > 1 ? 's' : ''} will receive ${data.otherRecipientCount > 1 ? 'their own' : 'a separate'} ticket code${data.otherRecipientCount > 1 ? 's' : ''} via email once they complete registration.</p>` : ''}
+              ${data.otherRecipientCount && data.otherRecipientCount > 0 ? `<p style="margin: 12px 0 0; font-size: 13px; color: #666;">ℹ️ ${this.formatEmailLabel(data.otherRecipientCount === 1 ? labels.otherRecipientOne : labels.otherRecipientMany, { ...data, count: data.otherRecipientCount })}</p>` : ''}
             </div>` : ''}
 
             <!-- Event Info -->
             <div style="background: #e8f4fd; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
-              <h3 style="margin: 0 0 8px; color: #333;">📅 Event Details</h3>
-              <p style="margin: 4px 0;"><strong>Event:</strong> ${data.eventName}</p>
-              <p style="margin: 4px 0;"><strong>Date:</strong> ${data.eventDate}</p>
-              <p style="margin: 4px 0;"><strong>Venue:</strong> ${this.venueHtml(data.eventVenue, data.eventVenueMapUrl)}</p>
+              <h3 style="margin: 0 0 8px; color: #333;">📅 ${labels.eventDetails}</h3>
+              <p style="margin: 4px 0;"><strong>${labels.event}:</strong> ${data.eventName}</p>
+              <p style="margin: 4px 0;"><strong>${labels.date}:</strong> ${data.eventDate}</p>
+              <p style="margin: 4px 0;"><strong>${labels.venue}:</strong> ${this.venueHtml(data.eventVenue, data.eventVenueMapUrl)}</p>
             </div>
 
             ${data.invoiceUrl ? `
             <!-- Invoice Link -->
             <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 0 0 20px;">
-              <h3 style="margin: 0 0 8px; color: #333;">🧾 Invoice</h3>
-              <p style="margin: 4px 0; font-size: 14px; color: #555;">Your invoice is attached to this email. You can also download it anytime:</p>
+              <h3 style="margin: 0 0 8px; color: #333;">🧾 ${labels.invoice}</h3>
+              <p style="margin: 4px 0; font-size: 14px; color: #555;">${labels.invoiceAttached}</p>
               <p style="margin: 12px 0 0;">
-                <a href="${data.invoiceUrl}" style="display: inline-block; background: #0078d4; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Download Invoice</a>
+                <a href="${data.invoiceUrl}" style="display: inline-block; background: #0078d4; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">${labels.downloadInvoice}</a>
               </p>
             </div>` : ''}
           </td>
@@ -1133,18 +1361,25 @@ ${data.message}
   }
 
   private renderOrderConfirmationText(data: OrderConfirmationData): string {
+    const labels = this.orderEmailLabels(data.language);
+    const ticketCount = this.orderTicketCount(data);
     const tickets = data.tickets
       .map((t) => `  - ${t.typeName} x${t.quantity}`)
       .join('\n');
 
-    const itemLabel = data.isExhibitor ? 'Booth package' : 'Tickets';
+    const itemLabel = data.isExhibitor
+      ? labels.boothPackage
+      : ticketCount === 1 ? labels.ticketListOne : labels.ticketListMany;
     const thankYouLine = data.isExhibitor
-      ? `Thank you for your order! Your booth for ${data.eventName} is confirmed. You will receive a separate email with instructions to set up your Exhibitor Portal.`
-      : `Thank you for your order! Your tickets for ${data.eventName} are confirmed.`;
+      ? this.formatEmailLabel(labels.boothThankYou.replace(/<\/?.*?>/g, ''), data)
+      : this.formatEmailLabel(
+          (ticketCount === 1 ? labels.ticketThankYouOne : labels.ticketThankYouMany).replace(/<\/?.*?>/g, ''),
+          data,
+        );
     const showTicketCodes = !data.isExhibitor && data.ticketCodes && data.ticketCodes.length > 0;
 
     return `
-Order Confirmation — ${data.orderNumber}
+${labels.orderConfirmation} — ${data.orderNumber}
 
 Hi ${data.customerName},
 
@@ -1153,12 +1388,12 @@ ${thankYouLine}
 ${itemLabel}:
 ${tickets}
 
-Total: ${data.totalFormatted} ${data.currency}
-${showTicketCodes ? `\nTicket Code${data.ticketCodes!.length > 1 ? 's' : ''}:\n${data.ticketCodes!.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
-Event: ${data.eventName}
-Date: ${data.eventDate}
-Venue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
-${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
+${labels.total}: ${data.totalFormatted} ${data.currency}
+${showTicketCodes ? `\n${data.ticketCodes!.length === 1 ? labels.ticketCodeTextHeadingOne : labels.ticketCodeTextHeadingMany}:\n${data.ticketCodes!.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
+${labels.event}: ${data.eventName}
+${labels.date}: ${data.eventDate}
+${labels.venue}: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
+${data.invoiceUrl ? `\n${labels.invoiceTextLabel}: ${data.invoiceUrl}\n` : ''}
 — Swiss Robotics Association / SRAtix
     `.trim();
   }
@@ -1287,7 +1522,8 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
   }): string {
     const ticketInfo = (data.ticketBreakdown ?? [])
       .map((t) => `${t.name} x${t.quantity}`)
-      .join(', ') || `${data.ticketCount} ticket(s)`;
+      .join(', ') || `${data.ticketCount} ${data.ticketCount === 1 ? 'ticket' : 'tickets'}`;
+    const ticketLabel = data.ticketCount === 1 ? 'Ticket' : 'Tickets';
 
     const rows = [
       this.adminInfoRow('Order', `#${data.orderNumber}`),
@@ -1295,7 +1531,7 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
       this.adminInfoRow('Email', `<a href="mailto:${data.customerEmail}" style="color: #4f46e5; text-decoration: none;">${data.customerEmail}</a>`),
       this.adminInfoRow('Event', data.eventName),
       this.adminInfoRow('Date', data.eventDate),
-      this.adminInfoRow('Tickets', ticketInfo),
+      this.adminInfoRow(ticketLabel, ticketInfo),
       ...(data.isExhibitor ? [this.adminInfoRow('Type', 'Exhibitor')] : []),
       ...(data.companyName ? [this.adminInfoRow('Company', data.companyName)] : []),
       ...(data.staffNames && data.staffNames.length > 0

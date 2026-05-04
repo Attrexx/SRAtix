@@ -423,6 +423,7 @@ export class PublicCheckoutController {
         orderMeta.membershipOptOutForcedByServer = true;
       }
       if (dto.attendeeData.company) orderMeta.companyName = dto.attendeeData.company;
+      if (dto.invoiceLanguage) orderMeta.invoiceLanguage = dto.invoiceLanguage;
       if (recipientAttendees.length > 0) {
         orderMeta.recipientAttendees = recipientAttendees;
         orderMeta.includeTicketForSelf = includeTicketForSelf;
@@ -445,9 +446,6 @@ export class PublicCheckoutController {
         customerName: dto.billingData.name,
         customerEmail: dto.billingData.email,
       });
-      if (dto.invoiceLanguage) {
-        await this.orders.updateMeta(order.id, { invoiceLanguage: dto.invoiceLanguage });
-      }
     }
 
     // ── 5. Validate promo code ───────────────────────────────────────────

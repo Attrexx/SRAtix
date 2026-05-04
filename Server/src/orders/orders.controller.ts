@@ -170,6 +170,7 @@ export class OrdersController {
 
     const event = await this.ordersService.findEventForOrder(id);
     const eventMeta = (event?.meta as Record<string, any>) ?? {};
+    const orderMeta = (order.meta as Record<string, unknown>) ?? {};
 
     // Resolve ticket type names
     const ttIds = order.items.map((item: any) => item.ticketTypeId);
@@ -208,6 +209,7 @@ export class OrdersController {
         eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
         eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
         isExhibitor: isExhibitorOrder,
+        language: (orderMeta.invoiceLanguage as string) ?? undefined,
       });
       this.logger.log(`Resent confirmation email to ${email} for order ${order.orderNumber}`);
       return { success: true, email };
