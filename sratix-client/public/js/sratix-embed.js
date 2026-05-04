@@ -1068,7 +1068,7 @@
 
     modal.querySelector('#sratix-qty-cancel').addEventListener('click', closeModal);
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    bindModalBackdropClose(modal);
 
     modal.querySelector('#sratix-qty-continue').addEventListener('click', () => {
       errorEl.style.display = 'none';
@@ -1148,7 +1148,7 @@
       });
     }
 
-    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    bindModalBackdropClose(modal);
     modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
 
     modal.querySelector('#sratix-rcpt-back').addEventListener('click', function() {
@@ -1433,7 +1433,7 @@
         openQuantityModal(flowCtx.eventId, tt);
       }
     });
-    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    bindModalBackdropClose(modal);
 
     var continueBtn = modal.querySelector('#sratix-attendee-continue');
     var errorEl = modal.querySelector('#sratix-attendee-error');
@@ -1666,7 +1666,7 @@
         openQuantityModal(flowCtx.eventId, tt);
       }
     });
-    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    bindModalBackdropClose(modal);
 
     var submitBtn = modal.querySelector('#sratix-billing-submit');
     var errorEl = modal.querySelector('#sratix-billing-error');
@@ -3661,7 +3661,7 @@
       closeModal();
       openQuantityModal(eventId, tt);
     });
-    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    bindModalBackdropClose(modal);
 
     var submitBtn = modal.querySelector('#sratix-reg-submit');
     var errorEl   = modal.querySelector('#sratix-reg-error');
@@ -4115,7 +4115,7 @@
 
       // Bind events
       modal.querySelector('.sratix-modal-close').addEventListener('click', closeModal);
-      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+      bindModalBackdropClose(modal);
 
       if (currentStep === 2) {
         initRichtextEditors(modal);
@@ -4809,6 +4809,26 @@
     }
   }
 
+  function bindModalBackdropClose(modal, onClose) {
+    var pointerStartedOnBackdrop = false;
+    var closeFn = onClose || closeModal;
+
+    modal.addEventListener('pointerdown', function (e) {
+      pointerStartedOnBackdrop = e.target === modal;
+    });
+
+    modal.addEventListener('pointerup', function (e) {
+      if (pointerStartedOnBackdrop && e.target === modal) {
+        closeFn();
+      }
+      pointerStartedOnBackdrop = false;
+    });
+
+    modal.addEventListener('pointercancel', function () {
+      pointerStartedOnBackdrop = false;
+    });
+  }
+
   // ─── Tooltip click → mini-modal (works on both desktop and mobile) ────────────
 
   document.addEventListener('click', function (e) {
@@ -4836,9 +4856,7 @@
 
     // Close handlers
     modal.querySelector('.sratix-modal-close').addEventListener('click', function () { modal.remove(); });
-    modal.addEventListener('click', function (ev) {
-      if (ev.target === modal) modal.remove();
-    });
+    bindModalBackdropClose(modal, function () { modal.remove(); });
   });
 
   function buildSuccessUrl(category, email) {
