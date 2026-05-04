@@ -85,7 +85,7 @@ export class PromoCodesService {
         perCustomerLimit: data.perCustomerLimit ?? 1,
         validFrom: data.validFrom,
         validTo: data.validTo,
-        applicableTicketIds: data.applicableTicketIds
+        applicableTicketIds: data.applicableTicketIds && data.applicableTicketIds.length > 0
           ? (data.applicableTicketIds as any)
           : undefined,
         minOrderCents: data.minOrderCents,
@@ -123,7 +123,7 @@ export class PromoCodesService {
       where: { id },
       data: {
         ...rest,
-        applicableTicketIds: applicableTicketIds
+        applicableTicketIds: applicableTicketIds && applicableTicketIds.length > 0
           ? (applicableTicketIds as any)
           : undefined,
       },
@@ -221,7 +221,7 @@ export class PromoCodesService {
     }
 
     // Check applicable ticket types
-    if (promo.applicableTicketIds) {
+    if (Array.isArray(promo.applicableTicketIds) && promo.applicableTicketIds.length > 0) {
       const applicable = promo.applicableTicketIds as unknown as string[];
       const hasApplicable = orderDetails.ticketTypeIds.some((tid) =>
         applicable.includes(tid),

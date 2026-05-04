@@ -481,7 +481,6 @@
     container.innerHTML = `
       <div class="sratix-role-choice">
         <h2 class="sratix-role-choice__title">${escHtml(t('roleChoice.title'))}</h2>
-        <p class="sratix-role-choice__subtitle">${escHtml(t('roleChoice.subtitle'))}</p>
         <div class="sratix-role-choice__buttons">
           <div class="sratix-role-btn sratix-role-btn--visitor" role="button" tabindex="0" data-role="visitor">
             <span class="sratix-role-btn__icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a3 3 0 0 1 0-6V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></span>
@@ -843,10 +842,7 @@
     let badgesHtml = '';
     if (isBundled && !hideBundlePitch) {
       var tierLabel = HYBRID_TIER_LABELS[tt.membershipTier] || tt.sraMembershipTier || '';
-      var prices = config.membershipPrices || {};
-      var priceCents = prices[tt.sraWpProductId];
-      var valuedStr = priceCents ? ' valued ' + formatPrice(priceCents, tt.currency) : '';
-      badgesHtml += `<span class="sratix-bundle-badge">SRD+1yr SRA ${escHtml(tierLabel)} Membership${escHtml(valuedStr)}</span>`;
+      badgesHtml += `<span class="sratix-bundle-badge">SRD ticket + SRA ${escHtml(tierLabel)} individual membership until end of 2026</span>`;
     }
 
     // ── Price area ──
@@ -1042,7 +1038,15 @@
       promoMsg.className = 'sratix-promo-msg';
       try {
         const res = await apiFetch(
-          `promo-codes/validate?code=${encodeURIComponent(code)}&eventId=${EVENT_ID}&ticketTypeId=${tt.id}&totalCents=${tt.priceCents * qty}`,
+          `public/promo-codes/validate/event/${encodeURIComponent(EVENT_ID)}`,
+          {
+            method: 'POST',
+            body: {
+              code: code,
+              totalCents: tt.priceCents * qty,
+              ticketTypeIds: [tt.id],
+            },
+          },
         );
         if (res.valid) {
           discountCents = res.discountCents || 0;

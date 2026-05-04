@@ -10,6 +10,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RateLimit } from '../common/guards/rate-limit.guard';
 import { PromoCodesService } from './promo-codes.service';
 import {
   IsString,
@@ -187,6 +188,31 @@ export class PromoCodesController {
    */
   @Post('validate/event/:eventId')
   @Roles('event_admin', 'admin', 'super_admin', 'box_office', 'attendee')
+  validate(
+    @Param('eventId') eventId: string,
+    @Body() dto: ValidatePromoCodeDto,
+  ) {
+    return this.promoCodesService.validateCode(eventId, dto.code, {
+      totalCents: dto.totalCents,
+      ticketTypeIds: dto.ticketTypeIds,
+      customerEmail: dto.customerEmail,
+    });
+  }
+}
+
+/**
+ * Public endpoints for the Client widget checkout flow.
+ */
+@Controller('public/promo-codes')
+export class PromoCodesPublicController {
+  constructor(private readonly promoCodesService: PromoCodesService) {}
+
+  /**
+   * POST /api/public/promo-codes/validate/event/:eventId
+   * Validate a promo code and get the discount amount for the public widget.
+   */
+  @Post('validate/event/:eventId')
+  @RateLimit({ limit: 30, windowSec: 60 })
   validate(
     @Param('eventId') eventId: string,
     @Body() dto: ValidatePromoCodeDto,

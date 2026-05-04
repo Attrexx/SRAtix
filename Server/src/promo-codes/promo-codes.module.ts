@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PromoCodesService } from './promo-codes.service';
-import { PromoCodesController } from './promo-codes.controller';
+import { PromoCodesController, PromoCodesPublicController } from './promo-codes.controller';
 
 @Module({
-  controllers: [PromoCodesController],
+  controllers: [PromoCodesController, PromoCodesPublicController],
   providers: [PromoCodesService],
   exports: [PromoCodesService],
 })
