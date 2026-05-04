@@ -1790,13 +1790,20 @@ select.sratix-input.sratix-select-empty {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 100%;
 	padding: 16px 24px 8px;
 	gap: 0;
+	overflow: hidden;
 }
 
 .sratix-wizard-step {
 	display: flex;
 	align-items: center;
+	justify-content: center;
+	flex: 1 1 0;
+	min-width: 0;
 	gap: 8px;
 	opacity: 0.45;
 	transition: opacity 0.2s;
@@ -1839,15 +1846,20 @@ select.sratix-input.sratix-select-empty {
 .sratix-wizard-step__label {
 	font-size: 0.82em;
 	font-weight: 500;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .sratix-wizard-step__line {
-	width: 40px;
+	width: auto;
+	min-width: 10px;
+	max-width: 32px;
 	height: 2px;
 	background: var(--sratix-border-h);
-	margin: 0 8px;
-	flex-shrink: 0;
+	margin: 0 6px;
+	flex: 1 1 18px;
 }
 
 /* ── Wizard Body ── */
@@ -1863,6 +1875,7 @@ select.sratix-input.sratix-select-empty {
 
 .sratix-modal-box--wide {
 	max-width: 640px;
+	overflow-x: hidden;
 }
 
 /* ── Info Callout ── */
