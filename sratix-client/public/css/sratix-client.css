@@ -1804,7 +1804,7 @@ select.sratix-input.sratix-select-empty {
 	justify-content: center;
 	flex: 1 1 0;
 	min-width: 0;
-	gap: 8px;
+	gap: 6px;
 	opacity: 0.45;
 	transition: opacity 0.2s;
 }
@@ -1846,20 +1846,21 @@ select.sratix-input.sratix-select-empty {
 .sratix-wizard-step__label {
 	font-size: 0.82em;
 	font-weight: 500;
+	line-height: 1.15;
 	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	max-width: 100%;
+	text-align: center;
+	white-space: normal;
 }
 
 .sratix-wizard-step__line {
 	width: auto;
-	min-width: 10px;
-	max-width: 32px;
+	min-width: 8px;
+	max-width: 18px;
 	height: 2px;
 	background: var(--sratix-border-h);
-	margin: 0 6px;
-	flex: 1 1 18px;
+	margin: 0 4px;
+	flex: 0 1 18px;
 }
 
 /* ── Wizard Body ── */
