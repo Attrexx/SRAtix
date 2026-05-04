@@ -656,7 +656,10 @@
         </div>
         <div class="sratix-field">
           <label class="sratix-label" for="sratix-sra-password">${escHtml(t('memberGate.password'))}</label>
-          <input class="sratix-input" id="sratix-sra-password" type="password" autocomplete="current-password" />
+          <span class="sratix-password-field">
+            <input class="sratix-input sratix-password-field__input" id="sratix-sra-password" type="password" autocomplete="current-password" />
+            ${passwordToggleButton('sratix-sra-password')}
+          </span>
         </div>
         <p class="sratix-error-msg" id="sratix-sra-error" style="display:none"></p>
         <button class="sratix-btn sratix-btn--primary sratix-login-form__submit" id="sratix-sra-submit">
@@ -664,6 +667,8 @@
         </button>
       </div>
     `;
+
+    initPasswordToggles(container);
 
     container.querySelector('#sratix-gate-back').addEventListener('click', function (e) {
       e.preventDefault();
@@ -4894,6 +4899,36 @@
     return String(str ?? '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  function passwordEyeIcon(isVisible) {
+    if (isVisible) {
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.89 1 12a20.29 20.29 0 0 1 5.06-7.94"/><path d="M9.9 4.24A10.45 10.45 0 0 1 12 4c5 0 9.27 3.11 11 8a20.55 20.55 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+    }
+    return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8s11 8 11 8s-4 8-11 8S1 12 1 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  }
+
+  function passwordToggleButton(targetId) {
+    return '<button type="button" class="sratix-password-toggle" data-password-target="' + escAttr(targetId) + '" aria-label="' + escAttr(t('password.show')) + '" title="' + escAttr(t('password.show')) + '">' + passwordEyeIcon(false) + '</button>';
+  }
+
+  function initPasswordToggles(root) {
+    root.querySelectorAll('.sratix-password-toggle').forEach(function (btn) {
+      if (btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function () {
+        var targetId = btn.dataset.passwordTarget || '';
+        var target = targetId ? document.getElementById(targetId) : null;
+        if (!target) return;
+        var nextVisible = target.type === 'password';
+        target.type = nextVisible ? 'text' : 'password';
+        var label = nextVisible ? t('password.hide') : t('password.show');
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+        btn.innerHTML = passwordEyeIcon(nextVisible);
+        target.focus();
+      });
+    });
+  }
+
   /** Resolve a potentially relative URL (e.g. /uploads/…) against API_BASE. */
   function resolveUrl(url) {
     if (!url) return url;
@@ -4999,11 +5034,17 @@
           + '<div class="sratix-field-row">'
           + '<div class="sratix-field">'
           +   '<label class="sratix-label" for="sratix-reg-password">' + escHtml(t('reg.password')) + '</label>'
-          +   '<input class="sratix-input" id="sratix-reg-password" type="password" name="password" minlength="8" required autocomplete="new-password" />'
+          +   '<span class="sratix-password-field">'
+          +     '<input class="sratix-input sratix-password-field__input" id="sratix-reg-password" type="password" name="password" minlength="8" required autocomplete="new-password" />'
+          +     passwordToggleButton('sratix-reg-password')
+          +   '</span>'
           + '</div>'
           + '<div class="sratix-field">'
           +   '<label class="sratix-label" for="sratix-reg-password-confirm">' + escHtml(t('reg.passwordConfirm')) + '</label>'
-          +   '<input class="sratix-input" id="sratix-reg-password-confirm" type="password" name="passwordConfirm" minlength="8" required autocomplete="new-password" />'
+          +   '<span class="sratix-password-field">'
+          +     '<input class="sratix-input sratix-password-field__input" id="sratix-reg-password-confirm" type="password" name="passwordConfirm" minlength="8" required autocomplete="new-password" />'
+          +     passwordToggleButton('sratix-reg-password-confirm')
+          +   '</span>'
           + '</div>'
           + '</div>'
           + '<p class="sratix-field-hint">' + escHtml(t('reg.passwordHint')) + '</p>';
@@ -5022,6 +5063,7 @@
         + '</form>';
 
       container.innerHTML = formHtml;
+      initPasswordToggles(container);
 
       var formEl = container.querySelector('#sratix-register-form');
 
@@ -5535,12 +5577,19 @@
             <input type="hidden" id="sratix-set-email" name="username" autocomplete="username" value="" />
             <div class="sratix-form-field">
               <label for="sratix-new-password">${escHtml(t('setPassword.newPassword'))}</label>
-              <input id="sratix-new-password" name="new-password" type="password" required minlength="8" autocomplete="new-password" />
+              <span class="sratix-password-field">
+                <input id="sratix-new-password" class="sratix-password-field__input" name="new-password" type="password" required minlength="8" autocomplete="new-password" />
+                ${passwordToggleButton('sratix-new-password')}
+              </span>
               <div id="sratix-strength-display" class="sratix-strength-display"></div>
             </div>
             <div class="sratix-form-field">
               <label for="sratix-confirm-password">${escHtml(t('setPassword.confirmPassword'))}</label>
-              <input id="sratix-confirm-password" name="confirm-password" type="password" required minlength="8" autocomplete="new-password" />
+              <span class="sratix-password-field">
+                <input id="sratix-confirm-password" class="sratix-password-field__input" name="confirm-password" type="password" required minlength="8" autocomplete="new-password" />
+                ${passwordToggleButton('sratix-confirm-password')}
+              </span>
+              <div id="sratix-password-match" class="sratix-password-match" aria-live="polite"></div>
             </div>
             <div class="sratix-set-password__error" style="display:none;"></div>
             <button type="submit" class="sratix-btn sratix-btn--primary sratix-set-password__submit" disabled>
@@ -5550,27 +5599,48 @@
         </div>
       </div>`;
 
+    initPasswordToggles(container);
+
     var form = container.querySelector('.sratix-set-password__form');
     var errorEl = container.querySelector('.sratix-set-password__error');
     var submitBtn = container.querySelector('.sratix-set-password__submit');
     var pwInput = container.querySelector('#sratix-new-password');
     var pw2Input = container.querySelector('#sratix-confirm-password');
     var strengthDisplay = container.querySelector('#sratix-strength-display');
+    var matchDisplay = container.querySelector('#sratix-password-match');
     var hiddenEmail = container.querySelector('#sratix-set-email');
     var currentStrength = { level: 'weak', score: 0 };
+
+    function updatePasswordSubmitState() {
+      var pw = pwInput.value;
+      var pw2 = pw2Input.value;
+      if (!pw2) {
+        matchDisplay.textContent = '';
+        matchDisplay.className = 'sratix-password-match';
+      } else if (pw === pw2) {
+        matchDisplay.textContent = t('setPassword.match');
+        matchDisplay.className = 'sratix-password-match sratix-password-match--ok';
+      } else {
+        matchDisplay.textContent = t('setPassword.mismatch');
+        matchDisplay.className = 'sratix-password-match sratix-password-match--bad';
+      }
+      submitBtn.disabled = currentStrength.score < 5 || !pw || pw !== pw2;
+    }
 
     // Live strength meter
     pwInput.addEventListener('input', function() {
       var pw = pwInput.value;
       if (pw.length === 0) {
         strengthDisplay.innerHTML = '';
-        submitBtn.disabled = true;
+        currentStrength = { level: 'weak', score: 0 };
+        updatePasswordSubmitState();
         return;
       }
       currentStrength = renderStrengthMeter(strengthDisplay, pw, hiddenEmail.value);
-      // Enable submit only if strength >= good (5/9)
-      submitBtn.disabled = currentStrength.score < 5;
+      updatePasswordSubmitState();
     });
+
+    pw2Input.addEventListener('input', updatePasswordSubmitState);
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -5603,20 +5673,15 @@
         // Populate hidden email field to trigger browser "Save Password" prompt
         if (userEmail) {
           hiddenEmail.value = userEmail;
-          // Create a visible-to-browser-but-hidden-to-user credential form
-          // so password managers detect the email + new-password pair
-          var credFrame = document.createElement('form');
-          credFrame.method = 'post';
-          credFrame.action = '#';
-          credFrame.style.cssText = 'position:absolute;left:-9999px;';
-          credFrame.innerHTML =
-            '<input type="text" name="username" autocomplete="username" value="' + escAttr(userEmail) + '" />' +
-            '<input type="password" name="password" autocomplete="current-password" value="' + escAttr(pw) + '" />' +
-            '<input type="submit" />';
-          document.body.appendChild(credFrame);
-          // Trigger submission to prompt password manager, then remove
-          try { credFrame.querySelector('input[type="submit"]').click(); } catch (ignore) {}
-          setTimeout(function() { credFrame.remove(); }, 500);
+        }
+
+        if (window.history && window.history.replaceState) {
+          var cleanParams = new URLSearchParams(window.location.search);
+          cleanParams.delete('token');
+          cleanParams.delete('setup');
+          var cleanQuery = cleanParams.toString();
+          var cleanUrl = window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash;
+          window.history.replaceState({}, document.title, cleanUrl);
         }
 
         // Auto-login: call the login API to get auth tokens
@@ -5700,6 +5765,7 @@
    */
   function renderPortalLoginForm(container) {
     var isPostPurchase = new URLSearchParams(window.location.search).get('sratix_success') === '1';
+    var eventId = container.dataset.eventId || EVENT_ID;
 
     container.innerHTML = `
       <div class="sratix-portal-login">
@@ -5714,19 +5780,76 @@
             </div>
             <div class="sratix-form-field">
               <label for="sratix-portal-password">${escHtml(t('exhibitorPortal.passwordLabel'))}</label>
-              <input id="sratix-portal-password" type="password" required autocomplete="current-password" />
+              <span class="sratix-password-field">
+                <input id="sratix-portal-password" class="sratix-password-field__input" type="password" required autocomplete="current-password" />
+                ${passwordToggleButton('sratix-portal-password')}
+              </span>
             </div>
             <div class="sratix-portal-login__error" style="display:none;"></div>
             <button type="submit" class="sratix-btn sratix-btn--primary sratix-portal-login__submit">
               ${escHtml(t('exhibitorPortal.loginBtn'))}
             </button>
           </form>
+          <button type="button" class="sratix-portal-login__forgot" id="sratix-portal-forgot">${escHtml(t('exhibitorPortal.forgotPassword'))}</button>
+          <div class="sratix-portal-reset" id="sratix-portal-reset" hidden>
+            <p class="sratix-portal-reset__copy">${escHtml(t('exhibitorPortal.resetPrompt'))}</p>
+            <div class="sratix-form-field">
+              <label for="sratix-portal-reset-email">${escHtml(t('exhibitorPortal.emailLabel'))}</label>
+              <input id="sratix-portal-reset-email" type="email" autocomplete="email" />
+            </div>
+            <button type="button" class="sratix-btn sratix-btn--secondary sratix-portal-reset__submit" id="sratix-portal-reset-submit">
+              ${escHtml(t('exhibitorPortal.resetBtn'))}
+            </button>
+            <div class="sratix-portal-reset__status" id="sratix-portal-reset-status" aria-live="polite"></div>
+          </div>
         </div>
       </div>`;
+
+    initPasswordToggles(container);
 
     const form = container.querySelector('.sratix-portal-login__form');
     const errorEl = container.querySelector('.sratix-portal-login__error');
     const submitBtn = container.querySelector('.sratix-portal-login__submit');
+    const forgotBtn = container.querySelector('#sratix-portal-forgot');
+    const resetBox = container.querySelector('#sratix-portal-reset');
+    const resetEmail = container.querySelector('#sratix-portal-reset-email');
+    const resetSubmit = container.querySelector('#sratix-portal-reset-submit');
+    const resetStatus = container.querySelector('#sratix-portal-reset-status');
+
+    forgotBtn.addEventListener('click', function () {
+      resetBox.hidden = !resetBox.hidden;
+      if (!resetBox.hidden) {
+        resetEmail.value = container.querySelector('#sratix-portal-email').value.trim();
+        resetEmail.focus();
+      }
+    });
+
+    resetSubmit.addEventListener('click', async function () {
+      var email = resetEmail.value.trim() || container.querySelector('#sratix-portal-email').value.trim();
+      if (!email) {
+        resetStatus.textContent = t('exhibitorPortal.resetEmailRequired');
+        resetStatus.className = 'sratix-portal-reset__status sratix-portal-reset__status--error';
+        return;
+      }
+      resetSubmit.disabled = true;
+      resetSubmit.textContent = t('exhibitorPortal.resetSending');
+      resetStatus.textContent = '';
+      resetStatus.className = 'sratix-portal-reset__status';
+      try {
+        await apiFetch('auth/forgot-password', {
+          method: 'POST',
+          body: JSON.stringify({ email: email, context: 'portal', eventId: eventId }),
+        });
+        resetStatus.textContent = t('exhibitorPortal.resetSent');
+        resetStatus.className = 'sratix-portal-reset__status sratix-portal-reset__status--success';
+      } catch (err) {
+        resetStatus.textContent = err.message || t('exhibitorPortal.loginFailed');
+        resetStatus.className = 'sratix-portal-reset__status sratix-portal-reset__status--error';
+      } finally {
+        resetSubmit.disabled = false;
+        resetSubmit.textContent = t('exhibitorPortal.resetBtn');
+      }
+    });
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -7358,7 +7481,7 @@
     var dismissBtn = container.querySelector('.sratix-confirmation-dismiss');
     if (dismissBtn) {
       dismissBtn.addEventListener('click', function () {
-        container.remove();
+        window.location.href = window.location.origin + '/';
       });
     }
   }
@@ -7412,7 +7535,7 @@
     var dismissBtn = container.querySelector('.sratix-confirmation-dismiss');
     if (dismissBtn) {
       dismissBtn.addEventListener('click', function () {
-        container.remove();
+        window.location.href = window.location.origin + '/';
       });
     }
   }

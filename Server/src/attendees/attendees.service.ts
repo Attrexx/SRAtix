@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, ConflictException } from '@nestj
 import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
+import { normalizeEmail } from '../common/email.util';
 
 @Injectable()
 export class AttendeesService {
@@ -200,21 +201,23 @@ export class AttendeesService {
     firstName: string;
     lastName: string;
     registrationToken: string;
-    purchasedByAttendeeId: string;
+    purchasedByAttendeeId?: string | null;
   }) {
+    const email = normalizeEmail(data.email);
     const existing = await this.prisma.attendee.findFirst({
-      where: { eventId: data.eventId, email: data.email },
+      where: { eventId: data.eventId, email },
     });
 
     if (existing) {
       return this.prisma.attendee.update({
         where: { id: existing.id },
         data: {
+          email,
           firstName: data.firstName,
           lastName: data.lastName,
           status: 'invited',
           registrationToken: data.registrationToken,
-          purchasedByAttendeeId: data.purchasedByAttendeeId,
+          purchasedByAttendeeId: data.purchasedByAttendeeId ?? null,
         },
       });
     }
@@ -223,12 +226,12 @@ export class AttendeesService {
       data: {
         eventId: data.eventId,
         orgId: data.orgId,
-        email: data.email,
+        email,
         firstName: data.firstName,
         lastName: data.lastName,
         status: 'invited',
         registrationToken: data.registrationToken,
-        purchasedByAttendeeId: data.purchasedByAttendeeId,
+        purchasedByAttendeeId: data.purchasedByAttendeeId ?? null,
       },
     });
 
@@ -237,7 +240,7 @@ export class AttendeesService {
       action: AuditAction.ATTENDEE_CREATED,
       entity: 'attendee',
       entityId: attendee.id,
-      detail: { email: data.email, firstName: data.firstName, lastName: data.lastName, status: 'invited' },
+      detail: { email, firstName: data.firstName, lastName: data.lastName, status: 'invited' },
     });
 
     return attendee;

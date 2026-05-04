@@ -36,6 +36,7 @@ import { TicketTypesService } from '../ticket-types/ticket-types.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
+import { normalizeEmail } from '../common/email.util';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -236,6 +237,16 @@ export class PublicCheckoutController {
 
   @Post()
   async checkout(@Body() dto: PublicCheckoutDto) {
+    dto.attendeeData.email = normalizeEmail(dto.attendeeData.email);
+    if (dto.billingData?.email) dto.billingData.email = normalizeEmail(dto.billingData.email);
+    if (dto.billingEmail) dto.billingEmail = normalizeEmail(dto.billingEmail);
+    if (dto.additionalAttendees) {
+      dto.additionalAttendees = dto.additionalAttendees.map((attendee) => ({
+        ...attendee,
+        email: normalizeEmail(attendee.email),
+      }));
+    }
+
     // ── 1. Find event ────────────────────────────────────────────────────
     const event = await this.prisma.event.findUnique({
       where: { id: dto.eventId },

@@ -23,6 +23,7 @@ import { RecordBoothLeadDto } from './dto/record-booth-lead.dto';
 import { UpsertSetupRequestDto, AdminUpdateSetupRequestDto } from './dto/upsert-setup-request.dto';
 import { AdminUpdateBoothDetailsDto } from './dto/admin-update-booth-details.dto';
 import { SendContactMessageDto } from './dto/send-contact-message.dto';
+import { normalizeEmail } from '../common/email.util';
 import { resolve, join } from 'path';
 import { mkdirSync, writeFileSync, unlinkSync, existsSync } from 'fs';
 import { randomBytes, createHmac, timingSafeEqual } from 'crypto';
@@ -402,6 +403,231 @@ export class ExhibitorPortalService {
       .toUpperCase();
   }
 
+  async provisionCheckoutStaff(data: {
+    exhibitorOrgId: string;
+    actorUserId?: string;
+    eventId: string;
+    staff: Array<{
+      attendeeId?: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      registrationToken?: string;
+      role?: string;
+    }>;
+    portalBaseUrl?: string;
+  }): Promise<Array<{ email: string; staffId: string; userId: string; passwordSetupUrl?: string }>> {
+    const results: Array<{ email: string; staffId: string; userId: string; passwordSetupUrl?: string }> = [];
+
+    for (const staffMember of data.staff) {
+      results.push(await this.provisionStaffAccess({
+        exhibitorOrgId: data.exhibitorOrgId,
+        actorUserId: data.actorUserId,
+        eventId: data.eventId,
+        firstName: staffMember.firstName,
+        lastName: staffMember.lastName,
+        email: staffMember.email,
+        attendeeId: staffMember.attendeeId,
+        registrationToken: staffMember.registrationToken,
+        role: staffMember.role ?? 'staff',
+        portalBaseUrl: data.portalBaseUrl,
+      }));
+    }
+
+    return results;
+  }
+
+  private async provisionStaffAccess(data: {
+    exhibitorOrgId: string;
+    actorUserId?: string;
+    eventId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    attendeeId?: string;
+    registrationToken?: string;
+    role?: string;
+    portalBaseUrl?: string;
+  }): Promise<{ email: string; staffId: string; userId: string; passwordSetupUrl?: string }> {
+    const email = normalizeEmail(data.email);
+    const ee = await this.requireEventExhibitor(data.exhibitorOrgId, data.eventId);
+
+    const event = await this.prisma.event.findUnique({
+      where: { id: data.eventId },
+      select: { id: true, orgId: true, name: true, startDate: true, venue: true, venueAddress: true, meta: true },
+    });
+    if (!event) throw new NotFoundException('Event not found');
+
+    const ticketType = await this.prisma.ticketType.findFirst({
+      where: { eventId: data.eventId, category: 'exhibitor', status: 'active' },
+      select: { id: true, name: true },
+    });
+    if (!ticketType) throw new BadRequestException('No active exhibitor ticket type found for this event');
+
+    let attendee = data.attendeeId
+      ? await this.prisma.attendee.findUnique({ where: { id: data.attendeeId } })
+      : null;
+
+    if (!attendee) {
+      const purchaser = await this.prisma.attendee.findFirst({
+        where: { eventId: data.eventId, orgId: event.orgId },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      attendee = await this.attendees.upsertRecipient({
+        eventId: data.eventId,
+        orgId: event.orgId,
+        email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        registrationToken: data.registrationToken ?? randomBytes(32).toString('hex'),
+        purchasedByAttendeeId: purchaser?.id ?? null,
+      });
+    } else if (attendee.email !== email || attendee.firstName !== data.firstName || attendee.lastName !== data.lastName) {
+      attendee = await this.prisma.attendee.update({
+        where: { id: attendee.id },
+        data: {
+          email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          ...(data.registrationToken ? { registrationToken: data.registrationToken } : {}),
+        },
+      });
+    }
+
+    let staff = await this.prisma.exhibitorStaff.findFirst({
+      where: { eventExhibitorId: ee.id, email },
+    });
+
+    if (!staff) {
+      staff = await this.prisma.exhibitorStaff.create({
+        data: {
+          eventExhibitorId: ee.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email,
+          role: data.role ?? 'staff',
+          attendeeId: attendee.id,
+          passStatus: 'invited',
+        },
+      });
+    } else {
+      staff = await this.prisma.exhibitorStaff.update({
+        where: { id: staff.id },
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role ?? staff.role,
+          attendeeId: attendee.id,
+          passStatus: staff.passStatus === 'pending' ? 'invited' : staff.passStatus,
+        },
+      });
+    }
+
+    const existingTicket = await this.prisma.ticket.findFirst({
+      where: {
+        eventId: data.eventId,
+        attendeeId: attendee.id,
+        ticketTypeId: ticketType.id,
+        status: { in: ['valid', 'checked_in'] },
+      },
+      select: { id: true },
+    });
+
+    let ticketId = existingTicket?.id;
+    if (!ticketId) {
+      const ticket = await this.prisma.ticket.create({
+        data: {
+          eventId: data.eventId,
+          orgId: event.orgId,
+          ticketTypeId: ticketType.id,
+          attendeeId: attendee.id,
+          code: this.generatePassCode(),
+          status: 'valid',
+          meta: { staffPass: true, exhibitorStaffId: staff.id } as any,
+        },
+      });
+      ticketId = ticket.id;
+    }
+
+    let staffUser = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, passwordHash: true },
+    });
+    const isNewStaffUser = !staffUser;
+    if (!staffUser) {
+      staffUser = await this.prisma.user.create({
+        data: {
+          email,
+          displayName: `${data.firstName} ${data.lastName}`.trim(),
+        },
+        select: { id: true, passwordHash: true },
+      });
+    }
+
+    await this.prisma.userRole.upsert({
+      where: { userId_orgId_role: { userId: staffUser.id, orgId: data.exhibitorOrgId, role: 'exhibitor' } },
+      update: {},
+      create: { userId: staffUser.id, orgId: data.exhibitorOrgId, role: 'exhibitor' },
+    });
+
+    const profile = await this.prisma.exhibitorProfile.findUnique({
+      where: { orgId: data.exhibitorOrgId },
+      select: { companyName: true },
+    });
+
+    const portalBaseUrl = data.portalBaseUrl ?? this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swissroboticsday.ch/exhibitor-portal';
+    let passwordSetupUrl: string | undefined;
+    if (isNewStaffUser || !staffUser.passwordHash) {
+      const rawToken = await this.auth.initiatePasswordSetup(staffUser.id);
+      const eventMeta = (event.meta as Record<string, any>) ?? {};
+      const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
+      const siteOrigin = new URL(portalBaseUrl).origin;
+      passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
+    }
+
+    const eventDate = event.startDate.toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+    const eventMeta = (event.meta as Record<string, any>) ?? {};
+    const fullVenue = [event.venue, event.venueAddress].filter(Boolean).join(', ');
+
+    if (passwordSetupUrl) {
+      await this.email.sendStaffPortalInvite(email, {
+        staffName: `${data.firstName} ${data.lastName}`,
+        companyName: profile?.companyName ?? 'Your Company',
+        eventName: event.name,
+        eventDate,
+        eventVenue: fullVenue,
+        eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
+        role: data.role ?? 'staff',
+        portalUrl: portalBaseUrl,
+        passwordSetupUrl,
+      });
+    } else {
+      await this.email.sendTicketGiftNotification(email, {
+        recipientName: `${data.firstName} ${data.lastName}`,
+        purchaserName: profile?.companyName ?? 'Your exhibitor company',
+        eventName: event.name,
+        eventDate,
+        eventVenue: fullVenue,
+        eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
+        ticketTypeName: ticketType.name,
+        registrationUrl: portalBaseUrl,
+      });
+    }
+
+    this.audit.log({
+      userId: data.actorUserId,
+      action: 'exhibitor_staff.invited',
+      entity: 'exhibitor_staff',
+      entityId: staff.id,
+      detail: { eventId: data.eventId, email, attendeeId: attendee.id, ticketId, staffUserId: staffUser.id, newUser: isNewStaffUser },
+    });
+
+    return { email, staffId: staff.id, userId: staffUser.id, passwordSetupUrl };
+  }
+
   // ── Staff Management ─────────────────────────────────────────────────────
 
   async listStaff(orgId: string, eventId: string) {
@@ -433,8 +659,9 @@ export class ExhibitorPortalService {
     }
 
     // Prevent duplicate email for the same event exhibitor
+    const email = normalizeEmail(dto.email);
     const existing = await this.prisma.exhibitorStaff.findFirst({
-      where: { eventExhibitorId: ee.id, email: dto.email },
+      where: { eventExhibitorId: ee.id, email },
     });
     if (existing) {
       throw new ConflictException('A staff member with this email already exists for this event');
@@ -445,7 +672,7 @@ export class ExhibitorPortalService {
         eventExhibitorId: ee.id,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: dto.email,
+        email,
         phone: dto.phone,
         role: dto.role ?? 'staff',
       },
@@ -456,7 +683,7 @@ export class ExhibitorPortalService {
       action: 'exhibitor_staff.created',
       entity: 'exhibitor_staff',
       entityId: staff.id,
-      detail: { eventId, email: dto.email, role: staff.role },
+      detail: { eventId, email, role: staff.role },
     });
 
     return staff;
@@ -475,7 +702,7 @@ export class ExhibitorPortalService {
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: dto.email,
+        email: dto.email ? normalizeEmail(dto.email) : dto.email,
         phone: dto.phone,
         role: dto.role,
       },
@@ -541,146 +768,18 @@ export class ExhibitorPortalService {
       throw new BadRequestException(`Staff member already ${staff.passStatus}`);
     }
 
-    // Load event for email details and the exhibitor ticket type
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      select: { id: true, orgId: true, name: true, startDate: true, endDate: true, venue: true, venueAddress: true, currency: true, meta: true },
-    });
-    if (!event) throw new NotFoundException('Event not found');
-
-    const ticketType = await this.prisma.ticketType.findFirst({
-      where: { eventId, category: 'exhibitor', status: 'active' },
-      select: { id: true, name: true },
-    });
-    if (!ticketType) {
-      throw new BadRequestException('No active exhibitor ticket type found for this event');
-    }
-
-    // Find the purchaser attendee (the user invoking this)
-    const purchaser = await this.prisma.attendee.findFirst({
-      where: { eventId, orgId: event.orgId, email: { not: undefined } },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    const registrationToken = randomBytes(32).toString('hex');
-
-    // Create or update attendee for the staff member
-    const attendee = await this.attendees.upsertRecipient({
+    const result = await this.provisionStaffAccess({
+      exhibitorOrgId: orgId,
+      actorUserId: userId,
       eventId,
-      orgId: event.orgId,
-      email: staff.email,
       firstName: staff.firstName,
       lastName: staff.lastName,
-      registrationToken,
-      purchasedByAttendeeId: purchaser?.id ?? userId,
+      email: staff.email,
+      role: staff.role,
+      registrationToken: randomBytes(32).toString('hex'),
     });
 
-    // Issue a complimentary staff pass ticket (no order)
-    const code = this.generatePassCode();
-    const ticket = await this.prisma.ticket.create({
-      data: {
-        eventId,
-        orgId: event.orgId,
-        ticketTypeId: ticketType.id,
-        attendeeId: attendee.id,
-        code,
-        status: 'valid',
-        meta: { staffPass: true, exhibitorStaffId: staffId } as any,
-      },
-    });
-
-    // Link attendee back to staff record
-    await this.prisma.exhibitorStaff.update({
-      where: { id: staffId },
-      data: { attendeeId: attendee.id, passStatus: 'invited' },
-    });
-
-    // ── Staff portal access: create User + exhibitor role + password setup ──
-    let staffUser = await this.prisma.user.findUnique({
-      where: { email: staff.email },
-      select: { id: true, passwordHash: true },
-    });
-    const isNewStaffUser = !staffUser;
-    if (!staffUser) {
-      staffUser = await this.prisma.user.create({
-        data: {
-          email: staff.email,
-          displayName: `${staff.firstName} ${staff.lastName}`,
-        },
-        select: { id: true, passwordHash: true },
-      });
-    }
-
-    // Assign exhibitor role scoped to the same org
-    await this.prisma.userRole.upsert({
-      where: { userId_orgId_role: { userId: staffUser.id, orgId: event.orgId, role: 'exhibitor' } },
-      update: {},
-      create: { userId: staffUser.id, orgId: event.orgId, role: 'exhibitor' },
-    });
-
-    // Generate password setup token + send portal invite email
-    const portalBaseUrl = this.config.get('EXHIBITOR_PORTAL_URL') ?? 'https://swissroboticsday.ch/exhibitor-portal';
-    let passwordSetupUrl: string | undefined;
-    if (isNewStaffUser || !staffUser.passwordHash) {
-      const rawToken = await this.auth.initiatePasswordSetup(staffUser.id);
-      // Build password setup URL from event site (not Dashboard)
-      const eventMeta = (event.meta as Record<string, any>) ?? {};
-      const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
-      const siteOrigin = new URL(portalBaseUrl).origin;
-      passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
-    }
-
-    const profile = await this.prisma.exhibitorProfile.findUnique({
-      where: { orgId },
-      select: { companyName: true },
-    });
-
-    const eventDate = event.startDate.toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'long', year: 'numeric',
-    });
-    const staffEventMeta = (event.meta as Record<string, any>) ?? {};
-    const fullVenue = [event.venue, event.venueAddress].filter(Boolean).join(', ');
-
-    if (passwordSetupUrl) {
-      // New user: send staff portal invite with password setup
-      this.email.sendStaffPortalInvite(staff.email, {
-        staffName: `${staff.firstName} ${staff.lastName}`,
-        companyName: profile?.companyName ?? 'Your Company',
-        eventName: event.name,
-        eventDate,
-        eventVenue: fullVenue,
-        eventVenueMapUrl: staffEventMeta.venueMapUrl || undefined,
-        role: staff.role,
-        portalUrl: portalBaseUrl,
-        passwordSetupUrl,
-      }).catch((err) => {
-        this.logger.error(`Failed to send staff portal invite to ${staff.email}: ${err}`);
-      });
-    } else {
-      // Existing user with password: send simpler notification
-      this.email.sendTicketGiftNotification(staff.email, {
-        recipientName: `${staff.firstName} ${staff.lastName}`,
-        purchaserName: profile?.companyName ?? 'Your exhibitor company',
-        eventName: event.name,
-        eventDate,
-        eventVenue: fullVenue,
-        eventVenueMapUrl: staffEventMeta.venueMapUrl || undefined,
-        ticketTypeName: ticketType.name,
-        registrationUrl: portalBaseUrl,
-      }).catch((err) => {
-        this.logger.error(`Failed to send staff notification to ${staff.email}: ${err}`);
-      });
-    }
-
-    this.audit.log({
-      userId,
-      action: 'exhibitor_staff.invited',
-      entity: 'exhibitor_staff',
-      entityId: staffId,
-      detail: { eventId, email: staff.email, attendeeId: attendee.id, ticketId: ticket.id, staffUserId: staffUser.id, newUser: isNewStaffUser },
-    });
-
-    return { success: true, passStatus: 'invited', attendeeId: attendee.id };
+    return { success: true, passStatus: 'invited', staffUserId: result.userId };
   }
 
   // ── Media Management ─────────────────────────────────────────────────────

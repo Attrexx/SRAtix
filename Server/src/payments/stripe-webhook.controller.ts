@@ -25,7 +25,23 @@ import { RegistrationReminderWorker } from '../queue/registration-reminder.worke
 import { AuthService } from '../auth/auth.service';
 import { LogisticsService } from '../logistics/logistics.service';
 import { InvoicesService } from '../invoices/invoices.service';
+import { ExhibitorPortalService } from '../exhibitor-portal/exhibitor-portal.service';
+import { normalizeEmail } from '../common/email.util';
 import { randomBytes } from 'crypto';
+
+type RecipientAttendeeMeta = {
+  attendeeId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  registrationToken: string;
+};
+
+type ProvisionedExhibitor = {
+  userId: string;
+  exhibitorOrgId: string;
+  profileId: string;
+};
 
 /**
  * Stripe Webhook Controller.
@@ -57,6 +73,7 @@ export class StripeWebhookController {
     private readonly auth: AuthService,
     private readonly logistics: LogisticsService,
     private readonly invoices: InvoicesService,
+    private readonly exhibitorPortal: ExhibitorPortalService,
   ) {}
 
   @Post()
@@ -206,29 +223,34 @@ export class StripeWebhookController {
     }
 
     // ── Reassign tickets to recipients (multi-ticket purchase) ─────
-    const recipientAttendees = (orderMeta.recipientAttendees ?? []) as Array<{
-      attendeeId: string;
-      email: string;
-      firstName: string;
-      lastName: string;
-      registrationToken: string;
-    }>;
+    const recipientAttendees = (orderMeta.recipientAttendees ?? []) as RecipientAttendeeMeta[];
+    const orderTicketTypeIds = (orderForMeta.items ?? []).map((item: any) => item.ticketTypeId);
+    const orderTicketTypes = orderTicketTypeIds.length > 0
+      ? await this.prisma.ticketType.findMany({
+          where: { id: { in: orderTicketTypeIds } },
+          select: { id: true, name: true, category: true },
+        })
+      : [];
+    const orderTicketTypeNameMap = new Map(orderTicketTypes.map((tt) => [tt.id, tt.name]));
+    const isExhibitorOrder = orderTicketTypes.some((tt) => tt.category === 'exhibitor');
 
     if (recipientAttendees.length > 0 && issued.length > 0) {
       const includeTicketForSelf = orderMeta.includeTicketForSelf !== false;
       const startIdx = includeTicketForSelf ? 1 : 0;
-      for (let i = 0; i < recipientAttendees.length; i++) {
-        const ticketIdx = startIdx + i;
-        if (ticketIdx < issued.length) {
-          await this.prisma.ticket.update({
-            where: { id: issued[ticketIdx].id },
-            data: { attendeeId: recipientAttendees[i].attendeeId },
-          });
+      if (!isExhibitorOrder) {
+        for (let i = 0; i < recipientAttendees.length; i++) {
+          const ticketIdx = startIdx + i;
+          if (ticketIdx < issued.length) {
+            await this.prisma.ticket.update({
+              where: { id: issued[ticketIdx].id },
+              data: { attendeeId: recipientAttendees[i].attendeeId },
+            });
+          }
         }
+        this.logger.log(
+          `Reassigned ${recipientAttendees.length} ticket(s) to recipients for order ${orderId}`,
+        );
       }
-      this.logger.log(
-        `Reassigned ${recipientAttendees.length} ticket(s) to recipients for order ${orderId}`,
-      );
 
       // Send gift notification emails to recipients
       const registrationBaseUrl = (orderMeta.attendeeRegisterBaseUrl ?? orderMeta.registrationBaseUrl) as string;
@@ -237,11 +259,7 @@ export class StripeWebhookController {
         const purchaserName = registrationName;
         const giftEventMeta = (eventForGift?.meta as Record<string, any>) ?? {};
 
-        // Get ticket type name
-        const ttIds = (orderForMeta.items ?? []).map((item: any) => item.ticketTypeId);
-        const ttForGift = ttIds.length > 0
-          ? await this.prisma.ticketType.findFirst({ where: { id: { in: ttIds } } })
-          : null;
+        const firstTicketTypeName = orderTicketTypes[0]?.name ?? 'Ticket';
 
         for (const recipient of recipientAttendees) {
           this.email
@@ -252,7 +270,7 @@ export class StripeWebhookController {
               eventDate: eventForGift?.startDate?.toISOString().split('T')[0] ?? '',
               eventVenue: [eventForGift?.venue, eventForGift?.venueAddress].filter(Boolean).join(', '),
               eventVenueMapUrl: giftEventMeta.venueMapUrl || undefined,
-              ticketTypeName: ttForGift?.name ?? 'Ticket',
+              ticketTypeName: firstTicketTypeName,
               registrationUrl: `${registrationBaseUrl}?token=${recipient.registrationToken}`,
             })
             .catch((err) =>
@@ -292,19 +310,8 @@ export class StripeWebhookController {
     const eventMeta = (event?.meta as Record<string, any>) ?? {};
     if (paidOrder && paidOrder.customerEmail) {
       try {
-        // Resolve ticket type names (avoid showing raw UUIDs)
-        const ttIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
-        const ticketTypes = ttIds.length > 0
-          ? await this.prisma.ticketType.findMany({
-              where: { id: { in: ttIds } },
-              select: { id: true, name: true, category: true },
-            })
-          : [];
-        const ttNameMap = new Map(ticketTypes.map((tt) => [tt.id, tt.name]));
-        const isExhibitorOrder = ticketTypes.some((tt) => tt.category === 'exhibitor');
-
         const ticketDetails = paidOrder.items.map((item: { ticketTypeId: string; quantity: number }) => ({
-          typeName: ttNameMap.get(item.ticketTypeId) ?? 'Ticket',
+          typeName: orderTicketTypeNameMap.get(item.ticketTypeId) ?? 'Ticket',
           quantity: item.quantity,
           qrPayload: '',
         }));
@@ -365,17 +372,11 @@ export class StripeWebhookController {
     // Runs independently of confirmation email — must not be blocked by null email
     if (paidOrder && paidOrder.customerEmail) {
       try {
-        const ticketTypeIds = (paidOrder.items ?? []).map((item: any) => item.ticketTypeId);
-        if (ticketTypeIds.length > 0) {
-          const ticketTypes = await this.prisma.ticketType.findMany({
-            where: { id: { in: ticketTypeIds } },
-            select: { category: true },
-          });
-          const isExhibitor = ticketTypes.some((tt) => tt.category === 'exhibitor');
-          if (isExhibitor && !event) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: event not resolved`);
-          if (isExhibitor && !orgId) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: orgId missing from Stripe metadata`);
-          if (isExhibitor && event && orgId) {
-            await this.provisionExhibitor(
+        if (orderTicketTypes.length > 0) {
+          if (isExhibitorOrder && !event) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: event not resolved`);
+          if (isExhibitorOrder && !orgId) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: orgId missing from Stripe metadata`);
+          if (isExhibitorOrder && event && orgId) {
+            const provisioned = await this.provisionExhibitor(
               paidOrder.customerEmail,
               registrationName,
               (orderMeta.companyName as string) ?? registrationName,
@@ -385,6 +386,21 @@ export class StripeWebhookController {
               paidOrder.orderNumber,
               orderId,
             );
+            if (provisioned && recipientAttendees.length > 0) {
+              await this.exhibitorPortal.provisionCheckoutStaff({
+                exhibitorOrgId: provisioned.exhibitorOrgId,
+                actorUserId: provisioned.userId,
+                eventId: eventId!,
+                staff: recipientAttendees.map((recipient) => ({
+                  attendeeId: recipient.attendeeId,
+                  firstName: recipient.firstName,
+                  lastName: recipient.lastName,
+                  email: recipient.email,
+                  registrationToken: recipient.registrationToken,
+                })),
+              });
+              this.logger.log(`Provisioned ${recipientAttendees.length} exhibitor staff portal account(s) for order ${orderId}`);
+            }
           }
         }
       } catch (err) {
@@ -563,21 +579,22 @@ export class StripeWebhookController {
     event: { name?: string; startDate?: Date; venue?: string | null; venueAddress?: string | null; meta?: unknown },
     orderNumber: string,
     orderId: string,
-  ): Promise<void> {
+  ): Promise<ProvisionedExhibitor | null> {
     try {
+      const normalizedEmail = normalizeEmail(email);
       // 1. Find or create User
       let user = await this.prisma.user.findUnique({
-        where: { email },
+        where: { email: normalizedEmail },
         select: { id: true, passwordHash: true },
       });
 
       const isNewUser = !user;
       if (!user) {
         user = await this.prisma.user.create({
-          data: { email, displayName },
+          data: { email: normalizedEmail, displayName },
           select: { id: true, passwordHash: true },
         });
-        this.logger.log(`Created exhibitor user ${user.id} for ${email}`);
+        this.logger.log(`Created exhibitor user ${user.id} for ${normalizedEmail}`);
       }
 
       // 2. Resolve or create exhibitor Organization.
@@ -603,11 +620,11 @@ export class StripeWebhookController {
             name: companyName,
             slug,
             type: 'exhibitor',
-            contactEmail: email,
+            contactEmail: normalizedEmail,
           },
         });
         exhibitorOrgId = org.id;
-        this.logger.log(`Created exhibitor org ${org.id} (${slug}) for ${email}`);
+        this.logger.log(`Created exhibitor org ${org.id} (${slug}) for ${normalizedEmail}`);
       }
 
       // 3. Assign exhibitor role scoped to exhibitor org (idempotent)
@@ -626,7 +643,7 @@ export class StripeWebhookController {
         data: {
           orgId: exhibitorOrgId,
           companyName,
-          contactEmail: email,
+          contactEmail: normalizedEmail,
         },
         select: { id: true },
       });
@@ -638,7 +655,7 @@ export class StripeWebhookController {
         create: {
           eventId,
           exhibitorProfileId: profile.id,
-          meta: { buyerName: displayName, buyerEmail: email, orderNumber },
+          meta: { buyerName: displayName, buyerEmail: normalizedEmail, orderNumber },
         },
       });
 
@@ -671,7 +688,7 @@ export class StripeWebhookController {
         'https://swissroboticsday.ch/exhibitor-portal',
       );
       const provisionMeta = (event.meta as Record<string, any>) ?? {};
-      await this.email.sendExhibitorWelcome(email, {
+      await this.email.sendExhibitorWelcome(normalizedEmail, {
         contactName: displayName,
         companyName,
         eventName: event.name ?? 'Event',
@@ -686,8 +703,10 @@ export class StripeWebhookController {
       this.logger.log(
         `Exhibitor provisioned for order ${orderNumber}: user=${user.id}, org=${exhibitorOrgId}, profile=${profile.id}, event=${eventId}${isNewUser ? ' [NEW USER]' : ''}`,
       );
+      return { userId: user.id, exhibitorOrgId, profileId: profile.id };
     } catch (err) {
       this.logger.error(`Exhibitor provisioning failed for ${email}: ${err}`);
+      return null;
     }
   }
 

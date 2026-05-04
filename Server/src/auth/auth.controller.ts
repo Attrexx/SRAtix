@@ -90,6 +90,14 @@ class LoginDto {
 class ForgotPasswordDto {
   @IsEmail()
   email!: string;
+
+  @IsOptional()
+  @IsString()
+  context?: string;
+
+  @IsOptional()
+  @IsString()
+  eventId?: string;
 }
 
 class ResetPasswordDto {
@@ -374,6 +382,9 @@ export class AuthController {
     await this.authService.requestPasswordReset(dto.email, {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
+    }, {
+      context: dto.context === 'portal' ? 'portal' : 'dashboard',
+      eventId: dto.eventId,
     });
     return { success: true };
   }

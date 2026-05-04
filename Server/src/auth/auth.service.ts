@@ -8,6 +8,7 @@ import { VALID_ROLES } from '../users/users.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 import { EmailService } from '../email/email.service';
 import { emailHeader, emailPreFooter, emailFooter } from '../email/email-templates.util';
+import { normalizeEmail } from '../common/email.util';
 
 export interface JwtPayload {
   sub: string; // user ID
@@ -465,8 +466,9 @@ export class AuthService implements OnModuleDestroy {
     password: string,
     meta?: { ip?: string; userAgent?: string },
   ): Promise<TokenPair> {
+    const normalizedEmail = normalizeEmail(email);
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       include: { roles: true },
     });
 
@@ -626,14 +628,19 @@ export class AuthService implements OnModuleDestroy {
   async requestPasswordReset(
     email: string,
     meta?: { ip?: string; userAgent?: string },
+    resetContext?: { context?: 'dashboard' | 'portal'; eventId?: string },
   ): Promise<void> {
+    const normalizedEmail = normalizeEmail(email);
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { id: true, active: true, passwordHash: true, displayName: true },
     });
 
-    // Silently return for non-existent, inactive, or WP-only users
-    if (!user || !user.active || !user.passwordHash) return;
+    // Silently return for non-existent or inactive users. Portal reset
+    // requests also cover first-time setup, so users without a password are
+    // allowed there. Dashboard resets still require an existing password.
+    if (!user || !user.active) return;
+    if (!user.passwordHash && resetContext?.context !== 'portal') return;
 
     // Generate token: store SHA-256 hash in DB, send raw in email
     const rawToken = randomBytes(32).toString('hex');
@@ -657,11 +664,35 @@ export class AuthService implements OnModuleDestroy {
     });
 
     // Send reset email
-    const resetUrl = `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}`;
+    const resetUrl = await this.buildPasswordResetUrl(rawToken, resetContext);
     const html = this.renderPasswordResetEmail(user.displayName, resetUrl);
     const text = `Hi ${user.displayName},\n\nYou requested a password reset for your SRAtix account.\n\nClick here to reset your password: ${resetUrl}\n\nThis link expires in 30 minutes. If you did not request this, you can safely ignore this email.\n\n— Swiss Robotics Association / SRAtix`;
 
-    this.emailService.sendNotification(email, 'Reset your SRAtix password', html, text);
+    this.emailService.sendNotification(normalizedEmail, 'Reset your SRAtix password', html, text);
+  }
+
+  private async buildPasswordResetUrl(
+    rawToken: string,
+    resetContext?: { context?: 'dashboard' | 'portal'; eventId?: string },
+  ): Promise<string> {
+    if (resetContext?.context === 'portal') {
+      const portalUrl = this.config.get<string>('EXHIBITOR_PORTAL_URL') ?? 'https://swissroboticsday.ch/exhibitor-portal';
+      const siteOrigin = new URL(portalUrl).origin;
+      let setPasswordPath = '/set-password/';
+
+      if (resetContext.eventId) {
+        const event = await this.prisma.event.findUnique({
+          where: { id: resetContext.eventId },
+          select: { meta: true },
+        });
+        const eventMeta = (event?.meta as Record<string, any>) ?? {};
+        setPasswordPath = eventMeta.pagePaths?.setPassword ?? setPasswordPath;
+      }
+
+      return `${siteOrigin}${setPasswordPath}?token=${rawToken}`;
+    }
+
+    return `https://tix.swiss-robotics.org/auth/reset?token=${rawToken}`;
   }
 
   /**

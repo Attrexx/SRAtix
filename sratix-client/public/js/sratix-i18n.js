@@ -14,6 +14,8 @@ const sratixI18n = (function () {
     en: {
       // Common
       'common.loading':          'Loading…',
+      'password.show':           'Show password',
+      'password.hide':           'Hide password',
 
       // Ticket cards
       'tickets.noTickets':       'No tickets available at this time.',
@@ -374,6 +376,12 @@ const sratixI18n = (function () {
       'exhibitorPortal.loginBtn':        'Sign in',
       'exhibitorPortal.loggingIn':       'Signing in…',
       'exhibitorPortal.loginFailed':     'Invalid email or password.',
+      'exhibitorPortal.forgotPassword':  'Forgot password?',
+      'exhibitorPortal.resetPrompt':     'Enter your email and we will send a password reset link.',
+      'exhibitorPortal.resetBtn':        'Send reset link',
+      'exhibitorPortal.resetSending':    'Sending…',
+      'exhibitorPortal.resetSent':       'If an account exists for that email, a reset link has been sent.',
+      'exhibitorPortal.resetEmailRequired': 'Please enter your email address.',
       // Set Password widget
       'setPassword.setupTitle':          'Set your password',
       'setPassword.resetTitle':          'Reset your password',
@@ -386,6 +394,7 @@ const sratixI18n = (function () {
       'setPassword.saving':              'Saving…',
       'setPassword.tooShort':            'Password must be at least 8 characters.',
       'setPassword.mismatch':            'Passwords do not match.',
+      'setPassword.match':               'Passwords match.',
       'setPassword.successTitle':        'Password set successfully',
       'setPassword.successMsg':          'You can now sign in to the exhibitor portal.',
       'setPassword.redirecting':         'Redirecting to the portal…',
@@ -411,6 +420,8 @@ const sratixI18n = (function () {
 
     fr: {
       'common.loading':          'Chargement…',
+      'password.show':           'Afficher le mot de passe',
+      'password.hide':           'Masquer le mot de passe',
 
       'tickets.noTickets':       'Aucun billet disponible pour le moment.',
       'tickets.loadError':       'Impossible de charger les billets. Veuillez réessayer.',
@@ -760,6 +771,12 @@ const sratixI18n = (function () {
       'exhibitorPortal.loginBtn':        'Se connecter',
       'exhibitorPortal.loggingIn':       'Connexion…',
       'exhibitorPortal.loginFailed':     'E-mail ou mot de passe invalide.',
+      'exhibitorPortal.forgotPassword':  'Mot de passe oublié ?',
+      'exhibitorPortal.resetPrompt':     'Saisissez votre e-mail et nous vous enverrons un lien de réinitialisation.',
+      'exhibitorPortal.resetBtn':        'Envoyer le lien',
+      'exhibitorPortal.resetSending':    'Envoi…',
+      'exhibitorPortal.resetSent':       'Si un compte existe pour cet e-mail, un lien de réinitialisation a été envoyé.',
+      'exhibitorPortal.resetEmailRequired': 'Veuillez saisir votre adresse e-mail.',
       'setPassword.setupTitle':          'Définir votre mot de passe',
       'setPassword.resetTitle':          'Réinitialiser votre mot de passe',
       'setPassword.setupDesc':           'Créez un mot de passe pour votre compte exposant.',
@@ -771,6 +788,7 @@ const sratixI18n = (function () {
       'setPassword.saving':              'Enregistrement…',
       'setPassword.tooShort':            'Le mot de passe doit comporter au moins 8 caractères.',
       'setPassword.mismatch':            'Les mots de passe ne correspondent pas.',
+      'setPassword.match':               'Les mots de passe correspondent.',
       'setPassword.successTitle':        'Mot de passe défini avec succès',
       'setPassword.successMsg':          'Vous pouvez maintenant vous connecter au portail exposant.',
       'setPassword.redirecting':         'Redirection vers le portail…',
@@ -796,6 +814,8 @@ const sratixI18n = (function () {
 
     de: {
       'common.loading':          'Laden…',
+      'password.show':           'Passwort anzeigen',
+      'password.hide':           'Passwort ausblenden',
 
       'tickets.noTickets':       'Zurzeit sind keine Tickets verfügbar.',
       'tickets.loadError':       'Tickets konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
@@ -1145,6 +1165,12 @@ const sratixI18n = (function () {
       'exhibitorPortal.loginBtn':        'Anmelden',
       'exhibitorPortal.loggingIn':       'Anmeldung…',
       'exhibitorPortal.loginFailed':     'Ungültige E-Mail oder ungültiges Passwort.',
+      'exhibitorPortal.forgotPassword':  'Passwort vergessen?',
+      'exhibitorPortal.resetPrompt':     'Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen Link zum Zurücksetzen.',
+      'exhibitorPortal.resetBtn':        'Reset-Link senden',
+      'exhibitorPortal.resetSending':    'Wird gesendet…',
+      'exhibitorPortal.resetSent':       'Falls ein Konto für diese E-Mail existiert, wurde ein Reset-Link gesendet.',
+      'exhibitorPortal.resetEmailRequired': 'Bitte geben Sie Ihre E-Mail-Adresse ein.',
       'setPassword.setupTitle':          'Passwort festlegen',
       'setPassword.resetTitle':          'Passwort zurücksetzen',
       'setPassword.setupDesc':           'Erstellen Sie ein Passwort für Ihr Ausstellerkonto.',
@@ -1156,6 +1182,7 @@ const sratixI18n = (function () {
       'setPassword.saving':              'Speichern…',
       'setPassword.tooShort':            'Das Passwort muss mindestens 8 Zeichen lang sein.',
       'setPassword.mismatch':            'Die Passwörter stimmen nicht überein.',
+      'setPassword.match':               'Die Passwörter stimmen überein.',
       'setPassword.successTitle':        'Passwort erfolgreich festgelegt',
       'setPassword.successMsg':          'Sie können sich jetzt im Aussteller-Portal anmelden.',
       'setPassword.redirecting':         'Weiterleitung zum Portal…',
@@ -1181,6 +1208,8 @@ const sratixI18n = (function () {
 
     it: {
       'common.loading':          'Caricamento…',
+      'password.show':           'Mostra password',
+      'password.hide':           'Nascondi password',
 
       'tickets.noTickets':       'Al momento non sono disponibili biglietti.',
       'tickets.loadError':       'Impossibile caricare i biglietti. Riprova più tardi.',
@@ -1530,6 +1559,12 @@ const sratixI18n = (function () {
       'exhibitorPortal.loginBtn':        'Accedi',
       'exhibitorPortal.loggingIn':       'Accesso…',
       'exhibitorPortal.loginFailed':     'E-mail o password non validi.',
+      'exhibitorPortal.forgotPassword':  'Password dimenticata?',
+      'exhibitorPortal.resetPrompt':     'Inserisci la tua e-mail e ti invieremo un link per reimpostare la password.',
+      'exhibitorPortal.resetBtn':        'Invia link',
+      'exhibitorPortal.resetSending':    'Invio…',
+      'exhibitorPortal.resetSent':       'Se esiste un account per questa e-mail, il link di reimpostazione è stato inviato.',
+      'exhibitorPortal.resetEmailRequired': 'Inserisci il tuo indirizzo e-mail.',
       'setPassword.setupTitle':          'Imposta la password',
       'setPassword.resetTitle':          'Reimposta la password',
       'setPassword.setupDesc':           'Crea una password per il tuo account espositore.',
@@ -1541,6 +1576,7 @@ const sratixI18n = (function () {
       'setPassword.saving':              'Salvataggio…',
       'setPassword.tooShort':            'La password deve contenere almeno 8 caratteri.',
       'setPassword.mismatch':            'Le password non corrispondono.',
+      'setPassword.match':               'Le password corrispondono.',
       'setPassword.successTitle':        'Password impostata con successo',
       'setPassword.successMsg':          'Ora puoi accedere al portale espositore.',
       'setPassword.redirecting':         'Reindirizzamento al portale…',
@@ -1566,6 +1602,8 @@ const sratixI18n = (function () {
 
     'zh-TW': {
       'common.loading':          '載入中…',
+      'password.show':           '顯示密碼',
+      'password.hide':           '隱藏密碼',
 
       'tickets.noTickets':       '目前暫無可購買的票券。',
       'tickets.loadError':       '無法載入票券，請稍後再試。',
@@ -1915,6 +1953,12 @@ const sratixI18n = (function () {
       'exhibitorPortal.loginBtn':        '登入',
       'exhibitorPortal.loggingIn':       '登入中…',
       'exhibitorPortal.loginFailed':     '電子郵件或密碼無效。',
+      'exhibitorPortal.forgotPassword':  '忘記密碼？',
+      'exhibitorPortal.resetPrompt':     '輸入您的電子郵件，我們會寄送密碼重設連結。',
+      'exhibitorPortal.resetBtn':        '傳送重設連結',
+      'exhibitorPortal.resetSending':    '傳送中…',
+      'exhibitorPortal.resetSent':       '如果此電子郵件有帳號，重設連結已寄出。',
+      'exhibitorPortal.resetEmailRequired': '請輸入您的電子郵件地址。',
       'setPassword.setupTitle':          '設定密碼',
       'setPassword.resetTitle':          '重設密碼',
       'setPassword.setupDesc':           '為您的展商帳號建立密碼。',
@@ -1926,6 +1970,7 @@ const sratixI18n = (function () {
       'setPassword.saving':              '儲存中…',
       'setPassword.tooShort':            '密碼須至少 8 個字元。',
       'setPassword.mismatch':            '密碼不一致。',
+      'setPassword.match':               '密碼一致。',
       'setPassword.successTitle':        '密碼設定成功',
       'setPassword.successMsg':          '您現在可以登入展商入口。',
       'setPassword.redirecting':         '正在跳轉至入口…',

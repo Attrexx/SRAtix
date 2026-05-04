@@ -110,11 +110,11 @@ export class InvoicesService {
       where: { id: orderId },
       include: {
         items: {
-          include: { ticketType: { select: { name: true, priceCents: true } } },
+          include: { ticketType: { select: { name: true, description: true, priceCents: true } } },
         },
         tickets: {
           include: {
-            ticketType: { select: { name: true } },
+            ticketType: { select: { name: true, description: true } },
             attendee: { select: { firstName: true, lastName: true } },
           },
         },
@@ -350,10 +350,12 @@ export class InvoicesService {
       // We have individual tickets with attendee info — list each separately
       for (const ticket of order.tickets) {
         const typeName = ticket.ticketType?.name ?? 'Ticket';
+        const typeDescription = this.cleanInvoiceDescription(ticket.ticketType?.description);
         const attendeeName = ticket.attendee
           ? `${ticket.attendee.firstName} ${ticket.attendee.lastName}`.trim()
           : '';
-        const desc = attendeeName ? `${typeName} — ${attendeeName}` : typeName;
+        const descBase = attendeeName ? `${typeName} — ${attendeeName}` : typeName;
+        const desc = typeDescription ? `${descBase} — ${typeDescription}` : descBase;
 
         // Find matching order item for pricing
         const matchingItem = order.items.find(i => i.ticketTypeId === ticket.ticketTypeId);
@@ -364,7 +366,9 @@ export class InvoicesService {
     } else {
       // Fallback: use order items (no per-ticket breakdown)
       for (const item of order.items) {
-        const desc = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
+        const typeName = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
+        const typeDescription = this.cleanInvoiceDescription(item.ticketType?.description);
+        const desc = typeDescription ? `${typeName} — ${typeDescription}` : typeName;
         invoiceLines.push({
           desc, qty: item.quantity,
           unitCents: item.unitPriceCents,
@@ -593,6 +597,20 @@ export class InvoicesService {
 
   private formatCurrency(cents: number, currency: string): string {
     return `${currency} ${(cents / 100).toFixed(2)}`;
+  }
+
+  private cleanInvoiceDescription(description?: string | null): string {
+    return String(description ?? '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
   }
 
   private resolveCountryCode(country: string): string {

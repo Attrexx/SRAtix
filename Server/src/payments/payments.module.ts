@@ -17,9 +17,10 @@ import { AuthModule } from '../auth/auth.module';
 import { TicketTypesModule } from '../ticket-types/ticket-types.module';
 import { LogisticsModule } from '../logistics/logistics.module';
 import { InvoicesModule } from '../invoices/invoices.module';
+import { ExhibitorPortalModule } from '../exhibitor-portal/exhibitor-portal.module';
 
 @Module({
-  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule, forwardRef(() => LogisticsModule), InvoicesModule],
+  imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule, forwardRef(() => LogisticsModule), InvoicesModule, ExhibitorPortalModule],
   controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController, ExhibitorSetupController],
   providers: [StripeService],
   exports: [StripeService],
