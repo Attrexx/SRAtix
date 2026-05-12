@@ -5786,22 +5786,24 @@
               </span>
             </div>
             <div class="sratix-portal-login__error" style="display:none;"></div>
-            <button type="submit" class="sratix-btn sratix-btn--primary sratix-portal-login__submit">
-              ${escHtml(t('exhibitorPortal.loginBtn'))}
-            </button>
-          </form>
-          <button type="button" class="sratix-portal-login__forgot" id="sratix-portal-forgot">${escHtml(t('exhibitorPortal.forgotPassword'))}</button>
-          <div class="sratix-portal-reset" id="sratix-portal-reset" hidden>
-            <p class="sratix-portal-reset__copy">${escHtml(t('exhibitorPortal.resetPrompt'))}</p>
-            <div class="sratix-form-field">
-              <label for="sratix-portal-reset-email">${escHtml(t('exhibitorPortal.emailLabel'))}</label>
-              <input id="sratix-portal-reset-email" type="email" autocomplete="email" />
+            <div class="sratix-portal-login__actions">
+              <button type="submit" class="sratix-btn sratix-btn--primary sratix-portal-login__submit">
+                ${escHtml(t('exhibitorPortal.loginBtn'))}
+              </button>
+              <button type="button" class="sratix-portal-login__forgot" id="sratix-portal-forgot">${escHtml(t('exhibitorPortal.forgotPassword'))}</button>
             </div>
-            <button type="button" class="sratix-btn sratix-btn--secondary sratix-portal-reset__submit" id="sratix-portal-reset-submit">
-              ${escHtml(t('exhibitorPortal.resetBtn'))}
-            </button>
-            <div class="sratix-portal-reset__status" id="sratix-portal-reset-status" aria-live="polite"></div>
-          </div>
+            <div class="sratix-portal-reset" id="sratix-portal-reset" hidden>
+              <p class="sratix-portal-reset__copy">${escHtml(t('exhibitorPortal.resetPrompt'))}</p>
+              <div class="sratix-form-field">
+                <label for="sratix-portal-reset-email">${escHtml(t('exhibitorPortal.emailLabel'))}</label>
+                <input id="sratix-portal-reset-email" type="email" autocomplete="email" />
+              </div>
+              <button type="button" class="sratix-btn sratix-btn--secondary sratix-portal-reset__submit" id="sratix-portal-reset-submit">
+                ${escHtml(t('exhibitorPortal.resetBtn'))}
+              </button>
+              <div class="sratix-portal-reset__status" id="sratix-portal-reset-status" aria-live="polite"></div>
+            </div>
+          </form>
         </div>
       </div>`;
 
