@@ -354,8 +354,17 @@ class SRAtix_Client_Exhibitors_Grid {
 		}
 		// 'booth' sort is applied via posts_clauses filter below.
 
-		// --- Meta query.
+		// --- Meta query (collect ALL entries before assigning to args).
 		$meta_query = array();
+
+		// Event isolation — must match the current event ID stored by webhook.
+		if ( ! empty( $params['event_id'] ) ) {
+			$meta_query[] = array(
+				'key'     => '_sratix_event_id',
+				'value'   => $params['event_id'],
+				'compare' => '=',
+			);
+		}
 
 		if ( ! empty( $params['expo_area'] ) ) {
 			$meta_query[] = array(
@@ -396,14 +405,6 @@ class SRAtix_Client_Exhibitors_Grid {
 				'taxonomy' => 'exhibitor_type', // note: underscore, not hyphen
 				'field'    => 'term_id',
 				'terms'    => $params['type_id'],
-			);
-		}
-
-		if ( ! empty( $params['event_id'] ) ) {
-			$meta_query[] = array(
-				'key'     => '_sratix_event_id',
-				'value'   => $params['event_id'],
-				'compare' => '=',
 			);
 		}
 
