@@ -204,3 +204,4 @@ class SRAtix_Client_Webhook {
 
 		return $post_id;
 	}
+}
