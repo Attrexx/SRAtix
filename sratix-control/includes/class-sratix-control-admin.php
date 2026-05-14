@@ -275,6 +275,54 @@ class SRAtix_Control_Admin {
 	}
 
 	/**
+	 * AJAX: bulk-sync exhibitors from SRAtix to WordPress.
+	 * Calls GET /admin/exhibitor-portal/events/:id/exhibitors/wp-payload,
+	 * then upserts each exhibitor post locally.
+	 */
+	public function handle_sync_exhibitors() {
+		check_ajax_referer( 'sratix_sync_exhibitors_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'sratix-control' ) ), 403 );
+		}
+
+		$event_id = sanitize_text_field( get_option( 'sratix_client_event_id', '' ) );
+		if ( empty( $event_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'No event ID configured. Set sratix_client_event_id in WP options.', 'sratix-control' ) ) );
+		}
+
+		$api      = new SRAtix_Control_API();
+		$payloads = $api->get_exhibitors_wp_payload( $event_id );
+
+		if ( is_wp_error( $payloads ) ) {
+			wp_send_json_error( array( 'message' => $payloads->get_error_message() ) );
+		}
+
+		if ( ! is_array( $payloads ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unexpected response from SRAtix Server.', 'sratix-control' ) ) );
+		}
+
+		$webhook  = new SRAtix_Control_Webhook();
+		$synced   = 0;
+		$errors   = 0;
+
+		foreach ( $payloads as $data ) {
+			$result = $webhook->upsert_exhibitor_from_data( (array) $data );
+			if ( $result > 0 ) {
+				$synced++;
+			} else {
+				$errors++;
+			}
+		}
+
+		wp_send_json_success( array(
+			'synced' => $synced,
+			'errors' => $errors,
+			'total'  => count( $payloads ),
+		) );
+	}
+
+	/**
 	 * Enqueue admin assets (only on our page).
 	 */
 	public function enqueue_assets( $hook ) {
@@ -356,6 +404,57 @@ class SRAtix_Control_Admin {
 					</p>
 
 					<hr style="margin:16px 0">
+				<?php // ── Exhibitor Sync Panel ── ?>
+				<h3 style="margin-top:0"><?php esc_html_e( 'Sync Exhibitors', 'sratix-control' ); ?></h3>
+				<p class="description" style="margin-bottom:12px">
+					<?php esc_html_e( 'Pull all exhibitors for the current event from SRAtix and create or update their WordPress posts.', 'sratix-control' ); ?>
+				</p>
+				<p>
+					<button type="button" id="sratix-sync-exhibitors" class="button button-primary">
+						<?php esc_html_e( 'Sync Exhibitors to WordPress', 'sratix-control' ); ?>
+					</button>
+					<span id="sratix-sync-result" style="margin-left:10px;font-style:italic"></span>
+				</p>
+				<script>
+				(function(){
+					var btn    = document.getElementById('sratix-sync-exhibitors');
+					var result = document.getElementById('sratix-sync-result');
+					var nonce  = <?php echo wp_json_encode( wp_create_nonce( 'sratix_sync_exhibitors_nonce' ) ); ?>;
+
+					btn.addEventListener('click', function(){
+						btn.disabled   = true;
+						btn.textContent = <?php echo wp_json_encode( __( 'Syncing…', 'sratix-control' ) ); ?>;
+						result.textContent = '';
+
+						var fd = new FormData();
+						fd.append('action', 'sratix_sync_exhibitors');
+						fd.append('nonce', nonce);
+
+						fetch(ajaxurl, { method: 'POST', body: fd })
+							.then(function(r){ return r.json(); })
+							.then(function(res){
+								btn.disabled    = false;
+								btn.textContent = <?php echo wp_json_encode( __( 'Sync Exhibitors to WordPress', 'sratix-control' ) ); ?>;
+								if (!res.success) {
+									result.style.color = '#cc0000';
+									result.textContent = res.data && res.data.message ? res.data.message : <?php echo wp_json_encode( __( 'Sync failed.', 'sratix-control' ) ); ?>;
+								} else {
+									result.style.color = '#007c00';
+									result.textContent = res.data.synced + ' ' + <?php echo wp_json_encode( __( 'exhibitor(s) synced.', 'sratix-control' ) ); ?>
+										+ (res.data.errors ? ' ' + res.data.errors + ' ' + <?php echo wp_json_encode( __( 'error(s).', 'sratix-control' ) ); ?> : '');
+								}
+							})
+							.catch(function(){
+								btn.disabled    = false;
+								btn.textContent = <?php echo wp_json_encode( __( 'Sync Exhibitors to WordPress', 'sratix-control' ) ); ?>;
+								result.style.color = '#cc0000';
+								result.textContent = <?php echo wp_json_encode( __( 'Request failed.', 'sratix-control' ) ); ?>;
+							});
+					});
+				})();
+				</script>
+
+				<hr style="margin:16px 0">
 				<?php // ── Maintenance Mode Panel ── ?>
 				<h3 style="margin-top:0"><?php esc_html_e( 'Maintenance Mode', 'sratix-control' ); ?></h3>
 				<p class="description" style="margin-bottom:12px">

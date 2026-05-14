@@ -363,6 +363,17 @@ export class ExhibitorPortalAdminController {
     return this.portalService.listExhibitorsForEvent(eventId);
   }
 
+  /**
+   * Returns all exhibitors in webhook-payload format so WordPress can
+   * bulk-upsert them via sratix-control without needing a registered
+   * WebhookEndpoint record.
+   */
+  @Get('events/:eventId/exhibitors/wp-payload')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async getExhibitorsWpPayload(@Param('eventId') eventId: string) {
+    return this.portalService.getExhibitorsWpPayload(eventId);
+  }
+
   @Get('events/:eventId/setup-requests')
   @Roles('event_admin', 'admin', 'super_admin')
   async listSetupRequests(@Param('eventId') eventId: string) {

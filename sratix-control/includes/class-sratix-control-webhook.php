@@ -1238,17 +1238,55 @@ class SRAtix_Control_Webhook {
 	 * }
 	 */
 	private function on_exhibitor_updated( $payload ) {
-		$data    = $payload['data'] ?? $payload;
-		$profile = $data['profile'] ?? array();
-		$event   = $data['event']   ?? array();
+		$data   = $payload['data'] ?? $payload;
+		$result = $this->upsert_exhibitor_from_data( $data );
 
-		$company_name = sanitize_text_field( $profile['companyName'] ?? '' );
-		if ( empty( $company_name ) ) {
+		if ( $result === 0 ) {
 			return new \WP_REST_Response( array(
 				'received' => true,
 				'synced'   => false,
 				'reason'   => 'Missing companyName',
 			), 200 );
+		}
+
+		if ( is_wp_error( $result ) ) {
+			return new \WP_REST_Response( array(
+				'received' => true,
+				'synced'   => false,
+				'reason'   => $result->get_error_message(),
+			), 200 );
+		}
+
+		// $result is the WP post ID
+		$existing = ! empty( ( $payload['data'] ?? $payload )['wpPostId'] ) &&
+		            intval( ( $payload['data'] ?? $payload )['wpPostId'] ) === $result;
+		return new \WP_REST_Response( array(
+			'received' => true,
+			'synced'   => true,
+			'wpPostId' => $result,
+			'action'   => $existing ? 'updated' : 'created',
+		), 200 );
+	}
+
+	/**
+	 * Create or update a single exhibitor WP post from a webhook-format data array.
+	 * Called both by the webhook receiver and by the admin bulk-sync action.
+	 *
+	 * @param array $data  Associative array with keys:
+	 *   eventExhibitorId, eventId, wpPostId, status,
+	 *   profile { companyName, legalName, website, description, contactEmail,
+	 *             contactPhone, socialLinks, logoUrl, mediaGallery, videoLinks },
+	 *   event   { boothNumber, expoArea, exhibitorCategory, exhibitorType,
+	 *             demoTitle, demoDescription, demoMediaGallery, demoVideoLinks }
+	 * @return int|WP_Error  Post ID on success, WP_Error on failure, 0 if skipped.
+	 */
+	public function upsert_exhibitor_from_data( array $data ) {
+		$profile = $data['profile'] ?? array();
+		$event   = $data['event']   ?? array();
+
+		$company_name = sanitize_text_field( $profile['companyName'] ?? '' );
+		if ( empty( $company_name ) ) {
+			return 0;
 		}
 
 		$wp_post_id          = ! empty( $data['wpPostId'] ) ? intval( $data['wpPostId'] ) : 0;
@@ -1294,11 +1332,7 @@ class SRAtix_Control_Webhook {
 		} else {
 			$post_id = wp_insert_post( $post_data );
 			if ( is_wp_error( $post_id ) ) {
-				return new \WP_REST_Response( array(
-					'received' => true,
-					'synced'   => false,
-					'reason'   => $post_id->get_error_message(),
-				), 200 );
+				return $post_id;
 			}
 		}
 
@@ -1358,13 +1392,7 @@ class SRAtix_Control_Webhook {
 			$this->maybe_sideload_featured_image( $post_id, $logo_url );
 		}
 
-		// ── Report wpPostId back so server can store it ──
-		return new \WP_REST_Response( array(
-			'received' => true,
-			'synced'   => true,
-			'wpPostId' => $post_id,
-			'action'   => $existing_id ? 'updated' : 'created',
-		), 200 );
+		return $post_id;
 	}
 
 	/**

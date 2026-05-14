@@ -1411,6 +1411,58 @@ export class ExhibitorPortalService {
   }
 
   /**
+   * Admin: return all exhibitors for an event in the exact webhook payload
+   * format so WordPress (sratix-control) can bulk-upsert them without
+   * needing a registered WebhookEndpoint in the outgoing-webhooks system.
+   */
+  async getExhibitorsWpPayload(eventId: string) {
+    const exhibitors = await this.prisma.eventExhibitor.findMany({
+      where: { eventId },
+      include: {
+        exhibitorProfile: {
+          select: {
+            companyName: true, legalName: true, website: true,
+            description: true, contactEmail: true, contactPhone: true,
+            socialLinks: true, logoUrl: true, mediaGallery: true, videoLinks: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return exhibitors.map((ee) => ({
+      eventExhibitorId: ee.id,
+      eventId:          ee.eventId,
+      wpPostId:         ee.wpPostId ?? null,
+      status:           ee.status,
+      profile: ee.exhibitorProfile
+        ? {
+            companyName:  ee.exhibitorProfile.companyName,
+            legalName:    ee.exhibitorProfile.legalName,
+            website:      ee.exhibitorProfile.website,
+            description:  ee.exhibitorProfile.description,
+            contactEmail: ee.exhibitorProfile.contactEmail,
+            contactPhone: ee.exhibitorProfile.contactPhone,
+            socialLinks:  ee.exhibitorProfile.socialLinks,
+            logoUrl:      ee.exhibitorProfile.logoUrl,
+            mediaGallery: ee.exhibitorProfile.mediaGallery,
+            videoLinks:   ee.exhibitorProfile.videoLinks,
+          }
+        : null,
+      event: {
+        boothNumber:       ee.boothNumber,
+        expoArea:          ee.expoArea,
+        exhibitorCategory: ee.exhibitorCategory,
+        exhibitorType:     ee.exhibitorType,
+        demoTitle:         ee.demoTitle,
+        demoDescription:   ee.demoDescription,
+        demoMediaGallery:  ee.demoMediaGallery,
+        demoVideoLinks:    ee.demoVideoLinks,
+      },
+    }));
+  }
+
+  /**
    * Admin: list all exhibitors for an event with card-level data.
    * Returns enriched data for the dashboard exhibitor cards.
    */
