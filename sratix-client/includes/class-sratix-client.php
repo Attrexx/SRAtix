@@ -39,6 +39,9 @@ class SRAtix_Client {
 	private function define_admin_hooks() {
 		$this->loader->add_action( 'admin_menu',  $this->admin, 'add_menu_page' );
 		$this->loader->add_action( 'admin_init',  $this->admin, 'register_settings' );
+
+		// AJAX: bulk sync exhibitors to WordPress
+		$this->loader->add_action( 'wp_ajax_sratix_client_sync_exhibitors', $this->admin, 'handle_sync_exhibitors' );
 	}
 
 	private function define_public_hooks() {

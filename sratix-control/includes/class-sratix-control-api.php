@@ -111,20 +111,6 @@ class SRAtix_Control_API {
 	}
 
 	/**
-	 * Fetch all exhibitors for an event in webhook-payload format.
-	 * Used by the admin bulk-sync action to upsert exhibitor posts
-	 * without needing a registered WebhookEndpoint in SRAtix.
-	 *
-	 * @param string $event_id  SRAtix event ID.
-	 * @return array|WP_Error   Array of exhibitor payload objects, or WP_Error.
-	 */
-	public function get_exhibitors_wp_payload( $event_id ) {
-		return $this->get(
-			'admin/exhibitor-portal/events/' . rawurlencode( $event_id ) . '/exhibitors/wp-payload'
-		);
-	}
-
-	/**
 	 * Ensure we have a valid access token for the current admin user.
 	 *
 	 * @return string|WP_Error

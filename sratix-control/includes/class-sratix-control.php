@@ -58,9 +58,6 @@ class SRAtix_Control {
 		// AJAX: maintenance mode
 		$this->loader->add_action( 'wp_ajax_sratix_fetch_events', $this->admin, 'handle_fetch_events' );
 		$this->loader->add_action( 'wp_ajax_sratix_toggle_maintenance', $this->admin, 'handle_toggle_maintenance' );
-
-		// AJAX: bulk sync exhibitors to WordPress
-		$this->loader->add_action( 'wp_ajax_sratix_sync_exhibitors', $this->admin, 'handle_sync_exhibitors' );
 	}
 
 	private function define_sync_hooks() {
