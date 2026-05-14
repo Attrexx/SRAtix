@@ -20,6 +20,8 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_attendee_register', array( $this, 'render_attendee_register' ) );
 		add_shortcode( 'sratix_exhibitor_portal', array( $this, 'render_exhibitor_portal' ) );
 		add_shortcode( 'sratix_set_password',     array( $this, 'render_set_password' ) );
+		// Note: [sratix_exhibitors_grid] is registered by SRAtix_Client_Exhibitors_Grid
+		// directly in its constructor. Do NOT add it here — it would override that handler.
 	}
 
 	/**
@@ -38,6 +40,7 @@ class SRAtix_Client_Public {
 			|| has_shortcode( $post->post_content, 'sratix_attendee_register' )
 			|| has_shortcode( $post->post_content, 'sratix_exhibitor_portal' )
 			|| has_shortcode( $post->post_content, 'sratix_set_password' );
+			// Note: sratix_exhibitors_grid assets are loaded by enqueue_grid_assets() separately.
 
 		if ( ! $has_shortcode ) {
 			return;
@@ -639,5 +642,80 @@ class SRAtix_Client_Public {
 		}
 
 		return 'en';
+	}
+
+	/*──────────────────────────────────────────────────────────
+	 * Exhibitors Grid — asset enqueue + shortcode stub
+	 *────────────────────────────────────────────────────────*/
+
+	/**
+	 * Enqueue grid-specific JS/CSS on pages that contain [sratix_exhibitors_grid].
+	 * Localized as `window.sratixExgrid` (separate from `sratixConfig`).
+	 */
+	public function enqueue_grid_assets() {
+		global $post;
+		if ( ! $post || ! is_a( $post, 'WP_Post' ) ) {
+			return;
+		}
+
+		if ( ! has_shortcode( $post->post_content, 'sratix_exhibitors_grid' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'sratix-exhibitors-grid',
+			SRATIX_CLIENT_URL . 'public/css/sratix-exhibitors-grid.css',
+			array(),
+			SRATIX_CLIENT_VERSION
+		);
+
+		wp_enqueue_script(
+			'sratix-exhibitors-grid',
+			SRATIX_CLIENT_URL . 'public/js/sratix-exhibitors-grid.js',
+			array(), // no jQuery dependency — vanilla JS
+			SRATIX_CLIENT_VERSION,
+			true
+		);
+
+		$api_url  = get_option( 'sratix_client_api_url', '' );
+		$event_id = get_option( 'sratix_client_event_id', '' );
+
+		$config = array(
+			'ajaxUrl'           => esc_url( admin_url( 'admin-ajax.php' ) ),
+			'nonce'             => wp_create_nonce( SRAtix_Client_Exhibitors_Grid::NONCE_ACTION ),
+			'apiUrl'            => esc_url( $api_url ),
+			'eventId'           => sanitize_text_field( $event_id ),
+			'liveStatusEnabled' => false, // Phase C — disabled in Phase A
+			'i18n'              => array(
+				'loading'       => __( 'Loading…', 'sratix-client' ),
+				'loadMore'      => __( 'Load more', 'sratix-client' ),
+				'noResults'     => __( 'No exhibitors found.', 'sratix-client' ),
+				'close'         => __( 'Close', 'sratix-client' ),
+				'prevImage'     => __( 'Previous image', 'sratix-client' ),
+				'nextImage'     => __( 'Next image', 'sratix-client' ),
+				'imageOf'       => __( '%1$d of %2$d', 'sratix-client' ),
+				'errorLoading'  => __( 'Could not load exhibitor details.', 'sratix-client' ),
+				'showing'       => __( 'Showing %1$d of %2$d exhibitors', 'sratix-client' ),
+			),
+		);
+
+		// Provide user context for Phase D favorites (safe to include now).
+		if ( is_user_logged_in() ) {
+			$user      = wp_get_current_user();
+			$secret    = get_option( 'sratix_client_api_secret', '' );
+			$source    = wp_parse_url( home_url(), PHP_URL_HOST );
+			$roles     = (array) $user->roles;
+			sort( $roles );
+			$payload   = $user->ID . ':' . implode( ',', $roles ) . ':' . $source;
+			$signature = $secret ? hash_hmac( 'sha256', $payload, $secret ) : '';
+
+			$config['user'] = array(
+				'wpUserId'   => $user->ID,
+				'signature'  => $signature,
+				'sourceSite' => $source,
+			);
+		}
+
+		wp_localize_script( 'sratix-exhibitors-grid', 'sratixExgrid', $config );
 	}
 }

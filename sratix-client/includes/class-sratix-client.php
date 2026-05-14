@@ -18,11 +18,15 @@ class SRAtix_Client {
 	/** @var SRAtix_Client_Webhook */
 	private $webhook;
 
+	/** @var SRAtix_Client_Exhibitors_Grid */
+	private $exhibitors_grid;
+
 	public function __construct() {
-		$this->loader  = new SRAtix_Client_Loader();
-		$this->admin   = new SRAtix_Client_Admin();
-		$this->public  = new SRAtix_Client_Public();
-		$this->webhook = new SRAtix_Client_Webhook();
+		$this->loader          = new SRAtix_Client_Loader();
+		$this->admin           = new SRAtix_Client_Admin();
+		$this->public          = new SRAtix_Client_Public();
+		$this->webhook         = new SRAtix_Client_Webhook();
+		$this->exhibitors_grid = new SRAtix_Client_Exhibitors_Grid();
 	}
 
 	public function run() {
@@ -43,6 +47,9 @@ class SRAtix_Client {
 
 		// Enqueue frontend assets only on pages with our shortcodes
 		$this->loader->add_action( 'wp_enqueue_scripts', $this->public, 'enqueue_assets' );
+
+		// Exhibitors grid — asset enqueue (separate so it can localize sratixExgrid).
+		$this->loader->add_action( 'wp_enqueue_scripts', $this->public, 'enqueue_grid_assets' );
 
 		// Public geolocation helper for map-listing fields during checkout.
 		$this->loader->add_action( 'wp_ajax_sratix_client_geocode', $this->public, 'handle_geocode_request' );
