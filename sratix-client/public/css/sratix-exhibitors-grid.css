@@ -299,7 +299,7 @@
 
 /* Placeholder logo (CSS initials overlay) */
 .sratix-exgrid-card__logo[data-fallback="true"] {
-	background: hsl( var(--sxg-hue, 220), 50%, 88% );
+	background: #eef0f4;
 }
 
 .sratix-exgrid-card__logo[data-fallback="true"]::after {
@@ -307,7 +307,7 @@
 	position: absolute;
 	font-size: 2rem;
 	font-weight: 700;
-	color: hsl( var(--sxg-hue, 220), 50%, 38% );
+	color: #94a3b8;
 	pointer-events: none;
 }
 
@@ -654,14 +654,14 @@
 }
 
 .sratix-exgrid-modal__logo--placeholder {
-	background: hsl( var(--sxg-hue, 220), 50%, 88% );
+	background: #eef0f4;
 }
 
 .sratix-exgrid-modal__logo--placeholder::after {
 	content: attr(data-initials);
 	font-size: 1.75rem;
 	font-weight: 700;
-	color: hsl( var(--sxg-hue, 220), 50%, 38% );
+	color: #94a3b8;
 }
 
 .sratix-exgrid-modal__meta { flex: 1; }
