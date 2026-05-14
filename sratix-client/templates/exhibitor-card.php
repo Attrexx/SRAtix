@@ -213,6 +213,7 @@ $permalink = get_permalink( $post_id );
 	</div>
 </article>
 <?php
+if ( ! function_exists( 'sratix_exgrid_social_icon' ) ) :
 /**
  * Inline helper: return hardcoded SVG icon for a social link type.
  * Not a filter/hook — pure output utility local to this template.
@@ -231,3 +232,4 @@ function sratix_exgrid_social_icon( string $type ): string {
 	);
 	return $icons[ $type ] ?? $icons['website'];
 }
+endif;
