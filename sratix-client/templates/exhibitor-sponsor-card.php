@@ -37,7 +37,7 @@ $description  = wp_strip_all_tags( get_post_meta( $post_id, 'description', true 
 $description  = mb_strlen( $description ) > 250 ? mb_substr( $description, 0, 247 ) . '…' : $description;
 $logo_url     = get_post_meta( $post_id, 'logo_url', true );
 $demo_desc    = get_post_meta( $post_id, 'demo_description', true );
-$sratix_id    = get_post_meta( $post_id, 'sratix_event_exhibitor_id', true );
+$sratix_id    = get_post_meta( $post_id, '_sratix_event_exhibitor_id', true );
 
 if ( empty( $logo_url ) ) {
 	$logo_url = get_the_post_thumbnail_url( $post_id, 'medium' ) ?: '';

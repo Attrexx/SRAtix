@@ -531,6 +531,20 @@
 /* ══════════════════════════════════════════════════════════════
    Loading State
 ══════════════════════════════════════════════════════════════ */
+.sratix-exgrid-loading {
+	display: none;
+}
+
+.sratix-exgrid-root.is-loading .sratix-exgrid-loading {
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	justify-content: center;
+	padding: 1.5rem;
+	font-size: .95rem;
+	color: var(--sxg-text-muted, #666);
+}
+
 .sratix-exgrid-root.is-loading .sratix-exgrid-cards {
 	opacity: .5;
 	pointer-events: none;

@@ -78,10 +78,8 @@ class SRAtix_Client_Exhibitors_Grid {
 		$show_filters = filter_var( $atts['show_filters'], FILTER_VALIDATE_BOOLEAN );
 		$featured_top = filter_var( $atts['featured_top'], FILTER_VALIDATE_BOOLEAN );
 		$columns      = in_array( $atts['columns'], array( 'auto', '2', '3', '4' ), true ) ? $atts['columns'] : 'auto';
-		$event        = sanitize_text_field( $atts['event'] );
-
-		// Resolve edition slug.
-		$edition_slug = $this->resolve_edition_slug( $event );
+		$event    = sanitize_text_field( $atts['event'] ); // kept for data-event attribute
+		$event_id = sanitize_text_field( get_option( 'sratix_client_event_id', '' ) );
 
 		// Read initial filter state from URL params (GET-submit / no-JS fallback).
 		$initial_search   = isset( $_GET['exhibitor_search'] )    ? sanitize_text_field( wp_unslash( $_GET['exhibitor_search'] ) )    : '';
@@ -95,14 +93,14 @@ class SRAtix_Client_Exhibitors_Grid {
 		// --- Sponsor row (separate query, page 1 only).
 		$sponsor_posts = array();
 		if ( $featured_top ) {
-			$sponsor_posts = $this->query_sponsors( $edition_slug, $initial_search, $initial_area, $initial_cat );
+			$sponsor_posts = $this->query_sponsors( $event_id, $initial_search, $initial_area, $initial_cat );
 		}
 		$sponsor_ids = wp_list_pluck( $sponsor_posts, 'ID' );
 
 		// --- Main grid query (page 1 server-render).
 		$query = $this->build_query(
 			array(
-				'edition_slug' => $edition_slug,
+				'event_id'     => $event_id,
 				'search'       => $initial_search,
 				'sort'         => $initial_sort,
 				'expo_area'    => $initial_area,
@@ -133,7 +131,7 @@ class SRAtix_Client_Exhibitors_Grid {
 			data-per-page="<?php echo esc_attr( $per_page ); ?>"
 			data-default-sort="<?php echo esc_attr( $default_sort ); ?>"
 			data-event="<?php echo esc_attr( $event ); ?>"
-			data-edition="<?php echo esc_attr( $edition_slug ); ?>"
+			data-edition="<?php echo esc_attr( $event_id ); ?>"
 		>
 			<?php if ( $show_filters ) : ?>
 				<?php $this->load_template( 'exhibitor-filters', compact( 'expo_areas', 'categories', 'types', 'initial_search', 'initial_sort', 'initial_area', 'initial_cat', 'initial_type', 'initial_has_demo' ) ); ?>
@@ -241,22 +239,21 @@ class SRAtix_Client_Exhibitors_Grid {
 			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'sratix-client' ) ), 403 );
 		}
 
-		$event        = isset( $_POST['event'] )     ? sanitize_text_field( wp_unslash( $_POST['event'] ) )     : 'current';
-		$search       = isset( $_POST['search'] )    ? sanitize_text_field( wp_unslash( $_POST['search'] ) )    : '';
-		$sort         = isset( $_POST['sort'] )      ? sanitize_text_field( wp_unslash( $_POST['sort'] ) )      : 'booth';
+		$search       = isset( $_POST['exhibitor_search'] )    ? sanitize_text_field( wp_unslash( $_POST['exhibitor_search'] ) )    : '';
+		$sort         = isset( $_POST['exhibitor_sort'] )      ? sanitize_text_field( wp_unslash( $_POST['exhibitor_sort'] ) )      : 'booth';
 		$sort         = in_array( $sort, array( 'booth', 'name' ), true ) ? $sort : 'booth';
-		$expo_area    = isset( $_POST['expo_area'] ) ? sanitize_text_field( wp_unslash( $_POST['expo_area'] ) ) : '';
-		$category_id  = isset( $_POST['category'] )  ? (int) $_POST['category']  : 0;
-		$type_id      = isset( $_POST['type'] )       ? (int) $_POST['type']       : 0;
-		$has_demo     = isset( $_POST['has_demo'] )  && '1' === $_POST['has_demo'];
-		$page         = max( 1, (int) ( $_POST['page'] ?? 1 ) );
+		$expo_area    = isset( $_POST['exhibitor_expo_area'] ) ? sanitize_text_field( wp_unslash( $_POST['exhibitor_expo_area'] ) ) : '';
+		$category_id  = isset( $_POST['exhibitor_category'] )  ? (int) $_POST['exhibitor_category']  : 0;
+		$type_id      = isset( $_POST['exhibitor_type'] )       ? (int) $_POST['exhibitor_type']       : 0;
+		$has_demo     = isset( $_POST['exhibitor_has_demo'] )  && '1' === $_POST['exhibitor_has_demo'];
+		$page         = max( 1, (int) ( $_POST['exhibitor_page'] ?? 1 ) );
 		$per_page     = max( 1, min( 96, (int) ( $_POST['per_page'] ?? 24 ) ) );
 
-		$edition_slug = $this->resolve_edition_slug( $event );
+		$event_id = sanitize_text_field( get_option( 'sratix_client_event_id', '' ) );
 
 		$query = $this->build_query(
 			array(
-				'edition_slug' => $edition_slug,
+				'event_id'     => $event_id,
 				'search'       => $search,
 				'sort'         => $sort,
 				'expo_area'    => $expo_area,
@@ -402,11 +399,11 @@ class SRAtix_Client_Exhibitors_Grid {
 			);
 		}
 
-		if ( ! empty( $params['edition_slug'] ) ) {
-			$tax_query[] = array(
-				'taxonomy' => 'edition',
-				'field'    => 'slug',
-				'terms'    => $params['edition_slug'],
+		if ( ! empty( $params['event_id'] ) ) {
+			$meta_query[] = array(
+				'key'     => '_sratix_event_id',
+				'value'   => $params['event_id'],
+				'compare' => '=',
 			);
 		}
 
@@ -461,10 +458,10 @@ class SRAtix_Client_Exhibitors_Grid {
 	 * @param int    $category_id
 	 * @return WP_Post[]
 	 */
-	public function query_sponsors( string $edition_slug, string $search = '', string $expo_area = '', int $category_id = 0 ): array {
+	public function query_sponsors( string $event_id, string $search = '', string $expo_area = '', int $category_id = 0 ): array {
 		$query = $this->build_query(
 			array(
-				'edition_slug' => $edition_slug,
+				'event_id'    => $event_id,
 				'search'       => $search,
 				'sort'         => 'name',
 				'expo_area'    => $expo_area,
