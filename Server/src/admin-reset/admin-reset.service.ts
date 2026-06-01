@@ -15,6 +15,8 @@ export interface ResetCounts {
   exhibitorProfiles: number;
   boothScans: number;
   boothLeads: number;
+  /** Ticket types whose denormalized `sold` counter is recomputed to match reality. */
+  ticketTypesRecomputed: number;
 }
 
 export interface ResetResult {
@@ -108,14 +110,24 @@ export class AdminResetService {
     for (const id of exhibitorStaffAttendeeIds) deleteAttendeeIdSet.add(id);
     const deleteAttendeeIds = [...deleteAttendeeIdSet];
 
-    // ticketsToDelete = tickets of test orders OR held by a to-be-deleted attendee.
+    // ticketsToDelete = tickets of test orders, OR held by a to-be-deleted
+    // attendee, OR orphan leftovers (no order AND no attendee — e.g. tickets
+    // whose order/attendee were removed by an earlier partial run).
     const ticketsToDelete = tickets
       .filter(
         (t) =>
           (t.orderId && testOrderIdSet.has(t.orderId)) ||
-          (t.attendeeId && deleteAttendeeIdSet.has(t.attendeeId)),
+          (t.attendeeId && deleteAttendeeIdSet.has(t.attendeeId)) ||
+          (!t.orderId && !t.attendeeId),
       )
       .map((t) => t.id);
+
+    // Ticket types for the event — their denormalized `sold` counter is rebuilt
+    // from the surviving tickets after deletion (raw deletes never touch it,
+    // so it otherwise stays stale and the overview keeps showing old numbers).
+    const eventTicketTypeIds = (
+      await this.prisma.ticketType.findMany({ where: { eventId }, select: { id: true } })
+    ).map((t) => t.id);
 
     // Exhibitor profiles that become orphaned (no links to any OTHER event).
     const orphanProfileIds: string[] = [];
@@ -153,6 +165,7 @@ export class AdminResetService {
       exhibitorProfiles: orphanProfileIds.length,
       boothScans: boothScansCount,
       boothLeads: boothLeadsCount,
+      ticketTypesRecomputed: eventTicketTypeIds.length,
     };
 
     if (opts.dryRun) {
@@ -195,6 +208,16 @@ export class AdminResetService {
 
         // 6. Attendees (form_submissions cascade on delete).
         await tx.attendee.deleteMany({ where: { id: { in: deleteAttendeeIds } } });
+
+        // 7. Rebuild each ticket type's denormalized `sold` counter from the
+        //    tickets that actually remain (the overview reads this field; raw
+        //    deletes above don't decrement it, so we recompute it to truth).
+        for (const ttId of eventTicketTypeIds) {
+          const activeCount = await tx.ticket.count({
+            where: { eventId, ticketTypeId: ttId, status: { notIn: ['voided', 'cancelled'] } },
+          });
+          await tx.ticketType.update({ where: { id: ttId }, data: { sold: activeCount } });
+        }
       },
       { timeout: 60_000 },
     );

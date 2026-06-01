@@ -1487,6 +1487,7 @@ export const api = {
         exhibitorProfiles: number;
         boothScans: number;
         boothLeads: number;
+        ticketTypesRecomputed: number;
       };
     }>(`/admin/reset/event/${eventId}/test-data`, { method: 'POST', body }),
 };

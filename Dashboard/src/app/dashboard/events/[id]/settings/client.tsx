@@ -71,27 +71,33 @@ export default function EventSettingsPage() {
       const preview = await api.resetEventTestData(id, { dryRun: true });
       const c = preview.counts;
       const total = c.testOrders + c.tickets + c.attendees + c.eventExhibitors;
-      if (total === 0) {
-        toast.info('Nothing to reset — no test orders, attendees, or exhibitors found.');
-        return;
-      }
-      const summary =
-        `Permanently DELETE the following for "${preview.eventName}"?\n\n` +
-        `• ${c.testOrders} TEST order(s) — only orders flagged as test\n` +
-        `• ${c.tickets} issued/sold ticket(s) — the QR passes from those orders\n` +
-        `      (NOT ticket types/products, and NOT any form or schema)\n` +
-        `• ${c.attendees} attendee record(s) — registered people (NOT app logins)\n` +
-        `• ${c.checkIns} check-in(s), ${c.badgeRenders} badge render(s)\n` +
-        `• ${c.eventExhibitors} exhibitor profile(s) + ${c.exhibitorStaff} booth-staff` +
-        ` (total across ALL exhibitors) + ${c.boothLeads} lead(s)\n\n` +
-        `KEPT — never touched: app users & logins, ticket types/products,\n` +
-        `forms & schemas, event settings, and any real (non-test) order.\n\n` +
-        `This cannot be undone.`;
-      if (!window.confirm(summary)) return;
+      // Even with nothing left to delete, the run still rebuilds the ticket
+      // "sold" counters — that's how stale "Tickets Sold" numbers get fixed.
+      const confirmMsg =
+        total === 0
+          ? `Nothing left to delete for "${preview.eventName}".\n\n` +
+            `Proceed to recompute the ticket "sold" counters (${c.ticketTypesRecomputed} ticket type(s)) ` +
+            `so the overview reflects reality?`
+          : `Permanently DELETE the following for "${preview.eventName}"?\n\n` +
+            `• ${c.testOrders} TEST order(s) — only orders flagged as test\n` +
+            `• ${c.tickets} issued/sold ticket(s) — the QR passes from those orders\n` +
+            `      (NOT ticket types/products, and NOT any form or schema)\n` +
+            `• ${c.attendees} attendee record(s) — registered people (NOT app logins)\n` +
+            `• ${c.checkIns} check-in(s), ${c.badgeRenders} badge render(s)\n` +
+            `• ${c.eventExhibitors} exhibitor profile(s) + ${c.exhibitorStaff} booth-staff` +
+            ` (total across ALL exhibitors) + ${c.boothLeads} lead(s)\n\n` +
+            `The "sold" counters on ${c.ticketTypesRecomputed} ticket type(s) are then recomputed to match.\n\n` +
+            `KEPT — never touched: app users & logins, ticket types/products,\n` +
+            `forms & schemas, event settings, and any real (non-test) order.\n\n` +
+            `This cannot be undone.`;
+      if (!window.confirm(confirmMsg)) return;
       const result = await api.resetEventTestData(id, { dryRun: false, confirm: true });
       const r = result.counts;
       toast.success(
-        `Reset complete — removed ${r.testOrders} order(s), ${r.attendees} attendee(s), ${r.eventExhibitors} exhibitor(s).`,
+        total === 0
+          ? `Counters recomputed for ${r.ticketTypesRecomputed} ticket type(s).`
+          : `Reset complete — removed ${r.testOrders} order(s), ${r.attendees} attendee(s), ` +
+            `${r.eventExhibitors} exhibitor(s); counters recomputed.`,
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Reset failed');
