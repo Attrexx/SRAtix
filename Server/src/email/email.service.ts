@@ -858,16 +858,24 @@ export class EmailService {
       orderNumber: string;
       portalUrl: string;
       passwordSetupUrl?: string;
+      // True when the email already belongs to an existing SRAtix account that
+      // has a password — switches the copy to "reset / sign in" instead of "set up".
+      accountExists?: boolean;
     },
   ): Promise<DeliveryResult> {
+    const pwHeading = data.accountExists ? '🔑 Reset Your Password' : '🔑 Set Up Your Password';
+    const pwBody = data.accountExists
+      ? 'You already have a SRAtix account for this email address. Set a new password to access your exhibitor portal — or, if you remember it, just sign in:'
+      : 'Your exhibitor account has been created. Set your password to access the portal:';
+    const pwButton = data.accountExists ? 'Set a New Password' : 'Set Password';
     const passwordSection = data.passwordSetupUrl ? `
       <div style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 20px; margin: 0 0 20px;">
-        <h3 style="margin: 0 0 8px; color: #333;">🔑 Set Up Your Password</h3>
+        <h3 style="margin: 0 0 8px; color: #333;">${pwHeading}</h3>
         <p style="margin: 0 0 12px; font-size: 14px;">
-          Your exhibitor account has been created. Set your password to access the portal:
+          ${pwBody}
         </p>
         <div style="text-align: center;">
-          <a href="${data.passwordSetupUrl}" style="display: inline-block; background: #d97706; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">Set Password</a>
+          <a href="${data.passwordSetupUrl}" style="display: inline-block; background: #d97706; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: 600;">${pwButton}</a>
         </div>
         <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">This link expires in 7 days.</p>
       </div>
@@ -931,7 +939,7 @@ export class EmailService {
     `);
 
     const passwordText = data.passwordSetupUrl
-      ? `\nSet Up Your Password\n-----------------------------\n${data.passwordSetupUrl}\n(Expires in 7 days)\n`
+      ? `\n${data.accountExists ? 'Reset Your Password' : 'Set Up Your Password'}\n-----------------------------\n${data.passwordSetupUrl}\n(Expires in 7 days)\n`
       : '';
 
     const portalText = data.passwordSetupUrl
@@ -973,7 +981,9 @@ Questions? Contact contact@swissroboticsday.ch
 
     return this.send({
       to,
-      subject: `🏢 Exhibitor confirmed — Set up your portal for ${data.eventName}`,
+      subject: data.accountExists
+        ? `🏢 Exhibitor confirmed — access your portal for ${data.eventName}`
+        : `🏢 Exhibitor confirmed — Set up your portal for ${data.eventName}`,
       html,
       text,
     });

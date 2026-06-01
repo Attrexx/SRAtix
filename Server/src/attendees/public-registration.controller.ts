@@ -96,20 +96,34 @@ export class PublicRegistrationController {
       },
     });
 
-    // Load form schema if the ticket type has one, with event-level fallback
+    // Detect exhibitor booth-staff passes. Staff must NOT be shown the exhibitor
+    // company onboarding form (legal name / VAT / billing / consents) — they get
+    // a simple name/phone form on the client instead. Signals: the ticket's
+    // staffPass meta flag, or an ExhibitorStaff record linked to this attendee.
+    const ticketMeta = (ticket?.meta as Record<string, unknown> | null) ?? null;
+    const staffRec = await this.prisma.exhibitorStaff.findFirst({
+      where: { attendeeId: attendee.id },
+      select: { eventExhibitor: { select: { exhibitorProfile: { select: { companyName: true } } } } },
+    });
+    const isStaffPass = ticketMeta?.staffPass === true || !!staffRec;
+    const companyName = staffRec?.eventExhibitor?.exhibitorProfile?.companyName ?? undefined;
+
+    // Load form schema if the ticket type has one, with event-level fallback.
+    // Skipped entirely for staff passes (no company form, no fallback).
     let formSchema = null;
     let resolvedFormSchemaId: string | null = ticket?.ticketType?.formSchemaId ?? null;
-    if (resolvedFormSchemaId) {
+    if (!isStaffPass && resolvedFormSchemaId) {
       formSchema = await this.forms.findSchemaForTicketType(
         attendee.eventId,
         ticket!.ticketType.id,
       );
     }
     // Fallback: if ticket type has no schema (e.g. Complimentary), try event's other ticket types
-    if (!formSchema) {
+    if (!isStaffPass && !formSchema) {
       formSchema = await this.forms.findFallbackSchemaForEvent(attendee.eventId);
       if (formSchema) resolvedFormSchemaId = formSchema.id;
     }
+    if (isStaffPass) resolvedFormSchemaId = null;
 
     // Load saved form answers for re-visit pre-population
     let savedFormData = null;
@@ -128,6 +142,8 @@ export class PublicRegistrationController {
 
     return {
       ...(isAlreadyRegistered ? { alreadyRegistered: true } : {}),
+      isStaffPass,
+      companyName,
       attendee: {
         firstName: attendee.firstName,
         lastName: attendee.lastName,

@@ -5238,6 +5238,10 @@
       var ticketTypeName = data.ticketTypeName || '';
       var isUpdate = !!data.alreadyRegistered;
       var savedFormData = data.savedFormData || {};
+      // Exhibitor booth-staff pass: server suppresses the company form schema and
+      // flags isStaffPass so we render a simple name/phone form (not the company form).
+      var isStaffPass = !!data.isStaffPass;
+      var companyName = data.companyName || '';
 
       // Extract form schema fields
       var schemaFields = null;
@@ -5282,7 +5286,7 @@
           +   '</div>'
           +   '<div class="sratix-field">'
           +     '<label class="sratix-label" for="sratix-areg-company">' + escHtml(t('reg.organization')) + '</label>'
-          +     '<input class="sratix-input" id="sratix-areg-company" type="text" name="company" value="' + escAttr(attendee.company || '') + '" autocomplete="organization" />'
+          +     '<input class="sratix-input" id="sratix-areg-company" type="text" name="company" value="' + escAttr(isStaffPass ? (companyName || attendee.company || '') : (attendee.company || '')) + '"' + (isStaffPass ? ' readonly' : '') + ' autocomplete="organization" />'
           +   '</div>'
           + '</div>';
       }
@@ -5299,7 +5303,7 @@
         + '<h2 class="sratix-modal-title">' + escHtml(event.name || 'Event Registration') + '</h2>'
         + (ticketTypeName ? '<p class="sratix-modal-subtitle">' + escHtml(ticketTypeName) + '</p>' : '')
         + statusBanner
-        + '<p style="margin-bottom:20px;opacity:0.7;">' + escHtml(isUpdate ? t('reg.updateSubtitle') : t('reg.completeSubtitle')) + '</p>'
+        + '<p style="margin-bottom:20px;opacity:0.7;">' + escHtml(isStaffPass ? t('reg.staffNote') : (isUpdate ? t('reg.updateSubtitle') : t('reg.completeSubtitle'))) + '</p>'
         + '<form id="sratix-areg-form" novalidate>'
         +   formBodyHtml
         +   '<p class="sratix-error-msg" id="sratix-areg-error" style="display:none"></p>'
@@ -5411,8 +5415,10 @@
           var rawAnswers = collectDynamicAnswers(formEl, schemaFields, {});
           var answers = collectDynamicAnswers(formEl, schemaFields, rawAnswers);
 
-          firstName = answers.first_name || answers.firstName || '';
-          lastName  = answers.last_name  || answers.lastName  || '';
+          // Fall back to the invited attendee's name when the custom form has no
+          // name field — prevents an unsatisfiable "name required" dead-end.
+          firstName = answers.first_name || answers.firstName || attendee.firstName || '';
+          lastName  = answers.last_name  || answers.lastName  || attendee.lastName  || '';
           phone     = answers.phone      || '';
           company   = answers.company    || answers.organization || '';
 

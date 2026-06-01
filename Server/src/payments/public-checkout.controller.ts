@@ -36,6 +36,7 @@ import { TicketTypesService } from '../ticket-types/ticket-types.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
+import { ExhibitorPortalService } from '../exhibitor-portal/exhibitor-portal.service';
 import { normalizeEmail } from '../common/email.util';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
@@ -233,6 +234,7 @@ export class PublicCheckoutController {
     private readonly ticketsService: TicketsService,
     private readonly emailService: EmailService,
     private readonly registrationReminder: RegistrationReminderWorker,
+    private readonly exhibitorPortal: ExhibitorPortalService,
   ) {}
 
   @Post()
@@ -583,8 +585,9 @@ export class PublicCheckoutController {
           isTestTicket: isTestMode,
         });
 
-        // Reassign tickets to recipients if multi-ticket purchase
-        if (recipientAttendees.length > 0 && issued.length > 0) {
+        // Reassign tickets to VISITOR recipients (multi-ticket purchase).
+        // Exhibitor staff get their own staff-pass tickets via provisioning below.
+        if (!isExhibitor && recipientAttendees.length > 0 && issued.length > 0) {
           const startIdx = includeTicketForSelf ? 1 : 0;
           for (let i = 0; i < recipientAttendees.length; i++) {
             const ticketIdx = startIdx + i;
@@ -624,6 +627,38 @@ export class PublicCheckoutController {
                 console.error('[PublicCheckout] Reminder scheduling failed:', err),
               );
           }
+        }
+
+        // Exhibitor free/comp orders: send the order confirmation and provision
+        // the exhibitor account + welcome email + booth-staff invites — identical
+        // to the paid (Stripe webhook) path, which otherwise never runs for $0 orders.
+        if (isExhibitor) {
+          const eventMetaConf = (event.meta as Record<string, any>) ?? {};
+          this.emailService
+            .sendOrderConfirmation(dto.billingData?.email || dto.attendeeData.email, {
+              customerName: `${dto.attendeeData.firstName} ${dto.attendeeData.lastName}`,
+              orderNumber: order.orderNumber,
+              totalFormatted: (0).toFixed(2),
+              currency: event.currency,
+              tickets: [{ typeName: tt.name, quantity: dto.quantity, qrPayload: '' }],
+              ticketCodes: issued.map((t) => t.code),
+              apiBaseUrl: 'https://tix.swiss-robotics.org',
+              eventName: event.name,
+              eventDate: event.startDate.toISOString().split('T')[0],
+              eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
+              eventVenueMapUrl: eventMetaConf.venueMapUrl || undefined,
+              isExhibitor: true,
+              language: dto.invoiceLanguage,
+            })
+            .catch((err) =>
+              console.error('[PublicCheckout] Exhibitor confirmation failed:', err),
+            );
+
+          await this.exhibitorPortal
+            .provisionExhibitorForOrder(order.id)
+            .catch((err) =>
+              console.error('[PublicCheckout] Exhibitor provisioning failed:', err),
+            );
         }
       } catch (err) {
         console.error('[PublicCheckout] Failed to issue tickets for free order:', err);

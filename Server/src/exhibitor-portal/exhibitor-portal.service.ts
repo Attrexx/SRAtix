@@ -403,6 +403,248 @@ export class ExhibitorPortalService {
       .toUpperCase();
   }
 
+  /**
+   * Provision an exhibitor account for a completed order (free OR paid).
+   *
+   * Single entry point shared by the Stripe webhook (paid orders) and the
+   * public-checkout free/comp path, so both behave identically:
+   *   1. Detect exhibitor orders (returns null for non-exhibitor orders).
+   *   2. Find/create the SRAtix User + exhibitor Organization + ExhibitorProfile
+   *      + EventExhibitor link.
+   *   3. ALWAYS issue a password set/reset link (so the user is never stranded).
+   *   4. Send the welcome email (setup vs reset wording via accountExists).
+   *   5. Provision any checkout staff (recipients) as booth staff.
+   *
+   * Idempotent: re-running on the same order reuses existing user/org/profile.
+   */
+  async provisionExhibitorForOrder(
+    orderId: string,
+  ): Promise<{ userId: string; exhibitorOrgId: string; profileId: string } | null> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        orgId: true,
+        eventId: true,
+        orderNumber: true,
+        customerEmail: true,
+        customerName: true,
+        meta: true,
+        attendee: { select: { email: true, firstName: true, lastName: true } },
+        items: { select: { ticketTypeId: true } },
+      },
+    });
+    if (!order) return null;
+
+    const ticketTypeIds = order.items.map((i) => i.ticketTypeId);
+    const ticketTypes = ticketTypeIds.length
+      ? await this.prisma.ticketType.findMany({
+          where: { id: { in: ticketTypeIds } },
+          select: { category: true },
+        })
+      : [];
+    const isExhibitorOrder = ticketTypes.some((tt) => tt.category === 'exhibitor');
+    if (!isExhibitorOrder) return null;
+
+    if (!order.eventId || !order.orgId) {
+      this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: missing eventId/orgId`);
+      return null;
+    }
+
+    const email = order.customerEmail || order.attendee?.email;
+    if (!email) {
+      this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: no email`);
+      return null;
+    }
+
+    const orderMeta = (order.meta as Record<string, any>) ?? {};
+    const displayName =
+      order.customerName ||
+      [order.attendee?.firstName, order.attendee?.lastName].filter(Boolean).join(' ').trim() ||
+      'Exhibitor';
+    const companyName = (orderMeta.companyName as string) || displayName;
+
+    const event = await this.prisma.event.findUnique({
+      where: { id: order.eventId },
+      select: { id: true, name: true, startDate: true, venue: true, venueAddress: true, meta: true },
+    });
+    if (!event) {
+      this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: event not found`);
+      return null;
+    }
+
+    const result = await this.provisionExhibitorAccount({
+      email,
+      displayName,
+      companyName,
+      eventId: order.eventId,
+      event,
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+    });
+
+    // Provision checkout staff (recipient attendees) as booth staff so they
+    // receive a portal invite (set-password) instead of the gift/attendee form.
+    const recipients = (orderMeta.recipientAttendees ?? []) as Array<{
+      attendeeId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      registrationToken: string;
+    }>;
+    if (result && recipients.length > 0) {
+      try {
+        await this.provisionCheckoutStaff({
+          exhibitorOrgId: result.exhibitorOrgId,
+          actorUserId: result.userId,
+          eventId: order.eventId,
+          staff: recipients.map((r) => ({
+            attendeeId: r.attendeeId,
+            firstName: r.firstName,
+            lastName: r.lastName,
+            email: r.email,
+            registrationToken: r.registrationToken,
+          })),
+        });
+        this.logger.log(`Provisioned ${recipients.length} exhibitor staff account(s) for order ${orderId}`);
+      } catch (err) {
+        this.logger.error(`Checkout staff provisioning failed for order ${orderId}: ${err}`);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Core exhibitor account provisioning (user/org/profile/event link + welcome
+   * email). Always issues a password set-or-reset link. Returns null on failure.
+   */
+  private async provisionExhibitorAccount(data: {
+    email: string;
+    displayName: string;
+    companyName: string;
+    eventId: string;
+    event: { name?: string; startDate?: Date; venue?: string | null; venueAddress?: string | null; meta?: unknown };
+    orderNumber: string;
+    orderId: string;
+  }): Promise<{ userId: string; exhibitorOrgId: string; profileId: string } | null> {
+    try {
+      const normalizedEmail = normalizeEmail(data.email);
+
+      // 1. Find or create User
+      let user = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true, passwordHash: true },
+      });
+      const isNewUser = !user;
+      if (!user) {
+        user = await this.prisma.user.create({
+          data: { email: normalizedEmail, displayName: data.displayName },
+          select: { id: true, passwordHash: true },
+        });
+        this.logger.log(`Created exhibitor user ${user.id} for ${normalizedEmail}`);
+      }
+      // Existing account that already has a usable password → reset wording.
+      const accountExists = !isNewUser && !!user.passwordHash;
+
+      // 2. Resolve or create exhibitor Organization (reuse if user already has one).
+      let exhibitorOrgId: string;
+      const existingRole = await this.prisma.userRole.findFirst({
+        where: { userId: user.id, role: 'exhibitor' },
+        select: { orgId: true },
+      });
+      if (existingRole?.orgId) {
+        exhibitorOrgId = existingRole.orgId;
+      } else {
+        const baseSlug = data.companyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80);
+        const slug = `exhibitor-${baseSlug}-${randomBytes(4).toString('hex')}`;
+        const org = await this.prisma.organization.create({
+          data: { name: data.companyName, slug, type: 'exhibitor', contactEmail: normalizedEmail },
+        });
+        exhibitorOrgId = org.id;
+        this.logger.log(`Created exhibitor org ${org.id} (${slug}) for ${normalizedEmail}`);
+      }
+
+      // 3. Assign exhibitor role scoped to exhibitor org (idempotent)
+      await this.prisma.userRole.upsert({
+        where: { userId_orgId_role: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' } },
+        update: {},
+        create: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' },
+      });
+
+      // 4. Create ExhibitorProfile if not exists
+      const existingProfile = await this.prisma.exhibitorProfile.findUnique({
+        where: { orgId: exhibitorOrgId },
+        select: { id: true },
+      });
+      const profile =
+        existingProfile ??
+        (await this.prisma.exhibitorProfile.create({
+          data: { orgId: exhibitorOrgId, companyName: data.companyName, contactEmail: normalizedEmail },
+          select: { id: true },
+        }));
+
+      // 5. Create EventExhibitor if not exists, storing buyer info in meta
+      await this.prisma.eventExhibitor.upsert({
+        where: { eventId_exhibitorProfileId: { eventId: data.eventId, exhibitorProfileId: profile.id } },
+        update: {},
+        create: {
+          eventId: data.eventId,
+          exhibitorProfileId: profile.id,
+          meta: { buyerName: data.displayName, buyerEmail: normalizedEmail, orderNumber: data.orderNumber },
+        },
+      });
+
+      // 6. ALWAYS issue a password set/reset link so the user is never stranded.
+      //    New accounts → setup wording (?setup=1); existing accounts → reset wording.
+      const portalBaseUrl =
+        this.config.get<string>('EXHIBITOR_PORTAL_URL') ?? 'https://swissroboticsday.ch/exhibitor-portal';
+      const rawToken = await this.auth.initiatePasswordSetup(user.id);
+      const siteOrigin = new URL(portalBaseUrl).origin;
+      const eventMeta = (data.event.meta as Record<string, any>) ?? {};
+      const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
+      const passwordSetupUrl = accountExists
+        ? `${siteOrigin}${setPasswordPath}?token=${rawToken}`
+        : `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
+
+      // Store token in order meta so the confirmation page can retrieve it via polling.
+      const existingOrderMeta =
+        ((await this.prisma.order.findUnique({ where: { id: data.orderId }, select: { meta: true } }))
+          ?.meta as Record<string, any>) ?? {};
+      await this.prisma.order.update({
+        where: { id: data.orderId },
+        data: { meta: { ...existingOrderMeta, exhibitorSetupToken: rawToken } },
+      });
+
+      // 7. Send welcome email with portal + password set/reset link
+      await this.email.sendExhibitorWelcome(normalizedEmail, {
+        contactName: data.displayName,
+        companyName: data.companyName,
+        eventName: data.event.name ?? 'Event',
+        eventDate: data.event.startDate?.toISOString().split('T')[0] ?? '',
+        eventVenue: [data.event.venue, data.event.venueAddress].filter(Boolean).join(', '),
+        eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
+        orderNumber: data.orderNumber,
+        portalUrl: portalBaseUrl,
+        passwordSetupUrl,
+        accountExists,
+      });
+
+      this.logger.log(
+        `Exhibitor provisioned for order ${data.orderNumber}: user=${user.id}, org=${exhibitorOrgId}, profile=${profile.id}` +
+          (isNewUser ? ' [NEW USER]' : accountExists ? ' [EXISTING ACCOUNT]' : ' [NO-PASSWORD USER]'),
+      );
+      return { userId: user.id, exhibitorOrgId, profileId: profile.id };
+    } catch (err) {
+      this.logger.error(`Exhibitor provisioning failed for ${data.email}: ${err}`);
+      return null;
+    }
+  }
+
   async provisionCheckoutStaff(data: {
     exhibitorOrgId: string;
     actorUserId?: string;

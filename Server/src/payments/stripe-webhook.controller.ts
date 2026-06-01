@@ -26,7 +26,6 @@ import { AuthService } from '../auth/auth.service';
 import { LogisticsService } from '../logistics/logistics.service';
 import { InvoicesService } from '../invoices/invoices.service';
 import { ExhibitorPortalService } from '../exhibitor-portal/exhibitor-portal.service';
-import { normalizeEmail } from '../common/email.util';
 import { randomBytes } from 'crypto';
 
 type RecipientAttendeeMeta = {
@@ -35,12 +34,6 @@ type RecipientAttendeeMeta = {
   firstName: string;
   lastName: string;
   registrationToken: string;
-};
-
-type ProvisionedExhibitor = {
-  userId: string;
-  exhibitorOrgId: string;
-  profileId: string;
 };
 
 /**
@@ -252,9 +245,12 @@ export class StripeWebhookController {
         );
       }
 
-      // Send gift notification emails to recipients
+      // Send gift notification emails to VISITOR recipients only. Exhibitor
+      // staff are provisioned as booth staff (portal invite / set-password) via
+      // provisionExhibitorForOrder below, so they must NOT also receive the
+      // attendee-registration gift email (which would point them at the wrong form).
       const registrationBaseUrl = (orderMeta.attendeeRegisterBaseUrl ?? orderMeta.registrationBaseUrl) as string;
-      if (registrationBaseUrl) {
+      if (registrationBaseUrl && !isExhibitorOrder) {
         const eventForGift = await this.orders.findEventForOrder(orderId);
         const purchaserName = registrationName;
         const giftEventMeta = (eventForGift?.meta as Record<string, any>) ?? {};
@@ -368,43 +364,17 @@ export class StripeWebhookController {
       }
     }
 
-    // ── Exhibitor provisioning: auto-create account, profile, event link ──
-    // Runs independently of confirmation email — must not be blocked by null email
+    // ── Exhibitor provisioning: auto-create account, profile, event link,
+    //    password set/reset link, welcome email, and booth-staff invites.
+    //    Shared with the free/comp checkout path via provisionExhibitorForOrder.
+    //    Non-exhibitor orders are a no-op inside the service.
     if (paidOrder && paidOrder.customerEmail) {
-      try {
-        if (orderTicketTypes.length > 0) {
-          if (isExhibitorOrder && !event) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: event not resolved`);
-          if (isExhibitorOrder && !orgId) this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: orgId missing from Stripe metadata`);
-          if (isExhibitorOrder && event && orgId) {
-            const provisioned = await this.provisionExhibitor(
-              paidOrder.customerEmail,
-              registrationName,
-              (orderMeta.companyName as string) ?? registrationName,
-              orgId,
-              eventId!,
-              event,
-              paidOrder.orderNumber,
-              orderId,
-            );
-            if (provisioned && recipientAttendees.length > 0) {
-              await this.exhibitorPortal.provisionCheckoutStaff({
-                exhibitorOrgId: provisioned.exhibitorOrgId,
-                actorUserId: provisioned.userId,
-                eventId: eventId!,
-                staff: recipientAttendees.map((recipient) => ({
-                  attendeeId: recipient.attendeeId,
-                  firstName: recipient.firstName,
-                  lastName: recipient.lastName,
-                  email: recipient.email,
-                  registrationToken: recipient.registrationToken,
-                })),
-              });
-              this.logger.log(`Provisioned ${recipientAttendees.length} exhibitor staff portal account(s) for order ${orderId}`);
-            }
-          }
+      if (isExhibitorOrder) {
+        try {
+          await this.exhibitorPortal.provisionExhibitorForOrder(orderId);
+        } catch (err) {
+          this.logger.error(`Exhibitor provisioning failed for order ${orderId}: ${err}`);
         }
-      } catch (err) {
-        this.logger.error(`Exhibitor provisioning failed for order ${orderId}: ${err}`);
       }
     } else if (paidOrder) {
       this.logger.warn(`Order ${orderId} has no customer email — skipping confirmation email and exhibitor provisioning`);
@@ -556,157 +526,6 @@ export class StripeWebhookController {
           this.logger.error(`Failed to send refund email for order ${order.id}: ${err}`);
         }
       }
-    }
-  }
-
-  // ─── Exhibitor Provisioning ─────────────────────────────────
-
-  /**
-   * Provision exhibitor account on ticket purchase:
-   * 1. Find/create User (no password — setup via email link)
-   * 2. Assign exhibitor UserRole scoped to org
-   * 3. Create ExhibitorProfile for the org
-   * 4. Create EventExhibitor linking org to event
-   * 5. Generate password setup token
-   * 6. Send welcome email with password setup link
-   */
-  private async provisionExhibitor(
-    email: string,
-    displayName: string,
-    companyName: string,
-    eventOrgId: string,
-    eventId: string,
-    event: { name?: string; startDate?: Date; venue?: string | null; venueAddress?: string | null; meta?: unknown },
-    orderNumber: string,
-    orderId: string,
-  ): Promise<ProvisionedExhibitor | null> {
-    try {
-      const normalizedEmail = normalizeEmail(email);
-      // 1. Find or create User
-      let user = await this.prisma.user.findUnique({
-        where: { email: normalizedEmail },
-        select: { id: true, passwordHash: true },
-      });
-
-      const isNewUser = !user;
-      if (!user) {
-        user = await this.prisma.user.create({
-          data: { email: normalizedEmail, displayName },
-          select: { id: true, passwordHash: true },
-        });
-        this.logger.log(`Created exhibitor user ${user.id} for ${normalizedEmail}`);
-      }
-
-      // 2. Resolve or create exhibitor Organization.
-      //    Each exhibiting company gets its own org (type='exhibitor').
-      //    Reuse an existing exhibitor org if this user already has one.
-      let exhibitorOrgId: string;
-      const existingRole = await this.prisma.userRole.findFirst({
-        where: { userId: user.id, role: 'exhibitor' },
-        select: { orgId: true },
-      });
-
-      if (existingRole?.orgId) {
-        exhibitorOrgId = existingRole.orgId;
-      } else {
-        const baseSlug = companyName
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .slice(0, 80);
-        const slug = `exhibitor-${baseSlug}-${randomBytes(4).toString('hex')}`;
-        const org = await this.prisma.organization.create({
-          data: {
-            name: companyName,
-            slug,
-            type: 'exhibitor',
-            contactEmail: normalizedEmail,
-          },
-        });
-        exhibitorOrgId = org.id;
-        this.logger.log(`Created exhibitor org ${org.id} (${slug}) for ${normalizedEmail}`);
-      }
-
-      // 3. Assign exhibitor role scoped to exhibitor org (idempotent)
-      await this.prisma.userRole.upsert({
-        where: { userId_orgId_role: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' } },
-        update: {},
-        create: { userId: user.id, orgId: exhibitorOrgId, role: 'exhibitor' },
-      });
-
-      // 4. Create ExhibitorProfile if not exists
-      const existingProfile = await this.prisma.exhibitorProfile.findUnique({
-        where: { orgId: exhibitorOrgId },
-        select: { id: true },
-      });
-      const profile = existingProfile ?? await this.prisma.exhibitorProfile.create({
-        data: {
-          orgId: exhibitorOrgId,
-          companyName,
-          contactEmail: normalizedEmail,
-        },
-        select: { id: true },
-      });
-
-      // 5. Create EventExhibitor if not exists, storing buyer info in meta
-      await this.prisma.eventExhibitor.upsert({
-        where: { eventId_exhibitorProfileId: { eventId, exhibitorProfileId: profile.id } },
-        update: {},
-        create: {
-          eventId,
-          exhibitorProfileId: profile.id,
-          meta: { buyerName: displayName, buyerEmail: normalizedEmail, orderNumber },
-        },
-      });
-
-      // 6. Generate password setup token (only for new users or users without password)
-      let passwordSetupUrl: string | undefined;
-      if (isNewUser || !user.passwordHash) {
-        const rawToken = await this.auth.initiatePasswordSetup(user.id);
-
-        // Build password setup URL from event site (not Dashboard)
-        const portalBaseUrl = await this.settings.resolve(
-          'exhibitor_portal_url',
-          'https://swissroboticsday.ch/exhibitor-portal',
-        );
-        const siteOrigin = new URL(portalBaseUrl).origin;
-        const eventRecord = await this.prisma.event.findUnique({
-          where: { id: eventId },
-          select: { meta: true },
-        });
-        const eventMeta = (eventRecord?.meta as Record<string, any>) ?? {};
-        const setPasswordPath = eventMeta.pagePaths?.setPassword ?? '/set-password/';
-        passwordSetupUrl = `${siteOrigin}${setPasswordPath}?token=${rawToken}&setup=1`;
-
-        // Store token in order meta so the confirmation page can retrieve it via polling
-        await this.orders.updateMeta(orderId, { exhibitorSetupToken: rawToken });
-      }
-
-      // 7. Send welcome email with portal + password setup links
-      const portalBaseUrl = await this.settings.resolve(
-        'exhibitor_portal_url',
-        'https://swissroboticsday.ch/exhibitor-portal',
-      );
-      const provisionMeta = (event.meta as Record<string, any>) ?? {};
-      await this.email.sendExhibitorWelcome(normalizedEmail, {
-        contactName: displayName,
-        companyName,
-        eventName: event.name ?? 'Event',
-        eventDate: event.startDate?.toISOString().split('T')[0] ?? '',
-        eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
-        eventVenueMapUrl: provisionMeta.venueMapUrl || undefined,
-        orderNumber,
-        portalUrl: portalBaseUrl,
-        passwordSetupUrl,
-      });
-
-      this.logger.log(
-        `Exhibitor provisioned for order ${orderNumber}: user=${user.id}, org=${exhibitorOrgId}, profile=${profile.id}, event=${eventId}${isNewUser ? ' [NEW USER]' : ''}`,
-      );
-      return { userId: user.id, exhibitorOrgId, profileId: profile.id };
-    } catch (err) {
-      this.logger.error(`Exhibitor provisioning failed for ${email}: ${err}`);
-      return null;
     }
   }
 
