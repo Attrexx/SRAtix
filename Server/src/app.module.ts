@@ -34,6 +34,7 @@ import { ExhibitorPortalModule } from './exhibitor-portal/exhibitor-portal.modul
 import { MembershipPartnersModule } from './membership-partners/membership-partners.module';
 import { LogisticsModule } from './logistics/logistics.module';
 import { CompEntriesModule } from './comp-entries/comp-entries.module';
+import { AdminResetModule } from './admin-reset/admin-reset.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { join } from 'path';
 
@@ -136,6 +137,9 @@ import { join } from 'path';
 
     // Comp entries — staff, volunteers, partners, sponsors (complimentary tickets)
     CompEntriesModule,
+
+    // Admin reset — owner-only "clean slate before go-live" data wipe
+    AdminResetModule,
   ],
   providers: [
     // Global rate limiting — 100 req/min per IP (overridable per-route with @RateLimit)

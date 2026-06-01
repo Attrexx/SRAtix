@@ -1465,6 +1465,30 @@ export const api = {
       `/events/${eventId}/comp-entries/${id}`,
       { method: 'DELETE' },
     ),
+
+  // Owner-only destructive "clean slate" reset for an event. Always preview
+  // first ({ dryRun: true }); execute with { dryRun: false, confirm: true }.
+  resetEventTestData: (
+    eventId: string,
+    body: { dryRun: boolean; confirm?: boolean },
+  ) =>
+    request<{
+      dryRun: boolean;
+      eventId: string;
+      eventName: string;
+      counts: {
+        testOrders: number;
+        tickets: number;
+        attendees: number;
+        checkIns: number;
+        badgeRenders: number;
+        eventExhibitors: number;
+        exhibitorStaff: number;
+        exhibitorProfiles: number;
+        boothScans: number;
+        boothLeads: number;
+      };
+    }>(`/admin/reset/event/${eventId}/test-data`, { method: 'POST', body }),
 };
 
 export { ApiError };

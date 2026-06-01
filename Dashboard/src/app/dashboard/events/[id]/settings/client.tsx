@@ -6,7 +6,12 @@ import { api, type Event, type MembershipPartner } from '@/lib/api';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
 import { RichTextEditor } from '@/components/rich-text-editor';
+import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+
+// Owner-only gate for the destructive "reset test data" action.
+const RESET_OWNER_EMAIL = 'attrexx@gmail.com';
+const RESET_OWNER_ID = '850281e6-e321-48ad-a18e-f31df765867e';
 
 const TITLE_SIZE_OPTIONS = [
   { value: '1.25', label: '1.25 rem' },
@@ -50,9 +55,45 @@ function toLocal(iso?: string | null): string {
 export default function EventSettingsPage() {
   const { t } = useI18n();
   const id = useEventId();
+  const { user } = useAuth();
+  const isResetOwner = !!user && (user.email === RESET_OWNER_EMAIL || user.id === RESET_OWNER_ID);
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // Owner-only "clean slate before go-live" reset: previews counts, confirms,
+  // then wipes this event's TEST orders, their attendees, and all exhibitors.
+  const handleResetTestData = useCallback(async () => {
+    if (!id) return;
+    setResetting(true);
+    try {
+      const preview = await api.resetEventTestData(id, { dryRun: true });
+      const c = preview.counts;
+      const total = c.testOrders + c.tickets + c.attendees + c.eventExhibitors;
+      if (total === 0) {
+        toast.info('Nothing to reset — no test orders, attendees, or exhibitors found.');
+        return;
+      }
+      const summary =
+        `Permanently DELETE the following for "${preview.eventName}"?\n\n` +
+        `• ${c.testOrders} test order(s)\n` +
+        `• ${c.tickets} ticket(s) (${c.checkIns} check-in(s))\n` +
+        `• ${c.attendees} attendee(s)\n` +
+        `• ${c.eventExhibitors} exhibitor(s), ${c.exhibitorStaff} staff, ${c.boothLeads} lead(s)\n\n` +
+        `App users / logins are NOT affected. This cannot be undone.`;
+      if (!window.confirm(summary)) return;
+      const result = await api.resetEventTestData(id, { dryRun: false, confirm: true });
+      const r = result.counts;
+      toast.success(
+        `Reset complete — removed ${r.testOrders} order(s), ${r.attendees} attendee(s), ${r.eventExhibitors} exhibitor(s).`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Reset failed');
+    } finally {
+      setResetting(false);
+    }
+  }, [id]);
 
   // Form state
   const [name, setName] = useState('');
@@ -1214,6 +1255,37 @@ export default function EventSettingsPage() {
           <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
             {t('events.settings.deleteNotAvailable')}
           </p>
+
+          {/* Owner-only: reset test data (clean slate before go-live) */}
+          {isResetOwner && (
+            <div
+              className="mt-5 border-t pt-4"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <h3 className="mb-1 text-sm font-semibold" style={{ color: 'var(--color-danger, #ef4444)' }}>
+                Reset test data (clean slate)
+              </h3>
+              <p className="mb-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                Permanently deletes this event&apos;s <strong>TEST orders</strong>, their{' '}
+                <strong>attendees</strong>, and <strong>all exhibitors</strong> (profiles, staff,
+                booths, scans &amp; leads) to zero out stats before go-live. App users / logins are
+                never touched. You&apos;ll see a count and confirm before anything is deleted.
+              </p>
+              <button
+                onClick={handleResetTestData}
+                disabled={resetting}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-50"
+                style={{ background: 'var(--color-danger, #ef4444)' }}
+              >
+                {resetting ? (
+                  <Icons.RefreshCw size={16} className="animate-spin" />
+                ) : (
+                  <Icons.AlertTriangle size={16} />
+                )}
+                {resetting ? 'Resetting…' : 'Reset test data'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
