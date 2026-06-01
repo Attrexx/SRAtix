@@ -2114,7 +2114,7 @@
         }
         var consentLabelHtml;
         if (docUrl) {
-          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" target="_blank" rel="noopener noreferrer" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
+          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" data-legal-url="' + escAttr(docUrl) + '" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
         } else {
           consentLabelHtml = escHtml(label);
         }
@@ -7541,6 +7541,67 @@
       });
     }
   }
+
+  // ─── Legal document modal ────────────────────────────────────────────────────
+  // Intercepts clicks on .sratix-consent-link (consent field links in the
+  // registration form) and shows the document in a fullscreen-style overlay
+  // instead of opening a new tab.
+
+  function initLegalModal() {
+    if (document.getElementById('sratix-legal-overlay')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'sratix-legal-overlay';
+    overlay.className = 'sratix-legal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Legal document');
+    overlay.innerHTML =
+      '<button class="sratix-legal-close" aria-label="Close document">' +
+        '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+          '<path d="M14 4L4 14M4 4l10 10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+        '</svg>' +
+      '</button>' +
+      '<div class="sratix-legal-dialog">' +
+        '<iframe class="sratix-legal-iframe" src="" title="Legal document" sandbox="allow-same-origin allow-scripts" loading="lazy"></iframe>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.sratix-legal-close').addEventListener('click', closeLegalModal);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeLegalModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlay.classList.contains('sratix-legal-open')) closeLegalModal();
+    });
+  }
+
+  function openLegalModal(url) {
+    initLegalModal();
+    var overlay = document.getElementById('sratix-legal-overlay');
+    var iframe = overlay.querySelector('.sratix-legal-iframe');
+    iframe.src = url;
+    overlay.classList.add('sratix-legal-open');
+    document.body.classList.add('sratix-legal-body-lock');
+  }
+
+  function closeLegalModal() {
+    var overlay = document.getElementById('sratix-legal-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('sratix-legal-open');
+    document.body.classList.remove('sratix-legal-body-lock');
+    var iframe = overlay.querySelector('.sratix-legal-iframe');
+    if (iframe) iframe.src = '';
+  }
+
+  // Delegated — works regardless of when the consent field is rendered into the DOM.
+  document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest ? e.target.closest('.sratix-consent-link') : null;
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var url = link.getAttribute('data-legal-url') || link.getAttribute('href');
+    if (url) openLegalModal(url);
+  });
 
   // ─── Boot ─────────────────────────────────────────────────────────────────────
 

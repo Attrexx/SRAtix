@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res, Header } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, Header } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import { EventsService } from './events.service';
 import * as sanitizeHtml from 'sanitize-html';
@@ -21,12 +21,17 @@ export class EventsLegalController {
   async getLegalPage(
     @Param('id') eventId: string,
     @Param('slug') slug: string,
+    @Query('fragment') fragment: string | undefined,
     @Res() reply: FastifyReply,
   ) {
     try {
       const content = await this.eventsService.getLegalPage(eventId, slug);
+      const title = this.slugToTitle(slug);
 
       if (!content) {
+        if (fragment) {
+          return reply.status(404).send({ error: 'not_configured' });
+        }
         return reply
           .status(404)
           .type('text/html')
@@ -35,7 +40,7 @@ export class EventsLegalController {
 
       // Sanitize stored HTML to prevent XSS
       const safe = sanitizeHtml(content, {
-        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'img']),
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'h4', 'u', 'img', 'mark', 's']),
         allowedAttributes: {
           ...sanitizeHtml.defaults.allowedAttributes,
           img: ['src', 'alt', 'width', 'height'],
@@ -43,12 +48,18 @@ export class EventsLegalController {
         },
       });
 
-      const title = this.slugToTitle(slug);
+      // ?fragment=1 → return JSON content for PHP shortcode rendering
+      if (fragment) {
+        return reply.send({ title, html: safe });
+      }
 
       return reply
         .type('text/html')
         .send(this.renderPage(title, safe));
     } catch {
+      if (fragment) {
+        return reply.status(404).send({ error: 'not_found' });
+      }
       return reply
         .status(404)
         .type('text/html')
@@ -79,9 +90,11 @@ export class EventsLegalController {
   <title>${this.escHtml(title)}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0; padding: 40px 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px; font-weight: 400;
       line-height: 1.7; color: #1a1a2e;
       background: #f8f9fc;
     }
@@ -90,11 +103,14 @@ export class EventsLegalController {
       background: #fff; border-radius: 12px;
       padding: 48px 40px; box-shadow: 0 1px 4px rgba(0,0,0,.08);
     }
-    h1 { font-size: 1.8rem; margin: 0 0 24px; color: #0f172a; }
-    h2 { font-size: 1.3rem; margin: 32px 0 12px; color: #1e293b; }
-    h3 { font-size: 1.1rem; margin: 24px 0 8px; color: #334155; }
-    p { margin: 0 0 16px; }
-    ul, ol { margin: 0 0 16px; padding-left: 24px; }
+    h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 24px; color: #0f172a; }
+    h2 { font-size: 1.2rem; font-weight: 700; margin: 32px 0 10px; color: #1e293b; }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 8px; color: #334155; }
+    p { margin: 0 0 14px; font-weight: 400; }
+    strong, b { font-weight: 700; }
+    em, i { font-style: italic; }
+    u { text-decoration: underline; }
+    ul, ol { margin: 0 0 14px; padding-left: 24px; }
     li { margin-bottom: 6px; }
     a { color: #6366f1; }
     @media (max-width: 600px) {

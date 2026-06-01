@@ -112,6 +112,101 @@
 	overflow-x: hidden;
 }
 
+/* Override theme max-width so full-page SRAtix portals aren't clipped.
+   The overflow-x above + the theme's .site-main max-width together cut off content;
+   unset the width constraint here so the portal fills the page. */
+body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
+	max-width: none;
+}
+
+/* ── Legal document modal overlay ── */
+.sratix-legal-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	background: rgba(0, 0, 0, 0.72);
+	align-items: center;
+	justify-content: center;
+}
+.sratix-legal-overlay.sratix-legal-open {
+	display: flex;
+}
+.sratix-legal-body-lock {
+	overflow: hidden;
+}
+.sratix-legal-close {
+	position: fixed;
+	top: 14px;
+	right: 14px;
+	z-index: 100001;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: #fff;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #0f172a;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+	flex-shrink: 0;
+}
+.sratix-legal-close:hover {
+	background: #f1f5f9;
+}
+.sratix-legal-dialog {
+	width: min(820px, 96vw);
+	height: 88vh;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+.sratix-legal-iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	display: block;
+	background: #f8f9fc;
+}
+@media (max-width: 600px) {
+	.sratix-legal-overlay {
+		align-items: flex-end;
+	}
+	.sratix-legal-dialog {
+		width: 100vw;
+		height: 94vh;
+		border-radius: 16px 16px 0 0;
+	}
+	.sratix-legal-close {
+		top: 10px;
+		right: 10px;
+	}
+}
+
+/* ── [sratix_legal] shortcode — legal prose rendered in WP pages ── */
+.sratix-legal-prose {
+	max-width: 760px;
+	margin: 0 auto;
+	font-size: 1rem;
+	line-height: 1.75;
+	color: inherit;
+}
+.sratix-legal-prose .sratix-legal-title {
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin: 0 0 1.5rem;
+}
+.sratix-legal-prose h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 1.25rem; }
+.sratix-legal-prose h2 { font-size: 1.2rem; font-weight: 700; margin: 2rem 0 0.6rem; }
+.sratix-legal-prose h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+.sratix-legal-prose p  { margin: 0 0 0.9rem; font-weight: 400; }
+.sratix-legal-prose strong, .sratix-legal-prose b { font-weight: 700; }
+.sratix-legal-prose em, .sratix-legal-prose i    { font-style: italic; }
+.sratix-legal-prose ul, .sratix-legal-prose ol   { margin: 0 0 0.9rem; padding-left: 1.5rem; }
+.sratix-legal-prose li { margin-bottom: 0.4rem; }
+
 /* ── Ticket Display Header ── */
 .sratix-ticket-header {
 	margin-bottom: 24px;

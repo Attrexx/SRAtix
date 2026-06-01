@@ -20,6 +20,7 @@ class SRAtix_Client_Public {
 		add_shortcode( 'sratix_attendee_register', array( $this, 'render_attendee_register' ) );
 		add_shortcode( 'sratix_exhibitor_portal', array( $this, 'render_exhibitor_portal' ) );
 		add_shortcode( 'sratix_set_password',     array( $this, 'render_set_password' ) );
+		add_shortcode( 'sratix_legal',            array( $this, 'render_legal' ) );
 		// Note: [sratix_exhibitors_grid] is registered by SRAtix_Client_Exhibitors_Grid
 		// directly in its constructor. Do NOT add it here — it would override that handler.
 	}
@@ -42,7 +43,16 @@ class SRAtix_Client_Public {
 			|| has_shortcode( $post->post_content, 'sratix_set_password' );
 			// Note: sratix_exhibitors_grid assets are loaded by enqueue_grid_assets() separately.
 
+		// [sratix_legal] is server-side rendered — only CSS needed, no embed JS.
 		if ( ! $has_shortcode ) {
+			if ( has_shortcode( $post->post_content, 'sratix_legal' ) ) {
+				wp_enqueue_style(
+					'sratix-client-public',
+					SRATIX_CLIENT_URL . 'public/css/sratix-client.css',
+					array(),
+					SRATIX_CLIENT_VERSION
+				);
+			}
 			return;
 		}
 
@@ -601,6 +611,77 @@ class SRAtix_Client_Public {
 			esc_attr( $portal_path ),
 			esc_attr( $event_id )
 		);
+	}
+
+	/**
+	 * [sratix_legal event_id="…" doc="terms-conditions"] — render a legal
+	 * document stored in SRAtix event settings inside a WordPress page.
+	 *
+	 * Fetches content from the SRAtix API (?fragment=1 returns JSON {title,html}).
+	 * Result is cached in a WP transient for one hour.
+	 *
+	 * Usage:
+	 *   [sratix_legal doc="terms-conditions"]
+	 *   [sratix_legal doc="privacy-policy" event_id="42"]
+	 *
+	 * Accepted doc slugs: terms-conditions, privacy-policy,
+	 *                     code-of-conduct, photography-consent
+	 *
+	 * @param array<string, string>|string $atts Shortcode attributes.
+	 * @return string HTML output.
+	 */
+	public function render_legal( $atts ): string {
+		$atts = shortcode_atts(
+			array(
+				'event_id' => get_option( 'sratix_client_event_id', '' ),
+				'doc'      => '',
+			),
+			$atts,
+			'sratix_legal'
+		);
+
+		$event_id = sanitize_text_field( $atts['event_id'] );
+		// Accept underscores or dashes; API uses dashes.
+		$doc = sanitize_key( str_replace( '_', '-', $atts['doc'] ) );
+
+		if ( ! $event_id || ! $doc ) {
+			return '';
+		}
+
+		$api_url = rtrim( get_option( 'sratix_client_api_url', '' ), '/' );
+		if ( ! $api_url ) {
+			return '';
+		}
+
+		$cache_key = 'sratix_legal_' . md5( $event_id . $doc );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		$url      = $api_url . '/api/events/' . rawurlencode( $event_id ) . '/legal/' . rawurlencode( $doc ) . '?fragment=1';
+		$response = wp_remote_get( $url, array( 'timeout' => 10 ) );
+
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return '';
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( empty( $body['html'] ) ) {
+			return '';
+		}
+
+		$title  = ! empty( $body['title'] ) ? esc_html( $body['title'] ) : '';
+		$output  = '<div class="sratix-legal-prose">';
+		if ( $title ) {
+			$output .= '<h1 class="sratix-legal-title">' . $title . '</h1>';
+		}
+		$output .= wp_kses_post( $body['html'] );
+		$output .= '</div>';
+
+		set_transient( $cache_key, $output, HOUR_IN_SECONDS );
+
+		return $output;
 	}
 
 	/*──────────────────────────────────────────────────────────
