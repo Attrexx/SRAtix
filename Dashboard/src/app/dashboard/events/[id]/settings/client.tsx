@@ -77,11 +77,16 @@ export default function EventSettingsPage() {
       }
       const summary =
         `Permanently DELETE the following for "${preview.eventName}"?\n\n` +
-        `• ${c.testOrders} test order(s)\n` +
-        `• ${c.tickets} ticket(s) (${c.checkIns} check-in(s))\n` +
-        `• ${c.attendees} attendee(s)\n` +
-        `• ${c.eventExhibitors} exhibitor(s), ${c.exhibitorStaff} staff, ${c.boothLeads} lead(s)\n\n` +
-        `App users / logins are NOT affected. This cannot be undone.`;
+        `• ${c.testOrders} TEST order(s) — only orders flagged as test\n` +
+        `• ${c.tickets} issued/sold ticket(s) — the QR passes from those orders\n` +
+        `      (NOT ticket types/products, and NOT any form or schema)\n` +
+        `• ${c.attendees} attendee record(s) — registered people (NOT app logins)\n` +
+        `• ${c.checkIns} check-in(s), ${c.badgeRenders} badge render(s)\n` +
+        `• ${c.eventExhibitors} exhibitor profile(s) + ${c.exhibitorStaff} booth-staff` +
+        ` (total across ALL exhibitors) + ${c.boothLeads} lead(s)\n\n` +
+        `KEPT — never touched: app users & logins, ticket types/products,\n` +
+        `forms & schemas, event settings, and any real (non-test) order.\n\n` +
+        `This cannot be undone.`;
       if (!window.confirm(summary)) return;
       const result = await api.resetEventTestData(id, { dryRun: false, confirm: true });
       const r = result.counts;
@@ -1266,10 +1271,14 @@ export default function EventSettingsPage() {
                 Reset test data (clean slate)
               </h3>
               <p className="mb-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                Permanently deletes this event&apos;s <strong>TEST orders</strong>, their{' '}
-                <strong>attendees</strong>, and <strong>all exhibitors</strong> (profiles, staff,
-                booths, scans &amp; leads) to zero out stats before go-live. App users / logins are
-                never touched. You&apos;ll see a count and confirm before anything is deleted.
+                Zeros this event&apos;s stats before go-live. Permanently deletes its{' '}
+                <strong>TEST orders</strong> and the <strong>issued tickets</strong> from them (the
+                sold QR passes — <em>not</em> ticket types/products and <em>not</em> forms), the{' '}
+                <strong>attendee records</strong> tied to them (registered people, not app logins),
+                and <strong>all exhibitors</strong> (profiles, booth-staff, booths, scans &amp;
+                leads). Ticket types, forms, settings, app users/logins and any real (non-test)
+                order are <strong>never touched</strong>. You&apos;ll see exact counts and confirm
+                before anything is deleted.
               </p>
               <button
                 onClick={handleResetTestData}
