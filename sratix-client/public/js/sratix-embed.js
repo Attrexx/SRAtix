@@ -264,9 +264,30 @@
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(body.message || `SRAtix API error: ${res.status}`);
+      var friendly = friendlyValidationMessage(body.message);
+      var fallback = Array.isArray(body.message) ? body.message.join(' ') : body.message;
+      throw new Error(friendly || fallback || `SRAtix API error: ${res.status}`);
     }
     return body;
+  }
+
+  /**
+   * Map server (class-validator) field errors to friendly, translated text.
+   * The API returns messages like "attendeeData.lastName should not be empty"
+   * or an array of them — we must never surface those raw field paths to users.
+   * Returns null when the message isn't a recognised validation error.
+   */
+  function friendlyValidationMessage(raw) {
+    var arr = Array.isArray(raw) ? raw : (typeof raw === 'string' ? raw.split(',') : []);
+    var joined = arr.join(' ');
+    if (!/should not be empty|must be an email|must be a |must be longer|must be shorter|must not be|isNotEmpty|attendeeData\.|additionalAttendees\.|billingData\./i.test(joined)) {
+      return null;
+    }
+    var parts = [];
+    if (/must be an email/i.test(joined)) parts.push(t('checkout.errEmail'));
+    if (/should not be empty|isNotEmpty|must be longer|must not be/i.test(joined)) parts.push(t('checkout.errRequired'));
+    if (parts.length === 0) parts.push(t('checkout.errValidation'));
+    return parts.join(' ');
   }
 
   /** Resolve a relative URL (e.g. /uploads/...) against the server origin. */
@@ -2457,8 +2478,9 @@
         }
       });
 
-      // Close on scroll of any ancestor (modal body etc.)
-      var scrollParent = trigger.closest('.sratix-modal-box') || window;
+      // Close on scroll of the scrolling ancestor. The modal body is the
+      // scroll container (the box itself is overflow:hidden), so target it first.
+      var scrollParent = trigger.closest('.sratix-modal-body') || trigger.closest('.sratix-modal-box') || window;
       scrollParent.addEventListener('scroll', function () {
         if (dd.classList.contains('sratix-msd-open')) {
           dd.classList.remove('sratix-msd-open');
@@ -4849,12 +4871,20 @@
     var fieldLabel = btn.getAttribute('data-tooltip-label') || '';
     if (!tip) return;
 
-    // Create mini-modal using existing pattern
-    var modal = createModalShell('sratix-tooltip-modal');
-    modal.className += ' sratix-tooltip-modal';
+    // IMPORTANT: build a STANDALONE overlay stacked ABOVE the active modal.
+    // Do NOT use createModalShell() — it calls closeModal() and would destroy
+    // the registration/wizard modal underneath, kicking the user out of the flow.
+    var prev = document.getElementById('sratix-tooltip-modal');
+    if (prev) prev.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'sratix-tooltip-modal';
+    modal.className = 'sratix-modal sratix-tooltip-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
     modal.innerHTML = '<div class="sratix-modal-box">'
       + '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close') || 'Close') + '">&times;</button>'
-      + '<h2 class="sratix-modal-title">' + escHtml(fieldLabel) + '</h2>'
+      + (fieldLabel ? '<h2 class="sratix-modal-title">' + escHtml(fieldLabel) + '</h2>' : '')
       + '<div class="sratix-modal-body"><p>' + escHtml(tip) + '</p></div>'
       + '</div>';
     document.body.appendChild(modal);
@@ -4862,7 +4892,7 @@
     // Animate in
     requestAnimationFrame(function () { modal.classList.add('sratix-modal--visible'); });
 
-    // Close handlers
+    // Close handlers — only remove the tooltip overlay, never the modal beneath.
     modal.querySelector('.sratix-modal-close').addEventListener('click', function () { modal.remove(); });
     bindModalBackdropClose(modal, function () { modal.remove(); });
   });

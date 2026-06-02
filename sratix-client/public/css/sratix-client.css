@@ -505,6 +505,14 @@ body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
 	background: rgba(0, 0, 0, 0.7);
 }
 
+/* Tooltip mini-modal stacks ABOVE the active registration/wizard modal (99999). */
+.sratix-tooltip-modal {
+	z-index: 100002;
+}
+.sratix-tooltip-modal .sratix-modal-box {
+	max-width: 420px;
+}
+
 .sratix-modal-box {
 	background: var(--sratix-navy-light);
 	border: 1px solid var(--sratix-border);
@@ -513,7 +521,10 @@ body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
 	max-width: 800px;
 	width: 100%;
 	max-height: 90vh;
-	overflow-y: auto;
+	/* The box is a fixed frame; only .sratix-modal-body scrolls so the title,
+	   subtitle and wizard steps stay pinned (otherwise tall content like 3 staff
+	   forms scrolls the header out of view / overlaps it). */
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	position: relative;
@@ -562,7 +573,11 @@ body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
 
 .sratix-modal-body {
 	padding: 16px 24px;
-	flex: 1;
+	flex: 1 1 auto;
+	/* min-height:0 lets this flex child shrink below its content so it can
+	   scroll inside the fixed-height box instead of pushing the header. */
+	min-height: 0;
+	overflow-y: auto;
 }
 
 .sratix-modal-footer {
