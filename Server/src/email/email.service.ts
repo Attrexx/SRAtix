@@ -4,6 +4,15 @@ import { emailHeader, emailPreFooter, emailFooter, emailShell } from './email-te
 import { parseLocale, type Locale } from '../common/i18n';
 
 /**
+ * Public origin of the SRAtix server, used to build absolute links/images in
+ * emails (e.g. ticket QR PNGs at /api/public/tickets/:code/qr.png).
+ * Overridable via the API_BASE_URL env var; falls back to the production origin
+ * so QR images are NEVER blank when the env var is unset (the rest of the
+ * codebase hardcodes this same origin, e.g. the Stripe webhook).
+ */
+const DEFAULT_API_BASE = 'https://tix.swiss-robotics.org';
+
+/**
  * Email templates — server-side HTML generation.
  *
  * Phase 1: Simple HTML string templates.
@@ -488,7 +497,7 @@ export class EmailService {
       apiBaseUrl?: string;
     },
   ): Promise<DeliveryResult> {
-    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || '';
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || DEFAULT_API_BASE;
     const introByType: Record<string, string> = {
       staff: `You have been registered as <strong>Staff</strong> for <strong>${data.eventName}</strong>. Your complimentary event pass is confirmed.`,
       volunteer: `Thank you for volunteering at <strong>${data.eventName}</strong>! Your complimentary event pass is confirmed.`,
@@ -750,7 +759,7 @@ export class EmailService {
       apiBaseUrl?: string;
     },
   ): Promise<DeliveryResult> {
-    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || '';
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || DEFAULT_API_BASE;
     const html = this.publicWrapper('Registration Confirmed', `
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
@@ -1280,6 +1289,7 @@ ${data.message}
   // ─── Template Rendering (Phase 1: Inline HTML) ────────────────
 
   private renderOrderConfirmation(data: OrderConfirmationData): string {
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || DEFAULT_API_BASE;
     const labels = this.orderEmailLabels(data.language);
     const ticketCount = this.orderTicketCount(data);
     const itemLabel = data.isExhibitor ? labels.boothPackage : labels.ticketTableLabel;
@@ -1350,7 +1360,7 @@ ${data.message}
               <h3 style="margin: 0 0 8px; color: #333;">${data.ticketCodes!.length === 1 ? labels.ticketCodeHeadingOne : labels.ticketCodeHeadingMany}</h3>
               <p style="margin: 0 0 12px; font-size: 13px; color: #666;">${data.ticketCodes!.length === 1 ? labels.presentCodeOne : labels.presentCodeMany}</p>
               ${data.ticketCodes!.map((code) => `<table cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0;"><tr>
-                <td style="vertical-align: middle; padding-right: 12px;">${data.apiBaseUrl ? `<img src="${data.apiBaseUrl}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
+                <td style="vertical-align: middle; padding-right: 12px;">${apiBase ? `<img src="${apiBase}/api/public/tickets/${code}/qr.png" width="80" height="80" alt="QR" style="display: block; border-radius: 4px;" />` : ''}</td>
                 <td style="vertical-align: middle;"><div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 16px; font-family: monospace; font-size: 16px; letter-spacing: 1px; font-weight: 600;">${code}</div></td>
               </tr></table>`).join('')}
               ${data.otherRecipientCount && data.otherRecipientCount > 0 ? `<p style="margin: 12px 0 0; font-size: 13px; color: #666;">ℹ️ ${this.formatEmailLabel(data.otherRecipientCount === 1 ? labels.otherRecipientOne : labels.otherRecipientMany, { ...data, count: data.otherRecipientCount })}</p>` : ''}
@@ -1385,6 +1395,7 @@ ${data.message}
   }
 
   private renderOrderConfirmationText(data: OrderConfirmationData): string {
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || DEFAULT_API_BASE;
     const labels = this.orderEmailLabels(data.language);
     const ticketCount = this.orderTicketCount(data);
     const tickets = data.tickets
@@ -1413,7 +1424,7 @@ ${itemLabel}:
 ${tickets}
 
 ${labels.total}: ${data.totalFormatted} ${data.currency}
-${showTicketCodes ? `\n${data.ticketCodes!.length === 1 ? labels.ticketCodeTextHeadingOne : labels.ticketCodeTextHeadingMany}:\n${data.ticketCodes!.map((c) => `  ${c}${data.apiBaseUrl ? `  —  QR: ${data.apiBaseUrl}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
+${showTicketCodes ? `\n${data.ticketCodes!.length === 1 ? labels.ticketCodeTextHeadingOne : labels.ticketCodeTextHeadingMany}:\n${data.ticketCodes!.map((c) => `  ${c}${apiBase ? `  —  QR: ${apiBase}/api/public/tickets/${c}/qr.png` : ''}`).join('\n')}\n` : ''}
 ${labels.event}: ${data.eventName}
 ${labels.date}: ${data.eventDate}
 ${labels.venue}: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}
