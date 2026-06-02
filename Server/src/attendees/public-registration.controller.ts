@@ -297,6 +297,10 @@ export class PublicRegistrationController {
               eventVenue: [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', '),
               eventVenueMapUrl: regEventMeta2.venueMapUrl || undefined,
               ticketTypeName: ticket.ticketType?.name ?? 'Ticket',
+              // The recipient's ticket already exists (issued at purchase) — embed
+              // its QR so they get it now, not "at the check-in desk".
+              ticketCode: ticket.code,
+              apiBaseUrl: 'https://tix.swiss-robotics.org',
             })
             .catch((err) => console.error('[Registration] Confirmation email failed:', err));
         }

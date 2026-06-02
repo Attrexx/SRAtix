@@ -746,8 +746,11 @@ export class EmailService {
       eventVenue: string;
       eventVenueMapUrl?: string;
       ticketTypeName: string;
+      ticketCode?: string;
+      apiBaseUrl?: string;
     },
   ): Promise<DeliveryResult> {
+    const apiBase = data.apiBaseUrl || process.env.API_BASE_URL || '';
     const html = this.publicWrapper('Registration Confirmed', `
       <p style="font-size: 16px; margin: 0 0 20px;">Hi <strong>${data.recipientName}</strong>,</p>
       <p style="font-size: 16px; margin: 0 0 20px;">
@@ -761,11 +764,22 @@ export class EmailService {
           ${this.adminInfoRow('Venue', this.venueHtml(data.eventVenue, data.eventVenueMapUrl))}
         </table>
       </div>
+      ${data.ticketCode ? `
+      <div style="background: #f0f9ff; border-radius: 8px; padding: 20px; margin: 0 0 20px; text-align: center;">
+        <p style="margin: 0 0 12px; font-size: 13px; color: #666;">Present this QR code at the event entrance for check-in.</p>
+        ${apiBase ? `<img src="${apiBase}/api/public/tickets/${data.ticketCode}/qr.png" width="160" height="160" alt="QR Code" style="display: inline-block; border-radius: 8px; margin: 0 0 12px;" />` : ''}
+        <div style="background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 20px; font-family: monospace; font-size: 18px; letter-spacing: 2px; font-weight: 700; display: inline-block; color: #1a1a2e;">
+          ${data.ticketCode}
+        </div>
+      </div>
+      <p style="font-size: 13px; color: #999; margin: 16px 0 0; line-height: 1.5;">💡 Save this email or take a screenshot of the QR code for quick check-in.</p>
+      ` : `
       <p style="font-size: 14px; color: #666; margin: 20px 0 0;">
         Your ticket QR code will be available for check-in at the event entrance.
       </p>
+      `}
     `);
-    const text = `Registration Confirmed\n\nHi ${data.recipientName},\n\nYour registration for ${data.eventName} is confirmed!\n\nTicket: ${data.ticketTypeName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n\nYour ticket QR code will be available for check-in at the event.\n\n— Swiss Robotics Association / SRAtix`;
+    const text = `Registration Confirmed\n\nHi ${data.recipientName},\n\nYour registration for ${data.eventName} is confirmed!\n\nTicket: ${data.ticketTypeName}\nDate: ${data.eventDate}\nVenue: ${this.venueText(data.eventVenue, data.eventVenueMapUrl)}\n\n${data.ticketCode ? 'Your ticket code: ' + data.ticketCode + '\n' + (apiBase ? 'QR code: ' + apiBase + '/api/public/tickets/' + data.ticketCode + '/qr.png\n' : '') + 'Present this QR code at the event entrance for check-in.' : 'Your ticket QR code will be available for check-in at the event.'}\n\n— Swiss Robotics Association / SRAtix`;
 
     return this.send({
       to,
