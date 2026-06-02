@@ -3905,10 +3905,10 @@ button.sratix-msd-trigger:focus,
 .sratix-page-wrap .sratix-tooltip-popup,
 .sratix-modal .sratix-tooltip-popup {
 	display: none;
-	position: absolute;
-	bottom: calc(100% + 8px);
-	left: 50%;
-	transform: translateX(-50%);
+	/* Fixed so the popup escapes the registration modal's overflow clipping and
+	   stays fully visible even when it extends past the modal edge. JS sets
+	   top/left relative to the ? button and clamps it to the viewport. */
+	position: fixed;
 	width: max-content;
 	max-width: min(280px, 80vw);
 	padding: 10px 14px;
@@ -3920,29 +3920,16 @@ button.sratix-msd-trigger:focus,
 	line-height: 1.45;
 	color: var(--sratix-text);
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-	z-index: 10000;
+	/* Above the modal (99999), tooltip-modal (100002) and legal overlay. */
+	z-index: 100003;
 	pointer-events: none;
 	white-space: normal;
 }
 
-/* Caret / arrow pointing down */
-.sratix-page-wrap .sratix-tooltip-popup::after,
-.sratix-modal .sratix-tooltip-popup::after {
-	content: '';
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	transform: translateX(-50%);
-	border: 6px solid transparent;
-	border-top-color: var(--sratix-border);
-}
-
-/* Desktop: show on hover */
-@media (hover: hover) and (pointer: fine) {
-	.sratix-page-wrap .sratix-tooltip-wrap:hover .sratix-tooltip-popup,
-	.sratix-modal .sratix-tooltip-wrap:hover .sratix-tooltip-popup {
-		display: block;
-	}
+/* Shown by JS on hover/focus (desktop). */
+.sratix-page-wrap .sratix-tooltip-popup.sratix-tooltip-popup--visible,
+.sratix-modal .sratix-tooltip-popup.sratix-tooltip-popup--visible {
+	display: block;
 }
 
 /* Tooltip mini-modal (mobile tap) */

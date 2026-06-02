@@ -4914,6 +4914,65 @@
     bindModalBackdropClose(modal, function () { modal.remove(); });
   });
 
+  // ─── Tooltip hover popup (desktop) ────────────────────────────────────────────
+  // The popup is position:fixed so it escapes the registration modal's overflow
+  // clipping. JS toggles + positions it (CSS :hover can't position a fixed
+  // element relative to the button). Desktop/hover-capable pointers only — touch
+  // devices use the tap-to-modal handler above.
+  var _tooltipHoverable = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+
+  function _tooltipPopupFor(btn) {
+    var wrap = btn.closest('.sratix-tooltip-wrap');
+    return wrap ? wrap.querySelector('.sratix-tooltip-popup') : null;
+  }
+
+  function showTooltipPopup(btn) {
+    if (!_tooltipHoverable) return;
+    var popup = _tooltipPopupFor(btn);
+    if (!popup) return;
+    popup.classList.add('sratix-tooltip-popup--visible');
+    // Measure (now displayed) then place above the button, clamped to viewport.
+    var br = btn.getBoundingClientRect();
+    var pr = popup.getBoundingClientRect();
+    var m = 8;
+    var left = br.left + br.width / 2 - pr.width / 2;
+    left = Math.max(m, Math.min(left, window.innerWidth - pr.width - m));
+    var top = br.top - pr.height - m;
+    if (top < m) top = br.bottom + m; // flip below if there's no room above
+    popup.style.left = Math.round(left) + 'px';
+    popup.style.top = Math.round(top) + 'px';
+  }
+
+  function hideTooltipPopup(btn) {
+    var popup = _tooltipPopupFor(btn);
+    if (popup) popup.classList.remove('sratix-tooltip-popup--visible');
+  }
+
+  function hideAllTooltipPopups() {
+    document.querySelectorAll('.sratix-tooltip-popup--visible').forEach(function (p) {
+      p.classList.remove('sratix-tooltip-popup--visible');
+    });
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.sratix-tooltip-btn') : null;
+    if (btn) showTooltipPopup(btn);
+  });
+  document.addEventListener('mouseout', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.sratix-tooltip-btn') : null;
+    if (btn) hideTooltipPopup(btn);
+  });
+  document.addEventListener('focusin', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.sratix-tooltip-btn') : null;
+    if (btn) showTooltipPopup(btn);
+  });
+  document.addEventListener('focusout', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.sratix-tooltip-btn') : null;
+    if (btn) hideTooltipPopup(btn);
+  });
+  // A fixed popup can't follow the button while the modal body scrolls — hide it.
+  document.addEventListener('scroll', hideAllTooltipPopups, true);
+
   function buildSuccessUrl(category, email) {
     // Exhibitor purchases → redirect to portal page if configured in event settings
     if (category === 'exhibitor' && pagePaths.exhibitorPortal) {
