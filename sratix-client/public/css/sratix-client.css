@@ -187,11 +187,11 @@ body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
 
 /* ── [sratix_legal] shortcode — legal prose rendered in WP pages ── */
 .sratix-legal-prose {
-	max-width: 760px;
+	max-width: 1140px;
 	margin: 0 auto;
 	font-size: 1rem;
 	line-height: 1.75;
-	color: inherit;
+	color: #fff;
 }
 .sratix-legal-prose .sratix-legal-title {
 	font-size: 1.75rem;
@@ -206,6 +206,7 @@ body:not([class*=elementor-page-]) .site-main:has(.sratix-page-wrap) {
 .sratix-legal-prose em, .sratix-legal-prose i    { font-style: italic; }
 .sratix-legal-prose ul, .sratix-legal-prose ol   { margin: 0 0 0.9rem; padding-left: 1.5rem; }
 .sratix-legal-prose li { margin-bottom: 0.4rem; }
+.sratix-legal-prose a  { color: #93c5fd; text-decoration: underline; }
 
 /* ── Ticket Display Header ── */
 .sratix-ticket-header {
