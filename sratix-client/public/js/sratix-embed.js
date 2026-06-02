@@ -39,6 +39,17 @@
   // Legal page URLs from event public-info (populated on ticket selection)
   var legalPageUrls = {};
 
+  // Standard consent field IDs → legal-page slugs. Used as a fallback so the
+  // "read the document" link/modal appears on EVERY form (attendee/recipient
+  // registration, exhibitor wizard, etc.), not just the ticket flow that
+  // fetches public-info.
+  var LEGAL_SLUG_BY_FIELD = {
+    terms_conditions:    'terms-conditions',
+    privacy_policy:      'privacy-policy',
+    code_of_conduct:     'code-of-conduct',
+    photography_consent: 'photography-consent',
+  };
+
   // Page paths from event settings (populated on ticket load)
   var pagePaths = {};
 
@@ -2129,9 +2140,15 @@
         break;
       case 'consent':
         var docUrl = resolveLabel(field.documentUrl) || '';
-        // Fallback: use event-level legal page URL from public-info
+        // Fallback 1: event-level legal page URL from public-info (ticket flow).
         if (!docUrl && legalPageUrls[field.id]) {
           docUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
+        }
+        // Fallback 2: build the URL deterministically for the standard legal
+        // consents, so the link/modal appears even when public-info wasn't
+        // loaded (attendee/recipient registration, exhibitor wizard).
+        if (!docUrl && LEGAL_SLUG_BY_FIELD[field.id] && EVENT_ID) {
+          docUrl = API_BASE + '/events/' + encodeURIComponent(EVENT_ID) + '/legal/' + LEGAL_SLUG_BY_FIELD[field.id];
         }
         var consentLabelHtml;
         if (docUrl) {
