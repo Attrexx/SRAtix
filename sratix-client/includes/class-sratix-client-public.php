@@ -652,6 +652,10 @@ class SRAtix_Client_Public {
 		if ( ! $api_url ) {
 			return '';
 		}
+		// The stored API URL already includes the /api suffix in the embed config
+		// (e.g. https://tix.swiss-robotics.org/api). Strip a trailing /api so we
+		// build /api/events/... once, not /api/api/events/... (which 404s → blank).
+		$api_root = preg_replace( '#/api/?$#', '', $api_url );
 
 		$cache_key = 'sratix_legal_' . md5( $event_id . $doc );
 		$cached    = get_transient( $cache_key );
@@ -659,7 +663,7 @@ class SRAtix_Client_Public {
 			return $cached;
 		}
 
-		$url      = $api_url . '/api/events/' . rawurlencode( $event_id ) . '/legal/' . rawurlencode( $doc ) . '?fragment=1';
+		$url      = $api_root . '/api/events/' . rawurlencode( $event_id ) . '/legal/' . rawurlencode( $doc ) . '?fragment=1';
 		$response = wp_remote_get( $url, array( 'timeout' => 10 ) );
 
 		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {

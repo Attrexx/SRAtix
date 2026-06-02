@@ -2135,7 +2135,7 @@
         }
         var consentLabelHtml;
         if (docUrl) {
-          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" data-legal-url="' + escAttr(docUrl) + '" class="sratix-consent-link" onclick="event.stopPropagation()">' + escHtml(label) + '</a>';
+          consentLabelHtml = '<a href="' + escAttr(docUrl) + '" data-legal-url="' + escAttr(docUrl) + '" class="sratix-consent-link">' + escHtml(label) + '</a>';
         } else {
           consentLabelHtml = escHtml(label);
         }
@@ -7629,7 +7629,10 @@
     if (iframe) iframe.src = '';
   }
 
-  // Delegated — works regardless of when the consent field is rendered into the DOM.
+  // Delegated, CAPTURE phase — runs before the link's own handlers so it fires
+  // even though the consent <a> sits inside a toggle label (a bubble-phase
+  // listener was being blocked by the label's stopPropagation). preventDefault
+  // stops navigation; stopPropagation stops the label toggling the checkbox.
   document.addEventListener('click', function (e) {
     var link = e.target && e.target.closest ? e.target.closest('.sratix-consent-link') : null;
     if (!link) return;
@@ -7637,7 +7640,7 @@
     e.stopPropagation();
     var url = link.getAttribute('data-legal-url') || link.getAttribute('href');
     if (url) openLegalModal(url);
-  });
+  }, true);
 
   // ─── Boot ─────────────────────────────────────────────────────────────────────
 
