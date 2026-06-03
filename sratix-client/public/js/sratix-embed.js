@@ -721,6 +721,15 @@
         return;
       }
 
+      // Validate the single email locally so an invalid entry shows a singular,
+      // sensible message instead of the multi-recipient checkout error the server
+      // would otherwise surface ("One or more email addresses are invalid …").
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorEl.textContent = t('reg.emailInvalid');
+        errorEl.style.display = '';
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.textContent = t('reg.pleaseWait');
 
@@ -1334,14 +1343,23 @@
         + '</div>';
     }
 
+    // The self-note ("you chose to include a ticket for yourself … toggle it off")
+    // only makes sense when the include-myself toggle was actually offered — i.e.
+    // multiple tickets were ordered and the buyer opted to include themselves. For a
+    // single-ticket order the toggle is hidden (qty=1 always implies self), so the
+    // note — and its "go back to toggle it off" instruction — would be confusing.
+    var selfNoteHtml = (flowCtx.qty > 1 && flowCtx.includeForSelf)
+      ? '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
+        +   '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('attendee.selfNote')) + '</p>'
+        + '</div>'
+      : '';
+
     modal.innerHTML = ''
       + '<div class="sratix-modal-box">'
       +   '<button class="sratix-modal-close" aria-label="' + escAttr(t('modal.close')) + '">&times;</button>'
       +   '<h2 class="sratix-modal-title">' + escHtml(t('attendee.title')) + '</h2>'
       +   '<div class="sratix-modal-body">'
-      +     '<div class="sratix-info-banner" style="margin-bottom:16px;padding:12px 14px;border-radius:8px;border-left:4px solid var(--sratix-accent,#6366f1);background:rgba(99,102,241,.08)">'
-      +       '<p style="margin:0;font-size:13px;line-height:1.5">' + escHtml(t('attendee.selfNote')) + '</p>'
-      +     '</div>'
+      +     selfNoteHtml
       +     '<form id="sratix-attendee-form" novalidate>'
       +       formBodyHtml
       +       '<p class="sratix-error-msg" id="sratix-attendee-error" style="display:none"></p>'
