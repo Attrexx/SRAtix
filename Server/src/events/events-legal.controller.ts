@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Res, Header } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
 import { EventsService } from './events.service';
 import * as sanitizeHtml from 'sanitize-html';
@@ -17,13 +17,20 @@ export class EventsLegalController {
   constructor(private readonly eventsService: EventsService) {}
 
   @Get(':slug')
-  @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
   async getLegalPage(
     @Param('id') eventId: string,
     @Param('slug') slug: string,
     @Query('fragment') fragment: string | undefined,
     @Res() reply: FastifyReply,
   ) {
+    // Legal content is edited live in the Dashboard and must reflect immediately
+    // in the consent iframe modals (and the WP shortcode fetch). Set no-cache
+    // directly on the reply: @Res() puts this handler in Fastify library-specific
+    // mode, where the @Header() decorator is silently ignored — so without this the
+    // page is served with no cache headers and browsers heuristically cache it.
+    reply.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    reply.header('Pragma', 'no-cache');
+
     try {
       const content = await this.eventsService.getLegalPage(eventId, slug);
       const title = this.slugToTitle(slug);

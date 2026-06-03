@@ -64,6 +64,12 @@ class SRAtix_Client_Webhook {
 					update_option( 'sratix_client_maintenance_message', sanitize_text_field( $maint['message'] ?? '' ) );
 				}
 
+				// Handle legal-document edits: purge the cached [sratix_legal]
+				// shortcode output so the new text appears on the next page view.
+				if ( isset( $data['type'] ) && 'legal.updated' === $data['type'] ) {
+					$this->clear_legal_cache( $data['eventId'] ?? '' );
+				}
+
 				// Clear any cached event data
 				delete_transient( 'sratix_event_data' );
 				break;
@@ -78,6 +84,39 @@ class SRAtix_Client_Webhook {
 		}
 
 		return new \WP_REST_Response( array( 'received' => true ), 200 );
+	}
+
+	/**
+	 * Purge cached [sratix_legal] shortcode output for an event.
+	 *
+	 * The shortcode caches each rendered legal document in a transient keyed by
+	 * md5( event_id . dash-slug ). Legal edits are infrequent, so we clear all
+	 * four known documents for the event rather than rely on the exact edited
+	 * slug — this sidesteps dash/underscore form mismatches between the API and
+	 * the shortcode cache key.
+	 *
+	 * @param string $event_id SRAtix event ID from the webhook payload.
+	 * @return void
+	 */
+	private function clear_legal_cache( $event_id ) {
+		$event_id = sanitize_text_field( (string) $event_id );
+		if ( '' === $event_id ) {
+			// Fall back to the site's configured event when the payload omits it.
+			$event_id = (string) get_option( 'sratix_client_event_id', '' );
+		}
+		if ( '' === $event_id ) {
+			return;
+		}
+
+		$slugs = array(
+			'terms-conditions',
+			'privacy-policy',
+			'code-of-conduct',
+			'photography-consent',
+		);
+		foreach ( $slugs as $slug ) {
+			delete_transient( 'sratix_legal_' . md5( $event_id . $slug ) );
+		}
 	}
 
 	/**

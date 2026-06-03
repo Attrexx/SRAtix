@@ -319,6 +319,25 @@ export class EventsController {
     const orgId = this.isSuperAdmin(user) ? undefined : user.orgId;
     await this.eventsService.setLegalPage(id, orgId, slug, body.html ?? '');
     this.logger.log(`Legal page '${slug}' updated for event ${id} by ${user.email}`);
+
+    // Notify client sites so they can purge their cached copy of this document.
+    // The WP [sratix_legal] shortcode caches fetched HTML in a transient; without
+    // this signal edits would not surface until the cache expired. Reuses the
+    // 'event.updated' channel (clients subscribe to it) with a 'legal.updated'
+    // discriminator, mirroring the maintenance-toggle dispatch above.
+    const event = this.isSuperAdmin(user)
+      ? await this.eventsService.findOne(id)
+      : await this.eventsService.findOne(id, user.orgId);
+    this.webhooks
+      .dispatch(event.orgId, id, 'event.updated', {
+        eventId: id,
+        type: 'legal.updated',
+        slug,
+      })
+      .catch((err) =>
+        this.logger.error(`Legal webhook dispatch failed: ${err}`),
+      );
+
     return { ok: true };
   }
 
