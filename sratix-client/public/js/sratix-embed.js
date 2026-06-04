@@ -743,6 +743,7 @@
           setMemberSession({
             memberGroup: 'sra',
             tier: res.membershipTier || null,
+            isMember: res.isMember === true,
             firstName: res.firstName || '',
             lastName: res.lastName || '',
             sessionToken: res.sessionToken,
@@ -877,9 +878,15 @@
    * membership add-on UI are hidden for these users — the bundle pitch is
    * meant only for non-members. SRA discounts (configured per ticket) still
    * apply to give them a price reduction.
+   *
+   * Keys off the authoritative `isMember` flag resolved server-side, NOT the
+   * display `tier`: a real member whose specific tier can't be mapped must
+   * still be recognised, or they'd be re-pitched a membership they hold.
+   * Falls back to `tier` for sessions stored before isMember existed.
    */
   function isActiveSraMember(memberSession) {
-    return !!(memberSession && memberSession.memberGroup === 'sra' && memberSession.tier);
+    if (!memberSession || memberSession.memberGroup !== 'sra') return false;
+    return memberSession.isMember === true || !!memberSession.tier;
   }
 
   function renderCard(tt, memberSession) {

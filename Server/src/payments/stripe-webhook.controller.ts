@@ -565,6 +565,15 @@ export class StripeWebhookController {
     });
     payload.event = event;
 
+    // Membership opt-out: recorded at checkout (manual uncheck, or server-forced
+    // for active SRA members). When set, the buyer must NOT be granted a
+    // (duplicate) SRA membership — suppress the membership block below and flag
+    // it explicitly so the WP handler skips the role / ProfileGrid group / WC
+    // membership order.
+    const orderMeta = (paidOrder.meta as Record<string, unknown>) ?? {};
+    const membershipOptOut = !!orderMeta.membershipOptOut;
+    payload.membershipOptOut = membershipOptOut;
+
     // Fetch ticket types with pricing variants for this order's items
     const ticketTypeIds = (paidOrder.items ?? []).map(
       (item: any) => item.ticketTypeId,
@@ -591,11 +600,13 @@ export class StripeWebhookController {
         })),
       }));
 
-      // Extract primary membership info (first membership-type ticket)
+      // Extract primary membership info (first membership-type ticket).
+      // Skipped entirely when the buyer opted out of (or already holds) the
+      // SRA membership.
       const membershipTicket = ticketTypes.find(
         (tt) => tt.membershipTier && tt.wpProductId,
       );
-      if (membershipTicket) {
+      if (membershipTicket && !membershipOptOut) {
         const mappedTier = HYBRID_TIER_MAP[membershipTicket.membershipTier as MembershipTier]
           ?? membershipTicket.membershipTier;
         const mappedProductId = TIER_WP_PRODUCT_MAP[mappedTier as MembershipTier]
@@ -705,6 +716,7 @@ export class StripeWebhookController {
     const primaryTicketType = ticketTypesArr[0] ?? {};
     const attendeeEntry: Record<string, unknown> = {
       ...(payload.attendee as Record<string, unknown> ?? {}),
+      membershipOptOut,
       ticketType: {
         name: primaryTicketType.name,
         category: primaryTicketType.category,
@@ -755,7 +767,11 @@ export class StripeWebhookController {
       ? `${attendee.firstName} ${attendee.lastName}`.trim()
       : paidOrder.customerName ?? 'Guest';
 
-    // Find membership ticket type
+    // Find membership ticket type. Membership-granting actions are skipped when
+    // the buyer opted out of (or already holds) the SRA membership.
+    const membershipOptOut = !!(
+      (paidOrder.meta as Record<string, unknown>) ?? {}
+    ).membershipOptOut;
     const membershipTicket = ticketTypes.find(
       (tt) => tt.membershipTier && tt.wpProductId,
     );
@@ -768,7 +784,7 @@ export class StripeWebhookController {
     });
 
     // 2. WP Role assignment (if membership ticket)
-    if (membershipTicket) {
+    if (membershipTicket && !membershipOptOut) {
       // Hybrid mapping: all bundled tiers map to individual-type → always 'candidate'
       const mappedTier = HYBRID_TIER_MAP[membershipTicket.membershipTier as MembershipTier]
         ?? membershipTicket.membershipTier;

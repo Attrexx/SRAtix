@@ -121,8 +121,12 @@ class SRAtix_Control_Webhook {
 			), 200 );
 		}
 
-		// Resolve membership tier.
-		$tier = $this->resolve_membership_tier( $user->ID );
+		// Resolve membership tier (for display + discounts) and the authoritative
+		// active-membership flag (for the SRD bundle pitch + duplicate-membership
+		// guard at checkout). The flag is intentionally broader than the tier:
+		// a member counts even when their specific tier can't be mapped.
+		$tier      = $this->resolve_membership_tier( $user->ID );
+		$is_member = $this->is_active_sra_member( $user->ID, $tier );
 
 		return new \WP_REST_Response( array(
 			'valid'          => true,
@@ -131,6 +135,7 @@ class SRAtix_Control_Webhook {
 			'firstName'      => $user->first_name,
 			'lastName'       => $user->last_name,
 			'membershipTier' => $tier,
+			'isMember'       => $is_member,
 			'roles'          => $user->roles,
 		), 200 );
 	}
@@ -204,6 +209,108 @@ class SRAtix_Control_Webhook {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Determine whether a user is an active SRA member.
+	 *
+	 * This is the authoritative membership signal for the SRD bundle pitch and
+	 * the duplicate-membership guard at checkout. It is intentionally broader
+	 * than {@see resolve_membership_tier()}: a member still counts when their
+	 * specific tier cannot be mapped (e.g. a ProfileGrid group ID that is not in
+	 * the hard-coded tier map), so newly-added tiers don't silently regress a
+	 * real member to "non-member" and re-pitch them a membership they already
+	 * hold. Signals, in order:
+	 *
+	 *   1. An explicit `sratix_membership_tier` user meta (set by a paid order).
+	 *   2. Any ACTIVE ProfileGrid group (group_status = 1) — drift-proof, since
+	 *      every SRA membership tier is a ProfileGrid group.
+	 *   3. Any recognised SRA member role.
+	 *
+	 * Site owners can override the verdict via the `sratix_control_is_sra_member`
+	 * filter (e.g. to exclude a default/free ProfileGrid group from counting).
+	 *
+	 * @param int         $user_id WordPress user ID.
+	 * @param string|null $tier    Already-resolved tier, if known (avoids re-resolving).
+	 * @return bool
+	 */
+	public function is_active_sra_member( $user_id, $tier = null ) {
+		$is_member = false;
+
+		// Signal 1: a resolved tier (meta / mapped group / mapped role) is proof.
+		if ( null === $tier ) {
+			$tier = $this->resolve_membership_tier( $user_id );
+		}
+		if ( $tier ) {
+			$is_member = true;
+		}
+
+		// Signal 2: any active ProfileGrid group membership.
+		if ( ! $is_member && $this->has_active_profilegrid_group( $user_id ) ) {
+			$is_member = true;
+		}
+
+		// Signal 3: any recognised SRA member role.
+		if ( ! $is_member ) {
+			$user = get_userdata( $user_id );
+			if ( $user ) {
+				$member_roles = array(
+					'student',
+					'young_academics_member',
+					'academics_member',
+					'young_professionals_member',
+					'individual_member',
+					'professionals_member',
+					'retired_member',
+					'academic_member',
+					'startup_member',
+					'industry_small',
+					'industry_medium',
+					'industry_large',
+				);
+				if ( array_intersect( $member_roles, (array) $user->roles ) ) {
+					$is_member = true;
+				}
+			}
+		}
+
+		/**
+		 * Filter the resolved active-SRA-member status.
+		 *
+		 * @param bool $is_member Whether the user is considered an active member.
+		 * @param int  $user_id   WordPress user ID.
+		 */
+		return (bool) apply_filters( 'sratix_control_is_sra_member', $is_member, (int) $user_id );
+	}
+
+	/**
+	 * Whether the user has at least one ACTIVE ProfileGrid group membership.
+	 *
+	 * Queries ProfileGrid's `pm_user_groups` table directly for group_status = 1.
+	 * Returns false when ProfileGrid is inactive / the table is missing.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return bool
+	 */
+	private function has_active_profilegrid_group( $user_id ) {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'pm_user_groups';
+
+		// Guard: the table only exists when ProfileGrid is installed.
+		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		if ( $found !== $table ) {
+			return false;
+		}
+
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND group_status = 1",
+				(int) $user_id
+			)
+		);
+
+		return $count > 0;
 	}
 
 	/**
@@ -354,6 +461,12 @@ class SRAtix_Control_Webhook {
 		$ticket_type = $attendee['ticketType'] ?? array();
 		$form_data   = $attendee['formSubmission'] ?? array();
 
+		// Membership opt-out (manual uncheck, or server-forced for active SRA
+		// members). When set, the attendee still gets their event ticket, but is
+		// NOT granted a (duplicate) SRA membership: skip the membership role,
+		// ProfileGrid group, WC membership order, and the membership-tier meta.
+		$membership_opt_out = ! empty( $attendee['membershipOptOut'] );
+
 		if ( empty( $email ) ) {
 			error_log( 'SRAtix Control [order.paid]: Attendee has no email, skipping.' );
 			return;
@@ -410,7 +523,7 @@ class SRAtix_Control_Webhook {
 				$wp_user->add_role( 'exhibitor' );
 				error_log( "SRAtix Control [order.paid]: Added exhibitor role to user {$user_id}" );
 			}
-		} elseif ( $category !== 'general' && $mapped_product_id ) {
+		} elseif ( $category !== 'general' && $mapped_product_id && ! $membership_opt_out ) {
 			$role = $this->get_wp_role_for_product( $mapped_product_id );
 			if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
 				$wp_user->set_role( $role );
@@ -419,14 +532,20 @@ class SRAtix_Control_Webhook {
 		}
 
 		// ── 4. Assign ProfileGrid group ───────────────────────────
-		if ( $mapped_product_id ) {
+		if ( $mapped_product_id && ! $membership_opt_out ) {
 			$this->assign_profilegrid_group( $user_id, $mapped_product_id );
 		}
 
 		// ── 5-7. Create & complete WC order ───────────────────────
 		$wc_order_id = null;
-		if ( $mapped_product_id && $category !== 'general' ) {
+		if ( $mapped_product_id && $category !== 'general' && ! $membership_opt_out ) {
 			$wc_order_id = $this->create_membership_order( $user_id, $mapped_product_id, $order_id, $order_number, $currency );
+		} elseif ( $membership_opt_out && $mapped_product_id && $category !== 'general' ) {
+			error_log( sprintf(
+				'SRAtix Control [order.paid]: Membership opt-out — skipped SRA membership grant (role, ProfileGrid group, WC order) for user %d on order %s.',
+				$user_id,
+				$order_number
+			) );
 		}
 
 		// ── 8. Store mappings ─────────────────────────────────────
@@ -442,7 +561,12 @@ class SRAtix_Control_Webhook {
 		// ── 9. Store ticket meta ──────────────────────────────────
 		update_user_meta( $user_id, 'sratix_ticket_type', $ticket_name );
 		update_user_meta( $user_id, 'sratix_ticket_category', $category );
-		update_user_meta( $user_id, 'sratix_membership_tier', $mapped_tier ?: $membership_tier );
+		// Only record the membership tier when a membership was actually granted.
+		// Writing it on opt-out would falsely tag the user as an active member
+		// (this meta is the first signal {@see is_active_sra_member()} checks).
+		if ( ! $membership_opt_out ) {
+			update_user_meta( $user_id, 'sratix_membership_tier', $mapped_tier ?: $membership_tier );
+		}
 		update_user_meta( $user_id, 'sratix_order_number', $order_number );
 		update_user_meta( $user_id, 'sratix_order_id', $order_id );
 		update_user_meta( $user_id, 'sratix_payment_status', 'paid' );

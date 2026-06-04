@@ -284,11 +284,15 @@ export class PublicCheckoutController {
       dto.memberGroup === 'sra'
     ) {
       const session = this.authService.decodeMemberSession(dto.memberSessionToken);
+      // `isMember` is the authoritative flag; fall back to a resolved `tier`
+      // for tokens issued before isMember was added. A member with an
+      // unmappable tier must still be opted out, or they'd be charged for a
+      // duplicate SRA membership they already hold.
       if (
         session &&
         session.eventId === dto.eventId &&
         session.memberGroup === 'sra' &&
-        session.tier
+        (session.isMember ?? !!session.tier)
       ) {
         effectiveMembershipOptOut = true;
       }

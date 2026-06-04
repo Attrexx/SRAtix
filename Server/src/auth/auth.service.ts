@@ -824,6 +824,7 @@ export class AuthService implements OnModuleDestroy {
     firstName?: string;
     lastName?: string;
     membershipTier?: string;
+    isMember?: boolean;
     sessionToken?: string;
     error?: string;
   }> {
@@ -871,6 +872,7 @@ export class AuthService implements OnModuleDestroy {
         firstName?: string;
         lastName?: string;
         membershipTier?: string | null;
+        isMember?: boolean;
         roles?: string[];
         error?: string;
       };
@@ -879,11 +881,18 @@ export class AuthService implements OnModuleDestroy {
         return { authenticated: false, error: result.error ?? 'invalid_credentials' };
       }
 
-      // Issue a short-lived session token (2hr TTL)
+      // Authoritative active-membership flag. Prefer the explicit flag from
+      // sratix-control; fall back to "has a resolved tier" for older plugin
+      // builds that don't send it yet (preserves prior behaviour).
+      const isMember = result.isMember ?? !!result.membershipTier;
+
+      // Issue a short-lived session token (2hr TTL). `isMember` is encoded so
+      // checkout can enforce the no-duplicate-membership rule without a DB hit.
       const sessionToken = this.jwt.sign(
         {
           memberGroup: 'sra',
           tier: result.membershipTier ?? null,
+          isMember,
           eventId,
           email: result.email,
           wpUserId: result.wpUserId,
@@ -896,6 +905,7 @@ export class AuthService implements OnModuleDestroy {
         firstName: result.firstName,
         lastName: result.lastName,
         membershipTier: result.membershipTier ?? undefined,
+        isMember,
         sessionToken,
       };
     } catch (err: any) {
@@ -995,11 +1005,18 @@ export class AuthService implements OnModuleDestroy {
    */
   decodeMemberSession(
     token: string,
-  ): { memberGroup: string; tier?: string; partnerId?: string; eventId: string } | null {
+  ): {
+    memberGroup: string;
+    tier?: string;
+    isMember?: boolean;
+    partnerId?: string;
+    eventId: string;
+  } | null {
     try {
       const payload = this.jwt.verify(token) as {
         memberGroup: string;
         tier?: string;
+        isMember?: boolean;
         partnerId?: string;
         eventId: string;
       };
