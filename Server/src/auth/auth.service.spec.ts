@@ -128,3 +128,103 @@ describe('AuthService password auth normalization', () => {
     }));
   });
 });
+
+describe('AuthService SRA member verification (isMember)', () => {
+  function setup() {
+    const jwt = {
+      sign: jest.fn((payload: any) => `token:${JSON.stringify(payload)}`),
+      verify: jest.fn(),
+    };
+    const config = {
+      get: jest.fn(() => undefined),
+      getOrThrow: jest.fn((key: string) =>
+        key === 'WEBHOOK_SIGNING_SECRET' ? 'test-secret' : undefined,
+      ),
+    };
+    const prisma = { user: { findUnique: jest.fn() }, event: { findUnique: jest.fn() } };
+    const audit = { log: jest.fn() };
+    const emailService = { sendNotification: jest.fn() };
+    const service = new AuthService(jwt as any, config as any, prisma as any, audit as any, emailService as any);
+    // The WP API URL resolution hits settings/env — stub it out.
+    jest.spyOn(service as any, 'resolveWpApiUrl').mockResolvedValue('https://wp.example');
+    return { service, jwt };
+  }
+
+  function mockWpResponse(body: any) {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: true, status: 200, json: async () => body } as unknown as Response);
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('treats a verified member with an unmappable tier as a member, and encodes isMember in the JWT', async () => {
+    const { service, jwt } = setup();
+    mockWpResponse({
+      valid: true,
+      wpUserId: 7,
+      email: 'm@example.com',
+      firstName: 'Mem',
+      lastName: 'Ber',
+      membershipTier: null,
+      isMember: true,
+    });
+
+    const res = await service.verifySraMember('m@example.com', 'pw', 'evt-1');
+    service.onModuleDestroy();
+
+    expect(res.authenticated).toBe(true);
+    expect(res.isMember).toBe(true);
+    expect(res.membershipTier).toBeUndefined();
+    // Checkout enforces the no-duplicate-membership rule from the JWT, so the
+    // flag must be signed into the token even when the tier is null.
+    expect(jwt.sign).toHaveBeenCalledWith(
+      expect.objectContaining({ memberGroup: 'sra', tier: null, isMember: true }),
+      expect.objectContaining({ expiresIn: '2h' }),
+    );
+  });
+
+  it('falls back to "has a tier" when an older sratix-control build omits isMember', async () => {
+    const { service } = setup();
+    mockWpResponse({ valid: true, wpUserId: 8, email: 't@example.com', membershipTier: 'professionals' });
+
+    const res = await service.verifySraMember('t@example.com', 'pw', 'evt-1');
+    service.onModuleDestroy();
+
+    expect(res.isMember).toBe(true);
+    expect(res.membershipTier).toBe('professionals');
+  });
+
+  it('does not treat a non-member WP account (isMember=false, no tier) as a member', async () => {
+    const { service } = setup();
+    mockWpResponse({ valid: true, wpUserId: 9, email: 'admin@example.com', membershipTier: null, isMember: false });
+
+    const res = await service.verifySraMember('admin@example.com', 'pw', 'evt-1');
+    service.onModuleDestroy();
+
+    expect(res.authenticated).toBe(true);
+    expect(res.isMember).toBe(false);
+  });
+
+  it('decodeMemberSession round-trips the isMember claim', () => {
+    const { service, jwt } = setup();
+    jwt.verify.mockReturnValue({ memberGroup: 'sra', tier: null, isMember: true, eventId: 'evt-1' });
+
+    const session = service.decodeMemberSession('tok');
+    service.onModuleDestroy();
+
+    expect(session).toEqual(
+      expect.objectContaining({ memberGroup: 'sra', isMember: true, eventId: 'evt-1' }),
+    );
+  });
+
+  it('decodeMemberSession returns null for a token missing required claims', () => {
+    const { service, jwt } = setup();
+    jwt.verify.mockReturnValue({ tier: 'professionals' }); // no memberGroup / eventId
+
+    expect(service.decodeMemberSession('tok')).toBeNull();
+    service.onModuleDestroy();
+  });
+});
