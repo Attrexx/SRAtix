@@ -6,6 +6,57 @@ import { buildSpcPayload, QrBillData } from './qr-bill';
 import * as fs from 'fs';
 import * as path from 'path';
 
+/** A single rendered line on an invoice. */
+interface InvoiceLineItem {
+  desc: string;
+  qty: number;
+  unitCents: number;
+  totalCents: number;
+}
+
+/** Normalized, source-agnostic invoice data handed to the PDF renderer. */
+interface InvoiceRenderModel {
+  invoiceNumber: string;
+  lang: string;
+  currency: string;
+  issuer: {
+    companyName: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+    vatNumber: string;
+    companyNumber?: string;
+    iban?: string;
+    bic?: string;
+    bankName?: string;
+    email?: string;
+    website?: string;
+  };
+  billTo: {
+    name: string;
+    email: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+    companyName: string;
+    vatNumber: string;
+  };
+  /** Pre-localized reference lines (Order / Event / Date / Venue). */
+  refLines: string[];
+  lineItems: InvoiceLineItem[];
+  subtotalCents: number;
+  discountCents: number;
+  discountLabel: string;
+  totalCents: number;
+  paidAt: Date | null;
+  footerText: string;
+  /** Swiss QR-bill reference + message (used only when issuer.iban is set). */
+  qrReference: string;
+  qrMessage: string;
+}
+
 /**
  * Invoice Service — generates Swiss-compliant invoice PDFs.
  *
@@ -17,12 +68,19 @@ import * as path from 'path';
  * - Per-ticket line items with attendee names
  * - SRD event logo + SRAtix footer branding
  * - Swiss QR-bill section (informational — payments are via Stripe)
+ *
+ * Two entry points share one renderer (`renderInvoicePdf`):
+ *   - `generateInvoice`          — ticket/booth orders (Order model)
+ *   - `generateLogisticsInvoice` — exhibitor logistics orders (LogisticsOrder model)
  */
 @Injectable()
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
   private mainLogoBytes: Uint8Array | null = null;
   private sratixLogoBytes: Uint8Array | null = null;
+
+  private readonly footerText =
+    'Swiss Robotics Day • contact@swissroboticsday.com • https://swissroboticsday.com';
 
   /** Fallback issuer (used when event.meta.issuerDetails is not configured) */
   private readonly fallbackIssuer = {
@@ -101,6 +159,59 @@ export class InvoicesService {
     return `SRD-${shortYear}-${String(newCount).padStart(4, '0')}`;
   }
 
+  /**
+   * Return a STABLE invoice number for an order: reuse the one already persisted
+   * on the order's `meta.invoiceNumber`, or — only the first time — generate a
+   * new one (bumping the global counter) and persist it via `persist` so every
+   * later render reuses the same number.
+   *
+   * The invoice PDF is regenerated on each download, so without this the same
+   * order would get a fresh number (and a bumped counter) on every render — the
+   * number on the emailed invoice would not match later downloads. Invoice
+   * numbers must be stable and unique per document for accounting/compliance.
+   */
+  private async resolveInvoiceNumber(
+    meta: Record<string, any>,
+    persist: (invoiceNumber: string) => Promise<void>,
+  ): Promise<string> {
+    const existing = meta.invoiceNumber;
+    if (typeof existing === 'string' && existing.length > 0) {
+      return existing;
+    }
+    const invoiceNumber = await this.generateInvoiceNumber();
+    await persist(invoiceNumber);
+    return invoiceNumber;
+  }
+
+  /**
+   * Resolve issuer details: prefer event.meta.issuerDetails, fall back to the
+   * hardcoded SRA issuer. Admin UI saves: name, email, vatNumber, uid, street,
+   * city, postalCode, country, iban, bic, bankName.
+   */
+  private resolveIssuer(eventMeta: Record<string, any>): InvoiceRenderModel['issuer'] {
+    const raw = (eventMeta.issuerDetails as Record<string, string> | undefined) ?? {};
+    return {
+      ...this.fallbackIssuer,
+      ...(raw.name       ? { companyName: raw.name }       : {}),
+      ...(raw.email      ? { email: raw.email }            : {}),
+      ...(raw.vatNumber  ? { vatNumber: raw.vatNumber }    : {}),
+      ...(raw.uid        ? { companyNumber: raw.uid }      : {}),
+      ...(raw.street     ? { street: raw.street }          : {}),
+      ...(raw.city       ? { city: raw.city }              : {}),
+      ...(raw.postalCode ? { postalCode: raw.postalCode }  : {}),
+      ...(raw.country    ? { country: raw.country }        : {}),
+      ...(raw.iban       ? { iban: raw.iban }              : {}),
+      ...(raw.bic        ? { bic: raw.bic }                : {}),
+      ...(raw.bankName   ? { bankName: raw.bankName }      : {}),
+    };
+  }
+
+  private dateLocale(lang: string): string {
+    return lang === 'de' ? 'de-CH' : lang === 'fr' ? 'fr-CH' : lang === 'it' ? 'it-CH' : 'en-CH';
+  }
+
+  // ── Ticket / Booth orders ────────────────────────────────────────────
+
   async generateInvoice(orderId: string): Promise<{
     pdfBytes: Uint8Array;
     invoiceNumber: string;
@@ -141,25 +252,9 @@ export class InvoicesService {
     const eventMeta = (order.event.meta as Record<string, any>) ?? {};
     const lang = orderMeta.invoiceLanguage || 'en';
     const L = getInvoiceLabels(lang);
+    const dateLocale = this.dateLocale(lang);
 
-    // Issuer: prefer event.meta.issuerDetails, fall back to hardcoded.
-    // Admin UI saves: name, email, vatNumber, uid, street, city, postalCode, country
-    // Renderer expects: companyName, companyNumber, email, vatNumber, street, city, postalCode, country
-    const raw = (eventMeta.issuerDetails as Record<string, string> | undefined) ?? {};
-    const issuer = {
-      ...this.fallbackIssuer,
-      ...(raw.name         ? { companyName: raw.name }           : {}),
-      ...(raw.email        ? { email: raw.email }               : {}),
-      ...(raw.vatNumber    ? { vatNumber: raw.vatNumber }        : {}),
-      ...(raw.uid          ? { companyNumber: raw.uid }          : {}),
-      ...(raw.street       ? { street: raw.street }              : {}),
-      ...(raw.city         ? { city: raw.city }                  : {}),
-      ...(raw.postalCode   ? { postalCode: raw.postalCode }      : {}),
-      ...(raw.country      ? { country: raw.country }            : {}),
-      ...(raw.iban         ? { iban: raw.iban }                  : {}),
-      ...(raw.bic          ? { bic: raw.bic }                    : {}),
-      ...(raw.bankName     ? { bankName: raw.bankName }          : {}),
-    };
+    const issuer = this.resolveIssuer(eventMeta);
 
     // Bill-to: prefer order.billingAddress, fall back to attendee data
     const billing = order.billingAddress as Record<string, any> | null;
@@ -175,14 +270,198 @@ export class InvoicesService {
       vatNumber: billing?.vatNumber || '',
     };
 
-    // Discount
     const discountCents = orderMeta.discountCents || 0;
     const discountLabel = orderMeta.discountLabel || '';
-
-    const invoiceNumber = await this.generateInvoiceNumber();
+    const invoiceNumber = await this.resolveInvoiceNumber(orderMeta, async (num) => {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { meta: { ...orderMeta, invoiceNumber: num } },
+      });
+    });
     const currency = order.currency || order.event.currency || 'CHF';
 
-    // ─── PDF Generation ─────────────────────────────────────
+    // Venue line: name, address (comma separated)
+    const venueStr = [order.event.venue, order.event.venueAddress].filter(Boolean).join(', ');
+    const refLines = [
+      `${L.order}: ${order.orderNumber}`,
+      `${L.event}: ${order.event.name}`,
+      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
+      ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
+    ];
+
+    // ─── Build per-ticket line items ────────────────────────
+    // Group tickets by ticketType, listing each attendee separately
+    const lineItems: InvoiceLineItem[] = [];
+
+    if (order.tickets.length > 0) {
+      // We have individual tickets with attendee info — list each separately
+      for (const ticket of order.tickets) {
+        const typeName = ticket.ticketType?.name ?? 'Ticket';
+        const typeDescription = this.cleanInvoiceDescription(ticket.ticketType?.description);
+        const attendeeName = ticket.attendee
+          ? `${ticket.attendee.firstName} ${ticket.attendee.lastName}`.trim()
+          : '';
+        const descBase = attendeeName ? `${typeName} — ${attendeeName}` : typeName;
+        const desc = typeDescription ? `${descBase} — ${typeDescription}` : descBase;
+
+        // Find matching order item for pricing
+        const matchingItem = order.items.find(i => i.ticketTypeId === ticket.ticketTypeId);
+        const unitCents = matchingItem?.unitPriceCents ?? 0;
+
+        lineItems.push({ desc, qty: 1, unitCents, totalCents: unitCents });
+      }
+    } else {
+      // Fallback: use order items (no per-ticket breakdown)
+      for (const item of order.items) {
+        const typeName = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
+        const typeDescription = this.cleanInvoiceDescription(item.ticketType?.description);
+        const desc = typeDescription ? `${typeName} — ${typeDescription}` : typeName;
+        lineItems.push({
+          desc, qty: item.quantity,
+          unitCents: item.unitPriceCents,
+          totalCents: item.subtotalCents,
+        });
+      }
+    }
+
+    const subtotalCents = order.items.reduce((sum, item) => sum + item.subtotalCents, 0);
+
+    const pdfBytes = await this.renderInvoicePdf({
+      invoiceNumber,
+      lang,
+      currency,
+      issuer,
+      billTo,
+      refLines,
+      lineItems,
+      subtotalCents,
+      discountCents,
+      discountLabel,
+      totalCents: order.totalCents,
+      paidAt: order.paidAt,
+      footerText: this.footerText,
+      qrReference: order.orderNumber,
+      qrMessage: `${order.orderNumber} — ${order.event.name}`,
+    });
+
+    const fileName = `${invoiceNumber}_${order.orderNumber}.pdf`;
+    this.logger.log(
+      `Invoice ${invoiceNumber} generated for order ${order.orderNumber} [lang=${lang}] (${pdfBytes.length} bytes)`,
+    );
+
+    return { pdfBytes, invoiceNumber, fileName };
+  }
+
+  // ── Logistics orders ─────────────────────────────────────────────────
+
+  /**
+   * Generate a Swiss-compliant invoice PDF for a paid exhibitor logistics order
+   * (tables, chairs, power, etc. purchased via the portal Logistics tab).
+   */
+  async generateLogisticsInvoice(logisticsOrderId: string): Promise<{
+    pdfBytes: Uint8Array;
+    invoiceNumber: string;
+    fileName: string;
+  }> {
+    const order = await this.prisma.logisticsOrder.findUnique({
+      where: { id: logisticsOrderId },
+      include: {
+        items: { include: { item: { select: { name: true, description: true } } } },
+        event: {
+          select: {
+            name: true, startDate: true, venue: true, venueAddress: true,
+            currency: true, meta: true,
+          },
+        },
+        org: { select: { name: true, contactEmail: true } },
+      },
+    });
+
+    if (!order) throw new NotFoundException(`Logistics order ${logisticsOrderId} not found`);
+    if (order.status !== 'paid') {
+      throw new NotFoundException(`Logistics order ${logisticsOrderId} is not paid — cannot generate invoice`);
+    }
+
+    const orderMeta = (order.meta as Record<string, any>) ?? {};
+    const eventMeta = (order.event.meta as Record<string, any>) ?? {};
+    const lang = orderMeta.invoiceLanguage || 'en';
+    const L = getInvoiceLabels(lang);
+    const dateLocale = this.dateLocale(lang);
+    const issuer = this.resolveIssuer(eventMeta);
+    const currency = order.currency || order.event.currency || 'CHF';
+
+    // Bill-to: the exhibitor org / the staff member who placed the order.
+    const billTo = {
+      name: order.customerName || order.org.name || 'Customer',
+      email: order.customerEmail || order.org.contactEmail || '',
+      street: '',
+      city: '',
+      postalCode: '',
+      country: '',
+      companyName: order.org.name || '',
+      vatNumber: '',
+    };
+
+    const venueStr = [order.event.venue, order.event.venueAddress].filter(Boolean).join(', ');
+    const refLines = [
+      `${L.order}: ${order.orderNumber}`,
+      `${L.event}: ${order.event.name}`,
+      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
+      ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
+    ];
+
+    const lineItems: InvoiceLineItem[] = order.items.map((li) => {
+      const name = li.item?.name ?? 'Item';
+      const description = this.cleanInvoiceDescription(li.item?.description);
+      return {
+        desc: description ? `${name} — ${description}` : name,
+        qty: li.quantity,
+        unitCents: li.unitPriceCents,
+        totalCents: li.subtotalCents,
+      };
+    });
+
+    const subtotalCents = order.items.reduce((sum, li) => sum + li.subtotalCents, 0);
+    const invoiceNumber = await this.resolveInvoiceNumber(orderMeta, async (num) => {
+      await this.prisma.logisticsOrder.update({
+        where: { id: order.id },
+        data: { meta: { ...orderMeta, invoiceNumber: num } },
+      });
+    });
+
+    const pdfBytes = await this.renderInvoicePdf({
+      invoiceNumber,
+      lang,
+      currency,
+      issuer,
+      billTo,
+      refLines,
+      lineItems,
+      subtotalCents,
+      discountCents: 0,
+      discountLabel: '',
+      totalCents: order.totalCents,
+      paidAt: order.paidAt,
+      footerText: this.footerText,
+      qrReference: order.orderNumber,
+      qrMessage: `${order.orderNumber} — ${order.event.name}`,
+    });
+
+    const fileName = `${invoiceNumber}_${order.orderNumber}.pdf`;
+    this.logger.log(
+      `Logistics invoice ${invoiceNumber} generated for order ${order.orderNumber} [lang=${lang}] (${pdfBytes.length} bytes)`,
+    );
+
+    return { pdfBytes, invoiceNumber, fileName };
+  }
+
+  // ── Shared PDF renderer ──────────────────────────────────────────────
+
+  private async renderInvoicePdf(model: InvoiceRenderModel): Promise<Uint8Array> {
+    const L = getInvoiceLabels(model.lang);
+    const dateLocale = this.dateLocale(model.lang);
+    const { issuer, billTo, currency } = model;
+
     const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
 
     const doc = await PDFDocument.create();
@@ -245,12 +524,11 @@ export class InvoicesService {
     });
     y -= 16;
 
-    page.drawText(invoiceNumber, {
-      x: rightMargin - helveticaBold.widthOfTextAtSize(invoiceNumber, 12),
+    page.drawText(model.invoiceNumber, {
+      x: rightMargin - helveticaBold.widthOfTextAtSize(model.invoiceNumber, 12),
       y, size: 12, font: helveticaBold, color: black,
     });
 
-    const dateLocale = lang === 'de' ? 'de-CH' : lang === 'fr' ? 'fr-CH' : lang === 'it' ? 'it-CH' : 'en-CH';
     const dateStr = new Date().toLocaleDateString(dateLocale, {
       year: 'numeric', month: 'long', day: 'numeric',
     });
@@ -326,55 +604,9 @@ export class InvoicesService {
     page.drawLine({ start: { x: leftMargin, y }, end: { x: rightMargin, y }, thickness: 1, color: lightGray });
     y -= 18;
 
-    // Venue line: name, address (comma separated)
-    const venueParts = [order.event.venue, order.event.venueAddress].filter(Boolean);
-    const venueStr = venueParts.join(', ');
-
-    const refLines = [
-      `${L.order}: ${order.orderNumber}`,
-      `${L.event}: ${order.event.name}`,
-      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
-      ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
-    ];
-    for (const line of refLines) {
+    for (const line of model.refLines) {
       page.drawText(line, { x: leftMargin, y, size: 9, font: helvetica, color: gray });
       y -= 13;
-    }
-
-    // ─── Build per-ticket line items ────────────────────────
-    // Group tickets by ticketType, listing each attendee separately
-    interface InvoiceLine { desc: string; qty: number; unitCents: number; totalCents: number }
-    const invoiceLines: InvoiceLine[] = [];
-
-    if (order.tickets.length > 0) {
-      // We have individual tickets with attendee info — list each separately
-      for (const ticket of order.tickets) {
-        const typeName = ticket.ticketType?.name ?? 'Ticket';
-        const typeDescription = this.cleanInvoiceDescription(ticket.ticketType?.description);
-        const attendeeName = ticket.attendee
-          ? `${ticket.attendee.firstName} ${ticket.attendee.lastName}`.trim()
-          : '';
-        const descBase = attendeeName ? `${typeName} — ${attendeeName}` : typeName;
-        const desc = typeDescription ? `${descBase} — ${typeDescription}` : descBase;
-
-        // Find matching order item for pricing
-        const matchingItem = order.items.find(i => i.ticketTypeId === ticket.ticketTypeId);
-        const unitCents = matchingItem?.unitPriceCents ?? 0;
-
-        invoiceLines.push({ desc, qty: 1, unitCents, totalCents: unitCents });
-      }
-    } else {
-      // Fallback: use order items (no per-ticket breakdown)
-      for (const item of order.items) {
-        const typeName = item.ticketType?.name ?? `Ticket (${item.ticketTypeId.substring(0, 8)})`;
-        const typeDescription = this.cleanInvoiceDescription(item.ticketType?.description);
-        const desc = typeDescription ? `${typeName} — ${typeDescription}` : typeName;
-        invoiceLines.push({
-          desc, qty: item.quantity,
-          unitCents: item.unitPriceCents,
-          totalCents: item.subtotalCents,
-        });
-      }
     }
 
     // ─── Line Items Table ───────────────────────────────────
@@ -405,7 +637,7 @@ export class InvoicesService {
     });
     y -= 22;
 
-    for (const line of invoiceLines) {
+    for (const line of model.lineItems) {
       const descLines = wrapText(line.desc, helvetica, 9, descMaxWidth);
       const qty = String(line.qty);
       const unit = this.formatCurrency(line.unitCents, currency);
@@ -435,8 +667,7 @@ export class InvoicesService {
     y -= 18;
 
     // Subtotal
-    const subtotalCents = order.items.reduce((sum, item) => sum + item.subtotalCents, 0);
-    const subtotalValue = this.formatCurrency(subtotalCents, currency);
+    const subtotalValue = this.formatCurrency(model.subtotalCents, currency);
     page.drawText(L.subtotal + ':', { x: colUnit, y, size: 10, font: helvetica, color: gray });
     page.drawText(subtotalValue, {
       x: colTotal - helvetica.widthOfTextAtSize(subtotalValue, 10),
@@ -445,9 +676,9 @@ export class InvoicesService {
     y -= 18;
 
     // Discount (if any)
-    if (discountCents > 0) {
-      const discountValue = '−' + this.formatCurrency(discountCents, currency);
-      const discountText = discountLabel ? `${L.discount} (${discountLabel}):` : `${L.discount}:`;
+    if (model.discountCents > 0) {
+      const discountValue = '−' + this.formatCurrency(model.discountCents, currency);
+      const discountText = model.discountLabel ? `${L.discount} (${model.discountLabel}):` : `${L.discount}:`;
       page.drawText(discountText, { x: colUnit, y, size: 10, font: helvetica, color: gray });
       page.drawText(discountValue, {
         x: colTotal - helvetica.widthOfTextAtSize(discountValue, 10),
@@ -457,7 +688,7 @@ export class InvoicesService {
     }
 
     // Grand total
-    const grandTotal = this.formatCurrency(order.totalCents, currency);
+    const grandTotal = this.formatCurrency(model.totalCents, currency);
     page.drawText(L.grandTotal + ':', { x: colUnit, y, size: 12, font: helveticaBold, color: black });
     page.drawText(grandTotal, {
       x: colTotal - helveticaBold.widthOfTextAtSize(grandTotal, 12),
@@ -467,8 +698,8 @@ export class InvoicesService {
 
     // Payment status
     y -= 5;
-    const paidText = order.paidAt
-      ? `${L.paidOn} ${order.paidAt.toLocaleDateString(dateLocale)}`
+    const paidText = model.paidAt
+      ? `${L.paidOn} ${model.paidAt.toLocaleDateString(dateLocale)}`
       : `${L.paymentStatus}: ${L.paid}`;
     page.drawText(paidText, { x: colUnit, y, size: 9, font: helvetica, color: gray });
 
@@ -481,7 +712,7 @@ export class InvoicesService {
       page.drawText(L.paymentSection, { x: leftMargin, y, size: 11, font: helveticaBold, color: accent });
       y -= 18;
 
-      const amountFrancs = order.totalCents / 100;
+      const amountFrancs = model.totalCents / 100;
       const qrData: QrBillData = {
         iban: issuerIban,
         creditorName: issuer.companyName,
@@ -496,7 +727,7 @@ export class InvoicesService {
         debtorCity: billTo.city,
         debtorPostal: billTo.postalCode,
         debtorCountry: this.resolveCountryCode(billTo.country),
-        message: `${order.orderNumber} — ${order.event.name}`,
+        message: model.qrMessage,
       };
 
       const spcPayload = buildSpcPayload(qrData);
@@ -530,7 +761,7 @@ export class InvoicesService {
         drawQrLine(L.currency + ':', currency);
         drawQrLine(L.total + ':', grandTotal);
         if (billTo.name) drawQrLine(L.debtor + ':', billTo.name);
-        drawQrLine(L.reference + ':', order.orderNumber);
+        drawQrLine(L.reference + ':', model.qrReference);
         qrTextY -= 5;
         page.drawText(`✓ ${L.paid}`, {
           x: qrTextX, y: qrTextY, size: 10, font: helveticaBold, color: rgb(0.2, 0.7, 0.2),
@@ -547,8 +778,7 @@ export class InvoicesService {
     page.drawLine({ start: { x: leftMargin, y: footerY + 15 }, end: { x: rightMargin, y: footerY + 15 }, thickness: 0.5, color: lightGray });
 
     // Left: event-specific footer
-    const footerText = 'Swiss Robotics Day • contact@swissroboticsday.com • https://swissroboticsday.com';
-    page.drawText(footerText, {
+    page.drawText(model.footerText, {
       x: leftMargin, y: footerY, size: 7, font: helvetica, color: gray,
     });
 
@@ -585,14 +815,7 @@ export class InvoicesService {
     }
 
     // ─── Finalize ───────────────────────────────────────────
-    const pdfBytes = await doc.save();
-    const fileName = `${invoiceNumber}_${order.orderNumber}.pdf`;
-
-    this.logger.log(
-      `Invoice ${invoiceNumber} generated for order ${order.orderNumber} [lang=${lang}] (${pdfBytes.length} bytes)`,
-    );
-
-    return { pdfBytes, invoiceNumber, fileName };
+    return doc.save();
   }
 
   private formatCurrency(cents: number, currency: string): string {

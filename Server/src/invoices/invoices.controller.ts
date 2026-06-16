@@ -108,4 +108,63 @@ export class InvoicesController {
       .header('Cache-Control', 'private, max-age=3600')
       .send(Buffer.from(pdfBytes));
   }
+
+  /**
+   * GET /api/invoices/logistics/order/:orderId
+   * Generate and download the invoice PDF for a paid logistics order (admin).
+   */
+  @Get('logistics/order/:orderId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('event_admin', 'admin', 'super_admin', 'box_office')
+  async getLogisticsInvoice(
+    @Param('orderId') orderId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const { pdfBytes, fileName } =
+      await this.invoicesService.generateLogisticsInvoice(orderId);
+
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="${fileName}"`)
+      .header('Content-Length', pdfBytes.length)
+      .send(Buffer.from(pdfBytes));
+  }
+
+  /**
+   * GET /api/invoices/logistics/t/:token
+   * Public logistics-order invoice download via unique token (no JWT required).
+   * Token is stored in logisticsOrder.meta.invoiceToken.
+   */
+  @Get('logistics/t/:token')
+  async getLogisticsInvoiceByToken(
+    @Param('token') token: string,
+    @Res() reply: FastifyReply,
+  ) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)) {
+      throw new NotFoundException('Invalid invoice link');
+    }
+
+    const orders = await this.prisma.logisticsOrder.findMany({
+      where: {
+        status: 'paid',
+        meta: { path: '$.invoiceToken', equals: token },
+      },
+      select: { id: true },
+      take: 1,
+    });
+
+    if (orders.length === 0) {
+      throw new NotFoundException('Invoice not found or link expired');
+    }
+
+    const { pdfBytes, fileName } =
+      await this.invoicesService.generateLogisticsInvoice(orders[0].id);
+
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `inline; filename="${fileName}"`)
+      .header('Content-Length', pdfBytes.length)
+      .header('Cache-Control', 'private, max-age=3600')
+      .send(Buffer.from(pdfBytes));
+  }
 }

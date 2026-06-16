@@ -4,9 +4,10 @@ import { LogisticsService } from './logistics.service';
 import { PaymentsModule } from '../payments/payments.module';
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
+import { InvoicesModule } from '../invoices/invoices.module';
 
 @Module({
-  imports: [forwardRef(() => PaymentsModule), forwardRef(() => AuthModule), EmailModule],
+  imports: [forwardRef(() => PaymentsModule), forwardRef(() => AuthModule), EmailModule, InvoicesModule],
   controllers: [LogisticsExhibitorController, LogisticsAdminController],
   providers: [LogisticsService],
   exports: [LogisticsService],

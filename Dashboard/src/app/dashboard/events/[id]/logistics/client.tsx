@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
 import {
   api,
+  downloadFile,
   type LogisticsItem,
   type LogisticsOrderAdmin,
   type LogisticsOverview,
@@ -186,6 +187,7 @@ function RequestsTab({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [fulfillModal, setFulfillModal] = useState<{ orderId: string; item: LogisticsOrderAdmin['items'][0] } | null>(null);
   const [noteModal, setNoteModal] = useState<{ orderId: string; currentNotes: string | null } | null>(null);
+  const [invoicingId, setInvoicingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!eventId) return;
@@ -198,6 +200,18 @@ function RequestsTab({ eventId }: { eventId: string }) {
       setLoading(false);
     }
   }, [eventId, t]);
+
+  const handleInvoice = useCallback(async (order: LogisticsOrderAdmin) => {
+    if (invoicingId) return;
+    setInvoicingId(order.id);
+    try {
+      await downloadFile(api.logisticsInvoiceUrl(order.id), `invoice-${order.orderNumber}.pdf`);
+    } catch {
+      toast.error(t('logistics.invoiceError'));
+    } finally {
+      setInvoicingId(null);
+    }
+  }, [invoicingId, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -220,6 +234,7 @@ function RequestsTab({ eventId }: { eventId: string }) {
             <th className="py-2 pr-4">{t('logistics.fulfillment')}</th>
             <th className="py-2 pr-4">{t('logistics.notes')}</th>
             <th className="py-2 pr-4">{t('logistics.date')}</th>
+            <th className="py-2 pr-4">{t('logistics.invoice')}</th>
           </tr>
         </thead>
         <tbody>
@@ -286,6 +301,28 @@ function RequestsTab({ eventId }: { eventId: string }) {
               </td>
               <td className="py-2 pr-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                 {new Date(order.createdAt).toLocaleDateString()}
+              </td>
+              <td className="py-2 pr-4">
+                {order.status === 'paid' ? (
+                  <button
+                    onClick={() => handleInvoice(order)}
+                    disabled={invoicingId === order.id}
+                    className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded font-medium whitespace-nowrap"
+                    style={{
+                      background: 'var(--color-bg-subtle)',
+                      color: 'var(--color-text)',
+                      border: '1px solid var(--color-border)',
+                      cursor: invoicingId === order.id ? 'default' : 'pointer',
+                      opacity: invoicingId === order.id ? 0.6 : 1,
+                    }}
+                    title={t('logistics.downloadInvoice')}
+                  >
+                    <Icons.Download size={14} />
+                    {invoicingId === order.id ? t('common.loading') : t('logistics.invoice')}
+                  </button>
+                ) : (
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>—</span>
+                )}
               </td>
             </tr>
           ))}

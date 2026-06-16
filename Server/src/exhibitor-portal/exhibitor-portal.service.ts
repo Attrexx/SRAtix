@@ -440,11 +440,11 @@ export class ExhibitorPortalService {
     const ticketTypes = ticketTypeIds.length
       ? await this.prisma.ticketType.findMany({
           where: { id: { in: ticketTypeIds } },
-          select: { category: true },
+          select: { id: true, category: true, maxStaff: true },
         })
       : [];
-    const isExhibitorOrder = ticketTypes.some((tt) => tt.category === 'exhibitor');
-    if (!isExhibitorOrder) return null;
+    const exhibitorTicketType = ticketTypes.find((tt) => tt.category === 'exhibitor');
+    if (!exhibitorTicketType) return null;
 
     if (!order.eventId || !order.orgId) {
       this.logger.warn(`Exhibitor provisioning skipped for order ${orderId}: missing eventId/orgId`);
@@ -481,6 +481,8 @@ export class ExhibitorPortalService {
       event,
       orderNumber: order.orderNumber,
       orderId: order.id,
+      purchasedTicketTypeId: exhibitorTicketType.id,
+      includedSeats: exhibitorTicketType.maxStaff ?? null,
     });
 
     // Provision checkout staff (recipient attendees) as booth staff so they
@@ -527,6 +529,8 @@ export class ExhibitorPortalService {
     event: { name?: string; startDate?: Date; venue?: string | null; venueAddress?: string | null; meta?: unknown };
     orderNumber: string;
     orderId: string;
+    purchasedTicketTypeId?: string;
+    includedSeats?: number | null;
   }): Promise<{ userId: string; exhibitorOrgId: string; profileId: string } | null> {
     try {
       const normalizedEmail = normalizeEmail(data.email);
@@ -588,14 +592,22 @@ export class ExhibitorPortalService {
           select: { id: true },
         }));
 
-      // 5. Create EventExhibitor if not exists, storing buyer info in meta
+      // 5. Create EventExhibitor if not exists, storing buyer info + the booth's
+      //    included staff-seat allowance (snapshotted from the purchased exhibitor
+      //    ticket type) in meta so per-booth limits survive ticket-type changes.
       await this.prisma.eventExhibitor.upsert({
         where: { eventId_exhibitorProfileId: { eventId: data.eventId, exhibitorProfileId: profile.id } },
         update: {},
         create: {
           eventId: data.eventId,
           exhibitorProfileId: profile.id,
-          meta: { buyerName: data.displayName, buyerEmail: normalizedEmail, orderNumber: data.orderNumber },
+          meta: {
+            buyerName: data.displayName,
+            buyerEmail: normalizedEmail,
+            orderNumber: data.orderNumber,
+            ...(data.purchasedTicketTypeId ? { purchasedTicketTypeId: data.purchasedTicketTypeId } : {}),
+            ...(data.includedSeats != null ? { includedSeats: data.includedSeats } : {}),
+          },
         },
       });
 
@@ -874,28 +886,65 @@ export class ExhibitorPortalService {
 
   async listStaff(orgId: string, eventId: string) {
     const ee = await this.requireEventExhibitor(orgId, eventId);
-    return this.prisma.exhibitorStaff.findMany({
+    const staff = await this.prisma.exhibitorStaff.findMany({
       where: { eventExhibitorId: ee.id },
       orderBy: { createdAt: 'asc' },
     });
+    const seatLimit = await this.resolveStaffAllowance(ee, eventId);
+    return { staff, seatLimit, seatsUsed: staff.length };
+  }
+
+  /**
+   * Resolve the number of booth-staff seats included with this exhibitor's booth.
+   * Returns null when no limit applies (unlimited / not configured).
+   *
+   * Priority:
+   *   1. EventExhibitor.meta.includedSeats — the per-booth allowance snapshotted
+   *      at provisioning (or set by an admin). Authoritative, immune to having
+   *      multiple exhibitor ticket types on the event.
+   *   2. The purchased exhibitor ticket type's maxStaff (meta.purchasedTicketTypeId).
+   *   3. Any active exhibitor ticket type's maxStaff (fallback for legacy booths).
+   */
+  private async resolveStaffAllowance(
+    ee: { meta: unknown },
+    eventId: string,
+  ): Promise<number | null> {
+    const meta = (ee.meta as Record<string, unknown>) ?? {};
+    if (typeof meta.includedSeats === 'number' && meta.includedSeats >= 0) {
+      return meta.includedSeats;
+    }
+
+    const purchasedTicketTypeId =
+      typeof meta.purchasedTicketTypeId === 'string' ? meta.purchasedTicketTypeId : null;
+
+    const ticketType = purchasedTicketTypeId
+      ? await this.prisma.ticketType.findUnique({
+          where: { id: purchasedTicketTypeId },
+          select: { maxStaff: true },
+        })
+      : await this.prisma.ticketType.findFirst({
+          where: { eventId, category: 'exhibitor', status: 'active' },
+          select: { maxStaff: true },
+        });
+
+    return ticketType?.maxStaff ?? null;
   }
 
   async addStaff(orgId: string, userId: string, eventId: string, dto: CreateStaffDto) {
     const ee = await this.requireEventExhibitor(orgId, eventId);
 
-    // Enforce maxStaff limit from the exhibitor TicketType
-    const ticketType = await this.prisma.ticketType.findFirst({
-      where: { eventId, category: 'exhibitor' },
-      select: { maxStaff: true },
-    });
-
-    if (ticketType?.maxStaff) {
+    // Enforce the per-booth included-seat allowance (respects the limit set for
+    // THIS booth, not just any exhibitor ticket type on the event).
+    const seatLimit = await this.resolveStaffAllowance(ee, eventId);
+    if (seatLimit != null) {
       const count = await this.prisma.exhibitorStaff.count({
         where: { eventExhibitorId: ee.id },
       });
-      if (count >= ticketType.maxStaff) {
+      if (count >= seatLimit) {
         throw new BadRequestException(
-          `Staff limit reached (max ${ticketType.maxStaff})`,
+          `This booth includes ${seatLimit} staff ${seatLimit === 1 ? 'seat' : 'seats'}, ` +
+            `which are all assigned. Additional booth staff should purchase regular ` +
+            `individual event tickets.`,
         );
       }
     }
@@ -1541,11 +1590,14 @@ export class ExhibitorPortalService {
     });
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { name: true, orgId: true },
+      select: { name: true, orgId: true, meta: true },
     });
     if (!event) throw new NotFoundException('Event not found');
 
-    // Get super_admin emails only (testing — avoids spamming other admins)
+    // Recipients: super_admins (safety net) + the organizer contact email
+    // configured in the dashboard event settings (event.meta.contactEmail),
+    // when one has been set. The organizer email is the primary destination;
+    // super_admins are kept so messages are never silently dropped.
     const adminRoles = await this.prisma.userRole.findMany({
       where: {
         orgId: event.orgId,
@@ -1557,9 +1609,22 @@ export class ExhibitorPortalService {
       .filter(r => r.user.active)
       .map(r => r.user);
 
+    const eventMeta = (event.meta as Record<string, unknown>) ?? {};
+    const organizerEmail =
+      typeof eventMeta.contactEmail === 'string' ? eventMeta.contactEmail.trim() : '';
+
     const fromName = profile?.companyName || 'Exhibitor';
     const fromEmail = profile?.contactEmail || userEmail;
-    const recipients = [...new Set(admins.map(a => a.email).filter(Boolean))];
+
+    // Dedupe case-insensitively while preserving the original casing.
+    const recipientMap = new Map<string, string>();
+    for (const a of admins) {
+      if (a.email) recipientMap.set(a.email.toLowerCase(), a.email);
+    }
+    if (organizerEmail) {
+      recipientMap.set(organizerEmail.toLowerCase(), organizerEmail);
+    }
+    const recipients = [...recipientMap.values()];
 
     if (recipients.length === 0) {
       throw new NotFoundException('No admin recipients found for this event');
@@ -1730,15 +1795,20 @@ export class ExhibitorPortalService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Get the maxStaff from the exhibitor ticket type for this event
+    // Fallback maxStaff from the exhibitor ticket type for this event. Each
+    // booth's own meta.includedSeats (snapshotted at provisioning, or set by an
+    // admin) takes precedence so the count shown here matches what the portal
+    // actually enforces.
     const exhibitorTicketType = await this.prisma.ticketType.findFirst({
       where: { eventId, category: 'exhibitor', status: 'active' },
       select: { maxStaff: true },
     });
-    const maxStaff = exhibitorTicketType?.maxStaff ?? 0;
+    const fallbackMaxStaff = exhibitorTicketType?.maxStaff ?? 0;
 
     return eventExhibitors.map((ee) => {
       const meta = (ee.meta as Record<string, unknown>) ?? {};
+      const maxStaff =
+        typeof meta.includedSeats === 'number' ? meta.includedSeats : fallbackMaxStaff;
       const staffSubmitted = ee.staff.filter((s) => s.passStatus !== 'pending').length;
       const hasDemo = !!(ee.demoTitle && ee.demoDescription);
       const demoMediaCount = Array.isArray(ee.demoMediaGallery)
@@ -1867,6 +1937,14 @@ export class ExhibitorPortalService {
       }
     }
 
+    // Per-booth included-seat override: merge into meta (controls how many booth
+    // staff the exhibitor may add in the portal).
+    const currentMeta = (ee.meta as Record<string, unknown>) ?? {};
+    const nextMeta =
+      dto.includedSeats !== undefined
+        ? { ...currentMeta, includedSeats: dto.includedSeats }
+        : undefined;
+
     const updated = await this.prisma.eventExhibitor.update({
       where: { id: eventExhibitorId },
       data: {
@@ -1874,6 +1952,7 @@ export class ExhibitorPortalService {
         expoArea: dto.expoArea !== undefined ? dto.expoArea : undefined,
         exhibitorCategory: dto.exhibitorCategory !== undefined ? dto.exhibitorCategory : undefined,
         exhibitorType: dto.exhibitorType !== undefined ? dto.exhibitorType : undefined,
+        ...(nextMeta !== undefined ? { meta: nextMeta as any } : {}),
       },
     });
 

@@ -6480,19 +6480,45 @@
     }
   }
 
-  function renderStaffList(container, eventId, staffList, authHeaders) {
+  /** Human-readable, localized label for a staff role (avoids raw "booth_manager"). */
+  function staffRoleLabel(role) {
+    switch (role) {
+      case 'staff': return t('exhibitorPortal.roleStaff');
+      case 'booth_manager': return t('exhibitorPortal.roleBoothManager');
+      case 'demo_presenter': return t('exhibitorPortal.roleDemoPresenter');
+      default:
+        // Fallback: prettify any unknown value ("foo_bar" → "Foo bar").
+        return String(role || '')
+          .replace(/_/g, ' ')
+          .replace(/^\w/, function (c) { return c.toUpperCase(); });
+    }
+  }
+
+  function renderStaffList(container, eventId, staffData, authHeaders) {
+    // Accept either the { staff, seatLimit, seatsUsed } shape or a raw array.
+    const staffList = Array.isArray(staffData) ? staffData : ((staffData && staffData.staff) || []);
+    const seatLimit = (staffData && !Array.isArray(staffData) && typeof staffData.seatLimit === 'number')
+      ? staffData.seatLimit : null;
+    const seatsUsed = (staffData && !Array.isArray(staffData) && typeof staffData.seatsUsed === 'number')
+      ? staffData.seatsUsed : staffList.length;
+    const atCapacity = (seatLimit !== null) && (seatsUsed >= seatLimit);
     const passStatusBadge = (status) => {
       const cls = status === 'registered' || status === 'checked_in' ? 'valid' : (status === 'invited' ? 'pending' : 'default');
       return `<span class="sratix-badge sratix-badge--${cls}">${escHtml(status)}</span>`;
     };
 
+    const seatInfo = (seatLimit !== null)
+      ? ` · <span class="sratix-staff-seats">${escHtml(t('exhibitorPortal.seatsUsed').replace('{used}', seatsUsed).replace('{max}', seatLimit))}</span>`
+      : '';
+
     let html = `
       <div class="sratix-staff-header">
-        <span class="sratix-staff-count">${staffList.length} ${escHtml(t('exhibitorPortal.staffMembers'))}</span>
-        <button type="button" class="sratix-btn sratix-btn--primary sratix-btn--sm" id="sratix-add-staff">
+        <span class="sratix-staff-count">${staffList.length} ${escHtml(t('exhibitorPortal.staffMembers'))}${seatInfo}</span>
+        <button type="button" class="sratix-btn sratix-btn--primary sratix-btn--sm" id="sratix-add-staff"${atCapacity ? ' disabled' : ''}>
           + ${escHtml(t('exhibitorPortal.addStaff'))}
         </button>
       </div>
+      ${atCapacity ? `<div class="sratix-info-callout sratix-staff-limit-note">${escHtml(t('exhibitorPortal.staffLimitReached').replace('{max}', seatLimit))}</div>` : ''}
     `;
 
     if (staffList.length > 0) {
@@ -6511,7 +6537,7 @@
             <tr data-staff-id="${escAttr(s.id)}">
               <td>${escHtml(s.firstName)} ${escHtml(s.lastName)}</td>
               <td>${escHtml(s.email)}</td>
-              <td>${escHtml(s.role)}</td>
+              <td>${escHtml(staffRoleLabel(s.role))}</td>
               <td>${passStatusBadge(s.passStatus)}</td>
               <td class="sratix-staff-actions">
                 ${s.passStatus === 'pending' ? `<button type="button" class="sratix-btn sratix-btn--outline sratix-btn--xs" data-action="invite">${escHtml(t('exhibitorPortal.inviteStaff'))}</button>` : ''}
@@ -6531,10 +6557,13 @@
 
     container.innerHTML = html;
 
-    // Add staff button
-    container.querySelector('#sratix-add-staff').addEventListener('click', () => {
-      showStaffForm(container, eventId, null, authHeaders);
-    });
+    // Add staff button (disabled when the booth's included seats are all used)
+    const addStaffBtn = container.querySelector('#sratix-add-staff');
+    if (addStaffBtn && !addStaffBtn.disabled) {
+      addStaffBtn.addEventListener('click', () => {
+        showStaffForm(container, eventId, null, authHeaders);
+      });
+    }
 
     // Per-row actions
     container.querySelectorAll('tr[data-staff-id]').forEach(row => {

@@ -1256,6 +1256,64 @@ ${data.message}
   }
 
   /**
+   * Customer-facing confirmation for a paid logistics order, with the invoice
+   * PDF attached. Sent to the staff member who placed the order and, as a copy,
+   * to the booth purchaser when they are a different person.
+   */
+  async sendLogisticsOrderConfirmation(
+    to: string,
+    data: {
+      recipientName: string;
+      orderNumber: string;
+      exhibitorName: string;
+      eventName: string;
+      totalFormatted: string;
+      currency: string;
+      items: Array<{ name: string; quantity: number; subtotalFormatted: string }>;
+      isCopy?: boolean;
+      invoiceUrl?: string;
+      invoicePdf?: { bytes: Uint8Array; fileName: string };
+    },
+  ): Promise<DeliveryResult> {
+    const html = this.renderLogisticsOrderConfirmation(data);
+    const itemLines = data.items
+      .map((i) => `  ${i.quantity}× ${i.name} — ${i.subtotalFormatted} ${data.currency}`)
+      .join('\n');
+    const intro = data.isCopy
+      ? `A logistics order was placed for ${data.exhibitorName} by a booth staff member. A copy of the invoice is attached for your records.`
+      : `Thank you — your logistics order for ${data.eventName} is confirmed and paid. Your invoice is attached.`;
+    const text = `${intro}
+
+Order: ${data.orderNumber}
+Event: ${data.eventName}
+
+Items:
+${itemLines}
+
+Total: ${data.totalFormatted} ${data.currency}
+${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
+— SRAtix`;
+
+    const attachments: import('./email-transport.interface').EmailAttachment[] = [];
+    if (data.invoicePdf) {
+      attachments.push({
+        filename: data.invoicePdf.fileName,
+        content: Buffer.from(data.invoicePdf.bytes),
+        contentType: 'application/pdf',
+      });
+    }
+
+    return this.send({
+      to,
+      subject: `📦 ${data.eventName} — logistics order ${data.orderNumber} confirmed`,
+      html,
+      text,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      headers: { 'X-SRAtix-Logistics-Order': data.orderNumber },
+    });
+  }
+
+  /**
    * Low-level send — delegates to transport.
    */
   private async send(message: EmailMessage): Promise<DeliveryResult> {
@@ -1693,6 +1751,56 @@ ${data.invoiceUrl ? `\n${labels.invoiceTextLabel}: ${data.invoiceUrl}\n` : ''}
         </tr>
         ${itemRows}
       </table>
+    `);
+  }
+
+  private renderLogisticsOrderConfirmation(data: {
+    recipientName: string;
+    orderNumber: string;
+    exhibitorName: string;
+    eventName: string;
+    totalFormatted: string;
+    currency: string;
+    items: Array<{ name: string; quantity: number; subtotalFormatted: string }>;
+    isCopy?: boolean;
+    invoiceUrl?: string;
+  }): string {
+    const itemRows = data.items
+      .map(
+        (i) =>
+          `<tr>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee;">${i.name}</td>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee; text-align: center;">${i.quantity}</td>
+            <td style="padding: 6px 12px; border-bottom: 1px solid #eee; text-align: right;">${i.subtotalFormatted} ${data.currency}</td>
+          </tr>`,
+      )
+      .join('');
+
+    const intro = data.isCopy
+      ? `A logistics order was placed for <strong>${data.exhibitorName}</strong> by a booth staff member. A copy of the invoice is attached for your records.`
+      : `Thank you — your logistics order for <strong>${data.eventName}</strong> is confirmed and paid. Your invoice is attached.`;
+
+    const invoiceBtn = data.invoiceUrl
+      ? `<p style="margin: 20px 0 0;"><a href="${data.invoiceUrl}" style="display: inline-block; background: #4f46e5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-size: 14px;">Download invoice (PDF)</a></p>`
+      : '';
+
+    return this.publicWrapper('Logistics order confirmed', `
+      <p style="font-size: 16px; margin: 0 0 8px;">Hi ${data.recipientName || 'there'},</p>
+      <p style="font-size: 15px; color: #444; margin: 0 0 20px;">${intro}</p>
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 6px; padding: 16px 20px; margin: 0 0 20px;">
+        <p style="margin: 0; font-size: 26px; font-weight: 700; color: #15803d;">${data.totalFormatted} ${data.currency}</p>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #16a34a;">Order #${data.orderNumber} · Paid</p>
+      </div>
+      <h3 style="margin: 0 0 8px; font-size: 14px; color: #333;">Items ordered</h3>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 14px;">
+        <tr style="background: #f8f9fa;">
+          <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Item</th>
+          <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Qty</th>
+          <th style="padding: 8px 12px; text-align: right; font-weight: 600;">Subtotal</th>
+        </tr>
+        ${itemRows}
+      </table>
+      ${invoiceBtn}
     `);
   }
 }

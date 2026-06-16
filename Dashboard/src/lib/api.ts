@@ -1353,7 +1353,7 @@ export const api = {
 
   adminUpdateBoothDetails: (
     exhibitorId: string,
-    data: { boothNumber?: string; expoArea?: string; exhibitorCategory?: string; exhibitorType?: string },
+    data: { boothNumber?: string; expoArea?: string; exhibitorCategory?: string; exhibitorType?: string; includedSeats?: number },
   ) =>
     request<Record<string, unknown>>(
       `/admin/exhibitor-portal/exhibitors/${exhibitorId}/booth-details`,
@@ -1391,6 +1391,10 @@ export const api = {
       `/admin/logistics/events/${eventId}/orders`,
       { signal },
     ),
+
+  /** Authenticated URL to download a paid logistics order's invoice PDF (use with downloadFile). */
+  logisticsInvoiceUrl: (orderId: string) =>
+    `${API_BASE}/api/invoices/logistics/order/${orderId}`,
 
   updateLogisticsFulfillment: (eventId: string, orderId: string, data: { fulfillmentStatus: string; notes?: string }) =>
     request<Record<string, unknown>>(

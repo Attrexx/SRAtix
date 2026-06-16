@@ -4,14 +4,17 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from '../payments/stripe.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { CreateLogisticsItemDto } from './dto/create-logistics-item.dto';
 import { UpdateLogisticsItemDto } from './dto/update-logistics-item.dto';
 import { EmailService } from '../email/email.service';
+import { InvoicesService } from '../invoices/invoices.service';
 
 const ORDER_NUMBER_MAX_RETRIES = 5;
+const INVOICE_PUBLIC_BASE = 'https://tix.swiss-robotics.org';
 
 @Injectable()
 export class LogisticsService {
@@ -22,6 +25,7 @@ export class LogisticsService {
     private readonly stripe: StripeService,
     private readonly audit: AuditLogService,
     private readonly email: EmailService,
+    private readonly invoices: InvoicesService,
   ) {}
 
   // ─── Admin: Stock Items ───────────────────────────────────────────
@@ -430,6 +434,12 @@ export class LogisticsService {
 
     this.logger.log(`Logistics order ${order.orderNumber} marked as paid`);
 
+    // Generate the invoice and email it to the buyer(s) — the staff member who
+    // placed the order and the booth purchaser (when different).
+    this.issueInvoiceAndConfirm(order.id).catch((err) =>
+      this.logger.error(`Failed to issue logistics invoice/confirmation for ${order.orderNumber}: ${err}`),
+    );
+
     // Notify superadmins (testing — expand to admin + event_admin after testing)
     this.notifyLogisticsOrderPaid(order.id).catch((err) =>
       this.logger.error(`Failed to send logistics order notification: ${err}`),
@@ -466,6 +476,127 @@ export class LogisticsService {
   }
 
   // ─── Internals ────────────────────────────────────────────────────
+
+  /**
+   * Generate the invoice PDF for a paid logistics order and email it to the
+   * staff member who placed the order plus the booth purchaser (when different).
+   * Stores a public invoice token on the order so the email can link to a
+   * download URL. Non-blocking: a failure to generate the PDF still sends the
+   * confirmation email (without the attachment).
+   */
+  private async issueInvoiceAndConfirm(orderId: string) {
+    const order = await this.prisma.logisticsOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { item: { select: { name: true } } } },
+        event: { select: { id: true, name: true } },
+        org: { select: { name: true, contactEmail: true } },
+      },
+    });
+    if (!order) return;
+
+    // ── Generate invoice + store a public access token ──
+    let invoicePdf: { bytes: Uint8Array; fileName: string } | undefined;
+    let invoiceUrl: string | undefined;
+    try {
+      const invoiceToken = this.buildInvoiceToken();
+      const existingMeta = (order.meta as Record<string, any>) ?? {};
+      await this.prisma.logisticsOrder.update({
+        where: { id: orderId },
+        data: { meta: { ...existingMeta, invoiceToken } },
+      });
+
+      const result = await this.invoices.generateLogisticsInvoice(orderId);
+      invoicePdf = { bytes: result.pdfBytes, fileName: result.fileName };
+      invoiceUrl = `${INVOICE_PUBLIC_BASE}/api/invoices/logistics/t/${invoiceToken}`;
+      this.logger.log(`Logistics invoice ${result.invoiceNumber} generated for order ${order.orderNumber}`);
+    } catch (err) {
+      this.logger.error(`Logistics invoice generation failed for ${order.orderNumber}: ${err}`);
+    }
+
+    // ── Resolve recipients: ordering staff + booth purchaser (if different) ──
+    const staffEmail = order.customerEmail?.trim() || '';
+    const purchaserEmail = await this.resolveBoothPurchaserEmail(
+      order.eventId,
+      order.exhibitorOrgId,
+      order.org.contactEmail,
+    );
+
+    const items = order.items.map((li) => ({
+      name: li.item.name,
+      quantity: li.quantity,
+      subtotalFormatted: (li.subtotalCents / 100).toFixed(2),
+    }));
+    const totalFormatted = (order.totalCents / 100).toFixed(2);
+
+    const sendTo = (to: string, isCopy: boolean, recipientName: string) =>
+      this.email
+        .sendLogisticsOrderConfirmation(to, {
+          recipientName,
+          orderNumber: order.orderNumber,
+          exhibitorName: order.org.name,
+          eventName: order.event.name,
+          totalFormatted,
+          currency: order.currency,
+          items,
+          isCopy,
+          invoiceUrl,
+          invoicePdf,
+        })
+        .catch((err) => this.logger.error(`Logistics confirmation to ${to} failed: ${err}`));
+
+    const sent = new Set<string>();
+    if (staffEmail) {
+      sent.add(staffEmail.toLowerCase());
+      await sendTo(staffEmail, false, order.customerName ?? '');
+    }
+    if (purchaserEmail && !sent.has(purchaserEmail.toLowerCase())) {
+      sent.add(purchaserEmail.toLowerCase());
+      await sendTo(purchaserEmail, true, '');
+    }
+
+    this.logger.log(
+      `Logistics order ${order.orderNumber} confirmation sent to ${sent.size} recipient(s)`,
+    );
+  }
+
+  /**
+   * Resolve the booth purchaser's email for an exhibitor org at an event:
+   * EventExhibitor.meta.buyerEmail → org.contactEmail → profile.contactEmail.
+   */
+  private async resolveBoothPurchaserEmail(
+    eventId: string,
+    exhibitorOrgId: string,
+    orgContactEmail: string | null,
+  ): Promise<string> {
+    const profile = await this.prisma.exhibitorProfile.findUnique({
+      where: { orgId: exhibitorOrgId },
+      select: { id: true, contactEmail: true },
+    });
+    if (profile) {
+      const ee = await this.prisma.eventExhibitor.findUnique({
+        where: { eventId_exhibitorProfileId: { eventId, exhibitorProfileId: profile.id } },
+        select: { meta: true },
+      });
+      const meta = (ee?.meta as Record<string, unknown>) ?? {};
+      const buyerEmail = typeof meta.buyerEmail === 'string' ? meta.buyerEmail.trim() : '';
+      if (buyerEmail) return buyerEmail;
+      return (orgContactEmail || profile.contactEmail || '').trim();
+    }
+    return (orgContactEmail || '').trim();
+  }
+
+  /** Build a UUID-v4 string for use as a public invoice access token. */
+  private buildInvoiceToken(): string {
+    const hex = randomBytes(16).toString('hex');
+    return [
+      hex.slice(0, 8),
+      hex.slice(8, 12),
+      '4' + hex.slice(13, 16),
+      ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16) + hex.slice(17, 20),
+      hex.slice(20, 32),
+    ].join('-');
+  }
 
   /**
    * Send admin notification for a paid logistics order.
