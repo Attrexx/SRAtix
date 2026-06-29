@@ -41,7 +41,7 @@ async function main() {
           name: 'Swiss Robotics Association',
           slug: 'sra',
           type: 'organizer',
-          contactEmail: 'info@swiss-robotics.org',
+          contactEmail: 'contact@swiss-robotics.org',
           active: true,
         },
       });

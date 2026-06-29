@@ -75,7 +75,7 @@ async function seedDemoExhibitor() {
     let hostOrg = await prisma.organization.findFirst({ where: { type: 'organizer' } });
     if (!hostOrg) {
       hostOrg = await prisma.organization.create({
-        data: { name: 'Swiss Robotics Association', slug: 'sra', type: 'organizer', contactEmail: 'info@swiss-robotics.org', active: true },
+        data: { name: 'Swiss Robotics Association', slug: 'sra', type: 'organizer', contactEmail: 'contact@swiss-robotics.org', active: true },
       });
     }
     event = await prisma.event.create({

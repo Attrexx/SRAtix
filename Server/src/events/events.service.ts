@@ -125,7 +125,7 @@ export class EventsService {
         name: 'Swiss Robotics Association',
         slug: DEFAULT_ORG_SLUG,
         type: 'organizer',
-        contactEmail: 'info@swiss-robotics.org',
+        contactEmail: 'contact@swiss-robotics.org',
         active: true,
       },
     });

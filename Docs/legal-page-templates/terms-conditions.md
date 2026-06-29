@@ -76,5 +76,5 @@ Replace `[Event Date]` with the actual event date.
 <h3>15. Contact</h3>
 <p>Swiss Robotics Association<br>
 Zurich, Switzerland<br>
-Email: <strong>info@swiss-robotics.org</strong></p>
+Email: <strong>contact@swiss-robotics.org</strong></p>
 ```

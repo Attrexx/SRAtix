@@ -90,7 +90,7 @@ export class InvoicesService {
     postalCode: '1015',
     country: 'Switzerland',
     vatNumber: '',
-    email: 'info@swiss-robotics.org',
+    email: 'contact@swiss-robotics.org',
     website: 'https://swiss-robotics.org',
   };
 
