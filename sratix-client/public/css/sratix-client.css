@@ -1379,7 +1379,7 @@ select.sratix-input.sratix-select-empty {
 	max-width: 860px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
 	.sratix-member-gate__buttons {
 		grid-template-columns: 1fr;
 		max-width: 100%;
@@ -2203,18 +2203,6 @@ select.sratix-input.sratix-select-empty {
 	background: rgba(224, 32, 32, 0.15);
 	color: var(--sratix-red);
 	white-space: nowrap;
-}
-
-/* ── Responsive: Member Gate ── */
-@media (max-width: 480px) {
-	.sratix-member-gate__buttons {
-		flex-direction: column;
-		align-items: center;
-	}
-	.sratix-member-btn {
-		width: 100%;
-		max-width: 280px;
-	}
 }
 
 /* ── Maintenance Screen ── */
