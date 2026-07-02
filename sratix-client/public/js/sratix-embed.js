@@ -410,7 +410,9 @@
       }
       // Navigation links row
       html += '<div class="sratix-nav-links">';
-      if (!(memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') && config.memberGateEnabled) {
+      // Exhibitors get no membership-based discounts, so hide the "sign in for
+      // discounts" link on the exhibitor route. The change-role link below stays.
+      if (role !== 'exhibitor' && !(memberSession && memberSession.memberGroup && memberSession.memberGroup !== 'none') && config.memberGateEnabled) {
         html += `<a href="#" data-action="change-member" class="sratix-back-to-gate">${escHtml(t('memberGate.backToMembership'))}</a>`;
       }
       html += `<a href="#" data-action="change-role" class="sratix-back-to-gate">${escHtml(t('roleChoice.changeRole'))}</a>`;
