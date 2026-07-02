@@ -21,6 +21,7 @@ export default function EventOverviewPage() {
     checkIns: 0,
     totalAttendees: 0,
     compEntries: 0,
+    exhibitors: 0,
   });
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -49,20 +50,28 @@ export default function EventOverviewPage() {
     const ciP = api.getCheckInStats(id, ac.signal).catch(() => ({ total: 0, today: 0, byTicketType: {} }));
     const attP = api.getAttendees(id, ac.signal).catch(() => []);
     const compP = api.getCompEntrySummary(id, ac.signal).catch(() => ({ total: 0 }));
+    const exhP = api.getExhibitors(id, ac.signal).catch(() => [] as any[]);
 
-    Promise.all([evP, ttsP, ordP, ciP, attP, compP])
-      .then(([ev, tts, orders, checkInStats, attendees, compSummary]) => {
+    Promise.all([evP, ttsP, ordP, ciP, attP, compP, exhP])
+      .then(([ev, tts, orders, checkInStats, attendees, compSummary, exhibitors]) => {
         if (ev) setEvent(ev);
         setTicketTypes(tts);
         const paidOrders = orders.filter((o: any) => o.status === 'paid');
+        // Exclude abandoned checkouts (pending / expired) from headline counts.
+        const activeOrders = orders.filter(
+          (o: any) => o.status !== 'pending' && o.status !== 'expired',
+        );
         setStats({
-          totalOrders: orders.length,
+          totalOrders: activeOrders.length,
           paidOrders: paidOrders.length,
           totalRevenue: paidOrders.reduce((sum: number, o: any) => sum + o.totalCents, 0),
           ticketsSold: tts.reduce((sum, tt) => sum + (tt.sold ?? 0), 0),
           checkIns: checkInStats.total,
-          totalAttendees: attendees.length,
+          // Only count attendees with an issued ticket. A pending/expired order
+          // issues no tickets, so abandoned-checkout records don't inflate this.
+          totalAttendees: attendees.filter((a: any) => (a.tickets?.length ?? 0) > 0).length,
           compEntries: (compSummary as any).total ?? 0,
+          exhibitors: exhibitors.length,
         });
       })
       .finally(() => setLoading(false));
@@ -227,6 +236,11 @@ export default function EventOverviewPage() {
           icon={<Icons.UserPlus size={20} />}
           label={t('staffPartners.title')}
           value={(stats.compEntries ?? 0).toLocaleString()}
+        />
+        <StatCard
+          icon={<Icons.Package size={20} />}
+          label={t('events.overview.exhibitors')}
+          value={(stats.exhibitors ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}

@@ -1392,6 +1392,10 @@ export const api = {
       { signal },
     ),
 
+  /** Authenticated URL to download a paid order's invoice PDF (use with downloadFile). */
+  invoiceUrl: (orderId: string) =>
+    `${API_BASE}/api/invoices/order/${orderId}`,
+
   /** Authenticated URL to download a paid logistics order's invoice PDF (use with downloadFile). */
   logisticsInvoiceUrl: (orderId: string) =>
     `${API_BASE}/api/invoices/logistics/order/${orderId}`,

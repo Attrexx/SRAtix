@@ -2,15 +2,41 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Order, type OrderDetails, type PaymentInfo } from '@/lib/api';
+import { api, downloadFile, type Order, type OrderDetails, type PaymentInfo } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { StatusBadge } from '@/components/status-badge';
 import { TestBadge } from '@/components/test-badge';
 import { useSSE } from '@/lib/sse';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+import { toast } from 'sonner';
 
 type ViewMode = 'list' | 'detail' | 'edit';
+
+/**
+ * Ticket-category → attendee-facing type, mirroring the Attendees page so the
+ * Orders "Ticket Type" column colour-codes consistently (visitor vs exhibitor, etc.).
+ * general | individual | legal → visitor; everything else keeps its own label.
+ */
+const TICKET_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  visitor:   { bg: '#e0f2fe', text: '#0369a1' },
+  exhibitor: { bg: '#fce7f3', text: '#9d174d' },
+  staff:     { bg: '#f3e8ff', text: '#6b21a8' },
+  volunteer: { bg: '#dcfce7', text: '#166534' },
+  partner:   { bg: '#fef3c7', text: '#92400e' },
+  sponsor:   { bg: '#ffe4e6', text: '#9f1239' },
+  unknown:   { bg: '#f3f4f6', text: '#6b7280' },
+};
+
+function ticketCategoryToType(category?: string | null): string {
+  if (!category) return 'unknown';
+  if (category === 'exhibitor') return 'exhibitor';
+  if (category === 'staff') return 'staff';
+  if (category === 'volunteer') return 'volunteer';
+  if (category === 'partner') return 'partner';
+  if (category === 'sponsor') return 'sponsor';
+  return 'visitor';
+}
 
 export default function OrdersPage() {
   const { t } = useI18n();
@@ -37,6 +63,9 @@ export default function OrdersPage() {
 
   // Ticket type filter state
   const [filterTicketType, setFilterTicketType] = useState<string>('all');
+
+  // Invoice download state (which order's invoice is currently downloading)
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
 
   /** Get the primary ticket type name for an order (first item) */
   const getOrderTicketTypeName = (o: Order): string | null =>
@@ -176,6 +205,18 @@ export default function OrdersPage() {
     setError(null);
     setEmailResult(null);
     setPaymentInfo(null);
+  };
+
+  const handleDownloadInvoice = async (order: Order) => {
+    if (downloadingInvoiceId) return; // a download is already in flight
+    setDownloadingInvoiceId(order.id);
+    try {
+      await downloadFile(api.invoiceUrl(order.id), `invoice-${order.orderNumber}.pdf`);
+    } catch {
+      toast.error(t('orders.invoiceError'));
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
   };
 
   const handleResendConfirmation = async () => {
@@ -777,12 +818,27 @@ export default function OrdersPage() {
             header: t('orders.column.ticketType'),
             render: (row) => {
               const o = row as Order;
-              const names = o.items
-                ?.map((item) => item.ticketType?.name)
-                .filter(Boolean);
-              if (!names || names.length === 0)
+              const items = (o.items ?? []).filter((item) => item.ticketType?.name);
+              if (items.length === 0)
                 return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
-              return <span className="text-xs">{names.join(', ')}</span>;
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {items.map((item, i) => {
+                    const type = ticketCategoryToType(item.ticketType?.category);
+                    const c = TICKET_TYPE_COLORS[type] ?? TICKET_TYPE_COLORS.unknown;
+                    return (
+                      <span
+                        key={i}
+                        className="inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+                        style={{ background: c.bg, color: c.text }}
+                        title={item.ticketType?.name}
+                      >
+                        {item.ticketType?.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
             },
           },
           {
@@ -810,6 +866,21 @@ export default function OrdersPage() {
                 >
                   <Icons.Eye size={14} />
                 </button>
+                {(row.status as string) === 'paid' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(row as Order); }}
+                    disabled={downloadingInvoiceId === (row as Order).id}
+                    className="rounded px-2 py-1 text-xs"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      cursor: downloadingInvoiceId === (row as Order).id ? 'default' : 'pointer',
+                      opacity: downloadingInvoiceId === (row as Order).id ? 0.6 : 1,
+                    }}
+                    title={t('orders.downloadInvoice')}
+                  >
+                    <Icons.Download size={14} />
+                  </button>
+                )}
                 {(row.status as string) !== 'cancelled' && (row.status as string) !== 'refunded' && (
                   <button
                     onClick={(e) => { e.stopPropagation(); handleCancel(row as Order); }}
