@@ -2155,6 +2155,23 @@
             '<a href="https://swiss-robotics.org/robotics-ecosystem-map/" target="_blank" rel="noopener noreferrer" class="sratix-toggle-link" onclick="event.stopPropagation()">Swiss Robotics Map</a>'
           );
         }
+        // Legal consents modelled as a yes-no toggle (e.g. photography_consent)
+        // still get the document link/modal, resolved by field id OR slug so
+        // older custom-id fields also match. Mirrors the 'consent' case below.
+        var ynLegalKey = LEGAL_SLUG_BY_FIELD[field.id] ? field.id
+          : (LEGAL_SLUG_BY_FIELD[slug] ? slug : '');
+        if (ynLegalKey) {
+          var ynDocUrl = resolveLabel(field.documentUrl) || '';
+          if (!ynDocUrl && legalPageUrls[field.id]) {
+            ynDocUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
+          }
+          if (!ynDocUrl && EVENT_ID) {
+            ynDocUrl = API_BASE + '/events/' + encodeURIComponent(EVENT_ID) + '/legal/' + LEGAL_SLUG_BY_FIELD[ynLegalKey];
+          }
+          if (ynDocUrl) {
+            toggleLabelText = '<a href="' + escAttr(ynDocUrl) + '" data-legal-url="' + escAttr(ynDocUrl) + '" class="sratix-consent-link">' + escHtml(label) + '</a>';
+          }
+        }
         html = '<label class="sratix-toggle-label" for="' + escAttr(id) + '">';
         html += '<span class="sratix-toggle-switch">';
         html += '<input type="checkbox" id="' + escAttr(id) + '" data-field-id="' + escAttr(field.id) + '" />';
