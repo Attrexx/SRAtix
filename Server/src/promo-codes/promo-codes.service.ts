@@ -245,7 +245,7 @@ export class PromoCodesService {
         where: {
           eventId,
           customerEmail: orderDetails.customerEmail,
-          meta: { path: ['promoCodeId'], equals: promo.id } as any,
+          meta: { path: '$.promoCodeId', equals: promo.id },
           status: { in: ['paid', 'pending'] },
         },
       });
