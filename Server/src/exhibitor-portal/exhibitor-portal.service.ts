@@ -12,6 +12,7 @@ import { AuditLogService } from '../audit-log/audit-log.service';
 import { AttendeesService } from '../attendees/attendees.service';
 import { EmailService } from '../email/email.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { EVENT_TIME_ZONE, formatEventDateIso } from '../common/event-date.util';
 import { AuthService } from '../auth/auth.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateEventDetailsDto } from './dto/update-event-details.dto';
@@ -637,7 +638,7 @@ export class ExhibitorPortalService {
         contactName: data.displayName,
         companyName: data.companyName,
         eventName: data.event.name ?? 'Event',
-        eventDate: data.event.startDate?.toISOString().split('T')[0] ?? '',
+        eventDate: data.event.startDate ? formatEventDateIso(data.event.startDate) : '',
         eventVenue: [data.event.venue, data.event.venueAddress].filter(Boolean).join(', '),
         eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
         orderNumber: data.orderNumber,
@@ -841,7 +842,7 @@ export class ExhibitorPortalService {
     }
 
     const eventDate = event.startDate.toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'long', year: 'numeric',
+      day: 'numeric', month: 'long', year: 'numeric', timeZone: EVENT_TIME_ZONE,
     });
     const eventMeta = (event.meta as Record<string, any>) ?? {};
     const fullVenue = [event.venue, event.venueAddress].filter(Boolean).join(', ');

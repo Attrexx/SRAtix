@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { getInvoiceLabels } from './invoice-i18n';
 import { buildSpcPayload, QrBillData } from './qr-bill';
+import { EVENT_TIME_ZONE } from '../common/event-date.util';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -285,7 +286,7 @@ export class InvoicesService {
     const refLines = [
       `${L.order}: ${order.orderNumber}`,
       `${L.event}: ${order.event.name}`,
-      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
+      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale, { timeZone: EVENT_TIME_ZONE })}`,
       ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
     ];
 
@@ -406,7 +407,7 @@ export class InvoicesService {
     const refLines = [
       `${L.order}: ${order.orderNumber}`,
       `${L.event}: ${order.event.name}`,
-      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale)}`,
+      `${L.eventDate}: ${order.event.startDate.toLocaleDateString(dateLocale, { timeZone: EVENT_TIME_ZONE })}`,
       ...(venueStr ? [`${L.venue}: ${venueStr}`] : []),
     ];
 

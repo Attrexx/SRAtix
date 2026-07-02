@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { formatEventDateIso } from '../common/event-date.util';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/auth.service';
@@ -135,12 +136,8 @@ export class EventsController {
     if (recipients.length === 0) return;
 
     const dashboardUrl = `https://tix.swiss-robotics.org/dashboard/events/${event.id}`;
-    const startDate = event.startDate instanceof Date
-      ? event.startDate.toISOString().split('T')[0]
-      : String(event.startDate).split('T')[0];
-    const endDate = event.endDate instanceof Date
-      ? event.endDate.toISOString().split('T')[0]
-      : String(event.endDate).split('T')[0];
+    const startDate = formatEventDateIso(new Date(event.startDate));
+    const endDate = formatEventDateIso(new Date(event.endDate));
     const actor = user.email ?? 'Unknown user';
 
     if (type === 'draft') {

@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AttendeesService } from './attendees.service';
 import { FormsService } from '../forms/forms.service';
 import { EmailService } from '../email/email.service';
+import { EVENT_TIME_ZONE, formatEventDateIso } from '../common/event-date.util';
 import { AuthService } from '../auth/auth.service';
 
 // ─── DTO ──────────────────────────────────────────────────────────────────
@@ -279,7 +280,7 @@ export class PublicRegistrationController {
               organization: (attendeeMeta?.organization as string) || attendee.company || undefined,
               eventName: ticket.event.name,
               eventDate: ticket.event.startDate.toLocaleDateString('en-CH', {
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: EVENT_TIME_ZONE,
               }),
               eventVenue: regFullVenue,
               eventVenueMapUrl: regEventMeta.venueMapUrl || undefined,
@@ -293,7 +294,7 @@ export class PublicRegistrationController {
             .sendRecipientRegistrationConfirmation(attendee.email, {
               recipientName: finalFirstName,
               eventName: ticket.event.name,
-              eventDate: ticket.event.startDate.toISOString().split('T')[0],
+              eventDate: formatEventDateIso(ticket.event.startDate),
               eventVenue: [ticket.event.venue, ticket.event.venueAddress].filter(Boolean).join(', '),
               eventVenueMapUrl: regEventMeta2.venueMapUrl || undefined,
               ticketTypeName: ticket.ticketType?.name ?? 'Ticket',

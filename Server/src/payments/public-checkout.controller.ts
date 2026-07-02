@@ -9,6 +9,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { formatEventDateIso } from '../common/event-date.util';
 import {
   IsString,
   IsInt,
@@ -614,7 +615,7 @@ export class PublicCheckoutController {
                 recipientName: recipient.firstName,
                 purchaserName,
                 eventName: event.name,
-                eventDate: event.startDate.toISOString().split('T')[0],
+                eventDate: formatEventDateIso(event.startDate),
                 eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
                 eventVenueMapUrl: eventMetaFree.venueMapUrl || undefined,
                 ticketTypeName: tt.name,
@@ -648,7 +649,7 @@ export class PublicCheckoutController {
               ticketCodes: issued.map((t) => t.code),
               apiBaseUrl: 'https://tix.swiss-robotics.org',
               eventName: event.name,
-              eventDate: event.startDate.toISOString().split('T')[0],
+              eventDate: formatEventDateIso(event.startDate),
               eventVenue: [event.venue, event.venueAddress].filter(Boolean).join(', '),
               eventVenueMapUrl: eventMetaConf.venueMapUrl || undefined,
               isExhibitor: true,

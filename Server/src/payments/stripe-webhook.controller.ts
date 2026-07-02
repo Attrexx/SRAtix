@@ -16,6 +16,7 @@ import { TicketsService } from '../tickets/tickets.service';
 import { SseService } from '../sse/sse.service';
 import { EmailService } from '../email/email.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
+import { formatEventDateIso } from '../common/event-date.util';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -263,7 +264,7 @@ export class StripeWebhookController {
               recipientName: recipient.firstName,
               purchaserName,
               eventName: eventForGift?.name ?? 'Event',
-              eventDate: eventForGift?.startDate?.toISOString().split('T')[0] ?? '',
+              eventDate: eventForGift?.startDate ? formatEventDateIso(eventForGift.startDate) : '',
               eventVenue: [eventForGift?.venue, eventForGift?.venueAddress].filter(Boolean).join(', '),
               eventVenueMapUrl: giftEventMeta.venueMapUrl || undefined,
               ticketTypeName: firstTicketTypeName,
@@ -350,7 +351,7 @@ export class StripeWebhookController {
           ticketCodes: issued.map((t) => t.code),
           apiBaseUrl: 'https://tix.swiss-robotics.org',
           eventName: event?.name ?? 'Event',
-          eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+          eventDate: event?.startDate ? formatEventDateIso(event.startDate) : '',
           eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
           eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
           isExhibitor: isExhibitorOrder,
@@ -420,7 +421,7 @@ export class StripeWebhookController {
             currency: paidOrder.currency,
             ticketCount,
             eventName: event?.name ?? 'Event',
-            eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+            eventDate: event?.startDate ? formatEventDateIso(event.startDate) : '',
             ticketBreakdown,
             isExhibitor,
             companyName: (orderMeta.companyName as string) ?? undefined,

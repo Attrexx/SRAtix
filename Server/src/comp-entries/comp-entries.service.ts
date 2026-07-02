@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { EVENT_TIME_ZONE } from '../common/event-date.util';
 import { SettingsService } from '../settings/settings.service';
 
 /** Valid comp-entry types. */
@@ -624,6 +625,7 @@ export class CompEntriesService {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: EVENT_TIME_ZONE,
     });
 
     const compEventMeta = (event.meta as Record<string, any>) ?? {};
@@ -684,6 +686,7 @@ export class CompEntriesService {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: EVENT_TIME_ZONE,
     });
 
     const compInviteMeta = (event.meta as Record<string, any>) ?? {};

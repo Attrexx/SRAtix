@@ -12,6 +12,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { formatEventDateIso } from '../common/event-date.util';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OrdersService } from './orders.service';
 import { EmailService } from '../email/email.service';
@@ -205,7 +206,7 @@ export class OrdersController {
         ticketCodes: tickets.map((t) => t.code),
         apiBaseUrl: 'https://tix.swiss-robotics.org',
         eventName: event?.name ?? 'Event',
-        eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+        eventDate: event?.startDate ? formatEventDateIso(event.startDate) : '',
         eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
         eventVenueMapUrl: eventMeta.venueMapUrl || undefined,
         isExhibitor: isExhibitorOrder,
@@ -259,7 +260,7 @@ export class OrdersController {
           recipientName: recipient.firstName,
           purchaserName,
           eventName: event?.name ?? 'Event',
-          eventDate: event?.startDate?.toISOString().split('T')[0] ?? '',
+          eventDate: event?.startDate ? formatEventDateIso(event.startDate) : '',
           eventVenue: [event?.venue, event?.venueAddress].filter(Boolean).join(', '),
           eventVenueMapUrl: resendEventMeta.venueMapUrl || undefined,
           ticketTypeName: tt?.name ?? 'Ticket',

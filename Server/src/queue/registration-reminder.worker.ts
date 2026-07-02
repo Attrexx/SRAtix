@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { QueueService } from './queue.service';
+import { formatEventDateIso } from '../common/event-date.util';
 
 /**
  * Registration Reminder Worker — processes delayed reminder jobs.
@@ -139,7 +140,7 @@ export class RegistrationReminderWorker implements OnModuleInit {
         ? `${purchaser.firstName} ${purchaser.lastName}`
         : 'Someone',
       eventName: ticket?.event?.name ?? 'Event',
-      eventDate: ticket?.event?.startDate?.toISOString().split('T')[0] ?? '',
+      eventDate: ticket?.event?.startDate ? formatEventDateIso(ticket.event.startDate) : '',
       registrationUrl: `${registrationBaseUrl}?token=${attendee.registrationToken}`,
       isSecondReminder: data.isSecondReminder,
     });
