@@ -152,7 +152,7 @@ export class StripeService implements OnModuleInit {
       ...(discounts ? { discounts } : {}),
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
-      expires_at: Math.floor(Date.now() / 1000) + 1800, // 30 minutes from now
+      expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
     });
 
     this.logger.log(
