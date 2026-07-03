@@ -1,5 +1,6 @@
 import { FunnelService } from './funnel.service';
 import { SseService } from '../sse/sse.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Unit tests for FunnelService — the in-memory registration-flow presence
@@ -10,6 +11,7 @@ import { SseService } from '../sse/sse.service';
 describe('FunnelService', () => {
   let service: FunnelService;
   let sse: { emitTraffic: jest.Mock };
+  let prisma: { $executeRawUnsafe: jest.Mock; $queryRawUnsafe: jest.Mock };
 
   const T0 = new Date('2026-07-03T10:00:00.000Z');
 
@@ -17,7 +19,14 @@ describe('FunnelService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(T0);
     sse = { emitTraffic: jest.fn() };
-    service = new FunnelService(sse as unknown as SseService);
+    prisma = {
+      $executeRawUnsafe: jest.fn().mockResolvedValue(undefined),
+      $queryRawUnsafe: jest.fn().mockResolvedValue([]),
+    };
+    service = new FunnelService(
+      sse as unknown as SseService,
+      prisma as unknown as PrismaService,
+    );
   });
 
   afterEach(() => {
@@ -223,6 +232,51 @@ describe('FunnelService', () => {
       expect(
         (service as unknown as { bucketPeak: Map<string, unknown> }).bucketPeak.has('e1'),
       ).toBe(false);
+    });
+  });
+
+  describe('persistence', () => {
+    it('writes the committed trend to the database each sample tick', () => {
+      service.ping('e1', 's1', 'begin_checkout');
+      prisma.$executeRawUnsafe.mockClear();
+
+      service.sample();
+
+      const upsert = prisma.$executeRawUnsafe.mock.calls.find((c) =>
+        String(c[0]).includes('INSERT INTO `FunnelTrend`'),
+      );
+      expect(upsert).toBeDefined();
+      expect(upsert![1]).toBe('e1');
+      expect(JSON.parse(upsert![2])).toEqual([{ onPage: 1, inFunnel: 1 }]);
+    });
+
+    it('deletes the persisted trend when an event is garbage-collected', () => {
+      service.ping('e1', 's1', 'begin_checkout');
+      service.ping('e1', 's1', 'left');
+      service.sweep();
+      prisma.$executeRawUnsafe.mockClear();
+
+      for (let i = 0; i < 13; i++) service.sample();
+
+      const del = prisma.$executeRawUnsafe.mock.calls.find((c) =>
+        String(c[0]).includes('DELETE FROM `FunnelTrend`'),
+      );
+      expect(del).toBeDefined();
+      expect(del![1]).toBe('e1');
+    });
+
+    it('restores a recent trend from the database on boot', async () => {
+      prisma.$queryRawUnsafe.mockResolvedValueOnce([
+        { eventId: 'e9', samples: JSON.stringify([{ onPage: 5, inFunnel: 3 }]) },
+      ]);
+
+      await service.onModuleInit();
+
+      const h = service.snapshot('e9').history;
+      // restored committed sample sits just behind the (zero) live edge
+      expect(h.onPage[10]).toBe(5);
+      expect(h.inFunnel[10]).toBe(3);
+      expect(h.onPage[11]).toBe(0);
     });
   });
 });

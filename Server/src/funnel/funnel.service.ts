@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { SseService } from '../sse/sse.service';
+import { PrismaService } from '../prisma/prisma.service';
 import type { FunnelStep } from './dto/funnel-ping.dto';
 
 /** One anonymous visitor currently present in an event's registration flow. */
@@ -51,11 +52,14 @@ export interface TrafficSnapshot {
  * moves to Redis — the same upgrade path the SseService already anticipates.
  */
 @Injectable()
-export class FunnelService {
+export class FunnelService implements OnModuleInit {
   private readonly logger = new Logger(FunnelService.name);
 
   /** A session is considered gone this long after its last heartbeat. */
   private readonly TTL_MS = 60_000;
+
+  /** Restore committed trends written within this window on boot; older = stale. */
+  private readonly TREND_MAX_AGE_MS = 2 * 60 * 60_000;
 
   /**
    * Points shown on the sparkline (~1 hour at 5-min spacing). The rightmost is
@@ -73,7 +77,75 @@ export class FunnelService {
   /** eventId → running peak within the bucket currently being filled. */
   private readonly bucketPeak = new Map<string, Sample>();
 
-  constructor(private readonly sse: SseService) {}
+  constructor(
+    private readonly sse: SseService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /**
+   * The committed trend is persisted to a small self-managed table so the
+   * last-hour graph survives server restarts / redeploys (in-memory live
+   * sessions are transient and simply re-populate as visitors re-ping).
+   *
+   * The table is created on demand (no migration to run on deploy), and every
+   * DB call is best-effort — a database hiccup never blocks startup or the
+   * live pipeline; it just falls back to in-memory-only for this process.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.prisma.$executeRawUnsafe(
+        'CREATE TABLE IF NOT EXISTS `FunnelTrend` (' +
+          '`eventId` VARCHAR(64) NOT NULL PRIMARY KEY, ' +
+          '`samples` TEXT NOT NULL, ' +
+          '`updatedAt` DATETIME(3) NOT NULL' +
+          ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4',
+      );
+
+      const since = new Date(Date.now() - this.TREND_MAX_AGE_MS);
+      const rows = (await this.prisma.$queryRawUnsafe(
+        'SELECT `eventId`, `samples` FROM `FunnelTrend` WHERE `updatedAt` >= ?',
+        since,
+      )) as Array<{ eventId: string; samples: string }>;
+
+      let restored = 0;
+      for (const row of rows) {
+        try {
+          const parsed = JSON.parse(row.samples) as Sample[];
+          if (Array.isArray(parsed) && parsed.length) {
+            this.history.set(row.eventId, parsed.slice(-(this.HISTORY_SLOTS - 1)));
+            restored++;
+          }
+        } catch {
+          /* skip a corrupt row */
+        }
+      }
+      if (restored) this.logger.log(`Restored ${restored} funnel trend(s) from DB`);
+    } catch (err) {
+      this.logger.warn(
+        `Funnel trend persistence unavailable — continuing in-memory only: ${err}`,
+      );
+    }
+  }
+
+  /** Persist an event's committed trend (best-effort, fire-and-forget). */
+  private persist(eventId: string, samples: Sample[]): void {
+    this.prisma
+      .$executeRawUnsafe(
+        'INSERT INTO `FunnelTrend` (`eventId`, `samples`, `updatedAt`) ' +
+          'VALUES (?, ?, NOW(3)) ' +
+          'ON DUPLICATE KEY UPDATE `samples` = VALUES(`samples`), `updatedAt` = VALUES(`updatedAt`)',
+        eventId,
+        JSON.stringify(samples),
+      )
+      .catch((err) => this.logger.warn(`funnel trend persist failed: ${err}`));
+  }
+
+  /** Drop a garbage-collected event's persisted trend (best-effort). */
+  private forget(eventId: string): void {
+    this.prisma
+      .$executeRawUnsafe('DELETE FROM `FunnelTrend` WHERE `eventId` = ?', eventId)
+      .catch(() => undefined);
+  }
 
   /**
    * Record a funnel beacon. Emits an updated snapshot only when the aggregate
@@ -243,9 +315,11 @@ export class FunnelService {
       if (!active && allZero && c.onPage === 0) {
         this.history.delete(eventId);
         this.bucketPeak.delete(eventId);
+        this.forget(eventId);
         continue;
       }
 
+      this.persist(eventId, committed); // durable across restarts
       this.publish(eventId); // push the advanced graph to subscribers
     }
   }

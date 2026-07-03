@@ -386,7 +386,8 @@ function LiveTrafficBar({
       {/* Subtle last-hour trend hugging the base edge (auto-scaled, Task-Manager style) */}
       {history && <TrafficSparkline onPage={history.onPage} inFunnel={history.inFunnel} />}
 
-      <div className="relative z-10 flex flex-wrap items-center gap-x-8 gap-y-3 px-5 pb-9 pt-4">
+      <div className="relative z-10 px-5 pb-9 pt-4">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
       {/* Live indicator */}
       <div className="flex items-center gap-2">
         <span className="relative flex h-2.5 w-2.5">
@@ -450,7 +451,48 @@ function LiveTrafficBar({
           No visitors in the flow right now
         </span>
       )}
+        </div>
+        {!idle && <FunnelBreakdown byStep={traffic?.byStep ?? {}} />}
       </div>
+    </div>
+  );
+}
+
+/* ── Live funnel-step breakdown (where the people currently registering are) ── */
+const FUNNEL_STAGES = [
+  { key: 'begin_checkout', label: 'Tickets' },
+  { key: 'recipients', label: 'Recipients' },
+  { key: 'attendee_form', label: 'Details' },
+  { key: 'billing', label: 'Billing' },
+  { key: 'checkout_submitted', label: 'Submitting' },
+] as const;
+
+function FunnelBreakdown({ byStep }: { byStep: Record<string, number> }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+      {FUNNEL_STAGES.map((s, i) => {
+        const n = byStep[s.key] ?? 0;
+        return (
+          <div key={s.key} className="flex items-center gap-1.5">
+            {i > 0 && (
+              <span className="opacity-40" style={{ color: 'var(--color-text-muted)' }}>
+                ›
+              </span>
+            )}
+            <span
+              className="text-sm font-semibold tabular-nums"
+              style={{
+                color: n > 0 ? 'var(--color-success, #22c55e)' : 'var(--color-text-muted)',
+              }}
+            >
+              {n}
+            </span>
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {s.label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
