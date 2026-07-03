@@ -2245,15 +2245,20 @@
         break;
       case 'consent':
         var docUrl = resolveLabel(field.documentUrl) || '';
+        // Resolve the legal doc by field id OR slug, so custom-id fields
+        // (older/edited forms, e.g. the exhibitor package form) still match a
+        // standard legal consent — mirrors the yes-no case above.
+        var consentLegalKey = LEGAL_SLUG_BY_FIELD[field.id] ? field.id
+          : (LEGAL_SLUG_BY_FIELD[slug] ? slug : '');
         // Fallback 1: event-level legal page URL from public-info (ticket flow).
-        if (!docUrl && legalPageUrls[field.id]) {
-          docUrl = API_BASE + '/' + legalPageUrls[field.id].replace(/^\/api\//, '');
+        if (!docUrl && (legalPageUrls[field.id] || legalPageUrls[slug])) {
+          docUrl = API_BASE + '/' + (legalPageUrls[field.id] || legalPageUrls[slug]).replace(/^\/api\//, '');
         }
         // Fallback 2: build the URL deterministically for the standard legal
         // consents, so the link/modal appears even when public-info wasn't
         // loaded (attendee/recipient registration, exhibitor wizard).
-        if (!docUrl && LEGAL_SLUG_BY_FIELD[field.id] && EVENT_ID) {
-          docUrl = API_BASE + '/events/' + encodeURIComponent(EVENT_ID) + '/legal/' + LEGAL_SLUG_BY_FIELD[field.id];
+        if (!docUrl && consentLegalKey && EVENT_ID) {
+          docUrl = API_BASE + '/events/' + encodeURIComponent(EVENT_ID) + '/legal/' + LEGAL_SLUG_BY_FIELD[consentLegalKey];
         }
         var consentLabelHtml;
         if (docUrl) {
