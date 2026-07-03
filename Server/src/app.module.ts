@@ -29,6 +29,7 @@ import { SettingsModule } from './settings/settings.module';
 import { FieldRepositoryModule } from './field-repository/field-repository.module';
 import { FormTemplatesModule } from './form-templates/form-templates.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { FunnelModule } from './funnel/funnel.module';
 import { SystemModule } from './system/system.module';
 import { ContactModule } from './contact/contact.module';
 import { ExhibitorPortalModule } from './exhibitor-portal/exhibitor-portal.module';
@@ -121,6 +122,9 @@ import { join } from 'path';
 
     // Analytics — time-series aggregation for line graphs
     AnalyticsModule,
+
+    // Funnel — realtime registration-flow presence tracking (SSE traffic channel)
+    FunnelModule,
 
     // System — rebuild notifications, global SSE
     SystemModule,

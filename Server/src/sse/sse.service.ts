@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Subject, Observable, filter, map, merge, interval } from 'rxjs';
+import { Subject, Observable, filter, map, merge, interval, startWith } from 'rxjs';
 
 /**
  * Event types emitted via SSE.
@@ -8,8 +8,8 @@ import { Subject, Observable, filter, map, merge, interval } from 'rxjs';
 export interface SseEvent {
   /** Event UUID to scope the stream */
   eventId: string;
-  /** Stream channel: check-ins | stats | orders | alerts */
-  channel: 'check-ins' | 'stats' | 'orders' | 'alerts';
+  /** Stream channel: check-ins | stats | orders | alerts | traffic */
+  channel: 'check-ins' | 'stats' | 'orders' | 'alerts' | 'traffic';
   /** Payload data */
   data: Record<string, unknown>;
   /** ISO timestamp */
@@ -35,6 +35,13 @@ export class SseService {
   private readonly logger = new Logger(SseService.name);
   private readonly bus$ = new Subject<SseEvent>();
   private readonly systemBus$ = new Subject<SystemSseEvent>();
+
+  /**
+   * Last `traffic` snapshot per event, so a dashboard connecting to the
+   * traffic stream gets the current live count immediately (via `startWith`)
+   * instead of waiting for the next beacon/sweep.
+   */
+  private readonly lastTraffic = new Map<string, Record<string, unknown>>();
 
   /**
    * Emit an event to all connected SSE clients subscribed to this
@@ -141,6 +148,45 @@ export class SseService {
     },
   ) {
     this.emit(eventId, 'alerts', data);
+  }
+
+  /**
+   * Emit a live registration-traffic snapshot (people currently on the
+   * registration page / in the flow). Caches the payload so late subscribers
+   * receive the current value immediately (see {@link subscribeTraffic}).
+   */
+  emitTraffic(
+    eventId: string,
+    data: {
+      onPage: number;
+      inFunnel: number;
+      byStep: Record<string, number>;
+      updatedAt: string;
+    },
+  ) {
+    this.lastTraffic.set(eventId, data);
+    this.emit(eventId, 'traffic', data);
+  }
+
+  /**
+   * Subscribe to the `traffic` stream for an event, seeded with the last known
+   * snapshot so the dashboard tile renders a value on connect rather than
+   * waiting for the next update.
+   */
+  subscribeTraffic(eventId: string): Observable<MessageEvent> {
+    const stream = this.subscribe(eventId, 'traffic');
+    const last = this.lastTraffic.get(eventId);
+    if (!last) return stream;
+
+    const seed = {
+      data: {
+        eventId,
+        channel: 'traffic',
+        data: last,
+        timestamp: new Date().toISOString(),
+      },
+    } as MessageEvent;
+    return stream.pipe(startWith(seed));
   }
 
   // ────────────────────────────────────────────────────────────

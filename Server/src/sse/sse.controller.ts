@@ -64,6 +64,17 @@ export class SseController {
   }
 
   /**
+   * Traffic stream — live registration-flow presence (people currently on the
+   * registration page / actively registering). Fed by FunnelService.
+   */
+  @Sse(':eventId/traffic')
+  @Roles('event_admin', 'admin', 'super_admin')
+  streamTraffic(@Param('eventId') eventId: string): Observable<MessageEvent> {
+    this.logger.log(`SSE traffic stream opened for event ${eventId}`);
+    return this.sse.subscribeTraffic(eventId);
+  }
+
+  /**
    * Orders stream — new order notifications.
    */
   @Sse(':eventId/orders')

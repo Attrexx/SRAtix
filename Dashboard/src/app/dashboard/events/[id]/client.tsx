@@ -7,6 +7,21 @@ import { StatCard } from '@/components/stat-card';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+import { useSSE } from '@/lib/sse';
+
+/** Live registration-traffic snapshot pushed over the SSE `traffic` channel. */
+interface TrafficSnapshot {
+  onPage: number;
+  inFunnel: number;
+  byStep: Record<string, number>;
+  updatedAt: string;
+}
+interface TrafficSseEvent {
+  eventId: string;
+  channel: string;
+  data: TrafficSnapshot;
+  timestamp: string;
+}
 
 export default function EventOverviewPage() {
   const { t } = useI18n();
@@ -25,6 +40,17 @@ export default function EventOverviewPage() {
   });
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
+
+  // ── Live registration traffic (SSE) ──
+  const [traffic, setTraffic] = useState<TrafficSnapshot | null>(null);
+  const handleTraffic = useCallback((msg: TrafficSseEvent) => {
+    if (msg?.data) setTraffic(msg.data);
+  }, []);
+  const { isConnected: trafficLive } = useSSE<TrafficSseEvent>(
+    `events/${id}/traffic`,
+    handleTraffic,
+    !!id && id !== '_',
+  );
 
   const togglePublish = useCallback(async () => {
     if (!event || publishing) return;
@@ -218,6 +244,9 @@ export default function EventOverviewPage() {
         </div>
       </div>
 
+      {/* ── Live Registration Traffic ── */}
+      <LiveTrafficBar traffic={traffic} connected={trafficLive} />
+
       {/* ── Stats Grid ── */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
@@ -325,6 +354,95 @@ export default function EventOverviewPage() {
           <InfoItem icon={<Icons.Activity size={14} />} label="Status" value={event.status.charAt(0).toUpperCase() + event.status.slice(1)} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Live Registration Traffic ── */
+function LiveTrafficBar({
+  traffic,
+  connected,
+}: {
+  traffic: TrafficSnapshot | null;
+  connected: boolean;
+}) {
+  const onPage = traffic?.onPage ?? 0;
+  const inFunnel = traffic?.inFunnel ?? 0;
+  const idle = onPage === 0;
+  const live = connected && !idle;
+
+  return (
+    <div
+      className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl px-5 py-4"
+      style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      {/* Live indicator */}
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2.5 w-2.5">
+          {live && (
+            <span
+              className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+              style={{ background: 'var(--color-success, #22c55e)' }}
+            />
+          )}
+          <span
+            className="relative inline-flex h-2.5 w-2.5 rounded-full"
+            style={{
+              background: connected
+                ? 'var(--color-success, #22c55e)'
+                : 'var(--color-text-muted)',
+            }}
+          />
+        </span>
+        <span
+          className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          {connected ? 'Live' : 'Connecting…'}
+        </span>
+      </div>
+
+      {/* On the registration page */}
+      <div className="flex items-baseline gap-2">
+        <span
+          className="text-3xl font-bold tabular-nums"
+          style={{ color: 'var(--color-text)' }}
+        >
+          {onPage}
+        </span>
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          on the registration page
+        </span>
+      </div>
+
+      {/* Actively registering */}
+      <div className="flex items-baseline gap-2">
+        <span
+          className="text-3xl font-bold tabular-nums"
+          style={{
+            color:
+              inFunnel > 0 ? 'var(--color-success, #22c55e)' : 'var(--color-text)',
+          }}
+        >
+          {inFunnel}
+        </span>
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          registering now
+        </span>
+      </div>
+
+      {idle && (
+        <span
+          className="ml-auto text-xs"
+          style={{ color: 'var(--color-text-muted)' }}
+        >
+          No visitors in the flow right now
+        </span>
+      )}
     </div>
   );
 }

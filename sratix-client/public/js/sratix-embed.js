@@ -36,6 +36,62 @@
   const API_BASE = config.apiUrl.replace(/\/$/, '');
   const EVENT_ID = config.eventId;
 
+  // ─── Realtime funnel / traffic tracking (first-party, cookieless) ────────────
+  // Counts how many people are currently on the registration page / moving
+  // through the flow, so the event dashboard can show a live traffic tile.
+  //
+  // Privacy: the session id is random, in-memory only (no cookie, no
+  // localStorage, no PII), so this needs no consent banner. Sending is
+  // best-effort — it must never block or break the purchase flow.
+  var trackFunnel = (function () {
+    var endpoint = API_BASE + '/public/funnel/' + encodeURIComponent(EVENT_ID);
+    var sid =
+      'sx' +
+      Math.random().toString(36).slice(2, 12) +
+      Math.random().toString(36).slice(2, 8);
+    var currentStep = null;
+    var heartbeat = null;
+
+    function send(step) {
+      try {
+        var body = JSON.stringify({ sessionId: sid, step: step });
+        if (navigator && typeof navigator.sendBeacon === 'function') {
+          navigator.sendBeacon(
+            endpoint,
+            new Blob([body], { type: 'application/json' })
+          );
+        } else {
+          fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body,
+            keepalive: true,
+            credentials: 'omit',
+          }).catch(function () {});
+        }
+      } catch (e) {
+        /* tracking is best-effort — never surface errors to the visitor */
+      }
+    }
+
+    function startHeartbeat() {
+      if (heartbeat) return;
+      // Re-announce presence periodically (< server TTL of 60s) so the live
+      // count stays accurate while the tab is open and visible.
+      heartbeat = setInterval(function () {
+        if (document.visibilityState === 'visible' && currentStep) {
+          send(currentStep);
+        }
+      }, 25000);
+    }
+
+    return function track(step) {
+      currentStep = step;
+      send(step);
+      startHeartbeat();
+    };
+  })();
+
   // Legal page URLs from event public-info (populated on ticket selection)
   var legalPageUrls = {};
 
@@ -315,6 +371,9 @@
   async function initTicketsWidget() {
     const container = document.getElementById('sratix-tickets-widget');
     if (!container) return;
+
+    // Live traffic: someone opened the registration page.
+    trackFunnel('landing');
 
     const eventId = container.dataset.eventId || EVENT_ID;
     const layout = container.dataset.layout || 'cards';
@@ -1140,6 +1199,8 @@
       var includeForSelf = selfTicketCheckbox ? selfTicketCheckbox.checked : true;
       var optOutCheck = modal.querySelector('#sratix-optout-check');
       var membershipOptOut = optOutCheck ? optOutCheck.checked : false;
+      // Live traffic: visitor picked a ticket and is entering the flow.
+      trackFunnel('begin_checkout');
       closeModal();
       // Always go through recipient routing — it handles all combinations:
       // qty=1 + includeForSelf → 0 recipients → proceedAfterRecipients → attendee form
