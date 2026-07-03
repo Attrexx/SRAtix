@@ -50,6 +50,7 @@ export function Sidebar({ eventId }: { eventId?: string }) {
   const topNav: NavItem[] = [
     { href: '/dashboard', label: t('nav.events'), icon: <Icons.Calendar size={18} /> },
     { href: '/dashboard/users', label: t('nav.users'), icon: <Icons.User size={18} />, roles: ['super_admin', 'admin'] },
+    { href: '/dashboard/email-log', label: t('nav.emailLog'), icon: <Icons.Mail size={18} />, roles: ['super_admin', 'admin'] },
     { href: '/dashboard/settings', label: t('nav.settings'), icon: <Icons.Settings size={18} />, roles: ['super_admin'] },
   ];
 

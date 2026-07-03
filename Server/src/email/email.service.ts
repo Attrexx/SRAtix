@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { EmailTransport, EmailMessage, DeliveryResult } from './email-transport.interface';
 import { emailHeader, emailPreFooter, emailFooter, emailShell } from './email-templates.util';
 import { parseLocale, type Locale } from '../common/i18n';
+import { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Public origin of the SRAtix server, used to build absolute links/images in
@@ -258,6 +259,7 @@ export class EmailService {
   constructor(
     @Inject('EMAIL_TRANSPORT')
     private readonly transport: EmailTransport,
+    private readonly prisma: PrismaService,
   ) {}
 
   /** Format venue for HTML emails — wraps in a link if mapUrl is provided. */
@@ -1317,13 +1319,77 @@ ${data.invoiceUrl ? `\nInvoice: ${data.invoiceUrl}\n` : ''}
    * Low-level send — delegates to transport.
    */
   private async send(message: EmailMessage): Promise<DeliveryResult> {
+    let result: DeliveryResult;
     try {
-      return await this.transport.send(message);
+      result = await this.transport.send(message);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Email delivery failed: ${errorMsg}`);
-      return { success: false, error: errorMsg };
+      result = { success: false, error: errorMsg };
     }
+    // Record every send in the email log (fire-and-forget; logging must never
+    // break email delivery). Retained 7 days, purged by EmailLogRetentionService.
+    this.logEmail(message, result);
+    return result;
+  }
+
+  /**
+   * Persist a one-row summary of an email send to the email_log table.
+   * Metadata only — never the body. Failures are swallowed so a logging
+   * problem can never stop an email from being sent.
+   */
+  private logEmail(message: EmailMessage, result: DeliveryResult): void {
+    this.prisma.emailLog
+      .create({
+        data: {
+          type: this.classifyEmailType(message),
+          recipient: (message.to ?? '').slice(0, 255),
+          subject: (message.subject ?? '').slice(0, 500),
+          status: result.success ? 'sent' : 'failed',
+          error: result.success
+            ? null
+            : (result.error ?? 'Unknown error').slice(0, 2000),
+          messageId: result.messageId ?? null,
+        },
+      })
+      .catch((err) => {
+        this.logger.warn(
+          `Failed to write email log: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      });
+  }
+
+  /**
+   * Best-effort classification of an outbound email into a stable "type" for
+   * the dashboard email log. Uses custom headers where present, otherwise
+   * matches the (hardcoded, English) subject line. Keep in sync with the
+   * subject strings in the send methods above.
+   */
+  private classifyEmailType(message: EmailMessage): string {
+    const h = message.headers ?? {};
+    if (h['X-SRAtix-Logistics-Order']) return 'logistics_confirmation';
+    if (h['X-SRAtix-Order']) return 'order_confirmation';
+
+    const raw = message.subject ?? '';
+    const s = raw.toLowerCase();
+    if (raw.includes('📩')) return 'exhibitor_contact';
+    if (s.includes('logistics order')) return 'logistics_notification';
+    if (s.includes('voided')) return 'ticket_voided';
+    if (s.includes('refund')) return 'refund';
+    if (s.includes('new order')) return 'new_order';
+    if (s.includes('event draft')) return 'event_draft';
+    if (s.includes('event published')) return 'event_published';
+    if (s.includes('complete your registration')) return 'registration_reminder';
+    if (s.includes('pass for') && s.includes('complete registration'))
+      return 'comp_invitation';
+    if (s.includes('pass for')) return 'comp_confirmation';
+    if (s.includes('assigned you a ticket')) return 'ticket_gift';
+    if (s.includes('registration confirmed')) return 'recipient_registration';
+    if (s.includes('registered for')) return 'recipient_registered';
+    if (s.includes('exhibitor confirmed')) return 'exhibitor_welcome';
+    if (s.includes('booth staff')) return 'staff_invite';
+    if (s.includes('booth details')) return 'booth_details';
+    return 'notification';
   }
 
   private orderEmailLabels(language?: string): OrderEmailLabels {

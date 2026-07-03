@@ -585,6 +585,24 @@ model AuditLog {
   @@map("audit_log")
 }
 
+/// Outbound email delivery log — one row per send (metadata only, never the
+/// body). Global/system-wide; purged after 7 days by EmailLogRetentionService.
+model EmailLog {
+  id        String   @id @default(uuid()) @db.Char(36)
+  type      String   @db.VarChar(60)  // order_confirmation | refund | ticket_gift | ...
+  recipient String   @db.VarChar(255)
+  subject   String   @db.VarChar(500)
+  status    String   @db.VarChar(20)  // sent | failed
+  error     String?  @db.Text
+  messageId String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("email_log")
+}
+
 model WpMapping {
   id              String @id @default(uuid()) @db.Char(36)
   wpEntityType    String @db.VarChar(50)  // user | corporate-member | sra_entity

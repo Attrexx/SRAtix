@@ -15,6 +15,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { CheckInsModule } from './check-ins/check-ins.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { EmailModule } from './email/email.module';
+import { EmailLogModule } from './email-log/email-log.module';
 import { FormsModule } from './forms/forms.module';
 import { PromoCodesModule } from './promo-codes/promo-codes.module';
 import { InvoicesModule } from './invoices/invoices.module';
@@ -77,6 +78,7 @@ import { join } from 'path';
 
     // Email — SMTP transport, templates
     EmailModule,
+    EmailLogModule,
 
     // Registration form engine — versioned schemas & submissions
     FormsModule,

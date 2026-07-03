@@ -512,6 +512,17 @@ export interface AuditLogEntry {
   timestamp: string;
 }
 
+export interface EmailLogEntry {
+  id: string;
+  type: string;
+  recipient: string;
+  subject: string;
+  status: string; // sent | failed
+  error?: string | null;
+  messageId?: string | null;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   totalAttendees: number;
   totalOrders: number;
@@ -1190,6 +1201,31 @@ export const api = {
     if (options?.to) params.set('to', String(options.to));
     const qs = params.toString();
     return `${API_BASE}/api/audit-log/event/${eventId}/export${qs ? `?${qs}` : ''}`;
+  },
+
+  // Email Log (global, admin-only)
+  getEmailLog: (options?: { take?: number; skip?: number; status?: string; type?: string; search?: string; from?: string; to?: string }, signal?: AbortSignal) => {
+    const params = new URLSearchParams();
+    if (options?.take) params.set('take', String(options.take));
+    if (options?.skip) params.set('skip', String(options.skip));
+    if (options?.status) params.set('status', options.status);
+    if (options?.type) params.set('type', options.type);
+    if (options?.search) params.set('search', options.search);
+    if (options?.from) params.set('from', options.from);
+    if (options?.to) params.set('to', options.to);
+    const qs = params.toString();
+    return request<EmailLogEntry[]>(`/email-log${qs ? `?${qs}` : ''}`, { signal });
+  },
+
+  exportEmailLogCsvUrl: (options?: { status?: string; type?: string; search?: string; from?: string; to?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.status) params.set('status', options.status);
+    if (options?.type) params.set('type', options.type);
+    if (options?.search) params.set('search', options.search);
+    if (options?.from) params.set('from', options.from);
+    if (options?.to) params.set('to', options.to);
+    const qs = params.toString();
+    return `${API_BASE}/api/email-log/export${qs ? `?${qs}` : ''}`;
   },
 
   // Webhooks

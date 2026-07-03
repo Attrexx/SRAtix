@@ -1,5 +1,6 @@
 import { EmailService } from './email.service';
 import type { EmailMessage, EmailTransport } from './email-transport.interface';
+import type { PrismaService } from '../prisma/prisma.service';
 
 describe('EmailService order confirmation wording', () => {
   function setup() {
@@ -10,8 +11,12 @@ describe('EmailService order confirmation wording', () => {
         return { success: true, messageId: 'test-message' };
       }),
     };
+    // The email-log write is fire-and-forget; a stub is enough for these tests.
+    const prisma = {
+      emailLog: { create: jest.fn().mockResolvedValue({}) },
+    } as unknown as PrismaService;
 
-    return { service: new EmailService(transport), sent };
+    return { service: new EmailService(transport, prisma), sent };
   }
 
   const baseData = {
