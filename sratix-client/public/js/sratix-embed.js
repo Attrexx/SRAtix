@@ -1223,6 +1223,9 @@
       return;
     }
 
+    // Live funnel: reached the recipient-details step.
+    trackFunnel('recipients');
+
     var modal = createModalShell('sratix-modal-recipients');
     var rows = '';
     for (var i = 0; i < recipientCount; i++) {
@@ -1351,6 +1354,8 @@
   // ─── Attendee Form Modal (buyer's own registration form) ─────────────────────
 
   async function openAttendeeFormModal(flowCtx) {
+    // Live funnel: reached the attendee registration form.
+    trackFunnel('attendee_form');
     var tt = flowCtx.tt;
     var eventId = flowCtx.eventId;
     var modal = createModalShell('sratix-modal-attendee');
@@ -1654,6 +1659,8 @@
   // ─── Billing Modal (collects billing/invoice data before payment) ────────────
 
   function openBillingModal(flowCtx) {
+    // Live funnel: reached the billing / invoice step.
+    trackFunnel('billing');
     var tt = flowCtx.tt;
     var subtotal = tt.priceCents * flowCtx.qty;
     var finalPrice = Math.max(0, subtotal - flowCtx.discountCents);
@@ -1864,6 +1871,8 @@
   // ─── Submit Checkout (final POST to server) ─────────────────────────────────
 
   async function submitCheckout(flowCtx) {
+    // Live funnel: final submit (proceeding to payment / completing registration).
+    trackFunnel('checkout_submitted');
     var tt = flowCtx.tt;
     var submitLabel = tt.priceCents === 0 ? t('reg.completeRegistration') : t('reg.continueToPayment');
 
