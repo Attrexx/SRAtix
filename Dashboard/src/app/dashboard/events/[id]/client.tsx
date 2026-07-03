@@ -14,6 +14,8 @@ interface TrafficSnapshot {
   onPage: number;
   inFunnel: number;
   byStep: Record<string, number>;
+  /** Last hour of 5-min presence samples (oldest→newest), for the trend sparkline. */
+  history: number[];
   updatedAt: string;
 }
 interface TrafficSseEvent {
@@ -368,24 +370,29 @@ function LiveTrafficBar({
 }) {
   const onPage = traffic?.onPage ?? 0;
   const inFunnel = traffic?.inFunnel ?? 0;
+  const history = traffic?.history?.length ? traffic.history : null;
   const idle = onPage === 0;
   const live = connected && !idle;
 
   return (
     <div
-      className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl px-5 py-4"
+      className="relative mb-6 overflow-hidden rounded-xl"
       style={{
         background: 'var(--color-bg-card)',
         border: '1px solid var(--color-border)',
         boxShadow: 'var(--shadow-sm)',
       }}
     >
+      {/* Subtle last-hour trend hugging the base edge (auto-scaled, Task-Manager style) */}
+      {history && <TrafficSparkline data={history} />}
+
+      <div className="relative z-10 flex flex-wrap items-center gap-x-8 gap-y-3 px-5 pb-9 pt-4">
       {/* Live indicator */}
       <div className="flex items-center gap-2">
         <span className="relative flex h-2.5 w-2.5">
           {live && (
             <span
-              className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
+              className="animate-pulse-live-ring absolute inline-flex h-full w-full rounded-full"
               style={{ background: 'var(--color-success, #22c55e)' }}
             />
           )}
@@ -443,6 +450,63 @@ function LiveTrafficBar({
           No visitors in the flow right now
         </span>
       )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Last-hour trend sparkline (auto-scaled to the window's peak) ── */
+function TrafficSparkline({ data }: { data: number[] }) {
+  const n = data.length;
+  if (n < 2) return null;
+
+  const max = Math.max(...data, 1); // auto-scale y-axis to the tallest bar in view
+  const W = 100;
+  const H = 100;
+  const HEADROOM = 12; // keep the peak off the very top edge
+  const step = W / (n - 1);
+
+  const pts = data.map((v, i) => {
+    const x = i * step;
+    const y = H - (v / max) * (H - HEADROOM);
+    return [x, y] as const;
+  });
+
+  const line = pts
+    .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`)
+    .join(' ');
+  const area =
+    `M0 ${H} ` +
+    pts.map(([x, y]) => `L${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') +
+    ` L${W} ${H} Z`;
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-12">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        width="100%"
+        height="100%"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="sratix-traffic-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-success, #22c55e)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--color-success, #22c55e)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#sratix-traffic-grad)" />
+        <path
+          d={line}
+          fill="none"
+          stroke="var(--color-success, #22c55e)"
+          strokeOpacity="0.55"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
     </div>
   );
 }

@@ -141,4 +141,50 @@ describe('FunnelService', () => {
       expect(sse.emitTraffic).not.toHaveBeenCalled();
     });
   });
+
+  describe('history / sample()', () => {
+    it('seeds a full-width zero history before any sampling', () => {
+      service.ping('e1', 's1', 'landing');
+      expect(service.snapshot('e1').history).toEqual(new Array(12).fill(0));
+    });
+
+    it('commits the bucket peak — not the instantaneous count — on each tick', () => {
+      service.ping('e1', 's1', 'begin_checkout'); // onPage 1
+      service.ping('e1', 's2', 'begin_checkout'); // onPage 2 → bucket peak 2
+      service.ping('e1', 's2', 'left'); // onPage back to 1
+
+      service.sample();
+
+      const hist = service.snapshot('e1').history;
+      expect(hist).toHaveLength(12);
+      expect(hist[hist.length - 1]).toBe(2);
+    });
+
+    it('lets the trend decay to zero after traffic stops', () => {
+      service.ping('e1', 's1', 'begin_checkout');
+      service.ping('e1', 's1', 'left');
+
+      for (let i = 0; i < 3; i++) service.sample();
+
+      expect(service.snapshot('e1').history[11]).toBe(0);
+    });
+
+    it('keeps only the last 12 buckets (one hour)', () => {
+      service.ping('e1', 's1', 'landing');
+      for (let i = 0; i < 20; i++) service.sample();
+      expect(service.snapshot('e1').history).toHaveLength(12);
+    });
+
+    it('garbage-collects an event idle (all-zero) for a full hour', () => {
+      service.ping('e1', 's1', 'begin_checkout');
+      service.ping('e1', 's1', 'left');
+      service.sweep(); // remove the emptied room
+
+      for (let i = 0; i < 13; i++) service.sample(); // flush the 1 out of the window
+
+      expect(service.snapshot('e1').history).toEqual(new Array(12).fill(0));
+      expect((service as unknown as { history: Map<string, number[]> }).history.has('e1')).toBe(false);
+      expect((service as unknown as { bucketPeak: Map<string, number> }).bucketPeak.has('e1')).toBe(false);
+    });
+  });
 });

@@ -161,6 +161,8 @@ export class SseService {
       onPage: number;
       inFunnel: number;
       byStep: Record<string, number>;
+      /** Last hour of 5-min presence samples (oldest→newest), for the trend graph. */
+      history: number[];
       updatedAt: string;
     },
   ) {
