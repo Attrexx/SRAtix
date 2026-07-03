@@ -14,8 +14,8 @@ interface TrafficSnapshot {
   onPage: number;
   inFunnel: number;
   byStep: Record<string, number>;
-  /** Last hour of 5-min presence samples (oldest→newest), for the trend sparkline. */
-  history: number[];
+  /** Last-hour trend, two aligned series (grey on-page + green in-funnel); rightmost = live. */
+  history: { onPage: number[]; inFunnel: number[] };
   updatedAt: string;
 }
 interface TrafficSseEvent {
@@ -370,7 +370,7 @@ function LiveTrafficBar({
 }) {
   const onPage = traffic?.onPage ?? 0;
   const inFunnel = traffic?.inFunnel ?? 0;
-  const history = traffic?.history?.length ? traffic.history : null;
+  const history = traffic?.history && traffic.history.onPage?.length > 1 ? traffic.history : null;
   const idle = onPage === 0;
   const live = connected && !idle;
 
@@ -384,7 +384,7 @@ function LiveTrafficBar({
       }}
     >
       {/* Subtle last-hour trend hugging the base edge (auto-scaled, Task-Manager style) */}
-      {history && <TrafficSparkline data={history} />}
+      {history && <TrafficSparkline onPage={history.onPage} inFunnel={history.inFunnel} />}
 
       <div className="relative z-10 flex flex-wrap items-center gap-x-8 gap-y-3 px-5 pb-9 pt-4">
       {/* Live indicator */}
@@ -455,30 +455,32 @@ function LiveTrafficBar({
   );
 }
 
-/* ── Last-hour trend sparkline (auto-scaled to the window's peak) ── */
-function TrafficSparkline({ data }: { data: number[] }) {
-  const n = data.length;
+/* ── Last-hour trend sparklines (two shared-scale series, auto-scaled to the window peak) ── */
+function TrafficSparkline({ onPage, inFunnel }: { onPage: number[]; inFunnel: number[] }) {
+  const n = onPage.length;
   if (n < 2) return null;
 
-  const max = Math.max(...data, 1); // auto-scale y-axis to the tallest bar in view
   const W = 100;
   const H = 100;
   const HEADROOM = 12; // keep the peak off the very top edge
   const step = W / (n - 1);
+  // Shared y-axis so the two lines are comparable; scales to the tallest value in view.
+  const max = Math.max(...onPage, ...inFunnel, 1);
 
-  const pts = data.map((v, i) => {
-    const x = i * step;
-    const y = H - (v / max) * (H - HEADROOM);
-    return [x, y] as const;
-  });
+  const paths = (data: number[]) => {
+    const pts = data.map((v, i) => [i * step, H - (v / max) * (H - HEADROOM)] as const);
+    const line = pts
+      .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`)
+      .join(' ');
+    const area =
+      `M0 ${H} ` +
+      pts.map(([x, y]) => `L${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') +
+      ` L${W} ${H} Z`;
+    return { line, area };
+  };
 
-  const line = pts
-    .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`)
-    .join(' ');
-  const area =
-    `M0 ${H} ` +
-    pts.map(([x, y]) => `L${x.toFixed(2)} ${y.toFixed(2)}`).join(' ') +
-    ` L${W} ${H} Z`;
+  const page = paths(onPage);
+  const funnel = paths(inFunnel);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-12">
@@ -490,17 +492,36 @@ function TrafficSparkline({ data }: { data: number[] }) {
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="sratix-traffic-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-success, #22c55e)" stopOpacity="0.28" />
+          <linearGradient id="sratix-traffic-page" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-text-muted)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--color-text-muted)" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="sratix-traffic-funnel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-success, #22c55e)" stopOpacity="0.3" />
             <stop offset="100%" stopColor="var(--color-success, #22c55e)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={area} fill="url(#sratix-traffic-grad)" />
+
+        {/* On the registration page — faded grey backdrop */}
+        <path d={page.area} fill="url(#sratix-traffic-page)" />
         <path
-          d={line}
+          d={page.line}
+          fill="none"
+          stroke="var(--color-text-muted)"
+          strokeOpacity="0.5"
+          strokeWidth="1.25"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        {/* Registering — green, drawn on top */}
+        <path d={funnel.area} fill="url(#sratix-traffic-funnel)" />
+        <path
+          d={funnel.line}
           fill="none"
           stroke="var(--color-success, #22c55e)"
-          strokeOpacity="0.55"
+          strokeOpacity="0.7"
           strokeWidth="1.5"
           strokeLinejoin="round"
           strokeLinecap="round"

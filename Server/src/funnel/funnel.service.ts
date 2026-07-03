@@ -9,22 +9,31 @@ interface Presence {
   lastSeen: number;
 }
 
+/** A single graphed sample — peak of each metric within a 5-min bucket. */
+interface Sample {
+  onPage: number;
+  inFunnel: number;
+}
+
 /**
  * Live snapshot pushed to the dashboard `traffic` SSE channel.
  *   onPage   — total anonymous visitors currently on the registration page
  *   inFunnel — subset who have advanced past `landing` (actively registering)
  *   byStep   — count per funnel step (for a live funnel breakdown)
+ *   history  — last-hour trend, two aligned series for the overlaid sparklines
  */
 export interface TrafficSnapshot {
   onPage: number;
   inFunnel: number;
   byStep: Record<string, number>;
   /**
-   * Rolling last-hour trend: {@link FunnelService.HISTORY_SLOTS} samples of the
-   * peak `onPage` per 5-minute bucket, oldest → newest, left-padded with zeros.
-   * Drives the sparkline on the overview tile.
+   * Rolling last-hour trend: {@link FunnelService.HISTORY_SLOTS} points per
+   * series, oldest → newest, left-padded with zeros. The **rightmost point is
+   * the live value** (so activity shows immediately); the points behind it are
+   * committed 5-minute bucket peaks. `onPage` is the grey backdrop line,
+   * `inFunnel` the green line drawn on top.
    */
-  history: number[];
+  history: { onPage: number[]; inFunnel: number[] };
   updatedAt: string;
 }
 
@@ -48,17 +57,21 @@ export class FunnelService {
   /** A session is considered gone this long after its last heartbeat. */
   private readonly TTL_MS = 60_000;
 
-  /** Trend window: 12 buckets × 5 min = the last hour. */
+  /**
+   * Points shown on the sparkline (~1 hour at 5-min spacing). The rightmost is
+   * always the live value, so at most HISTORY_SLOTS - 1 committed buckets sit
+   * behind it.
+   */
   private readonly HISTORY_SLOTS = 12;
 
   /** eventId → (sessionId → presence) */
   private readonly rooms = new Map<string, Map<string, Presence>>();
 
-  /** eventId → committed peak-per-bucket samples (oldest→newest, ≤ HISTORY_SLOTS). */
-  private readonly history = new Map<string, number[]>();
+  /** eventId → committed peak-per-bucket samples (oldest→newest, ≤ HISTORY_SLOTS - 1). */
+  private readonly history = new Map<string, Sample[]>();
 
-  /** eventId → running peak `onPage` within the bucket currently being filled. */
-  private readonly bucketPeak = new Map<string, number>();
+  /** eventId → running peak within the bucket currently being filled. */
+  private readonly bucketPeak = new Map<string, Sample>();
 
   constructor(private readonly sse: SseService) {}
 
@@ -86,8 +99,17 @@ export class FunnelService {
     if (changed) this.publish(eventId);
   }
 
-  /** Current snapshot for an event (also prunes expired sessions as a side effect). */
+  /** Full snapshot for an event (also prunes expired sessions as a side effect). */
   snapshot(eventId: string): TrafficSnapshot {
+    return this.buildPayload(eventId);
+  }
+
+  /** Live counts, pruning expired sessions as a side effect. */
+  private counts(eventId: string): {
+    onPage: number;
+    inFunnel: number;
+    byStep: Record<string, number>;
+  } {
     const room = this.rooms.get(eventId);
     const byStep: Record<string, number> = {};
     let onPage = 0;
@@ -106,38 +128,64 @@ export class FunnelService {
       }
     }
 
+    return { onPage, inFunnel, byStep };
+  }
+
+  /**
+   * The last-hour trend as two aligned series of exactly HISTORY_SLOTS values.
+   * The rightmost value is the live count (immediate feedback); behind it sit
+   * the committed 5-min bucket peaks, left-padded with zeros so the sparkline
+   * always spans the full width.
+   */
+  private historyView(
+    eventId: string,
+    live: Sample,
+  ): { onPage: number[]; inFunnel: number[] } {
+    const committed = this.history.get(eventId) ?? [];
+    const tail = committed.slice(-(this.HISTORY_SLOTS - 1));
+    const series: Sample[] = [
+      ...tail,
+      { onPage: live.onPage, inFunnel: live.inFunnel },
+    ];
+
+    const pad = this.HISTORY_SLOTS - series.length;
+    const padded =
+      pad > 0
+        ? [
+            ...Array.from({ length: pad }, () => ({ onPage: 0, inFunnel: 0 })),
+            ...series,
+          ]
+        : series.slice(-this.HISTORY_SLOTS);
+
     return {
-      onPage,
-      inFunnel,
-      byStep,
-      history: this.historyView(eventId),
+      onPage: padded.map((s) => s.onPage),
+      inFunnel: padded.map((s) => s.inFunnel),
+    };
+  }
+
+  private buildPayload(
+    eventId: string,
+    live?: { onPage: number; inFunnel: number; byStep: Record<string, number> },
+  ): TrafficSnapshot {
+    const c = live ?? this.counts(eventId);
+    return {
+      onPage: c.onPage,
+      inFunnel: c.inFunnel,
+      byStep: c.byStep,
+      history: this.historyView(eventId, c),
       updatedAt: new Date().toISOString(),
     };
   }
 
-  /**
-   * The last-hour trend as exactly HISTORY_SLOTS values, left-padded with zeros
-   * so the sparkline always spans the full width (Task-Manager style).
-   */
-  private historyView(eventId: string): number[] {
-    const hist = this.history.get(eventId);
-    if (!hist || hist.length === 0) {
-      return new Array(this.HISTORY_SLOTS).fill(0);
-    }
-    if (hist.length >= this.HISTORY_SLOTS) {
-      return hist.slice(-this.HISTORY_SLOTS);
-    }
-    return [...new Array(this.HISTORY_SLOTS - hist.length).fill(0), ...hist];
-  }
-
   private publish(eventId: string): void {
-    const snap = this.snapshot(eventId);
-    // Track the peak population reached during the bucket currently being filled.
-    this.bucketPeak.set(
-      eventId,
-      Math.max(this.bucketPeak.get(eventId) ?? 0, snap.onPage),
-    );
-    this.sse.emitTraffic(eventId, snap);
+    const c = this.counts(eventId);
+    // Track the peak reached during the bucket currently being filled.
+    const peak = this.bucketPeak.get(eventId) ?? { onPage: 0, inFunnel: 0 };
+    this.bucketPeak.set(eventId, {
+      onPage: Math.max(peak.onPage, c.onPage),
+      inFunnel: Math.max(peak.inFunnel, c.inFunnel),
+    });
+    this.sse.emitTraffic(eventId, this.buildPayload(eventId, c));
   }
 
   /**
@@ -150,22 +198,22 @@ export class FunnelService {
   sweep(): void {
     for (const [eventId, room] of this.rooms) {
       const before = room.size;
-      const snap = this.snapshot(eventId); // prunes stale sessions
+      const c = this.counts(eventId); // prunes stale sessions
 
       if (room.size === 0) {
-        this.sse.emitTraffic(eventId, snap); // final "0" so tiles decay
+        this.sse.emitTraffic(eventId, this.buildPayload(eventId, c)); // final "0"
         this.rooms.delete(eventId);
       } else if (room.size !== before) {
-        this.sse.emitTraffic(eventId, snap);
+        this.sse.emitTraffic(eventId, this.buildPayload(eventId, c));
       }
     }
   }
 
   /**
    * Every 5 minutes, commit each event's bucket peak to its rolling history and
-   * open a fresh bucket — this is what advances the sparkline one step to the
-   * right. Events idle for a full hour (all-zero history, no live presence) are
-   * dropped to bound memory.
+   * open a fresh bucket — this is what freezes the current live edge into a
+   * fixed point and advances the sparkline one step to the left. Events idle
+   * for a full hour (all-zero history, no live presence) are dropped.
    */
   @Interval('funnel-sample', 5 * 60_000)
   sample(): void {
@@ -176,19 +224,23 @@ export class FunnelService {
     ]);
 
     for (const eventId of eventIds) {
-      const onPage = this.snapshot(eventId).onPage; // prunes stale sessions
-      const peak = Math.max(this.bucketPeak.get(eventId) ?? 0, onPage);
+      const c = this.counts(eventId); // prunes stale sessions
+      const peak = this.bucketPeak.get(eventId) ?? { onPage: 0, inFunnel: 0 };
+      const committed = this.history.get(eventId) ?? [];
 
-      const hist = this.history.get(eventId) ?? [];
-      hist.push(peak);
-      while (hist.length > this.HISTORY_SLOTS) hist.shift();
-      this.history.set(eventId, hist);
+      committed.push({
+        onPage: Math.max(peak.onPage, c.onPage),
+        inFunnel: Math.max(peak.inFunnel, c.inFunnel),
+      });
+      while (committed.length > this.HISTORY_SLOTS - 1) committed.shift();
+      this.history.set(eventId, committed);
 
       // Start the next bucket at the current live level.
-      this.bucketPeak.set(eventId, onPage);
+      this.bucketPeak.set(eventId, { onPage: c.onPage, inFunnel: c.inFunnel });
 
       const active = (this.rooms.get(eventId)?.size ?? 0) > 0;
-      if (!active && hist.every((v) => v === 0)) {
+      const allZero = committed.every((s) => s.onPage === 0 && s.inFunnel === 0);
+      if (!active && allZero && c.onPage === 0) {
         this.history.delete(eventId);
         this.bucketPeak.delete(eventId);
         continue;
