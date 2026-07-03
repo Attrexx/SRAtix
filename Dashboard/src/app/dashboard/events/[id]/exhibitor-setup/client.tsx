@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type EventExhibitorCard } from '@/lib/api';
+import { api, downloadFile, type EventExhibitorCard } from '@/lib/api';
 import { useI18n } from '@/i18n/i18n-provider';
 import { toast } from 'sonner';
 
@@ -27,6 +27,19 @@ export default function ExhibitorSetupPage() {
   const [exhibitors, setExhibitors] = useState<EventExhibitorCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (url: string, kind: 'csv' | 'xlsx') => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      await downloadFile(url, `exhibitors.${kind}`);
+    } catch {
+      toast.error(t('common.exportError'));
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!eventId) return;
@@ -87,7 +100,29 @@ export default function ExhibitorSetupPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">{t('exhibitors.title')}</h2>
-        <span className="text-sm text-gray-500">{exhibitors.length} {t('exhibitors.total')}</span>
+        <div className="flex items-center gap-3">
+          {exhibitors.length > 0 && (
+            <>
+              <button
+                onClick={() => handleExport(api.exportExhibitors(eventId), 'csv')}
+                disabled={exporting !== null}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              >
+                {exporting === 'csv' ? '…' : t('common.exportCsv')}
+              </button>
+              <button
+                onClick={() => handleExport(api.exportExhibitorsXlsx(eventId), 'xlsx')}
+                disabled={exporting !== null}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+              >
+                {exporting === 'xlsx' ? '…' : t('common.exportExcel')}
+              </button>
+            </>
+          )}
+          <span className="text-sm text-gray-500">{exhibitors.length} {t('exhibitors.total')}</span>
+        </div>
       </div>
 
       {exhibitors.length === 0 ? (

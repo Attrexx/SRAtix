@@ -67,6 +67,21 @@ export default function OrdersPage() {
   // Invoice download state (which order's invoice is currently downloading)
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
 
+  // Export state ('csv' | 'xlsx' while that download is in flight)
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (url: string, kind: 'csv' | 'xlsx') => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      await downloadFile(url, `orders.${kind}`);
+    } catch {
+      toast.error(t('common.exportError'));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   /** Get the primary ticket type name for an order (first item) */
   const getOrderTicketTypeName = (o: Order): string | null =>
     o.items?.[0]?.ticketType?.name ?? null;
@@ -760,19 +775,30 @@ export default function OrdersPage() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <a
-            href={api.exportOrders(eventId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          <button
+            onClick={() => handleExport(api.exportOrders(eventId), 'csv')}
+            disabled={exporting !== null}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
             style={{
               background: 'var(--color-bg-card)',
               border: '1px solid var(--color-border)',
               color: 'var(--color-text)',
             }}
           >
-                    <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
-          </a>
+            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {exporting === 'csv' ? '…' : t('common.exportCsv')}</span>
+          </button>
+          <button
+            onClick={() => handleExport(api.exportOrdersXlsx(eventId), 'xlsx')}
+            disabled={exporting !== null}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+          >
+            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {exporting === 'xlsx' ? '…' : t('common.exportExcel')}</span>
+          </button>
         </div>
       </div>
 

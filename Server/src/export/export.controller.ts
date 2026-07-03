@@ -33,7 +33,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const csv = await this.exportService.exportAttendees(eventId);
-    this.sendCsv(reply, csv, `attendees-${eventId.substring(0, 8)}.csv`);
+    this.sendCsv(reply, csv, this.fileName('attendees', eventId, 'csv'));
   }
 
   /**
@@ -47,7 +47,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const csv = await this.exportService.exportOrders(eventId);
-    this.sendCsv(reply, csv, `orders-${eventId.substring(0, 8)}.csv`);
+    this.sendCsv(reply, csv, this.fileName('orders', eventId, 'csv'));
   }
 
   /**
@@ -61,7 +61,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const csv = await this.exportService.exportCheckIns(eventId);
-    this.sendCsv(reply, csv, `check-ins-${eventId.substring(0, 8)}.csv`);
+    this.sendCsv(reply, csv, this.fileName('check-ins', eventId, 'csv'));
   }
 
   /**
@@ -79,7 +79,16 @@ export class ExportController {
       eventId,
       formSchemaId || undefined,
     );
-    this.sendCsv(reply, csv, `submissions-${eventId.substring(0, 8)}.csv`);
+    this.sendCsv(reply, csv, this.fileName('submissions', eventId, 'csv'));
+  }
+
+  /**
+   * Build a download filename that includes a short event id and today's date,
+   * e.g. `attendees-0df076e8-2026-07-03.csv`.
+   */
+  private fileName(base: string, eventId: string, ext: string): string {
+    const date = new Date().toISOString().slice(0, 10);
+    return `${base}-${eventId.substring(0, 8)}-${date}.${ext}`;
   }
 
   private sendCsv(reply: FastifyReply, csv: string, fileName: string) {
@@ -112,7 +121,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const buffer = await this.exportService.exportAttendeesXlsx(eventId);
-    this.sendExcel(reply, buffer, `attendees-${eventId.substring(0, 8)}.xlsx`);
+    this.sendExcel(reply, buffer, this.fileName('attendees', eventId, 'xlsx'));
   }
 
   /**
@@ -126,7 +135,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const buffer = await this.exportService.exportOrdersXlsx(eventId);
-    this.sendExcel(reply, buffer, `orders-${eventId.substring(0, 8)}.xlsx`);
+    this.sendExcel(reply, buffer, this.fileName('orders', eventId, 'xlsx'));
   }
 
   /**
@@ -140,7 +149,7 @@ export class ExportController {
     @Res() reply: FastifyReply,
   ) {
     const buffer = await this.exportService.exportCheckInsXlsx(eventId);
-    this.sendExcel(reply, buffer, `check-ins-${eventId.substring(0, 8)}.xlsx`);
+    this.sendExcel(reply, buffer, this.fileName('check-ins', eventId, 'xlsx'));
   }
 
   /**
@@ -158,6 +167,34 @@ export class ExportController {
       eventId,
       formSchemaId || undefined,
     );
-    this.sendExcel(reply, buffer, `submissions-${eventId.substring(0, 8)}.xlsx`);
+    this.sendExcel(reply, buffer, this.fileName('submissions', eventId, 'xlsx'));
+  }
+
+  /**
+   * GET /api/export/exhibitors/event/:eventId
+   * Download exhibitors (with their staff summarised) as CSV.
+   */
+  @Get('exhibitors/event/:eventId')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async exportExhibitors(
+    @Param('eventId') eventId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const csv = await this.exportService.exportExhibitors(eventId);
+    this.sendCsv(reply, csv, this.fileName('exhibitors', eventId, 'csv'));
+  }
+
+  /**
+   * GET /api/export/exhibitors/event/:eventId/xlsx
+   * Download exhibitors as Excel — an "Exhibitors" sheet plus a "Staff" sheet.
+   */
+  @Get('exhibitors/event/:eventId/xlsx')
+  @Roles('event_admin', 'admin', 'super_admin')
+  async exportExhibitorsXlsx(
+    @Param('eventId') eventId: string,
+    @Res() reply: FastifyReply,
+  ) {
+    const buffer = await this.exportService.exportExhibitorsXlsx(eventId);
+    this.sendExcel(reply, buffer, this.fileName('exhibitors', eventId, 'xlsx'));
   }
 }

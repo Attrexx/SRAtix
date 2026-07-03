@@ -1150,6 +1150,9 @@ export const api = {
   exportFormSubmissions: (eventId: string, formSchemaId?: string) =>
     `${API_BASE}/api/export/submissions/event/${eventId}${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
 
+  exportExhibitors: (eventId: string) =>
+    `${API_BASE}/api/export/exhibitors/event/${eventId}`,
+
   // Exports (Excel/xlsx)
   exportAttendeesXlsx: (eventId: string) =>
     `${API_BASE}/api/export/attendees/event/${eventId}/xlsx`,
@@ -1162,6 +1165,9 @@ export const api = {
 
   exportFormSubmissionsXlsx: (eventId: string, formSchemaId?: string) =>
     `${API_BASE}/api/export/submissions/event/${eventId}/xlsx${formSchemaId ? `?formSchemaId=${formSchemaId}` : ''}`,
+
+  exportExhibitorsXlsx: (eventId: string) =>
+    `${API_BASE}/api/export/exhibitors/event/${eventId}/xlsx`,
 
   // Audit Log
   getAuditLog: (eventId: string, options?: { take?: number; skip?: number; action?: string; search?: string; from?: string; to?: string }, signal?: AbortSignal) => {

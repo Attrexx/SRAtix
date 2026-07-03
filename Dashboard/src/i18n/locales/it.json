@@ -50,6 +50,8 @@
   "common.resultsCount": "{count} risultati",
   "common.sortBy": "Ordina per {column}",
   "common.exportCsv": "Esporta CSV",
+  "common.exportExcel": "Esporta Excel",
+  "common.exportError": "Esportazione non riuscita.",
   "common.downloadCsv": "Scarica CSV",
   "common.downloadExcel": "Scarica Excel",
   "common.tryAgain": "Riprova",
@@ -700,6 +702,8 @@
   "export.checkInsDesc": "Codice biglietto, tipo, partecipante, metodo, direzione, timestamp",
   "export.formSubmissions": "Risposte ai moduli",
   "export.formSubmissionsDesc": "Risposte di registrazione, campi personalizzati",
+  "export.exhibitors": "Espositori",
+  "export.exhibitorsDesc": "Aziende espositrici e il loro personale di stand",
 
   "webhooks.title": "Webhook in uscita",
   "webhooks.subtitle": "Notifica servizi esterni quando si verificano eventi (ordini, check-in, biglietti).",

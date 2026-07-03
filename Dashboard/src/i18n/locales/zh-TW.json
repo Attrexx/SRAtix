@@ -50,6 +50,8 @@
   "common.resultsCount": "{count} 筆結果",
   "common.sortBy": "依 {column} 排序",
   "common.exportCsv": "匯出 CSV",
+  "common.exportExcel": "匯出 Excel",
+  "common.exportError": "匯出失敗。",
   "common.downloadCsv": "下載 CSV",
   "common.downloadExcel": "下載 Excel",
   "common.tryAgain": "重試",
@@ -698,6 +700,8 @@
   "export.checkInsDesc": "票券代碼、類型、參加者、方式、方向、時間戳記",
   "export.formSubmissions": "表單回覆",
   "export.formSubmissionsDesc": "報名表答覆、自訂欄位回覆",
+  "export.exhibitors": "參展商",
+  "export.exhibitorsDesc": "參展公司及其攤位工作人員",
 
   "webhooks.title": "外送 Webhook",
   "webhooks.subtitle": "在事件發生時通知外部服務（訂單、報到、票券）。",

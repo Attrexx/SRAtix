@@ -50,6 +50,8 @@
   "common.resultsCount": "{count} results",
   "common.sortBy": "Sort by {column}",
   "common.exportCsv": "Export CSV",
+  "common.exportExcel": "Export Excel",
+  "common.exportError": "Export failed.",
   "common.downloadCsv": "Download CSV",
   "common.downloadExcel": "Download Excel",
   "common.tryAgain": "Try again",
@@ -700,6 +702,8 @@
   "export.checkInsDesc": "Ticket code, type, attendee, method, direction, timestamp",
   "export.formSubmissions": "Form Submissions",
   "export.formSubmissionsDesc": "Registration form answers, custom field responses",
+  "export.exhibitors": "Exhibitors",
+  "export.exhibitorsDesc": "Exhibitor companies and their booth staff",
 
   "webhooks.title": "Outgoing Webhooks",
   "webhooks.subtitle": "Notify external services when events occur (orders, check-ins, tickets).",

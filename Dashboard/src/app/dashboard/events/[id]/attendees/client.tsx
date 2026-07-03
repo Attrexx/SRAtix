@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type Attendee, type AttendeeDetails, type FormSubmission, type FormSchema } from '@/lib/api';
+import { api, downloadFile, type Attendee, type AttendeeDetails, type FormSubmission, type FormSchema } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
+import { toast } from 'sonner';
 
 interface FormField {
   id: string;
@@ -26,6 +27,21 @@ export default function AttendeesPage() {
   const eventId = useEventId();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Export state ('csv' | 'xlsx' while that download is in flight)
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const handleExport = async (url: string, kind: 'csv' | 'xlsx') => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      await downloadFile(url, `attendees.${kind}`);
+    } catch {
+      toast.error(t('common.exportError'));
+    } finally {
+      setExporting(null);
+    }
+  };
   const [showModal, setShowModal] = useState(false);
   const [editAttendee, setEditAttendee] = useState<Attendee | null>(null);
   const [saving, setSaving] = useState(false);
@@ -303,19 +319,30 @@ export default function AttendeesPage() {
               </option>
             ))}
           </select>
-          <a
-            href={api.exportAttendees(eventId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          <button
+            onClick={() => handleExport(api.exportAttendees(eventId), 'csv')}
+            disabled={exporting !== null}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
             style={{
               background: 'var(--color-bg-card)',
               border: '1px solid var(--color-border)',
               color: 'var(--color-text)',
             }}
           >
-                        <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {t('common.exportCsv')}</span>
-          </a>
+            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {exporting === 'csv' ? '…' : t('common.exportCsv')}</span>
+          </button>
+          <button
+            onClick={() => handleExport(api.exportAttendeesXlsx(eventId), 'xlsx')}
+            disabled={exporting !== null}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
+            }}
+          >
+            <span className="inline-flex items-center gap-1"><Icons.Download size={14} /> {exporting === 'xlsx' ? '…' : t('common.exportExcel')}</span>
+          </button>
           <button
             className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
             style={{ background: 'var(--color-primary)' }}

@@ -50,6 +50,8 @@
   "common.resultsCount": "{count} résultats",
   "common.sortBy": "Trier par {column}",
   "common.exportCsv": "Exporter en CSV",
+  "common.exportExcel": "Exporter en Excel",
+  "common.exportError": "Échec de l'export.",
   "common.downloadCsv": "Télécharger le CSV",
   "common.downloadExcel": "Télécharger l'Excel",
   "common.tryAgain": "Réessayer",
@@ -700,6 +702,8 @@
   "export.checkInsDesc": "Code billet, type, participant, méthode, sens, horodatage",
   "export.formSubmissions": "Réponses aux formulaires",
   "export.formSubmissionsDesc": "Réponses d'inscription, champs personnalisés",
+  "export.exhibitors": "Exposants",
+  "export.exhibitorsDesc": "Entreprises exposantes et leur personnel de stand",
 
   "webhooks.title": "Webhooks sortants",
   "webhooks.subtitle": "Notifiez les services externes lors d'événements (commandes, check-ins, billets).",

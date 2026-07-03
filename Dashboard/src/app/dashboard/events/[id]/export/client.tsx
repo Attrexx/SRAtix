@@ -58,6 +58,13 @@ export default function ExportPage() {
       csvUrl: api.exportFormSubmissions(eventId),
       xlsxUrl: api.exportFormSubmissionsXlsx(eventId),
     },
+    {
+      label: t('export.exhibitors'),
+      description: t('export.exhibitorsDesc'),
+      icon: <Icons.Package size={28} />,
+      csvUrl: api.exportExhibitors(eventId),
+      xlsxUrl: api.exportExhibitorsXlsx(eventId),
+    },
   ];
 
   return (

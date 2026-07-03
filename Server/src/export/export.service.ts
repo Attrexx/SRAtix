@@ -14,6 +14,25 @@ export class ExportService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Derive an attendee's "type" from the category of their first ticket.
+   * Mirrors the dashboard's getAttendeeType so the export matches the UI.
+   * An attendee with no issued ticket (e.g. a pending/expired order) → 'unknown'.
+   */
+  private attendeeType(
+    tickets: { ticketType?: { category?: string | null } | null }[],
+  ): string {
+    const category = tickets?.[0]?.ticketType?.category;
+    if (!category) return 'unknown';
+    if (category === 'exhibitor') return 'exhibitor';
+    if (category === 'staff') return 'staff';
+    if (category === 'volunteer') return 'volunteer';
+    if (category === 'partner') return 'partner';
+    if (category === 'sponsor') return 'sponsor';
+    // general | individual | legal → visitor
+    return 'visitor';
+  }
+
   // ─── Attendees Export ─────────────────────────────────────────
 
   async exportAttendees(eventId: string): Promise<string> {
@@ -21,7 +40,11 @@ export class ExportService {
       where: { eventId },
       include: {
         tickets: {
-          select: { code: true, status: true },
+          select: {
+            code: true,
+            status: true,
+            ticketType: { select: { category: true } },
+          },
         },
       },
       orderBy: { lastName: 'asc' },
@@ -34,6 +57,7 @@ export class ExportService {
       'Last Name',
       'Phone',
       'Company',
+      'Type',
       'WP User ID',
       'Ticket Count',
       'Tickets (codes)',
@@ -47,6 +71,7 @@ export class ExportService {
       a.lastName,
       a.phone ?? '',
       a.company ?? '',
+      this.attendeeType(a.tickets),
       a.wpUserId?.toString() ?? '',
       a.tickets.length.toString(),
       a.tickets.map((t) => `${t.code}(${t.status})`).join('; '),
@@ -236,7 +261,11 @@ export class ExportService {
       where: { eventId },
       include: {
         tickets: {
-          select: { code: true, status: true },
+          select: {
+            code: true,
+            status: true,
+            ticketType: { select: { category: true } },
+          },
         },
       },
       orderBy: { lastName: 'asc' },
@@ -249,6 +278,7 @@ export class ExportService {
       'Last Name',
       'Phone',
       'Company',
+      'Type',
       'WP User ID',
       'Ticket Count',
       'Tickets (codes)',
@@ -262,6 +292,7 @@ export class ExportService {
       a.lastName,
       a.phone ?? '',
       a.company ?? '',
+      this.attendeeType(a.tickets),
       a.wpUserId?.toString() ?? '',
       a.tickets.length,
       a.tickets.map((t) => `${t.code}(${t.status})`).join('; '),
@@ -435,6 +466,163 @@ export class ExportService {
     return this.toExcel('Submissions', headers, rows);
   }
 
+  // ─── Exhibitors Export ────────────────────────────────────────
+
+  private async loadExhibitorsForExport(eventId: string) {
+    return this.prisma.eventExhibitor.findMany({
+      where: { eventId },
+      include: {
+        exhibitorProfile: true,
+        staff: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            role: true,
+            passStatus: true,
+          },
+          orderBy: { lastName: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async exportExhibitors(eventId: string): Promise<string> {
+    const exhibitors = await this.loadExhibitorsForExport(eventId);
+
+    const headers = [
+      'Company',
+      'Legal Name',
+      'Category',
+      'Type',
+      'Booth',
+      'Expo Area',
+      'Status',
+      'Contact Email',
+      'Contact Phone',
+      'Website',
+      'Demo Title',
+      'Buyer Name',
+      'Buyer Email',
+      'Order #',
+      'Staff Count',
+      'Staff',
+      'Created At',
+    ];
+
+    const rows = exhibitors.map((e) => {
+      const meta = (e.meta ?? {}) as Record<string, unknown>;
+      const p = e.exhibitorProfile;
+      return [
+        p?.companyName ?? '',
+        p?.legalName ?? '',
+        e.exhibitorCategory ?? '',
+        e.exhibitorType ?? '',
+        e.boothNumber ?? '',
+        e.expoArea ?? '',
+        e.status,
+        p?.contactEmail ?? '',
+        p?.contactPhone ?? '',
+        p?.website ?? '',
+        e.demoTitle ?? '',
+        (meta.buyerName as string) ?? '',
+        (meta.buyerEmail as string) ?? '',
+        (meta.orderNumber as string) ?? '',
+        e.staff.length.toString(),
+        e.staff
+          .map(
+            (s) =>
+              `${s.firstName} ${s.lastName} <${s.email}> (${s.role}/${s.passStatus})`,
+          )
+          .join('; '),
+        e.createdAt.toISOString(),
+      ];
+    });
+
+    return this.toCsv(headers, rows);
+  }
+
+  async exportExhibitorsXlsx(eventId: string): Promise<Buffer> {
+    const exhibitors = await this.loadExhibitorsForExport(eventId);
+
+    const exhibitorHeaders = [
+      'Company',
+      'Legal Name',
+      'Category',
+      'Type',
+      'Booth',
+      'Expo Area',
+      'Status',
+      'Contact Email',
+      'Contact Phone',
+      'Website',
+      'Demo Title',
+      'Buyer Name',
+      'Buyer Email',
+      'Order #',
+      'Staff Count',
+      'Created At',
+    ];
+
+    const exhibitorRows = exhibitors.map((e) => {
+      const meta = (e.meta ?? {}) as Record<string, unknown>;
+      const p = e.exhibitorProfile;
+      return [
+        p?.companyName ?? '',
+        p?.legalName ?? '',
+        e.exhibitorCategory ?? '',
+        e.exhibitorType ?? '',
+        e.boothNumber ?? '',
+        e.expoArea ?? '',
+        e.status,
+        p?.contactEmail ?? '',
+        p?.contactPhone ?? '',
+        p?.website ?? '',
+        e.demoTitle ?? '',
+        (meta.buyerName as string) ?? '',
+        (meta.buyerEmail as string) ?? '',
+        (meta.orderNumber as string) ?? '',
+        e.staff.length,
+        e.createdAt,
+      ] as (string | number | Date | boolean)[];
+    });
+
+    const staffHeaders = [
+      'Company',
+      'Booth',
+      'First Name',
+      'Last Name',
+      'Email',
+      'Phone',
+      'Role',
+      'Pass Status',
+    ];
+
+    const staffRows: (string | number | Date | boolean)[][] = [];
+    for (const e of exhibitors) {
+      const company = e.exhibitorProfile?.companyName ?? '';
+      for (const s of e.staff) {
+        staffRows.push([
+          company,
+          e.boothNumber ?? '',
+          s.firstName,
+          s.lastName,
+          s.email,
+          s.phone ?? '',
+          s.role,
+          s.passStatus,
+        ]);
+      }
+    }
+
+    return this.toExcelSheets([
+      { name: 'Exhibitors', headers: exhibitorHeaders, rows: exhibitorRows },
+      { name: 'Staff', headers: staffHeaders, rows: staffRows },
+    ]);
+  }
+
   // ─── CSV Helper ───────────────────────────────────────────────
 
   /**
@@ -460,20 +648,19 @@ export class ExportService {
   // ─── Excel Helper ─────────────────────────────────────────────
 
   /**
-   * Convert headers + rows to an Excel (.xlsx) Buffer using ExcelJS.
+   * Add a styled worksheet to a workbook:
    * - Auto-sizes columns based on header length
    * - Bolds the header row with a light fill
    * - Formats Date values as date/time cells
+   * - Adds an auto-filter on the header row
+   * Shared by toExcel (single sheet) and toExcelSheets (multi sheet).
    */
-  private async toExcel(
+  private addStyledSheet(
+    workbook: ExcelJS.Workbook,
     sheetName: string,
     headers: string[],
     rows: (string | number | Date | boolean)[][],
-  ): Promise<Buffer> {
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'SRAtix';
-    workbook.created = new Date();
-
+  ): void {
     const sheet = workbook.addWorksheet(sheetName);
 
     // Header row
@@ -509,7 +696,41 @@ export class ExportService {
       from: { row: 1, column: 1 },
       to: { row: 1, column: headers.length },
     };
+  }
 
+  /**
+   * Convert headers + rows to a single-sheet Excel (.xlsx) Buffer using ExcelJS.
+   */
+  private async toExcel(
+    sheetName: string,
+    headers: string[],
+    rows: (string | number | Date | boolean)[][],
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SRAtix';
+    workbook.created = new Date();
+    this.addStyledSheet(workbook, sheetName, headers, rows);
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  /**
+   * Convert multiple named sheets to a single multi-sheet Excel (.xlsx) Buffer.
+   * Used e.g. for exhibitors (Exhibitors sheet + Staff sheet).
+   */
+  private async toExcelSheets(
+    sheets: {
+      name: string;
+      headers: string[];
+      rows: (string | number | Date | boolean)[][];
+    }[],
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SRAtix';
+    workbook.created = new Date();
+    for (const s of sheets) {
+      this.addStyledSheet(workbook, s.name, s.headers, s.rows);
+    }
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
