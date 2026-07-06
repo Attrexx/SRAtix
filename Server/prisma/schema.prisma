@@ -973,3 +973,21 @@ model LogisticsOrderItem {
   @@index([logisticsItemId])
   @@map("logistics_order_items")
 }
+
+// ============================================================================
+// FUNNEL TREND (self-managed)
+// ============================================================================
+
+// Created and managed entirely by FunnelService via raw SQL
+// (`CREATE TABLE IF NOT EXISTS` on module init; INSERT/DELETE at runtime). It
+// holds a per-event, last-hour snapshot of registration-funnel trend samples so
+// the live graph survives restarts. Declared here ONLY so `prisma db push`
+// recognises it as in-sync and never tries to drop it on deploy — Prisma never
+// reads or writes it. Keep the columns identical to the raw DDL.
+model FunnelTrend {
+  eventId   String   @id @db.VarChar(64)
+  samples   String   @db.Text
+  updatedAt DateTime @db.DateTime(3)
+
+  @@map("FunnelTrend")
+}
