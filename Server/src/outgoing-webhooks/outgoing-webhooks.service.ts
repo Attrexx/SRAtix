@@ -1,6 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { QueueService } from '../queue/queue.service';
 import { randomBytes } from 'crypto';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 
@@ -39,7 +38,6 @@ export class OutgoingWebhooksService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly queue: QueueService,
     private readonly audit: AuditLogService,
   ) {}
 
@@ -175,7 +173,15 @@ export class OutgoingWebhooksService {
       `Dispatching ${eventType} to ${matching.length} endpoint(s)`,
     );
 
-    // Create delivery records and enqueue jobs
+    // Create a delivery record and deliver inline (awaited).
+    //
+    // We deliver in-process rather than handing off to the BullMQ 'webhook'
+    // worker: on single-process hosting the worker cannot reliably *consume*
+    // jobs (the producer enqueues fine, but the blocking consumer connection
+    // may never drain the queue), which would leave every webhook stuck
+    // 'pending' and undelivered. Webhook volume here is tiny, so inline
+    // delivery — which signs with the shared secret and records its own
+    // status — is both simpler and more reliable.
     for (const endpoint of matching) {
       const delivery = await this.prisma.webhookDelivery.create({
         data: {
@@ -185,21 +191,7 @@ export class OutgoingWebhooksService {
         },
       });
 
-      if (this.queue.isAvailable()) {
-        await this.queue.addJob('webhook.deliver', {
-          url: endpoint.url,
-          eventType,
-          payload: {
-            ...payload,
-            _deliveryId: delivery.id,
-            _endpointId: endpoint.id,
-            _secret: endpoint.secret,
-          },
-        });
-      } else {
-        // Inline delivery fallback (no Redis)
-        this.deliverInline(endpoint.url, eventType, payload, delivery.id);
-      }
+      await this.deliverInline(endpoint.url, eventType, payload, delivery.id);
     }
   }
 
@@ -302,30 +294,17 @@ export class OutgoingWebhooksService {
 
     const payload = delivery.payload as Record<string, unknown>;
 
-    // Reset status and re-enqueue
+    // Reset status, then re-deliver inline (same reliable path as dispatch()).
     await this.prisma.webhookDelivery.update({
       where: { id: deliveryId },
       data: { status: 'pending', error: null },
     });
 
-    if (this.queue.isAvailable()) {
-      await this.queue.addJob('webhook.deliver', {
-        url: delivery.endpoint.url,
-        eventType: delivery.eventType,
-        payload: {
-          ...payload,
-          _deliveryId: deliveryId,
-          _endpointId: delivery.endpoint.id,
-          _secret: delivery.endpoint.secret,
-        },
-      });
-    } else {
-      await this.deliverInline(
-        delivery.endpoint.url,
-        delivery.eventType,
-        payload,
-        deliveryId,
-      );
-    }
+    await this.deliverInline(
+      delivery.endpoint.url,
+      delivery.eventType,
+      payload,
+      deliveryId,
+    );
   }
 }
