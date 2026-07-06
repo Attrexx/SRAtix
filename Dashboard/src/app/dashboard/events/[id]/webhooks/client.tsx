@@ -16,6 +16,7 @@ const ALL_EVENT_TYPES = [
   'checkin.created',
   'attendee.registered',
   'event.updated',
+  'exhibitor.updated',
 ];
 
 export default function WebhooksPage() {
