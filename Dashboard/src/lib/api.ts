@@ -324,6 +324,29 @@ export interface FormSchema {
   updatedAt: string;
 }
 
+/**
+ * Membership summary derived server-side from an attendee's paid orders.
+ * Every ticket bundles a free 1-year SRA membership; visitors can opt out, and
+ * existing members authenticate at the member gate (and are auto-opted-out).
+ */
+export interface AttendeeMembership {
+  /** Authenticated at the member gate as an existing member (any group). */
+  authenticated: boolean;
+  group: 'sra' | 'partner' | 'robotx' | null;
+  /** Verified existing, active SRA member (already holds a membership). */
+  activeSraMember: boolean;
+  partnerName: string | null;
+  tier: string | null;
+  /** Bought a ticket that bundles the free SRA membership. */
+  eligible: boolean;
+  /** Voluntarily declined the included membership. */
+  optedOut: boolean;
+  /** Opt-out forced by the server because they are already a member. */
+  optOutForced: boolean;
+  /** Will be enrolled as a NEW SRA member. */
+  willEnroll: boolean;
+}
+
 export interface Attendee {
   id: string;
   eventId: string;
@@ -335,6 +358,7 @@ export interface Attendee {
   status?: string;
   purchasedByAttendeeId?: string;
   tickets?: { code: string; status: string; ticketType?: { name: string; category: string } }[];
+  membership?: AttendeeMembership;
   createdAt: string;
 }
 

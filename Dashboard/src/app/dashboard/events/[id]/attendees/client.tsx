@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, downloadFile, type Attendee, type AttendeeDetails, type FormSubmission, type FormSchema } from '@/lib/api';
+import { api, downloadFile, type Attendee, type AttendeeDetails, type AttendeeMembership, type FormSubmission, type FormSchema } from '@/lib/api';
 import { DataTable } from '@/components/data-table';
 import { Icons } from '@/components/icons';
 import { useI18n } from '@/i18n/i18n-provider';
@@ -81,6 +81,66 @@ export default function AttendeesPage() {
     if (category === 'sponsor') return 'sponsor';
     // general, individual, legal → visitor
     return 'visitor';
+  };
+
+  /**
+   * Render membership marker pills for an attendee:
+   *   • Existing SRA member (authenticated & active)   — indigo
+   *   • Partner member (authenticated via partner code) — teal
+   *   • Joining SRA (kept the free bundled membership)  — green
+   *   • Opted out (declined the free membership)        — grey
+   */
+  const renderMembershipBadges = (m?: AttendeeMembership) => {
+    if (!m) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+    const pills: { label: string; bg: string; text: string; title?: string }[] = [];
+
+    if (m.activeSraMember) {
+      pills.push({
+        label: t('attendees.membership.activeMember'),
+        bg: '#e0e7ff', text: '#3730a3',
+        title: t('attendees.membership.activeMemberHint'),
+      });
+    } else if (m.group === 'partner' || m.group === 'robotx') {
+      pills.push({
+        label: m.partnerName
+          ? `${t('attendees.membership.partnerMember')} · ${m.partnerName}`
+          : t('attendees.membership.partnerMember'),
+        bg: '#ccfbf1', text: '#115e59',
+      });
+    }
+
+    // Enrollment outcome — skipped for existing members (already enrolled).
+    if (!m.activeSraMember) {
+      if (m.willEnroll) {
+        pills.push({
+          label: t('attendees.membership.joining'),
+          bg: '#dcfce7', text: '#166534',
+          title: t('attendees.membership.joiningHint'),
+        });
+      } else if (m.optedOut) {
+        pills.push({
+          label: t('attendees.membership.optedOut'),
+          bg: '#f3f4f6', text: '#6b7280',
+          title: t('attendees.membership.optedOutHint'),
+        });
+      }
+    }
+
+    if (pills.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+    return (
+      <span className="inline-flex flex-wrap gap-1">
+        {pills.map((p, i) => (
+          <span
+            key={i}
+            title={p.title}
+            className="inline-block rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+            style={{ background: p.bg, color: p.text }}
+          >
+            {p.label}
+          </span>
+        ))}
+      </span>
+    );
   };
 
   /** Get unique attendee types from current data for filter options */
@@ -420,6 +480,12 @@ export default function AttendeesPage() {
                 </span>
               );
             },
+          },
+          {
+            key: '_membership',
+            header: t('attendees.column.membership'),
+            sortable: false,
+            render: (row) => renderMembershipBadges((row as unknown as Attendee).membership),
           },
           {
             key: '_ticketType',
@@ -823,6 +889,48 @@ export default function AttendeesPage() {
                       />
                     </div>
                   </div>
+
+                  {/* ── Membership ── */}
+                  {detailAttendee.membership &&
+                    (detailAttendee.membership.eligible || detailAttendee.membership.authenticated) && (
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                        {t('attendees.membership.title')}
+                      </h3>
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        {renderMembershipBadges(detailAttendee.membership)}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <DetailField
+                          label={t('attendees.membership.included')}
+                          value={
+                            detailAttendee.membership.activeSraMember
+                              ? t('attendees.membership.alreadyMember')
+                              : detailAttendee.membership.willEnroll
+                                ? t('attendees.membership.includedYes')
+                                : detailAttendee.membership.optedOut
+                                  ? t('attendees.membership.includedOptedOut')
+                                  : t('attendees.membership.includedNo')
+                          }
+                        />
+                        {detailAttendee.membership.authenticated && (
+                          <DetailField
+                            label={t('attendees.membership.gate')}
+                            value={
+                              detailAttendee.membership.group === 'sra'
+                                ? t('attendees.membership.gateSra')
+                                : detailAttendee.membership.partnerName
+                                  ? `${t('attendees.membership.partnerMember')} · ${detailAttendee.membership.partnerName}`
+                                  : t('attendees.membership.partnerMember')
+                            }
+                          />
+                        )}
+                        {detailAttendee.membership.tier && (
+                          <DetailField label={t('attendees.membership.tier')} value={detailAttendee.membership.tier} />
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* ── Tickets ── */}
                   {(detailAttendee.tickets?.length ?? 0) > 0 && (

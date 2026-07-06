@@ -39,6 +39,10 @@ export default function EventOverviewPage() {
     totalAttendees: 0,
     compEntries: 0,
     exhibitors: 0,
+    // SRA membership breakdown (every ticket bundles a free membership)
+    newMembers: 0,        // kept the included membership → new SRA member
+    membershipOptOuts: 0, // declined the included membership
+    existingMembers: 0,   // authenticated as an existing active SRA member
   });
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -100,6 +104,10 @@ export default function EventOverviewPage() {
           totalAttendees: attendees.filter((a: any) => (a.tickets?.length ?? 0) > 0).length,
           compEntries: (compSummary as any).total ?? 0,
           exhibitors: exhibitors.length,
+          // Membership breakdown, derived server-side onto each attendee.
+          newMembers: attendees.filter((a: any) => a.membership?.willEnroll).length,
+          membershipOptOuts: attendees.filter((a: any) => a.membership?.optedOut).length,
+          existingMembers: attendees.filter((a: any) => a.membership?.activeSraMember).length,
         });
       })
       .finally(() => setLoading(false));
@@ -148,6 +156,12 @@ export default function EventOverviewPage() {
   const exhibitorTickets = ticketTypes.filter((tt) => tt.category === 'exhibitor');
   const visitorSold = visitorTickets.reduce((s, tt) => s + (tt.sold ?? 0), 0);
   const exhibitorSold = exhibitorTickets.reduce((s, tt) => s + (tt.sold ?? 0), 0);
+
+  // Membership opt-in vs opt-out split, among visitors who actually had the
+  // choice (existing members are auto-enrolled, so excluded from the ratio).
+  const membershipChoiceTotal = stats.newMembers + stats.membershipOptOuts;
+  const optInPct = membershipChoiceTotal > 0 ? Math.round((stats.newMembers / membershipChoiceTotal) * 100) : 0;
+  const optOutPct = membershipChoiceTotal > 0 ? Math.round((stats.membershipOptOuts / membershipChoiceTotal) * 100) : 0;
 
   return (
     <div>
@@ -272,6 +286,25 @@ export default function EventOverviewPage() {
           icon={<Icons.Package size={20} />}
           label={t('events.overview.exhibitors')}
           value={(stats.exhibitors ?? 0).toLocaleString()}
+        />
+        <StatCard
+          icon={<Icons.Sparkles size={20} />}
+          label={t('events.overview.newMembers')}
+          value={(stats.newMembers ?? 0).toLocaleString()}
+          trend={membershipChoiceTotal > 0 ? t('events.overview.optedInPercent').replace('{pct}', String(optInPct)) : undefined}
+          trendUp
+        />
+        <StatCard
+          icon={<Icons.Ban size={20} />}
+          label={t('events.overview.membershipOptOuts')}
+          value={(stats.membershipOptOuts ?? 0).toLocaleString()}
+          trend={membershipChoiceTotal > 0 ? t('events.overview.optedOutPercent').replace('{pct}', String(optOutPct)) : undefined}
+          trendUp={false}
+        />
+        <StatCard
+          icon={<Icons.UserCheck size={20} />}
+          label={t('events.overview.existingMembers')}
+          value={(stats.existingMembers ?? 0).toLocaleString()}
         />
         <StatCard
           icon={<Icons.ShoppingCart size={20} />}

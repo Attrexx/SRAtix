@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
 import { AuditLogService, AuditAction } from '../audit-log/audit-log.service';
 import { normalizeEmail } from '../common/email.util';
+import { deriveAttendeeMembership } from './attendee-membership.util';
 
 @Injectable()
 export class AttendeesService {
@@ -15,22 +16,52 @@ export class AttendeesService {
   ) {}
 
   async findByEvent(eventId: string) {
-    return this.prisma.attendee.findMany({
-      where: { eventId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        tickets: {
-          select: {
-            code: true,
-            status: true,
-            ticketType: {
-              select: { name: true, category: true },
+    const [attendees, partners] = await Promise.all([
+      this.prisma.attendee.findMany({
+        where: { eventId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          tickets: {
+            select: {
+              code: true,
+              status: true,
+              ticketType: {
+                select: { name: true, category: true },
+              },
+            },
+            take: 5,
+          },
+          // Paid buyer-orders only — used to derive the membership summary
+          // (opt-out / active member) below; stripped from the response.
+          orders: {
+            where: { status: 'paid' },
+            select: {
+              status: true,
+              meta: true,
+              items: {
+                select: {
+                  ticketType: {
+                    select: { membershipTier: true, category: true },
+                  },
+                },
+              },
             },
           },
-          take: 5,
         },
-      },
-    });
+      }),
+      this.prisma.membershipPartner.findMany({
+        where: { eventId },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    const partnerNameById = new Map(partners.map((p) => [p.id, p.name]));
+
+    // Attach a compact membership summary; drop the raw orders projection.
+    return attendees.map(({ orders, ...attendee }) => ({
+      ...attendee,
+      membership: deriveAttendeeMembership(orders, partnerNameById),
+    }));
   }
 
   async findOne(id: string) {
@@ -52,7 +83,16 @@ export class AttendeesService {
           orderBy: { submittedAt: 'desc' },
         },
         orders: {
-          select: { id: true, orderNumber: true, status: true, totalCents: true, currency: true, createdAt: true },
+          select: {
+            id: true, orderNumber: true, status: true, totalCents: true, currency: true, createdAt: true,
+            // Read for the membership summary; stripped from the response below.
+            meta: true,
+            items: {
+              select: {
+                ticketType: { select: { membershipTier: true, category: true } },
+              },
+            },
+          },
           orderBy: { createdAt: 'desc' },
         },
         checkIns: {
@@ -63,7 +103,17 @@ export class AttendeesService {
       },
     });
     if (!attendee) throw new NotFoundException(`Attendee ${id} not found`);
-    return attendee;
+
+    const partners = await this.prisma.membershipPartner.findMany({
+      where: { eventId: attendee.eventId },
+      select: { id: true, name: true },
+    });
+    const partnerNameById = new Map(partners.map((p) => [p.id, p.name]));
+    const membership = deriveAttendeeMembership(attendee.orders, partnerNameById);
+
+    // Strip the derivation-only order fields (meta, items) before returning.
+    const orders = attendee.orders.map(({ meta, items, ...order }) => order);
+    return { ...attendee, orders, membership };
   }
 
   async findByEmail(eventId: string, email: string) {

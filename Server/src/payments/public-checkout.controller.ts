@@ -494,6 +494,7 @@ export class PublicCheckoutController {
     let validatedMemberGroup: string | undefined;
     let validatedMemberTier: string | undefined;
     let validatedPartnerId: string | undefined;
+    let validatedMemberIsActive = false;
 
     if (dto.memberSessionToken && dto.memberGroup) {
       const session = this.authService.decodeMemberSession(dto.memberSessionToken);
@@ -505,6 +506,9 @@ export class PublicCheckoutController {
       validatedMemberGroup = session.memberGroup;
       validatedMemberTier = session.tier;
       validatedPartnerId = session.partnerId;
+      // Authoritative active-membership flag (fallback to a resolved tier for
+      // older tokens issued before isMember existed).
+      validatedMemberIsActive = session.isMember ?? !!session.tier;
 
       // Load ticket type with SRA discounts + partner discounts for calculation
       const ttWithDiscounts = await this.prisma.ticketType.findUnique({
@@ -559,6 +563,20 @@ export class PublicCheckoutController {
     } else {
       discountCents = 0;
       appliedDiscountLabel = '';
+    }
+
+    // ── 5d. Persist member-auth markers on the order ────────────────────
+    // Recorded for BOTH free and paid orders so the admin dashboard can flag
+    // authenticated members reliably (the paid meta write below runs only on
+    // the paid path). memberGroup 'sra' + memberIsActive = existing active SRA
+    // member; 'partner'/'robotx' = partner-authenticated.
+    if (validatedMemberGroup) {
+      await this.orders.updateMeta(order.id, {
+        memberGroup: validatedMemberGroup,
+        memberIsActive: validatedMemberIsActive,
+        ...(validatedMemberTier ? { memberTier: validatedMemberTier } : {}),
+        ...(validatedPartnerId ? { memberPartnerId: validatedPartnerId } : {}),
+      });
     }
 
     // ── 6. Create Stripe Checkout Session ───────────────────────────────
