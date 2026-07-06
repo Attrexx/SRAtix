@@ -1,8 +1,10 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { StripeService } from './stripe.service';
+import { OrderPaidSyncService } from './order-paid-sync.service';
 import { PaymentsController } from './payments.controller';
 import { PublicCheckoutController } from './public-checkout.controller';
 import { StripeWebhookController } from './stripe-webhook.controller';
+import { MembershipSyncController } from './membership-sync.controller';
 import { ExhibitorSetupController } from './exhibitor-setup.controller';
 import { OrdersModule } from '../orders/orders.module';
 import { TicketsModule } from '../tickets/tickets.module';
@@ -21,8 +23,8 @@ import { ExhibitorPortalModule } from '../exhibitor-portal/exhibitor-portal.modu
 
 @Module({
   imports: [OrdersModule, TicketsModule, SseModule, EmailModule, PromoCodesModule, OutgoingWebhooksModule, forwardRef(() => AttendeesModule), forwardRef(() => SettingsModule), FormsModule, AuthModule, TicketTypesModule, forwardRef(() => LogisticsModule), InvoicesModule, ExhibitorPortalModule],
-  controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController, ExhibitorSetupController],
-  providers: [StripeService],
-  exports: [StripeService],
+  controllers: [PaymentsController, PublicCheckoutController, StripeWebhookController, MembershipSyncController, ExhibitorSetupController],
+  providers: [StripeService, OrderPaidSyncService],
+  exports: [StripeService, OrderPaidSyncService],
 })
 export class PaymentsModule {}

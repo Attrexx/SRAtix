@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useEventId } from '@/hooks/use-event-id';
-import { api, type WebhookEndpoint, type WebhookDelivery } from '@/lib/api';
+import { api, type WebhookEndpoint, type WebhookDelivery, type MembershipResyncSummary } from '@/lib/api';
 import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Icons } from '@/components/icons';
@@ -29,6 +29,8 @@ export default function WebhooksPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showSecret, setShowSecret] = useState<string | null>(null);
+  const [resyncing, setResyncing] = useState(false);
+  const [resyncResult, setResyncResult] = useState<MembershipResyncSummary | null>(null);
 
   // Form state
   const [newUrl, setNewUrl] = useState('');
@@ -117,6 +119,21 @@ export default function WebhooksPage() {
     await api.retryWebhookDelivery(deliveryId);
     if (selectedEndpoint) {
       handleViewDeliveries(selectedEndpoint);
+    }
+  };
+
+  const handleResync = async (force: boolean) => {
+    if (!confirm(t('webhooks.resyncConfirm'))) return;
+    try {
+      setResyncing(true);
+      setResyncResult(null);
+      const summary = await api.resyncEventMemberships(eventId, force);
+      setResyncResult(summary);
+      toast.success(t('webhooks.resyncDone', { count: summary.dispatched }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('webhooks.resyncFailed'));
+    } finally {
+      setResyncing(false);
     }
   };
 
@@ -360,6 +377,59 @@ export default function WebhooksPage() {
           ))}
         </div>
       )}
+
+      {/* SRA membership backfill / re-sync */}
+      <div
+        className="rounded-lg p-5 space-y-3"
+        style={{ background: 'var(--color-card)', border: '1px solid var(--color-border)' }}
+      >
+        <div>
+          <h3 className="font-semibold text-lg" style={{ color: 'var(--color-text)' }}>
+            {t('webhooks.resyncTitle')}
+          </h3>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+            {t('webhooks.resyncSubtitle')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handleResync(false)}
+            disabled={resyncing}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            {resyncing ? t('webhooks.resyncRunning') : t('webhooks.resyncButton')}
+          </button>
+          <button
+            onClick={() => handleResync(true)}
+            disabled={resyncing}
+            className="rounded-lg px-3 py-2 text-xs disabled:opacity-60"
+            style={{ border: '1px solid var(--color-border)', color: 'var(--color-text)' }}
+            title={t('webhooks.resyncForceHint')}
+          >
+            {t('webhooks.resyncForce')}
+          </button>
+        </div>
+        {resyncResult && (
+          <div className="text-sm rounded-md p-3 space-y-1" style={{ background: 'var(--color-bg)' }}>
+            <p style={{ color: 'var(--color-text)' }}>
+              <strong>{resyncResult.dispatched}</strong> {t('webhooks.resyncDispatched')}
+              {' · '}{resyncResult.alreadySynced} {t('webhooks.resyncAlready')}
+              {' · '}{resyncResult.skippedOptedOut} {t('webhooks.resyncOptedOut')}
+              {' · '}{resyncResult.skippedExhibitor} {t('webhooks.resyncExhibitor')}
+            </p>
+            {resyncResult.dispatchedOrders.length > 0 && (
+              <ul className="mt-1 font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {resyncResult.dispatchedOrders.map((o) => (
+                  <li key={o.orderNumber}>
+                    {o.orderNumber} — {o.email ?? '—'}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Delivery log panel */}
       {selectedEndpoint && (

@@ -198,7 +198,7 @@ export class OutgoingWebhooksService {
         });
       } else {
         // Inline delivery fallback (no Redis)
-        this.deliverInline(endpoint.url, endpoint.secret, eventType, payload, delivery.id);
+        this.deliverInline(endpoint.url, eventType, payload, delivery.id);
       }
     }
   }
@@ -206,10 +206,14 @@ export class OutgoingWebhooksService {
   /**
    * Inline delivery fallback when BullMQ is not available.
    * Fire-and-forget — errors are logged and recorded.
+   *
+   * Signs with the shared WEBHOOK_SIGNING_SECRET (same as the BullMQ worker),
+   * NOT the per-endpoint secret: the WP receivers verify against a single
+   * fixed option, so both delivery paths must use the same key or signatures
+   * fail to verify.
    */
   private async deliverInline(
     url: string,
-    secret: string,
     eventType: string,
     payload: Record<string, unknown>,
     deliveryId: string,
@@ -221,7 +225,8 @@ export class OutgoingWebhooksService {
     });
 
     const { createHmac } = await import('crypto');
-    const signature = createHmac('sha256', secret).update(body).digest('hex');
+    const signingSecret = process.env.WEBHOOK_SIGNING_SECRET || 'sratix-webhook-default';
+    const signature = createHmac('sha256', signingSecret).update(body).digest('hex');
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
@@ -317,7 +322,6 @@ export class OutgoingWebhooksService {
     } else {
       await this.deliverInline(
         delivery.endpoint.url,
-        delivery.endpoint.secret,
         delivery.eventType,
         payload,
         deliveryId,

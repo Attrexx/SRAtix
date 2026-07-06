@@ -17,7 +17,7 @@ import { SseService } from '../sse/sse.service';
 import { EmailService } from '../email/email.service';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { formatEventDateIso } from '../common/event-date.util';
-import { OutgoingWebhooksService } from '../outgoing-webhooks/outgoing-webhooks.service';
+import { OrderPaidSyncService } from './order-paid-sync.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { HYBRID_TIER_MAP, SECTOR_TIER_OVERRIDE, TIER_WP_PRODUCT_MAP, type MembershipTier } from '../ticket-types/ticket-types.service';
@@ -60,7 +60,7 @@ export class StripeWebhookController {
     private readonly sse: SseService,
     private readonly email: EmailService,
     private readonly promoCodes: PromoCodesService,
-    private readonly outgoingWebhooks: OutgoingWebhooksService,
+    private readonly orderPaidSync: OrderPaidSyncService,
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly registrationReminder: RegistrationReminderWorker,
@@ -179,7 +179,6 @@ export class StripeWebhookController {
     const orderMeta = (orderForMeta.meta as Record<string, unknown>) ?? {};
     const isTestOrder =
       !!orderMeta.isTestOrder || session.metadata?.sratix_test_mode === '1';
-    const orgId = session.metadata?.sratix_org_id;
     const eventId = session.metadata?.sratix_event_id;
 
     // ── Resolve registration name (prefer attendee name over Stripe card name) ──
@@ -435,20 +434,15 @@ export class StripeWebhookController {
     }
 
     // ── WP Sync: outgoing order.paid webhook ─────────────────────
-    // Always dispatch the real webhook — test mode only affects Stripe payment
-    // (dummy cards), all downstream processes run identically.
-    if (orgId && eventId && paidOrder) {
-      const enrichedPayload = await this.buildOrderPaidPayload(paidOrder, eventId);
-      if (isTestOrder) {
-        enrichedPayload.isTestOrder = true;
-        this.logger.log(`🧪 Test mode order ${orderId} — dispatching real order.paid webhook (test flag included in payload)`);
-      }
-      this.outgoingWebhooks
-        .dispatch(orgId, eventId, 'order.paid', enrichedPayload)
-        .catch((err) =>
-          this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
-        );
-    }
+    // Delegated to the shared OrderPaidSyncService so the Stripe path, the
+    // free/100%-off checkout path, and the manual backfill all dispatch an
+    // identical payload. Always fires — test mode only affects Stripe payment
+    // (dummy cards); all downstream WP processing runs identically.
+    this.orderPaidSync
+      .dispatchForOrder(orderId, { isTestOrder })
+      .catch((err) =>
+        this.logger.error(`Webhook dispatch failed for order.paid: ${err}`),
+      );
 
     // Increment promo code usage if this order used one
     const promoCodeId = session.metadata?.sratix_promo_code_id;
@@ -528,207 +522,6 @@ export class StripeWebhookController {
         }
       }
     }
-  }
-
-  // ─── Enriched Webhook Payload Builder ───────────────────────
-
-  /**
-   * Build a comprehensive `order.paid` webhook payload containing:
-   *  - Order details (id, number, amount, currency)
-   *  - Attendee data (name, email, company, etc.)
-   *  - Ticket type metadata (category, membershipTier, wpProductId)
-   *  - Form submission answers (all fields the attendee filled in)
-   *  - Event metadata
-   *
-   * This enriched payload is what sratix-control on swiss-robotics.org uses
-   * to orchestrate WP user creation, WooCommerce order creation, SRA MAP
-   * entity matching/creation, and corporate profile creation.
-   */
-  private async buildOrderPaidPayload(
-    paidOrder: any,
-    eventId: string,
-  ): Promise<Record<string, unknown>> {
-    // Base order info
-    const payload: Record<string, unknown> = {
-      orderId: paidOrder.id,
-      orderNumber: paidOrder.orderNumber,
-      totalCents: paidOrder.totalCents,
-      currency: paidOrder.currency,
-      customerEmail: paidOrder.customerEmail,
-      customerName: paidOrder.customerName,
-      paidAt: paidOrder.paidAt,
-    };
-
-    // Fetch event info
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      select: { name: true, slug: true, startDate: true, endDate: true, venue: true },
-    });
-    payload.event = event;
-
-    // Membership opt-out: recorded at checkout (manual uncheck, or server-forced
-    // for active SRA members). When set, the buyer must NOT be granted a
-    // (duplicate) SRA membership — suppress the membership block below and flag
-    // it explicitly so the WP handler skips the role / ProfileGrid group / WC
-    // membership order.
-    const orderMeta = (paidOrder.meta as Record<string, unknown>) ?? {};
-    const membershipOptOut = !!orderMeta.membershipOptOut;
-    payload.membershipOptOut = membershipOptOut;
-
-    // Fetch ticket types with pricing variants for this order's items
-    const ticketTypeIds = (paidOrder.items ?? []).map(
-      (item: any) => item.ticketTypeId,
-    );
-    if (ticketTypeIds.length > 0) {
-      const ticketTypes = await this.prisma.ticketType.findMany({
-        where: { id: { in: ticketTypeIds } },
-        include: { pricingVariants: true },
-      });
-
-      payload.ticketTypes = ticketTypes.map((tt) => ({
-        id: tt.id,
-        name: tt.name,
-        category: tt.category,
-        membershipTier: tt.membershipTier,
-        wpProductId: tt.wpProductId,
-        priceCents: tt.priceCents,
-        pricingVariants: tt.pricingVariants.map((v) => ({
-          variantType: v.variantType,
-          label: v.label,
-          priceCents: v.priceCents,
-          wpProductId: v.wpProductId,
-          membershipTier: v.membershipTier,
-        })),
-      }));
-
-      // Extract primary membership info (first membership-type ticket).
-      // Skipped entirely when the buyer opted out of (or already holds) the
-      // SRA membership.
-      const membershipTicket = ticketTypes.find(
-        (tt) => tt.membershipTier && tt.wpProductId,
-      );
-      if (membershipTicket && !membershipOptOut) {
-        const mappedTier = HYBRID_TIER_MAP[membershipTicket.membershipTier as MembershipTier]
-          ?? membershipTicket.membershipTier;
-        const mappedProductId = TIER_WP_PRODUCT_MAP[mappedTier as MembershipTier]
-          ?? membershipTicket.wpProductId;
-        payload.membership = {
-          tier: membershipTicket.membershipTier,
-          wpProductId: membershipTicket.wpProductId,
-          category: membershipTicket.category,
-          // Hybrid mapping: actual SRA membership tier & product to use
-          sraMembershipTier: mappedTier,
-          sraWpProductId: mappedProductId,
-        };
-      }
-    }
-
-    // Fetch attendee data
-    const attendee = paidOrder.attendeeId
-      ? await this.prisma.attendee.findUnique({
-          where: { id: paidOrder.attendeeId },
-        })
-      : await this.prisma.attendee.findFirst({
-          where: { eventId, email: paidOrder.customerEmail ?? '' },
-        });
-
-    if (attendee) {
-      payload.attendee = {
-        id: attendee.id,
-        email: attendee.email,
-        firstName: attendee.firstName,
-        lastName: attendee.lastName,
-        phone: attendee.phone,
-        company: attendee.company,
-        wpUserId: attendee.wpUserId,
-        badgeName: attendee.badgeName,
-        jobTitle: attendee.jobTitle,
-        orgRole: attendee.orgRole,
-        dietaryNeeds: attendee.dietaryNeeds,
-        accessibilityNeeds: attendee.accessibilityNeeds,
-        consentMarketing: attendee.consentMarketing,
-        consentDataSharing: attendee.consentDataSharing,
-        meta: attendee.meta,
-      };
-
-      // Fetch form submissions for this attendee
-      const submissions = await this.prisma.formSubmission.findMany({
-        where: { eventId, attendeeId: attendee.id },
-        include: {
-          formSchema: { select: { name: true, version: true } },
-        },
-        orderBy: { submittedAt: 'desc' },
-      });
-
-      if (submissions.length > 0) {
-        payload.formSubmissions = submissions.map((s) => ({
-          schemaName: s.formSchema.name,
-          schemaVersion: s.formSchema.version,
-          data: s.data,
-          submittedAt: s.submittedAt,
-        }));
-
-        // Flatten the most recent submission's data for easy access
-        const latest = submissions[0];
-        payload.formData = latest.data;
-
-        // ── Sector-based tier override ──────────────────────────
-        // If attendee_sector is 'academia', swap professional tiers
-        // to their academic equivalents (e.g. professionals → academics).
-        const formDataObj = latest.data as Record<string, unknown> | null;
-        const attendeeSector = formDataObj?.attendee_sector as string | undefined;
-        const membership = payload.membership as Record<string, unknown> | undefined;
-        if (attendeeSector && membership) {
-          const sectorOverrides = SECTOR_TIER_OVERRIDE[attendeeSector];
-          if (sectorOverrides) {
-            const currentTier = membership.sraMembershipTier as MembershipTier;
-            const overriddenTier = sectorOverrides[currentTier];
-            if (overriddenTier) {
-              membership.sraMembershipTier = overriddenTier;
-              membership.sraWpProductId = TIER_WP_PRODUCT_MAP[overriddenTier]
-                ?? membership.sraWpProductId;
-              membership.sectorOverrideApplied = true;
-            }
-          }
-          membership.attendeeSector = attendeeSector;
-        }
-      }
-    }
-
-    // Order items detail
-    payload.items = (paidOrder.items ?? []).map((item: any) => ({
-      ticketTypeId: item.ticketTypeId,
-      quantity: item.quantity,
-      unitPriceCents: item.unitPriceCents,
-      subtotalCents: item.subtotalCents,
-    }));
-
-    // Ticket count
-    payload.ticketCount = (paidOrder.items ?? []).reduce(
-      (sum: number, item: any) => sum + (item.quantity ?? 0),
-      0,
-    );
-
-    // ── Build attendees[] array ─────────────────────────────────
-    // The WP handler expects an array of attendees, each with embedded
-    // ticketType and formSubmission. For single-ticket orders, there's
-    // one entry; for multi-ticket, we include the primary purchaser.
-    const ticketTypesArr = (payload.ticketTypes ?? []) as any[];
-    const primaryTicketType = ticketTypesArr[0] ?? {};
-    const attendeeEntry: Record<string, unknown> = {
-      ...(payload.attendee as Record<string, unknown> ?? {}),
-      membershipOptOut,
-      ticketType: {
-        name: primaryTicketType.name,
-        category: primaryTicketType.category,
-        membershipTier: primaryTicketType.membershipTier,
-        wpProductId: primaryTicketType.wpProductId,
-      },
-      formSubmission: (payload.formData as Record<string, unknown>) ?? {},
-    };
-    payload.attendees = [attendeeEntry];
-
-    return payload;
   }
 
   // ─── Test Mode: Simulated Actions Builder ───────────────────

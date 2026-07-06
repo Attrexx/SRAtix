@@ -38,6 +38,7 @@ import { TicketsService } from '../tickets/tickets.service';
 import { EmailService } from '../email/email.service';
 import { RegistrationReminderWorker } from '../queue/registration-reminder.worker';
 import { ExhibitorPortalService } from '../exhibitor-portal/exhibitor-portal.service';
+import { OrderPaidSyncService } from './order-paid-sync.service';
 import { normalizeEmail } from '../common/email.util';
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────
@@ -236,6 +237,7 @@ export class PublicCheckoutController {
     private readonly emailService: EmailService,
     private readonly registrationReminder: RegistrationReminderWorker,
     private readonly exhibitorPortal: ExhibitorPortalService,
+    private readonly orderPaidSync: OrderPaidSyncService,
   ) {}
 
   @Post()
@@ -686,6 +688,17 @@ export class PublicCheckoutController {
       } catch (err) {
         console.error('[PublicCheckout] Failed to issue tickets for free order:', err);
       }
+
+      // ── WP Sync: order.paid for free / 100%-off orders ──────────────
+      // The Stripe webhook (which dispatches order.paid) never runs for $0
+      // orders, so a non-opted-out visitor on a free or 100%-off-discount
+      // ticket would otherwise never become an SRA member. Dispatch it here.
+      // Dispatch-only + idempotent; the WP side scopes out opt-outs/exhibitors.
+      this.orderPaidSync
+        .dispatchForOrder(order.id, { isTestOrder: isTestMode })
+        .catch((err) =>
+          console.error('[PublicCheckout] order.paid dispatch failed for free order:', err),
+        );
 
       // Build success URL with order number (and test flag if applicable)
       const successUrlObj = new URL(dto.successUrl);

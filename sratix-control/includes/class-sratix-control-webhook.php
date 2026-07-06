@@ -493,6 +493,28 @@ class SRAtix_Control_Webhook {
 			) );
 		}
 
+		// ── Scope guard: only JOINERS get an SRA account ──────────
+		// A WP user + SRA membership is created ONLY for a non-opted-out visitor
+		// on a membership-bundling ticket. Everyone else gets nothing — no WP
+		// account is created for them:
+		//   - opted-out buyers (manual, or server-forced because already a member),
+		//   - exhibitors & booth staff (provisioned separately via the portal),
+		//   - non-membership tickets (no tier),
+		//   - any tier we can't map to a WooCommerce product.
+		// The order.paid webhook fires for every paid order, so this is the single
+		// point that decides who becomes an SRA member.
+		if ( $membership_opt_out || 'exhibitor' === $category || empty( $membership_tier ) || empty( $mapped_product_id ) ) {
+			error_log( sprintf(
+				'SRAtix Control [order.paid]: Skipping non-joining attendee %s — no SRA account created (optOut=%s, category=%s, tier=%s, product=%d).',
+				$email,
+				$membership_opt_out ? 'yes' : 'no',
+				$category ?: 'none',
+				$membership_tier ?: 'none',
+				$mapped_product_id
+			) );
+			return;
+		}
+
 		// ── 2. Find or create WP user ─────────────────────────────
 		$wp_user = get_user_by( 'email', $email );
 		$is_new_user = false;
@@ -516,37 +538,20 @@ class SRAtix_Control_Webhook {
 			}
 		}
 
-		// ── 3. Assign WP role ─────────────────────────────────────
-		if ( 'exhibitor' === $category ) {
-			// Exhibitor tickets get the 'exhibitor' role directly.
-			if ( ! in_array( 'exhibitor', (array) $wp_user->roles, true ) ) {
-				$wp_user->add_role( 'exhibitor' );
-				error_log( "SRAtix Control [order.paid]: Added exhibitor role to user {$user_id}" );
-			}
-		} elseif ( $category !== 'general' && $mapped_product_id && ! $membership_opt_out ) {
-			$role = $this->get_wp_role_for_product( $mapped_product_id );
-			if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
-				$wp_user->set_role( $role );
-				error_log( "SRAtix Control [order.paid]: Set user {$user_id} role to {$role}" );
-			}
+		// ── 3. Assign WP membership role ──────────────────────────
+		// Only joiners reach here (see the scope guard above), so this is always
+		// the individual-membership role for the mapped product.
+		$role = $this->get_wp_role_for_product( $mapped_product_id );
+		if ( $role && ! in_array( $role, (array) $wp_user->roles, true ) ) {
+			$wp_user->set_role( $role );
+			error_log( "SRAtix Control [order.paid]: Set user {$user_id} role to {$role}" );
 		}
 
 		// ── 4. Assign ProfileGrid group ───────────────────────────
-		if ( $mapped_product_id && ! $membership_opt_out ) {
-			$this->assign_profilegrid_group( $user_id, $mapped_product_id );
-		}
+		$this->assign_profilegrid_group( $user_id, $mapped_product_id );
 
-		// ── 5-7. Create & complete WC order ───────────────────────
-		$wc_order_id = null;
-		if ( $mapped_product_id && $category !== 'general' && ! $membership_opt_out ) {
-			$wc_order_id = $this->create_membership_order( $user_id, $mapped_product_id, $order_id, $order_number, $currency );
-		} elseif ( $membership_opt_out && $mapped_product_id && $category !== 'general' ) {
-			error_log( sprintf(
-				'SRAtix Control [order.paid]: Membership opt-out — skipped SRA membership grant (role, ProfileGrid group, WC order) for user %d on order %s.',
-				$user_id,
-				$order_number
-			) );
-		}
+		// ── 5-7. Create & complete WC membership order ────────────
+		$wc_order_id = $this->create_membership_order( $user_id, $mapped_product_id, $order_id, $order_number, $currency );
 
 		// ── 8. Store mappings ─────────────────────────────────────
 		SRAtix_Control_Sync::set_mapping(
@@ -561,12 +566,9 @@ class SRAtix_Control_Webhook {
 		// ── 9. Store ticket meta ──────────────────────────────────
 		update_user_meta( $user_id, 'sratix_ticket_type', $ticket_name );
 		update_user_meta( $user_id, 'sratix_ticket_category', $category );
-		// Only record the membership tier when a membership was actually granted.
-		// Writing it on opt-out would falsely tag the user as an active member
-		// (this meta is the first signal {@see is_active_sra_member()} checks).
-		if ( ! $membership_opt_out ) {
-			update_user_meta( $user_id, 'sratix_membership_tier', $mapped_tier ?: $membership_tier );
-		}
+		// Record the granted membership tier (only joiners reach this point, so
+		// this can't falsely tag a non-member — see the scope guard above).
+		update_user_meta( $user_id, 'sratix_membership_tier', $mapped_tier ?: $membership_tier );
 		update_user_meta( $user_id, 'sratix_order_number', $order_number );
 		update_user_meta( $user_id, 'sratix_order_id', $order_id );
 		update_user_meta( $user_id, 'sratix_payment_status', 'paid' );

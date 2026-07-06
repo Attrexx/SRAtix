@@ -582,6 +582,18 @@ export interface WebhookDelivery {
   createdAt: string;
 }
 
+/** Result of a per-event SRA membership backfill (order.paid re-sync). */
+export interface MembershipResyncSummary {
+  eventId: string;
+  totalPaidOrders: number;
+  dispatched: number;
+  alreadySynced: number;
+  skippedOptedOut: number;
+  skippedExhibitor: number;
+  skippedNotEligible: number;
+  dispatchedOrders: Array<{ orderNumber: string; email: string | null }>;
+}
+
 export interface AppUser {
   id: string;
   email: string;
@@ -1281,6 +1293,22 @@ export const api = {
 
   retryWebhookDelivery: (id: string) =>
     request<void>(`/webhooks/deliveries/${id}/retry`, { method: 'POST' }),
+
+  // ─── SRA membership backfill (re-dispatch order.paid) ──────────
+
+  /** Backfill SRA memberships for an event's eligible, not-yet-synced orders. */
+  resyncEventMemberships: (eventId: string, force = false) =>
+    request<MembershipResyncSummary>(
+      `/memberships/resync/${eventId}${force ? '?force=true' : ''}`,
+      { method: 'POST' },
+    ),
+
+  /** Re-dispatch order.paid for a single order (one-order verification run). */
+  resyncOrderMembership: (orderId: string) =>
+    request<{ dispatched: boolean; reason?: string }>(
+      `/memberships/resync-order/${orderId}`,
+      { method: 'POST' },
+    ),
 
   // ─── Users (Super Admin) ───────────────────────────────────────
 
