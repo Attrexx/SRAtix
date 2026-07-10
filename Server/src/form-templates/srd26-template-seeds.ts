@@ -27,6 +27,7 @@
  */
 
 import { FormSchemaDefinition, FormField, FormSection } from '../forms/forms.service';
+import { roboticsExpertiseAreas, roboticsSkillsTools } from '../field-repository/field-repository.service';
 
 // ─── Section / Field builder helpers ────────────────────────────
 
@@ -173,8 +174,8 @@ function resumeCreationSection(startOrder: number): FormField[] {
         { value: 'swiss_citizen', label: { en: 'Swiss citizen', de: 'Schweizer Bürger/in', fr: 'Citoyen(ne) suisse', it: 'Cittadino/a svizzero/a', 'zh-TW': '瑞士公民' } },
       ],
     }),
-    f('expertise_area', 'multi-select', { en: 'Field(s) of experience', de: 'Erfahrungsbereiche', fr: 'Domaines d\'expérience', it: 'Aree di esperienza', 'zh-TW': '經驗領域' }, 'resume_creation', startOrder + 6, { required: true, conditions: resumeConditions }),
-    f('skills_tools', 'multi-select', { en: 'Skills & Tools', de: 'Fähigkeiten & Werkzeuge', fr: 'Compétences & Outils', it: 'Competenze & Strumenti', 'zh-TW': '技能與工具' }, 'resume_creation', startOrder + 7, { required: true, conditions: resumeConditions }),
+    f('expertise_area', 'multi-select', { en: 'Field(s) of experience', de: 'Erfahrungsbereiche', fr: 'Domaines d\'expérience', it: 'Aree di esperienza', 'zh-TW': '經驗領域' }, 'resume_creation', startOrder + 6, { required: true, conditions: resumeConditions, options: roboticsExpertiseAreas() }),
+    f('skills_tools', 'multi-select', { en: 'Skills & Tools', de: 'Fähigkeiten & Werkzeuge', fr: 'Compétences & Outils', it: 'Competenze & Strumenti', 'zh-TW': '技能與工具' }, 'resume_creation', startOrder + 7, { required: true, conditions: resumeConditions, options: roboticsSkillsTools() }),
     f('languages_proficiency', 'text', { en: 'Languages spoken (with proficiency)', de: 'Sprachkenntnisse (mit Niveau)', fr: 'Langues parlées (avec niveau)', it: 'Lingue parlate (con livello)', 'zh-TW': '語言能力（含程度）' }, 'resume_creation', startOrder + 8, {
       conditions: resumeConditions,
       placeholder: { en: 'e.g. English (C1), German (B2)', de: 'z.B. Deutsch (C1), Englisch (B2)', fr: 'ex. Français (C1), Anglais (B2)', it: 'es. Italiano (C1), Inglese (B2)', 'zh-TW': '例：英語 (C1)、德語 (B2)' },

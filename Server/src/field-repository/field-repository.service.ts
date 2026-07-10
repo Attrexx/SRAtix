@@ -1253,7 +1253,7 @@ function swissCantons() {
  * Robotics expertise areas — mirrors SRA Jobs Augmenter `expertise_area` exactly.
  * 20 options matching the slugs used in resume creation.
  */
-function roboticsExpertiseAreas() {
+export function roboticsExpertiseAreas() {
   return [
     { value: 'mechanical_design', label: { en: 'Robot Mechanics & Mechanical Design', de: 'Robotermechanik & Konstruktion', fr: 'Mécanique robotique & conception', it: 'Meccanica robotica & design', 'zh-TW': '機器人力學與機構設計' } },
     { value: 'biorobotics', label: { en: 'Biorobotics', de: 'Biorobotik', fr: 'Biorobotique', it: 'Biorobotica', 'zh-TW': '生物機器人學' } },
@@ -1282,7 +1282,7 @@ function roboticsExpertiseAreas() {
  * Skills & tools — mirrors SRA Jobs Augmenter `skills_tools` exactly.
  * 25 options matching the slugs used in resume creation.
  */
-function roboticsSkillsTools() {
+export function roboticsSkillsTools() {
   return [
     { value: 'python', label: { en: 'Python', de: 'Python', fr: 'Python', it: 'Python', 'zh-TW': 'Python' } },
     { value: 'c_cpp', label: { en: 'C / C++', de: 'C / C++', fr: 'C / C++', it: 'C / C++', 'zh-TW': 'C / C++' } },

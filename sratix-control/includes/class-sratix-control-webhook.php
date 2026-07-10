@@ -1214,46 +1214,64 @@ class SRAtix_Control_Webhook {
 		update_post_meta( $resume_id, '_candidate_email', $user->user_email );
 		update_post_meta( $resume_id, '_candidate_location', sanitize_text_field( $form_data['city'] ?? '' ) );
 
-		// Map form fields → resume meta
-		$resume_meta_fields = array(
-			'work_permit'           => '_candidate_work_permit',
-			'education_level'       => '_candidate_education_level',
-			'diploma_specialization' => '_candidate_diploma_specialization',
-			'diploma_year'          => '_candidate_diploma_year',
-			'diploma_in_progress'   => '_candidate_diploma_in_progress',
-			'languages_proficiency' => '_candidate_languages',
-			'position_type_sought'  => '_candidate_position_type',
-			'remote_preference'     => '_candidate_remote_preference',
-			'availability_date'     => '_candidate_available_from',
-			'portfolio_url'         => '_candidate_portfolio_url',
-			'scholar_github_url'    => '_candidate_scholar_github',
+		// ── Map form fields → SRA Jobs Augmenter resume meta ──────────
+		// The SRA Jobs Augmenter reads its custom resume fields from
+		// *unprefixed* meta keys (e.g. `expertise_area`, `work_permit`) — NOT
+		// the `_candidate_*` namespace used for native WP Job Manager Resume
+		// Manager fields (title/email/location above). Writing the wrong keys
+		// creates the resume but leaves every SRA field blank on
+		// swiss-robotics.org. Canonical keys: SRA Jobs Augmenter
+		// includes/class-resume-form.php (save_custom_resume_fields + display).
+		$scalar_fields = array(
+			'work_permit'            => 'work_permit',
+			'education_level'        => 'education_level',
+			'diploma_specialization' => 'diploma_specialization',
+			'diploma_year'           => 'diploma_year',
+			'diploma_in_progress'    => 'diploma_in_progress',
+			'languages_proficiency'  => 'languages',
+			'remote_preference'      => 'remote_pref',
+			'availability_date'      => 'availability',
+			'portfolio_url'          => 'portfolio_url',
+			'scholar_github_url'     => 'scholar_github',
 		);
 
-		foreach ( $resume_meta_fields as $form_slug => $meta_key ) {
-			if ( isset( $form_data[ $form_slug ] ) ) {
-				$val = $form_data[ $form_slug ];
-				if ( is_array( $val ) ) {
-					$val = wp_json_encode( $val );
-				}
-				update_post_meta( $resume_id, $meta_key, sanitize_text_field( $val ) );
+		foreach ( $scalar_fields as $form_slug => $meta_key ) {
+			if ( isset( $form_data[ $form_slug ] ) && ! is_array( $form_data[ $form_slug ] ) ) {
+				update_post_meta( $resume_id, $meta_key, sanitize_text_field( $form_data[ $form_slug ] ) );
 			}
 		}
 
-		// Store multi-select taxonomy-like fields as JSON post meta
+		// Multi-select fields must be stored as sanitized PHP arrays (WP
+		// serializes them on save), so the augmenter's
+		// `(array) get_post_meta( $id, $key, true )` slug→label lookup
+		// resolves. A wp_json_encode() string would collapse to a single
+		// unmatched pseudo-slug and render nothing.
 		$multi_fields = array(
-			'expertise_area' => '_candidate_expertise_area',
-			'skills_tools'   => '_candidate_skills_tools',
+			'expertise_area'       => 'expertise_area',
+			'sub_expertise'        => 'sub_expertise',
+			'skills_tools'         => 'skills_tools',
+			'position_type_sought' => 'job_type',
 		);
 
 		foreach ( $multi_fields as $form_slug => $meta_key ) {
-			if ( ! empty( $form_data[ $form_slug ] ) && is_array( $form_data[ $form_slug ] ) ) {
-				update_post_meta( $resume_id, $meta_key, wp_json_encode( $form_data[ $form_slug ] ) );
+			if ( empty( $form_data[ $form_slug ] ) ) {
+				continue;
 			}
+			$vals = is_array( $form_data[ $form_slug ] ) ? $form_data[ $form_slug ] : array( $form_data[ $form_slug ] );
+			$vals = array_values( array_map( 'sanitize_text_field', $vals ) );
+			update_post_meta( $resume_id, $meta_key, $vals );
+		}
+
+		// Mirror the short bio into the augmenter's `short_bio` meta too (the
+		// native resume body is already stored as post_content above).
+		if ( ! empty( $form_data['short_bio_resume'] ) ) {
+			update_post_meta( $resume_id, 'short_bio', sanitize_textarea_field( $form_data['short_bio_resume'] ) );
 		}
 
 		// Assign resume_skill taxonomy terms if available
 		if ( ! empty( $form_data['skills_tools'] ) && taxonomy_exists( 'resume_skill' ) ) {
 			$skills = is_array( $form_data['skills_tools'] ) ? $form_data['skills_tools'] : array( $form_data['skills_tools'] );
+			$skills = array_map( 'sanitize_text_field', $skills );
 			wp_set_object_terms( $resume_id, $skills, 'resume_skill', false );
 		}
 
