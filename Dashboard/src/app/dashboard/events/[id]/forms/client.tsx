@@ -84,6 +84,25 @@ function generateId() {
   return `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/** Matches ids produced by generateId() above. */
+const GENERATED_ID_PATTERN = /^field_\d{10,}_[a-z0-9]+$/;
+
+/**
+ * Where a field's slug should be derived from.
+ *
+ * Fields that come from a seed template carry their canonical field-repository
+ * slug in `id` and ship without a `slug`. Deriving the slug from the label in
+ * that case silently renames them ("Skills & Tools" becomes skills_and_tools),
+ * which breaks the Server's FieldDefinition lookup and leaves centrally
+ * managed dropdowns with no options. Only fall back to the label for fields
+ * the builder itself created, whose ids are meaningless.
+ */
+function slugSourceFor(field: BuilderField, label: string): string {
+  if (field.slug) return field.slug;
+  if (field.id && !GENERATED_ID_PATTERN.test(field.id)) return field.id;
+  return label;
+}
+
 function slugifyField(value: string): string {
   return (value || '')
     .normalize('NFKD')
@@ -103,7 +122,7 @@ function normalizeBuilderFields(fields: BuilderField[]): BuilderField[] {
     const preferredLabel = next.label?.en?.trim()
       || Object.values(next.label || {}).find((value) => value?.trim())
       || '';
-    const baseSlug = slugifyField(next.slug || preferredLabel);
+    const baseSlug = slugifyField(slugSourceFor(next, preferredLabel));
 
     if (!baseSlug) {
       delete next.slug;

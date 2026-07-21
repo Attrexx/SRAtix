@@ -357,8 +357,9 @@ export class FormsService {
     ]);
     const needsForceOverwrite = def.fields.filter((f) => {
       if (!selectTypes.has(f.type) && f.type !== 'radio') return false;
-      const slug = (f as any).slug || f.id;
-      return FORCE_OVERWRITE_OPTION_SLUGS.has(slug);
+      return this.fieldLookupKeys(f).some((key) =>
+        FORCE_OVERWRITE_OPTION_SLUGS.has(key),
+      );
     });
 
     // ── Phase 2: Tooltip hydration (all fields missing tooltip) ─
@@ -371,17 +372,19 @@ export class FormsService {
       (f) => (f as any).defaultValue === undefined,
     );
 
-    // Collect all slugs that need any hydration
+    // Collect all lookup keys that need any hydration
     const allSlugsSet = new Set<string>();
-    for (const f of needsOptionsHydration) allSlugsSet.add((f as any).slug || f.id);
-    for (const f of needsForceOverwrite) allSlugsSet.add((f as any).slug || f.id);
-    for (const f of needsTooltipHydration) allSlugsSet.add((f as any).slug || f.id);
-    for (const f of needsDefaultValueHydration) allSlugsSet.add((f as any).slug || f.id);
+    for (const f of needsOptionsHydration) this.addLookupKeys(f, allSlugsSet);
+    for (const f of needsForceOverwrite) this.addLookupKeys(f, allSlugsSet);
+    for (const f of needsTooltipHydration) this.addLookupKeys(f, allSlugsSet);
+    for (const f of needsDefaultValueHydration) this.addLookupKeys(f, allSlugsSet);
     if (allSlugsSet.size === 0) return;
 
     // Batch-fetch all matching FieldDefinitions by slug.
-    // Fields from seed templates use id = slug directly;
-    // fields from the Dashboard builder store the slug in a separate property.
+    // Fields from seed templates use id = slug directly; fields from the
+    // Dashboard builder store the slug in a separate property. Both keys are
+    // queried because a builder save can overwrite a template field's slug
+    // (see fieldLookupKeys).
     const fieldDefs = await this.prisma.fieldDefinition.findMany({
       where: { slug: { in: [...allSlugsSet] }, active: true },
       select: { slug: true, options: true, tooltip: true, defaultValue: true },
@@ -394,8 +397,7 @@ export class FormsService {
 
     // Merge options into the schema fields
     for (const field of needsOptionsHydration) {
-      const fieldSlug = (field as any).slug || field.id;
-      const fdData = defsBySlug.get(fieldSlug);
+      const fdData = this.resolveFieldDef(field, defsBySlug);
       const opts = fdData?.options;
       if (Array.isArray(opts) && opts.length > 0) {
         field.options = opts as FormField['options'];
@@ -407,8 +409,7 @@ export class FormsService {
 
     // Force-overwrite options for curated slugs (centrally managed).
     for (const field of needsForceOverwrite) {
-      const fieldSlug = (field as any).slug || field.id;
-      const fdData = defsBySlug.get(fieldSlug);
+      const fdData = this.resolveFieldDef(field, defsBySlug);
       const opts = fdData?.options;
       if (Array.isArray(opts) && opts.length > 0) {
         field.options = opts as FormField['options'];
@@ -417,8 +418,7 @@ export class FormsService {
 
     // Merge tooltip into the schema fields
     for (const field of needsTooltipHydration) {
-      const fieldSlug = (field as any).slug || field.id;
-      const fdData = defsBySlug.get(fieldSlug);
+      const fdData = this.resolveFieldDef(field, defsBySlug);
       if (fdData?.tooltip && typeof fdData.tooltip === 'object') {
         (field as any).tooltip = fdData.tooltip;
       }
@@ -426,13 +426,49 @@ export class FormsService {
 
     // Merge defaultValue into the schema fields
     for (const field of needsDefaultValueHydration) {
-      const fieldSlug = (field as any).slug || field.id;
-      const fdData = defsBySlug.get(fieldSlug);
+      const fdData = this.resolveFieldDef(field, defsBySlug);
       if (fdData?.defaultValue != null) {
         (field as any).defaultValue = fdData.defaultValue;
       }
     }
 
+  }
+
+  /**
+   * FieldDefinition lookup keys for a schema field, in priority order.
+   *
+   * Seed-template fields carry the canonical slug in `id` and have no `slug`.
+   * The Dashboard form builder mints a `slug` from the field's English label
+   * whenever a form is saved, so a template field can end up with a
+   * label-derived slug that matches no FieldDefinition
+   * (`expertise_area` → `field_s_of_experience`). Falling back to `id` keeps
+   * those fields hydratable without re-saving every affected form.
+   */
+  private fieldLookupKeys(field: FormField): string[] {
+    const slug = (field as any).slug;
+    const keys: string[] = [];
+    if (typeof slug === 'string' && slug) keys.push(slug);
+    if (field.id && field.id !== slug) keys.push(field.id);
+    return keys;
+  }
+
+  private addLookupKeys(field: FormField, target: Set<string>): void {
+    for (const key of this.fieldLookupKeys(field)) target.add(key);
+  }
+
+  /**
+   * Resolve the FieldDefinition backing a schema field, preferring an explicit
+   * slug match and falling back to the field id.
+   */
+  private resolveFieldDef<T>(
+    field: FormField,
+    defs: Map<string, T>,
+  ): T | undefined {
+    for (const key of this.fieldLookupKeys(field)) {
+      const match = defs.get(key);
+      if (match) return match;
+    }
+    return undefined;
   }
 
   // ─── Submissions ──────────────────────────────────────────────
